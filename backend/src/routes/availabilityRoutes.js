@@ -1,11 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-router.get("/", (req, res) => {
-    res.json({
-        success: true,
-        message: "Availability route working"
-    });
-});
+const { getAvailability } = require("../controllers/availabilityController");
+
+router.get("/", getAvailability);
 
 module.exports = router;

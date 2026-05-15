@@ -1,11 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-router.get("/", (req, res) => {
-    res.json({
-        success: true,
-        message: "Attendance route working"
-    });
-});
+const { getAttendance } = require("../controllers/attendanceController");
+
+router.get("/", getAttendance);
 
 module.exports = router;

@@ -1,11 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-router.get("/", (req, res) => {
-    res.json({
-        success: true,
-        message: "Account route working"
-    });
-});
+const { getAccount } = require("../controllers/accountController");
+
+router.get("/", getAccount);
 
 module.exports = router;

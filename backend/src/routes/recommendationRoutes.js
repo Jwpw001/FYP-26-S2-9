@@ -1,11 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-router.get("/", (req, res) => {
-    res.json({
-        success: true,
-        message: "Recommendation route working"
-    });
-});
+const { getRecommendations } = require("../controllers/recommendationController");
+
+router.get("/", getRecommendations);
 
 module.exports = router;

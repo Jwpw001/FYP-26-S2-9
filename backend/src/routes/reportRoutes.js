@@ -1,11 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-router.get("/", (req, res) => {
-    res.json({
-        success: true,
-        message: "Report route working"
-    });
-});
+const { getReports } = require("../controllers/reportController");
+
+router.get("/", getReports);
 
 module.exports = router;

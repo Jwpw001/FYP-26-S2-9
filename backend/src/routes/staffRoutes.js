@@ -1,11 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-router.get("/", (req, res) => {
-    res.json({
-        success: true,
-        message: "Staff route working"
-    });
-});
+const { getStaff } = require("../controllers/staffController");
+
+router.get("/", getStaff);
 
 module.exports = router;
