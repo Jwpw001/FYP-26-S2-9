@@ -1,13 +1,27 @@
-const { getAccountService } = require("../services/accountService");
-
 const getAccount = (req, res) => {
+    res.json({
+        success: true,
+        message: "Get account"
+    });
+};
 
-    const result = getAccountService();
+const updateAccount = (req, res) => {
+    res.json({
+        success: true,
+        message: "Update account",
+        data: req.body
+    });
+};
 
-    res.json(result);
-
+const deleteAccount = (req, res) => {
+    res.json({
+        success: true,
+        message: "Delete account"
+    });
 };
 
 module.exports = {
-    getAccount
+    getAccount,
+    updateAccount,
+    deleteAccount
 };
