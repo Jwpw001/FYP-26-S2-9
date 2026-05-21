@@ -1,8 +1,11 @@
+const { getNotificationsService } = require("../services/notificationService");
+
 const getNotifications = (req, res) => {
-    res.json({
-        success: true,
-        message: "Get notifications controller working"
-    });
+
+    const result = getNotificationsService();
+
+    res.json(result);
+
 };
 
 module.exports = {

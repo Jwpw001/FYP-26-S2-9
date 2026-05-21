@@ -1,8 +1,11 @@
+const { getRecommendationsService } = require("../services/recommendationService");
+
 const getRecommendations = (req, res) => {
-    res.json({
-        success: true,
-        message: "Get recommendations controller working"
-    });
+
+    const result = getRecommendationsService();
+
+    res.json(result);
+
 };
 
 module.exports = {

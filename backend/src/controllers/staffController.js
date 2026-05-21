@@ -1,8 +1,11 @@
+const { getStaffService } = require("../services/staffService");
+
 const getStaff = (req, res) => {
-    res.json({
-        success: true,
-        message: "Get staff controller working"
-    });
+
+    const result = getStaffService();
+
+    res.json(result);
+
 };
 
 module.exports = {

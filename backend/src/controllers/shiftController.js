@@ -1,8 +1,11 @@
+const { getShiftsService } = require("../services/shiftService");
+
 const getShifts = (req, res) => {
-    res.json({
-        success: true,
-        message: "Get shifts controller working"
-    });
+
+    const result = getShiftsService();
+
+    res.json(result);
+
 };
 
 module.exports = {

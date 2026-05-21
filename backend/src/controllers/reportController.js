@@ -1,8 +1,11 @@
+const { getReportsService } = require("../services/reportService");
+
 const getReports = (req, res) => {
-    res.json({
-        success: true,
-        message: "Get reports controller working"
-    });
+
+    const result = getReportsService();
+
+    res.json(result);
+
 };
 
 module.exports = {

@@ -1,8 +1,11 @@
+const { getAttendanceService } = require("../services/attendanceService");
+
 const getAttendance = (req, res) => {
-    res.json({
-        success: true,
-        message: "Get attendance controller working"
-    });
+
+    const result = getAttendanceService();
+
+    res.json(result);
+
 };
 
 module.exports = {

@@ -1,8 +1,11 @@
+const { getAccountService } = require("../services/accountService");
+
 const getAccount = (req, res) => {
-    res.json({
-        success: true,
-        message: "Get account controller working"
-    });
+
+    const result = getAccountService();
+
+    res.json(result);
+
 };
 
 module.exports = {
