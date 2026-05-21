@@ -2,6 +2,8 @@ const express = require("express");
 
 const router = express.Router();
 
+const ROLES = require("../constants/roles");
+
 const {
     getShifts,
     getShiftById,
@@ -27,7 +29,10 @@ router.get("/:id", getShiftById);
 router.post(
     "/",
     verifyToken,
-    allowRoles("manager", "coordinator"),
+    allowRoles(
+    ROLES.MANAGER,
+    ROLES.COORDINATOR
+),
     validate(createShiftSchema),
     createShift
 );
