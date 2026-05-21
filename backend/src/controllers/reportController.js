@@ -1,13 +1,47 @@
-const { getReportsService } = require("../services/reportService");
-
 const getReports = (req, res) => {
+    res.json({
+        success: true,
+        message: "Get all reports"
+    });
+};
 
-    const result = getReportsService();
+const getReportById = (req, res) => {
+    res.json({
+        success: true,
+        message: "Get report by ID",
+        reportId: req.params.id
+    });
+};
 
-    res.json(result);
+const createReport = (req, res) => {
+    res.status(201).json({
+        success: true,
+        message: "Create report",
+        data: req.body
+    });
+};
 
+const updateReport = (req, res) => {
+    res.json({
+        success: true,
+        message: "Update report",
+        reportId: req.params.id,
+        data: req.body
+    });
+};
+
+const deleteReport = (req, res) => {
+    res.json({
+        success: true,
+        message: "Delete report",
+        reportId: req.params.id
+    });
 };
 
 module.exports = {
-    getReports
+    getReports,
+    getReportById,
+    createReport,
+    updateReport,
+    deleteReport
 };
