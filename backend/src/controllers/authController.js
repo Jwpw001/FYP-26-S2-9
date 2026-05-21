@@ -25,7 +25,25 @@ const login = (req, res) => {
     });
 };
 
+const forgotPassword = (req, res) => {
+    res.json({
+        success: true,
+        message: "Password reset request received",
+        data: req.body
+    });
+};
+
+const resetPassword = (req, res) => {
+    res.json({
+        success: true,
+        message: "Password reset successful",
+        data: req.body
+    });
+};
+
 module.exports = {
     register,
-    login
+    login,
+    forgotPassword,
+    resetPassword
 };
