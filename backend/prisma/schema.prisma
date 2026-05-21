@@ -1,13 +1,50 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  full_name    String
+  email        String   @unique
+  password     String
+  role         String
+  phone_number String?
+  created_at   DateTime @default(now())
+}
+
+model Shift {
+  id             Int      @id @default(autoincrement())
+  title          String
+  shift_date     DateTime
+  start_time     String
+  end_time       String
+  required_staff Int
+  location       String
+  role           String
+  created_at     DateTime @default(now())
+}
+
+model Attendance {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  shift_id       Int
+  check_in_time  String
+  check_out_time String?
+  status         String
+  created_at     DateTime @default(now())
+}
+
+model Availability {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  available_date DateTime
+  start_time     String
+  end_time       String
+  status         String
+  created_at     DateTime @default(now())
 }
