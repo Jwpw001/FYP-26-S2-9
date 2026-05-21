@@ -7,6 +7,16 @@ const getStaff = (req, res) => {
 
 };
 
+const getStaffById = (req, res) => {
+
+    res.json({
+        success: true,
+        message: "Get staff by ID",
+        staffId: req.params.id
+    });
+
+};
+
 const createStaff = (req, res) => {
 
     res.status(201).json({
@@ -40,6 +50,7 @@ const deleteStaff = (req, res) => {
 
 module.exports = {
     getStaff,
+    getStaffById,
     createStaff,
     updateStaff,
     deleteStaff

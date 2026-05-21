@@ -4,6 +4,7 @@ const router = express.Router();
 
 const {
     getStaff,
+    getStaffById,
     createStaff,
     updateStaff,
     deleteStaff
@@ -17,6 +18,8 @@ const {
 } = require("../validators/staffValidator");
 
 router.get("/", getStaff);
+
+router.get("/:id", getStaffById);
 
 router.post(
     "/",
