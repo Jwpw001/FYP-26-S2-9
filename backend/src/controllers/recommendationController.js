@@ -1,13 +1,47 @@
-const { getRecommendationsService } = require("../services/recommendationService");
-
 const getRecommendations = (req, res) => {
+    res.json({
+        success: true,
+        message: "Get all recommendations"
+    });
+};
 
-    const result = getRecommendationsService();
+const getRecommendationById = (req, res) => {
+    res.json({
+        success: true,
+        message: "Get recommendation by ID",
+        recommendationId: req.params.id
+    });
+};
 
-    res.json(result);
+const createRecommendation = (req, res) => {
+    res.status(201).json({
+        success: true,
+        message: "Create recommendation",
+        data: req.body
+    });
+};
 
+const updateRecommendation = (req, res) => {
+    res.json({
+        success: true,
+        message: "Update recommendation",
+        recommendationId: req.params.id,
+        data: req.body
+    });
+};
+
+const deleteRecommendation = (req, res) => {
+    res.json({
+        success: true,
+        message: "Delete recommendation",
+        recommendationId: req.params.id
+    });
 };
 
 module.exports = {
-    getRecommendations
+    getRecommendations,
+    getRecommendationById,
+    createRecommendation,
+    updateRecommendation,
+    deleteRecommendation
 };
