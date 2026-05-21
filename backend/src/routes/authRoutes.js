@@ -6,7 +6,14 @@ const {
     login
 } = require("../controllers/authController");
 
-router.post("/register", register);
-router.post("/login", login);
+const validate = require("../middleware/validateMiddleware");
+
+const {
+    registerSchema,
+    loginSchema
+} = require("../validators/authValidator");
+
+router.post("/register", validate(registerSchema), register);
+router.post("/login", validate(loginSchema), login);
 
 module.exports = router;
