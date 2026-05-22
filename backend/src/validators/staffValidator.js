@@ -1,31 +1,20 @@
 const { z } = require("zod");
 
 const createStaffSchema = z.object({
-    full_name: z.string().min(2, "Full name is required"),
-
-    email: z.string().email("Invalid email format"),
-
-    phone_number: z.string().min(8, "Invalid phone number"),
-
-    role: z.enum([
-        "manager",
-        "staff",
-        "coordinator"
-    ])
+    user_id: z.number(),
+    outlet_id: z.number(),
+    staff_type: z.enum(["regular", "part_time", "full_time"]),
+    default_work_days: z.string().optional(),
+    hired_at: z.string().optional(),
+    is_active: z.boolean().optional()
 });
 
 const updateStaffSchema = z.object({
-    full_name: z.string().min(2).optional(),
-
-    email: z.string().email().optional(),
-
-    phone_number: z.string().min(8).optional(),
-
-    role: z.enum([
-        "manager",
-        "staff",
-        "coordinator"
-    ]).optional()
+    outlet_id: z.number().optional(),
+    staff_type: z.enum(["regular", "part_time", "full_time"]).optional(),
+    default_work_days: z.string().optional(),
+    hired_at: z.string().optional(),
+    is_active: z.boolean().optional()
 });
 
 module.exports = {

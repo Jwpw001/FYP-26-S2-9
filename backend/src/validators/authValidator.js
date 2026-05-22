@@ -4,7 +4,13 @@ const registerSchema = z.object({
     full_name: z.string().min(2, "Full name is required"),
     email: z.string().email("Invalid email format"),
     password: z.string().min(6, "Password must be at least 6 characters"),
-    role: z.enum(["manager", "staff", "coordinator"])
+    role: z.enum([
+    "system_admin",
+    "outlet_manager",
+    "krewby_coordinator",
+    "staff",
+    "krewby_worker"
+])
 });
 
 const loginSchema = z.object({
