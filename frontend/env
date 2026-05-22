@@ -1,0 +1,2 @@
+# Backend API URL — change this to your deployed backend URL when ready
+REACT_APP_API_URL=http://localhost:5000/api
