@@ -20,14 +20,28 @@ const {
 router.get(
     "/",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.STAFF, ROLES.COORDINATOR),
+    allowRoles(
+        ROLES.SYSTEM_ADMIN,
+        ROLES.OUTLET_MANAGER,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.KREWBY_CASUAL_WORKER
+    ),
     getAccount
 );
 
 router.patch(
     "/",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.STAFF, ROLES.COORDINATOR),
+    allowRoles(
+        ROLES.SYSTEM_ADMIN,
+        ROLES.OUTLET_MANAGER,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.KREWBY_CASUAL_WORKER
+    ),
     validate(updateAccountSchema),
     updateAccount
 );
@@ -35,7 +49,9 @@ router.patch(
 router.delete(
     "/",
     verifyToken,
-    allowRoles(ROLES.MANAGER),
+    allowRoles(
+        ROLES.SYSTEM_ADMIN
+    ),
     deleteAccount
 );
 

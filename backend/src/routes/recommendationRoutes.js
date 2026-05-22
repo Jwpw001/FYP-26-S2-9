@@ -23,21 +23,33 @@ const {
 router.get(
     "/",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.COORDINATOR),
+    allowRoles(
+        ROLES.SYSTEM_ADMIN,
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR
+    ),
     getRecommendations
 );
 
 router.get(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.COORDINATOR),
+    allowRoles(
+        ROLES.SYSTEM_ADMIN,
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR
+    ),
     getRecommendationById
 );
 
 router.post(
     "/",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.COORDINATOR),
+    allowRoles(
+        ROLES.SYSTEM_ADMIN,
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR
+    ),
     validate(createRecommendationSchema),
     createRecommendation
 );
@@ -45,7 +57,11 @@ router.post(
 router.patch(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.COORDINATOR),
+    allowRoles(
+        ROLES.SYSTEM_ADMIN,
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR
+    ),
     validate(updateRecommendationSchema),
     updateRecommendation
 );
@@ -53,7 +69,10 @@ router.patch(
 router.delete(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.MANAGER),
+    allowRoles(
+        ROLES.SYSTEM_ADMIN,
+        ROLES.OUTLET_MANAGER
+    ),
     deleteRecommendation
 );
 

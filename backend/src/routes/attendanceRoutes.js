@@ -23,21 +23,36 @@ const {
 router.get(
     "/",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.STAFF),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF
+    ),
     getAttendance
 );
 
 router.get(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.STAFF),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF
+    ),
     getAttendanceById
 );
 
 router.post(
     "/",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.STAFF),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF
+    ),
     validate(createAttendanceSchema),
     createAttendance
 );
@@ -45,7 +60,12 @@ router.post(
 router.patch(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.MANAGER, ROLES.STAFF),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF
+    ),
     validate(updateAttendanceSchema),
     updateAttendance
 );
@@ -53,7 +73,10 @@ router.patch(
 router.delete(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.MANAGER),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR
+    ),
     deleteAttendance
 );
 

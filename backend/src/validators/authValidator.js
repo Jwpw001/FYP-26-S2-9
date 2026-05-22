@@ -7,9 +7,10 @@ const registerSchema = z.object({
     role: z.enum([
     "system_admin",
     "outlet_manager",
+    "regular_staff",
+    "outlet_casual_staff",
     "krewby_coordinator",
-    "staff",
-    "krewby_worker"
+    "krewby_casual_worker"
 ])
 });
 

@@ -24,21 +24,36 @@ const {
 router.get(
     "/",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR, ROLES.STAFF),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.KREWBY_CASUAL_WORKER
+    ),
     getShifts
 );
 
 router.get(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR, ROLES.STAFF),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.KREWBY_CASUAL_WORKER
+    ),
     getShiftById
 );
 
 router.post(
     "/",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR
+    ),
     validate(createShiftSchema),
     createShift
 );
@@ -46,7 +61,10 @@ router.post(
 router.patch(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR
+    ),
     validate(updateShiftSchema),
     updateShift
 );
@@ -54,7 +72,10 @@ router.patch(
 router.delete(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR
+    ),
     deleteShift
 );
 

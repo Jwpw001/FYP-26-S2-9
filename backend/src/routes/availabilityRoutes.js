@@ -23,21 +23,39 @@ const {
 router.get(
     "/",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.STAFF, ROLES.KREWBY_COORDINATOR),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.KREWBY_CASUAL_WORKER
+    ),
     getAvailability
 );
 
 router.get(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.STAFF, ROLES.KREWBY_COORDINATOR),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.KREWBY_CASUAL_WORKER
+    ),
     getAvailabilityById
 );
 
 router.post(
     "/",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.STAFF, ROLES.KREWBY_COORDINATOR),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.KREWBY_CASUAL_WORKER
+    ),
     validate(createAvailabilitySchema),
     createAvailability
 );
@@ -45,7 +63,13 @@ router.post(
 router.patch(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.STAFF, ROLES.KREWBY_COORDINATOR),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.KREWBY_COORDINATOR,
+        ROLES.KREWBY_CASUAL_WORKER
+    ),
     validate(updateAvailabilitySchema),
     updateAvailability
 );
@@ -53,7 +77,10 @@ router.patch(
 router.delete(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR),
+    allowRoles(
+        ROLES.OUTLET_MANAGER,
+        ROLES.KREWBY_COORDINATOR
+    ),
     deleteAvailability
 );
 
