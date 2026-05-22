@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Layout
 import Sidebar from './components/Sidebar';
 import Topbar  from './components/Topbar';
 
-// Screens — original
+// Screens
 import Login           from './screens/Login';
 import Dashboard       from './screens/Dashboard';
 import Schedule        from './screens/Schedule';
@@ -16,8 +17,6 @@ import AIAssistant     from './screens/AIAssistant';
 import Reports         from './screens/Reports';
 import MySchedule      from './screens/MySchedule';
 import Availability    from './screens/Availability';
-
-// Screens — new
 import StaffProfile        from './screens/StaffProfile';
 import ShiftDetail         from './screens/ShiftDetail';
 import ClockIn             from './screens/ClockIn';
@@ -32,10 +31,17 @@ const ROLE_DEFAULT = {
   coordinator: 'krewby',
 };
 
-export default function App() {
+function AppShell() {
+  const { user, logout } = useAuth();
   const [loggedIn, setLoggedIn] = useState(false);
   const [role,     setRole]     = useState('manager');
   const [screen,   setScreen]   = useState('dashboard');
+
+  const handleLogin = (userRole) => {
+    setRole(userRole || 'manager');
+    setScreen(ROLE_DEFAULT[userRole] || 'dashboard');
+    setLoggedIn(true);
+  };
 
   const handleRoleSwitch = (newRole) => {
     setRole(newRole);
@@ -44,7 +50,7 @@ export default function App() {
 
   const handleNavigate = (screenId) => setScreen(screenId);
 
-  if (!loggedIn) return <Login onLogin={() => setLoggedIn(true)} />;
+  if (!loggedIn) return <Login onLogin={handleLogin} />;
 
   const renderScreen = () => {
     switch (screen) {
@@ -64,7 +70,7 @@ export default function App() {
       case 'notifications': return <Notifications      onNavigate={handleNavigate} />;
       case 'workerprofile': return <KrewbyWorkerProfile onBack={() => handleNavigate('krewby')} />;
       case 'settings':      return <Settings />;
-      case 'account':       return <AccountProfile />;
+      case 'account':       return <AccountProfile onLogout={() => { logout(); setLoggedIn(false); }} />;
       default:              return <Dashboard onNavigate={handleNavigate} />;
     }
   };
@@ -83,5 +89,13 @@ export default function App() {
         <div className="content">{renderScreen()}</div>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
   );
 }
