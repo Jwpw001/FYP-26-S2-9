@@ -13,7 +13,6 @@ const {
 } = require("../controllers/shiftController");
 
 const validate = require("../middleware/validateMiddleware");
-
 const verifyToken = require("../middleware/authMiddleware");
 const allowRoles = require("../middleware/roleMiddleware");
 
@@ -22,17 +21,24 @@ const {
     updateShiftSchema
 } = require("../validators/shiftValidator");
 
-router.get("/", getShifts);
+router.get(
+    "/",
+    verifyToken,
+    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR, ROLES.STAFF),
+    getShifts
+);
 
-router.get("/:id", getShiftById);
+router.get(
+    "/:id",
+    verifyToken,
+    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR, ROLES.STAFF),
+    getShiftById
+);
 
 router.post(
     "/",
     verifyToken,
-    allowRoles(
-    ROLES.MANAGER,
-    ROLES.COORDINATOR
-),
+    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR),
     validate(createShiftSchema),
     createShift
 );
@@ -40,7 +46,7 @@ router.post(
 router.patch(
     "/:id",
     verifyToken,
-    allowRoles("manager", "coordinator"),
+    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR),
     validate(updateShiftSchema),
     updateShift
 );
@@ -48,7 +54,7 @@ router.patch(
 router.delete(
     "/:id",
     verifyToken,
-    allowRoles("manager", "coordinator"),
+    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR),
     deleteShift
 );
 

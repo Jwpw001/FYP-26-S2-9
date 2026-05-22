@@ -57,45 +57,41 @@ model krewby_workers {
   rating             Decimal?            @default(5.00) @db.Decimal(3, 2)
   total_jobs         Int?                @default(0)
   is_active          Boolean?            @default(true)
-  created_at         DateTime?           @default(now()) @db.Timestamp(6)
   users              users               @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
   shift_assignments  shift_assignments[]
 }
 
 model notifications {
-  notification_id Int       @id @default(autoincrement())
+  notification_id Int     @id @default(autoincrement())
   recipient_id    Int
-  type            String    @db.VarChar(50)
-  title           String    @db.VarChar(200)
+  type            String  @db.VarChar(50)
+  title           String  @db.VarChar(200)
   message         String?
-  related_entity  String?   @db.VarChar(50)
+  related_entity  String? @db.VarChar(50)
   related_id      Int?
-  created_at      DateTime? @default(now()) @db.Timestamp(6)
-  users           users     @relation(fields: [recipient_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  users           users   @relation(fields: [recipient_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model outlets {
-  outlet_id  Int       @id @default(autoincrement())
-  name       String    @db.VarChar(100)
-  address    String?
-  created_at DateTime? @default(now()) @db.Timestamp(6)
-  reports    reports[]
-  shifts     shifts[]
-  staff      staff[]
+  outlet_id Int       @id @default(autoincrement())
+  name      String    @db.VarChar(100)
+  address   String?
+  reports   reports[]
+  shifts    shifts[]
+  staff     staff[]
 }
 
 model reports {
-  report_id    Int       @id @default(autoincrement())
+  report_id    Int      @id @default(autoincrement())
   outlet_id    Int
   generated_by Int
-  report_type  String    @db.VarChar(50)
-  period_start DateTime  @db.Date
-  period_end   DateTime  @db.Date
+  report_type  String   @db.VarChar(50)
+  period_start DateTime @db.Date
+  period_end   DateTime @db.Date
   parameters   Json?
   result_data  Json?
-  created_at   DateTime? @default(now()) @db.Timestamp(6)
-  users        users     @relation(fields: [generated_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
-  outlets      outlets   @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade, onUpdate: NoAction)
+  users        users    @relation(fields: [generated_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  outlets      outlets  @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -106,7 +102,6 @@ model shift_assignments {
   staff_id                                                        Int?
   krewby_worker_id                                                Int?
   status                                                          String          @default("assigned") @db.VarChar(20)
-  assigned_at                                                     DateTime?       @default(now()) @db.Timestamp(6)
   attendance                                                      attendance[]
   krewby_workers                                                  krewby_workers? @relation(fields: [krewby_worker_id], references: [krewby_worker_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sa_krewby_worker")
   shift_roles                                                     shift_roles     @relation(fields: [role_id], references: [role_id], onDelete: Cascade, onUpdate: NoAction)
@@ -123,7 +118,6 @@ model shift_roles {
   shift_id          Int
   role_name         String              @db.VarChar(100)
   skill_id          Int?
-  headcount         Int                 @default(1)
   filled_count      Int                 @default(0)
   shift_assignments shift_assignments[]
   shifts            shifts              @relation(fields: [shift_id], references: [shift_id], onDelete: Cascade, onUpdate: NoAction)
@@ -140,7 +134,6 @@ model shifts {
   end_time          DateTime            @db.Time(6)
   status            String              @default("draft") @db.VarChar(20)
   created_by        Int?
-  created_at        DateTime?           @default(now()) @db.Timestamp(6)
   shift_assignments shift_assignments[]
   shift_roles       shift_roles[]
   users             users?              @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
@@ -154,7 +147,6 @@ model skills {
   name        String        @unique @db.VarChar(100)
   description String?
   created_by  Int?
-  created_at  DateTime?     @default(now()) @db.Timestamp(6)
   shift_roles shift_roles[]
   users       users?        @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -168,7 +160,6 @@ model staff {
   default_work_days String?   @db.VarChar(7)
   hired_at          DateTime? @db.Date
   is_active         Boolean?  @default(true)
-  created_at        DateTime? @default(now()) @db.Timestamp(6)
   outlets           outlets   @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade, onUpdate: NoAction)
   users             users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 }
@@ -186,7 +177,6 @@ model swap_requests {
   responded_at                                                        DateTime?          @db.Timestamp(6)
   manager_id                                                          Int?
   manager_decided_at                                                  DateTime?          @db.Timestamp(6)
-  created_at                                                          DateTime?          @default(now()) @db.Timestamp(6)
   users                                                               users?             @relation(fields: [manager_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   shift_assignments_swap_requests_requester_assignToshift_assignments shift_assignments  @relation("swap_requests_requester_assignToshift_assignments", fields: [requester_assign], references: [assignment_id], onDelete: NoAction, onUpdate: NoAction)
   shift_assignments_swap_requests_target_assign_idToshift_assignments shift_assignments? @relation("swap_requests_target_assign_idToshift_assignments", fields: [target_assign_id], references: [assignment_id], onDelete: NoAction, onUpdate: NoAction)
@@ -199,9 +189,7 @@ model users {
   user_id        Int              @id @default(autoincrement())
   full_name      String           @db.VarChar(100)
   email          String           @unique @db.VarChar(100)
-  password       String           @db.VarChar(255)
   role           String           @db.VarChar(20)
-  created_at     DateTime?        @default(now()) @db.Timestamp(6)
   attendance     attendance[]
   availability   availability[]
   krewby_workers krewby_workers[]
