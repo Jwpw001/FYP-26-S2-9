@@ -1,87 +1,48 @@
-import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-// Layout
-import Sidebar from './components/Sidebar';
-import Topbar  from './components/Topbar';
+import Home from "./pages/Home";
+import Login from "./pages/Login";
 
-// Screens — original
-import Login           from './screens/Login';
-import Dashboard       from './screens/Dashboard';
-import Schedule        from './screens/Schedule';
-import SmartAssign     from './screens/SmartAssign';
-import StaffManagement from './screens/StaffManagement';
-import ApprovalQueue   from './screens/ApprovalQueue';
-import KrewbyRequests  from './screens/KrewbyRequests';
-import AIAssistant     from './screens/AIAssistant';
-import Reports         from './screens/Reports';
-import MySchedule      from './screens/MySchedule';
-import Availability    from './screens/Availability';
+function OutletManagerDashboard() {
+  return <h1>Outlet Manager Dashboard</h1>;
+}
 
-// Screens — new
-import StaffProfile        from './screens/StaffProfile';
-import ShiftDetail         from './screens/ShiftDetail';
-import ClockIn             from './screens/ClockIn';
-import Notifications       from './screens/Notifications';
-import KrewbyWorkerProfile from './screens/KrewbyWorkerProfile';
-import Settings            from './screens/Settings';
-import AccountProfile      from './screens/AccountProfile';
+function RegularStaffDashboard() {
+  return <h1>Regular Staff Dashboard</h1>;
+}
 
-const ROLE_DEFAULT = {
-  manager:     'dashboard',
-  staff:       'myshift',
-  coordinator: 'krewby',
-};
+function CasualStaffDashboard() {
+  return <h1>Outlet Casual Staff Dashboard</h1>;
+}
 
-export default function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [role,     setRole]     = useState('manager');
-  const [screen,   setScreen]   = useState('dashboard');
+function CoordinatorDashboard() {
+  return <h1>Krewby Coordinator Dashboard</h1>;
+}
 
-  const handleRoleSwitch = (newRole) => {
-    setRole(newRole);
-    setScreen(ROLE_DEFAULT[newRole]);
-  };
+function WorkerDashboard() {
+  return <h1>Krewby Worker Dashboard</h1>;
+}
 
-  const handleNavigate = (screenId) => setScreen(screenId);
+function AdminDashboard() {
+  return <h1>System Admin Dashboard</h1>;
+}
 
-  if (!loggedIn) return <Login onLogin={() => setLoggedIn(true)} />;
-
-  const renderScreen = () => {
-    switch (screen) {
-      case 'dashboard':     return <Dashboard       onNavigate={handleNavigate} />;
-      case 'schedule':      return <Schedule        onNavigate={handleNavigate} />;
-      case 'recommend':     return <SmartAssign     onNavigate={handleNavigate} />;
-      case 'staff':         return <StaffManagement onNavigate={handleNavigate} />;
-      case 'approval':      return <ApprovalQueue />;
-      case 'krewby':        return <KrewbyRequests  onNavigate={handleNavigate} />;
-      case 'ai':            return <AIAssistant />;
-      case 'reports':       return <Reports />;
-      case 'myshift':       return <MySchedule />;
-      case 'availability':  return <Availability />;
-      case 'staffprofile':  return <StaffProfile      onBack={() => handleNavigate('staff')} />;
-      case 'shiftdetail':   return <ShiftDetail        onBack={() => handleNavigate('schedule')} onSmartAssign={() => handleNavigate('recommend')} />;
-      case 'clockin':       return <ClockIn />;
-      case 'notifications': return <Notifications      onNavigate={handleNavigate} />;
-      case 'workerprofile': return <KrewbyWorkerProfile onBack={() => handleNavigate('krewby')} />;
-      case 'settings':      return <Settings />;
-      case 'account':       return <AccountProfile />;
-      default:              return <Dashboard onNavigate={handleNavigate} />;
-    }
-  };
-
+function App() {
   return (
-    <div className="app">
-      <Sidebar role={role} screen={screen} onNavigate={handleNavigate} />
-      <div className="main">
-        <Topbar
-          role={role}
-          screen={screen}
-          onRoleSwitch={handleRoleSwitch}
-          onNotifications={() => handleNavigate('notifications')}
-          onAccount={() => handleNavigate('account')}
-        />
-        <div className="content">{renderScreen()}</div>
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+
+        <Route path="/system-admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/outlet-manager/dashboard" element={<OutletManagerDashboard />} />
+        <Route path="/regular-staff/dashboard" element={<RegularStaffDashboard />} />
+        <Route path="/outlet-casual-staff/dashboard" element={<CasualStaffDashboard />} />
+        <Route path="/krewby-coordinator/dashboard" element={<CoordinatorDashboard />} />
+        <Route path="/krewby-worker/dashboard" element={<WorkerDashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
+
+export default App;
