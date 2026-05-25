@@ -14,9 +14,12 @@ const createShiftSchema = z.object({
     location: z.string().min(2),
 
     role: z.enum([
-        "manager",
-        "staff",
-        "coordinator"
+        "system_admin",
+        "outlet_manager",
+        "regular_staff",
+        "outlet_casual_staff",
+        "krewby_coordinator",
+        "krewby_casual_worker"
     ])
 });
 
@@ -34,9 +37,12 @@ const updateShiftSchema = z.object({
     location: z.string().optional(),
 
     role: z.enum([
-        "manager",
-        "staff",
-        "coordinator"
+        "system_admin",
+        "outlet_manager",
+        "regular_staff",
+        "outlet_casual_staff",
+        "krewby_coordinator",
+        "krewby_casual_worker"
     ]).optional()
 });
 

@@ -16,7 +16,6 @@ model attendance {
   status            String            @default("pending") @db.VarChar(20)
   marked_by         Int
   marked_at         DateTime?         @default(now()) @db.Timestamp(6)
-  created_at        DateTime?         @default(now()) @db.Timestamp(6)
   shift_assignments shift_assignments @relation(fields: [assignment_id], references: [assignment_id], onDelete: Cascade, onUpdate: NoAction)
   users             users             @relation(fields: [marked_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -32,7 +31,6 @@ model availability {
   status      String    @default("pending") @db.VarChar(20)
   reviewed_by Int?
   reviewed_at DateTime? @db.Timestamp(6)
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
   users       users?    @relation(fields: [reviewed_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
@@ -44,7 +42,6 @@ model casual_availability {
   day_of_week     Int       @db.SmallInt
   available_from  DateTime? @db.Time(6)
   available_to    DateTime? @db.Time(6)
-  created_at      DateTime? @default(now()) @db.Timestamp(6)
 
   @@unique([staff_id, week_start_date, day_of_week])
 }
@@ -102,6 +99,7 @@ model shift_assignments {
   staff_id                                                        Int?
   krewby_worker_id                                                Int?
   status                                                          String          @default("assigned") @db.VarChar(20)
+  assigned_at                                                     DateTime?       @default(now()) @db.Timestamp(6)
   attendance                                                      attendance[]
   krewby_workers                                                  krewby_workers? @relation(fields: [krewby_worker_id], references: [krewby_worker_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sa_krewby_worker")
   shift_roles                                                     shift_roles     @relation(fields: [role_id], references: [role_id], onDelete: Cascade, onUpdate: NoAction)
@@ -118,7 +116,6 @@ model shift_roles {
   shift_id          Int
   role_name         String              @db.VarChar(100)
   skill_id          Int?
-  filled_count      Int                 @default(0)
   shift_assignments shift_assignments[]
   shifts            shifts              @relation(fields: [shift_id], references: [shift_id], onDelete: Cascade, onUpdate: NoAction)
   skills            skills?             @relation(fields: [skill_id], references: [skill_id], onDelete: NoAction, onUpdate: NoAction)
@@ -189,7 +186,7 @@ model users {
   user_id        Int              @id @default(autoincrement())
   full_name      String           @db.VarChar(100)
   email          String           @unique @db.VarChar(100)
-  role           String           @db.VarChar(20)
+  role           String           @db.VarChar(30)
   attendance     attendance[]
   availability   availability[]
   krewby_workers krewby_workers[]

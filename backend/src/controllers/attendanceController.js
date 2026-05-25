@@ -1,51 +1,141 @@
-const getAttendance = (req, res) => {
+const prisma = require("../config/prisma");
 
-    res.json({
-        success: true,
-        message: "Get all attendance"
-    });
+const getAttendance = async (req, res) => {
+    try {
+        const attendance = await prisma.attendance.findMany({
+            orderBy: {
+                attendance_id: "asc"
+            }
+        });
 
+        res.json({
+            success: true,
+            attendance
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 };
 
-const getAttendanceById = (req, res) => {
+const getAttendanceById = async (req, res) => {
+    try {
+        const attendanceId = Number(req.params.id);
 
-    res.json({
-        success: true,
-        message: "Get attendance by ID",
-        attendanceId: req.params.id
-    });
+        const attendance = await prisma.attendance.findUnique({
+            where: {
+                attendance_id: attendanceId
+            }
+        });
 
+        if (!attendance) {
+            return res.status(404).json({
+                success: false,
+                message: "Attendance record not found"
+            });
+        }
+
+        res.json({
+            success: true,
+            attendance
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 };
 
-const createAttendance = (req, res) => {
+const createAttendance = async (req, res) => {
+    try {
+        const {
+            user_id,
+            shift_id,
+            check_in_time,
+            check_out_time,
+            status
+        } = req.body;
 
-    res.status(201).json({
-        success: true,
-        message: "Create attendance",
-        data: req.body
-    });
+        const attendance = await prisma.attendance.create({
+            data: {
+                user_id,
+                shift_id,
+                check_in_time: new Date(check_in_time),
+                check_out_time: check_out_time ? new Date(check_out_time) : null,
+                status
+            }
+        });
 
+        res.status(201).json({
+            success: true,
+            message: "Attendance created successfully",
+            attendance
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 };
 
-const updateAttendance = (req, res) => {
+const updateAttendance = async (req, res) => {
+    try {
+        const attendanceId = Number(req.params.id);
 
-    res.json({
-        success: true,
-        message: "Update attendance",
-        attendanceId: req.params.id,
-        data: req.body
-    });
+        const {
+            check_in_time,
+            check_out_time,
+            status
+        } = req.body;
 
+        const attendance = await prisma.attendance.update({
+            where: {
+                attendance_id: attendanceId
+            },
+            data: {
+                check_in_time: check_in_time ? new Date(check_in_time) : undefined,
+                check_out_time: check_out_time ? new Date(check_out_time) : undefined,
+                status
+            }
+        });
+
+        res.json({
+            success: true,
+            message: "Attendance updated successfully",
+            attendance
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 };
 
-const deleteAttendance = (req, res) => {
+const deleteAttendance = async (req, res) => {
+    try {
+        const attendanceId = Number(req.params.id);
 
-    res.json({
-        success: true,
-        message: "Delete attendance",
-        attendanceId: req.params.id
-    });
+        await prisma.attendance.delete({
+            where: {
+                attendance_id: attendanceId
+            }
+        });
 
+        res.json({
+            success: true,
+            message: "Attendance deleted successfully"
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 };
 
 module.exports = {
