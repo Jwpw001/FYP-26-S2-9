@@ -1,31 +1,22 @@
 const { z } = require("zod");
 
 const createAvailabilitySchema = z.object({
-    user_id: z.number(),
-
-    available_date: z.string(),
-
-    start_time: z.string(),
-
-    end_time: z.string(),
-
-    status: z.enum([
-        "available",
-        "unavailable"
-    ])
+    staff_id: z.number(),
+    leave_type: z.string().min(2, "Leave type is required"),
+    start_date: z.string(),
+    end_date: z.string(),
+    reason: z.string().optional(),
+    status: z.enum(["pending", "approved", "rejected"])
 });
 
 const updateAvailabilitySchema = z.object({
-    available_date: z.string().optional(),
-
-    start_time: z.string().optional(),
-
-    end_time: z.string().optional(),
-
-    status: z.enum([
-        "available",
-        "unavailable"
-    ]).optional()
+    leave_type: z.string().min(2).optional(),
+    start_date: z.string().optional(),
+    end_date: z.string().optional(),
+    reason: z.string().optional(),
+    status: z.enum(["pending", "approved", "rejected"]).optional(),
+    reviewed_by: z.number().optional(),
+    reviewed_at: z.string().optional()
 });
 
 module.exports = {
