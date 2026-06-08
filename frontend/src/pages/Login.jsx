@@ -4,12 +4,12 @@ import { supabase } from "../lib/supabaseClient";
 import { setUser, getUser } from "../utils/auth";
 
 const ROLE_ROUTES = {
-  SystemAdmin: "/system-admin/dashboard",
-  OutletManager: "/outlet-manager/dashboard",
-  RegularStaff: "/regular-staff/dashboard",
-  OutletCasual_staff: "/outlet-casual-staff/dashboard",
-  KrewbyCoordinator: "/krewby-coordinator/dashboard",
-  KrewbyCasual_worker: "/krewby-worker/dashboard",
+  system_admin: "/system-admin/dashboard",
+  outlet_manager: "/outlet-manager/dashboard",
+  regular_staff: "/regular-staff/dashboard",
+  outlet_casual_staff: "/outlet-casual-staff/dashboard",
+  krewby_Coordinator: "/krewby-coordinator/dashboard",
+  krewby_casual_worker: "/krewby-worker/dashboard",
 };
 
 export default function Login() {
