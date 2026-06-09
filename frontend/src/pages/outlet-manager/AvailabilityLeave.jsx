@@ -29,8 +29,8 @@ export default function AvailabilityLeave() {
         const { data: staffRows } = await supabase
           .from("staff").select("staff_id, user_id").eq("outlet_id", oid);
 
-        const userIds = (staffRows || []).map(s => s.user_id);
-        if (userIds.length === 0) { setLoading(false); return; }
+        const staffIds = (staffRows || []).map(s => s.staff_id);
+        if (staffIds.length === 0) { setLoading(false); return; }
 
         const { data: reqs } = await supabase
           .from("availability")
@@ -39,7 +39,7 @@ export default function AvailabilityLeave() {
             reason, status, reviewed_at,
             users:staff_id ( user_id, full_name, email )
           `)
-          .in("staff_id", userIds)
+          .in("staff_id", staffIds)
           .order("start_date", { ascending: false });
 
         if (!cancelled) setRequests(reqs || []);
