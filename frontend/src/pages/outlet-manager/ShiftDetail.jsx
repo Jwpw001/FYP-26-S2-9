@@ -354,11 +354,11 @@ export default function ShiftDetail() {
                   {(role.shift_assignments || []).map(a => (
                     <div key={a.assignment_id} style={s.assignedRow}>
                       <div style={s.assignedAvatar}>
-                        {a.users?.full_name?.[0]?.toUpperCase() || "?"}
+                        {a.staff?.users?.full_name?.[0]?.toUpperCase() || "?"}
                       </div>
                       <div style={s.assignedInfo}>
-                        <p style={s.assignedName}>{a.users?.full_name || "Unknown"}</p>
-                        <p style={s.assignedEmail}>{a.users?.email}</p>
+                        <p style={s.assignedName}>{a.staff?.users?.full_name || "Unknown"}</p>
+                        <p style={s.assignedEmail}>{a.staff?.users?.email}</p>
                       </div>
                       <div style={s.assignedRight}>
                         {a.acknowledged && (
