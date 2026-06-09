@@ -183,17 +183,20 @@ model swap_requests {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model users {
-  user_id        Int              @id @default(autoincrement())
-  full_name      String           @db.VarChar(100)
-  email          String           @unique @db.VarChar(100)
-  role           String           @db.VarChar(30)
-  attendance     attendance[]
-  availability   availability[]
+  user_id       Int      @id @default(autoincrement())
+  username      String   @db.VarChar(100)
+  email         String   @unique @db.VarChar(100)
+  role          String   @db.VarChar(30)
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+
+  attendance    attendance[]
+  availability  availability[]
   krewby_workers krewby_workers[]
-  notifications  notifications[]
-  reports        reports[]
-  shifts         shifts[]
-  skills         skills[]
-  staff          staff[]
-  swap_requests  swap_requests[]
+  notifications notifications[]
+  reports       reports[]
+  shifts        shifts[]
+  skills        skills[]
+  staff         staff[]
+  swap_requests swap_requests[]
 }

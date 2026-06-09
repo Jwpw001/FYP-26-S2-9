@@ -34,49 +34,46 @@ export default function Login() {
   }
 
   async function handleLogin(e) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    try {
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-        });
+  try {
+    const response = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      }),
+    });
 
-      if (authError) {
-        setError("Invalid email or password. Please try again.");
-        return;
-      }
+    const data = await response.json();
 
-      const email = authData.user.email?.toLowerCase().trim();
-
-      const { data: profile, error: profileError } = await supabase
-        .from("users")
-        .select("*")
-        .ilike("email", email)
-        .single();
-
-      if (profileError || !profile) {
-        setError("Account not found. Please contact your administrator.");
-        return;
-      }
-
-      const route = ROLE_ROUTES[profile.role];
-      if (!route) {
-        setError(`Unrecognised role: "${profile.role}". Contact support.`);
-        return;
-      }
-
-      setUser(profile);
-      navigate(route, { replace: true });
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
+    if (!response.ok || !data.success) {
+      setError(data.message || "Invalid email or password.");
+      return;
     }
+
+    const route = ROLE_ROUTES[data.user.role];
+
+    if (!route) {
+      setError(`Unrecognised role: "${data.user.role}". Contact support.`);
+      return;
+    }
+
+    setUser(data.user);
+    localStorage.setItem("token", data.token);
+
+    navigate(route, { replace: true });
+  } catch (error) {
+    setError("Cannot connect to backend server.");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <main style={styles.page}>
