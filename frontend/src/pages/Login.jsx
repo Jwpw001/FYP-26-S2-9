@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { setUser, getUser } from "../utils/auth";
+import { supabase } from "../lib/supabaseClient";
 
 const ROLE_ROUTES = {
   system_admin: "/system-admin/dashboard",
@@ -32,46 +33,56 @@ export default function Login() {
   }
 
   async function handleLogin(e) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-        }),
+  try {
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setError(data.message || "Invalid email or password.");
-        return;
-      }
-
-      const route = ROLE_ROUTES[data.user.role];
-
-      if (!route) {
-        setError(`Unrecognised role: "${data.user.role}". Contact support.`);
-        return;
-      }
-
-      setUser(data.user);
-      localStorage.setItem("token", data.token);
-
-      navigate(route, { replace: true });
-    } catch (error) {
-      setError("Cannot connect to backend server.");
-    } finally {
-      setLoading(false);
+    if (authError) {
+      setError("Invalid email or password. Please try again.");
+      return;
     }
+
+    const email = authData.user.email?.toLowerCase().trim();
+
+    const response = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      setError(data.message || "Account not found. Please contact your administrator.");
+      return;
+    }
+
+    const route = ROLE_ROUTES[data.user.role];
+
+    if (!route) {
+      setError(`Unrecognised role: "${data.user.role}". Contact support.`);
+      return;
+    }
+
+    setUser(data.user);
+    localStorage.setItem("token", data.token);
+
+    navigate(route, { replace: true });
+  } catch (error) {
+    setError("Something went wrong. Please try again.");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <main style={styles.page}>
