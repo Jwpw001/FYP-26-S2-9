@@ -33,34 +33,34 @@ export default function ShiftDetail() {
     async function load() {
       setLoading(true);
       try {
+        // 1. Fetch shift
         const { data: shiftData } = await supabase
           .from("shifts")
-          .select(`
-            shift_id, title, shift_date, start_time, end_time, status, outlet_id,
-            outlets ( name, address )
-          `)
+          .select(`shift_id, title, shift_date, start_time, end_time, status, outlet_id, outlets ( name, address )`)
           .eq("shift_id", id).single();
-
         if (!shiftData || cancelled) return;
         setShift(shiftData);
 
+        // 2. Fetch roles
         const { data: roleData } = await supabase
           .from("shift_roles")
-          .select(`
-            role_id, role_name, skill_id, headcount,
-            skills ( name ),
-            shift_assignments (
-              assignment_id, staff_id, status, acknowledged,
-              users:staff_id ( user_id, full_name, email )
-            )
-          `)
+          .select(`role_id, role_name, skill_id, headcount, skills ( name )`)
+          .eq("shift_id", id);
+
+        // 3. Fetch assignments separately with staff -> users
+        const { data: assignData } = await supabase
+          .from("shift_assignments")
+          .select(`assignment_id, role_id, staff_id, status, acknowledged, staff:staff_id ( staff_id, users:user_id ( full_name, email ) )`)
           .eq("shift_id", id);
 
         if (!cancelled) {
-          setRoles(roleData || []);
-          const allAssignments = (roleData || [])
-            .flatMap(r => (r.shift_assignments || []).map(a => ({ ...a, role_id: r.role_id })));
-          setAssignments(allAssignments);
+          // Merge assignments into roles
+          const rolesWithAssignments = (roleData || []).map(role => ({
+            ...role,
+            shift_assignments: (assignData || []).filter(a => a.role_id === role.role_id),
+          }));
+          setRoles(rolesWithAssignments);
+          setAssignments(assignData || []);
         }
       } catch (err) {
         console.error(err);
@@ -153,17 +153,20 @@ export default function ShiftDetail() {
       // Refresh
       const { data: roleData } = await supabase
         .from("shift_roles")
-        .select(`
-          role_id, role_name, skill_id, headcount,
-          skills ( name ),
-          shift_assignments (
-            assignment_id, staff_id, status, acknowledged,
-            users:staff_id ( user_id, full_name, email )
-          )
-        `)
+        .select(`role_id, role_name, skill_id, headcount, skills ( name )`)
         .eq("shift_id", id);
 
-      setRoles(roleData || []);
+      const { data: assignData } = await supabase
+        .from("shift_assignments")
+        .select(`assignment_id, role_id, staff_id, status, acknowledged, staff:staff_id ( staff_id, users:user_id ( full_name, email ) )`)
+        .eq("shift_id", id);
+
+      const rolesWithAssignments = (roleData || []).map(role => ({
+        ...role,
+        shift_assignments: (assignData || []).filter(a => a.role_id === role.role_id),
+      }));
+      setRoles(rolesWithAssignments);
+      setAssignments(assignData || []);
       setActiveRole(null);
       setRecommendations([]);
       setSuccess("Staff assigned successfully.");
@@ -354,11 +357,11 @@ export default function ShiftDetail() {
                   {(role.shift_assignments || []).map(a => (
                     <div key={a.assignment_id} style={s.assignedRow}>
                       <div style={s.assignedAvatar}>
-                        {a.staff?.users?.full_name?.[0]?.toUpperCase() || "?"}
+                        {a.users?.full_name?.[0]?.toUpperCase() || "?"}
                       </div>
                       <div style={s.assignedInfo}>
-                        <p style={s.assignedName}>{a.staff?.users?.full_name || "Unknown"}</p>
-                        <p style={s.assignedEmail}>{a.staff?.users?.email}</p>
+                        <p style={s.assignedName}>{a.users?.full_name || "Unknown"}</p>
+                        <p style={s.assignedEmail}>{a.users?.email}</p>
                       </div>
                       <div style={s.assignedRight}>
                         {a.acknowledged && (
