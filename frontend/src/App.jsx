@@ -10,6 +10,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ManagerDashboard from "./pages/outlet-manager/Dashboard";
 import StaffList        from "./pages/outlet-manager/StaffList";
 import StaffProfile     from "./pages/outlet-manager/StaffProfile";
+import ShiftsList       from "./pages/outlet-manager/ShiftsList";
+import CreateShift      from "./pages/outlet-manager/CreateShift";
+import ShiftDetail      from "./pages/outlet-manager/ShiftDetail";
 
 // System Admin
 import AdminDashboard from "./pages/system-admin/Dashboard";
@@ -79,17 +82,11 @@ function App() {
         <Route path="/outlet-manager/staff/:id" element={
           <ProtectedRoute allowedRoles={["outlet_manager"]}><StaffProfile /></ProtectedRoute>} />
         <Route path="/outlet-manager/shifts" element={
-          <ProtectedRoute allowedRoles={["outlet_manager"]}>
-            <ComingSoon title="Shifts" layout={props => <ManagerDashboard {...props} />} />
-          </ProtectedRoute>} />
+          <ProtectedRoute allowedRoles={["outlet_manager"]}><ShiftsList /></ProtectedRoute>} />
         <Route path="/outlet-manager/shifts/new" element={
-          <ProtectedRoute allowedRoles={["outlet_manager"]}>
-            <ComingSoon title="Create Shift" layout={props => <div style={{padding:40}}>{props.children}</div>} />
-          </ProtectedRoute>} />
+          <ProtectedRoute allowedRoles={["outlet_manager"]}><CreateShift /></ProtectedRoute>} />
         <Route path="/outlet-manager/shifts/:id" element={
-          <ProtectedRoute allowedRoles={["outlet_manager"]}>
-            <ComingSoon title="Shift Detail" layout={props => <div style={{padding:40}}>{props.children}</div>} />
-          </ProtectedRoute>} />
+          <ProtectedRoute allowedRoles={["outlet_manager"]}><ShiftDetail /></ProtectedRoute>} />
         <Route path="/outlet-manager/availability" element={
           <ProtectedRoute allowedRoles={["outlet_manager"]}>
             <ComingSoon title="Availability & Leave" layout={props => <div style={{padding:40}}>{props.children}</div>} />
