@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
 import { setUser, getUser } from "../utils/auth";
 
 const ROLE_ROUTES = {
@@ -20,7 +19,6 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Redirect already-logged-in users
   useEffect(() => {
     const user = getUser();
     if (user && ROLE_ROUTES[user.role]) {
@@ -39,40 +37,37 @@ export default function Login() {
     setError("");
 
     try {
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           email: form.email.trim().toLowerCase(),
           password: form.password,
-        });
+        }),
+      });
 
-      if (authError) {
-        setError("Invalid email or password. Please try again.");
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.message || "Invalid email or password.");
         return;
       }
 
-      const email = authData.user.email?.toLowerCase().trim();
+      const route = ROLE_ROUTES[data.user.role];
 
-      const { data: profile, error: profileError } = await supabase
-        .from("users")
-        .select("*")
-        .ilike("email", email)
-        .single();
-
-      if (profileError || !profile) {
-        setError("Account not found. Please contact your administrator.");
-        return;
-      }
-
-      const route = ROLE_ROUTES[profile.role];
       if (!route) {
-        setError(`Unrecognised role: "${profile.role}". Contact support.`);
+        setError(`Unrecognised role: "${data.user.role}". Contact support.`);
         return;
       }
 
-      setUser(profile);
+      setUser(data.user);
+      localStorage.setItem("token", data.token);
+
       navigate(route, { replace: true });
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (error) {
+      setError("Cannot connect to backend server.");
     } finally {
       setLoading(false);
     }
@@ -80,7 +75,6 @@ export default function Login() {
 
   return (
     <main style={styles.page}>
-      {/* ── Left panel ───────────────────────────────────── */}
       <section style={styles.left} aria-hidden="true">
         <div style={styles.leftInner}>
           <Link to="/" style={styles.logoLink}>
@@ -108,7 +102,6 @@ export default function Login() {
         </div>
       </section>
 
-      {/* ── Right panel ──────────────────────────────────── */}
       <section style={styles.right}>
         <form
           style={styles.card}
@@ -116,7 +109,6 @@ export default function Login() {
           noValidate
           aria-label="Login form"
         >
-          {/* Mobile logo — only shown below 768px via inline media query workaround */}
           <div style={styles.mobileLogo}>
             <Link to="/" style={styles.logoLink}>
               <div style={{ ...styles.logoBox, ...styles.logoBoxDark }}>K</div>
@@ -127,7 +119,6 @@ export default function Login() {
           <h2 style={styles.cardTitle}>Welcome back</h2>
           <p style={styles.cardSub}>Sign in to your account to continue.</p>
 
-          {/* Error banner */}
           {error && (
             <div style={styles.error} role="alert">
               <span style={styles.errorIcon}>⚠</span>
@@ -135,7 +126,6 @@ export default function Login() {
             </div>
           )}
 
-          {/* Email */}
           <label htmlFor="email" style={styles.label}>
             Email address
           </label>
@@ -152,7 +142,6 @@ export default function Login() {
             disabled={loading}
           />
 
-          {/* Password */}
           <label htmlFor="password" style={styles.label}>
             Password
           </label>
@@ -179,14 +168,12 @@ export default function Login() {
             </button>
           </div>
 
-          {/* Forgot password */}
           <div style={styles.forgotRow}>
             <Link to="/forgot-password" style={styles.forgotLink}>
               Forgot password?
             </Link>
           </div>
 
-          {/* Submit */}
           <button
             style={{
               ...styles.button,
@@ -194,14 +181,7 @@ export default function Login() {
             }}
             disabled={loading}
           >
-            {loading ? (
-              <span style={styles.spinnerRow}>
-                <span style={styles.spinner} />
-                Signing in…
-              </span>
-            ) : (
-              "Sign in"
-            )}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
       </section>
@@ -217,8 +197,6 @@ const styles = {
     background: "#F7F6F3",
     color: "#1C1B18",
   },
-
-  /* Left */
   left: {
     background: "#1C1B18",
     color: "#FFFFFF",
@@ -226,7 +204,6 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     boxSizing: "border-box",
-    "@media(max-width:768px)": { display: "none" },
   },
   leftInner: {
     display: "flex",
@@ -292,8 +269,6 @@ const styles = {
     fontSize: "12px",
     color: "rgba(255,255,255,0.35)",
   },
-
-  /* Right */
   right: {
     display: "flex",
     alignItems: "center",
@@ -302,8 +277,6 @@ const styles = {
     boxSizing: "border-box",
     background: "#F7F6F3",
   },
-
-  /* Card */
   card: {
     width: "100%",
     maxWidth: "400px",
@@ -335,8 +308,6 @@ const styles = {
     marginBottom: "24px",
     lineHeight: "1.5",
   },
-
-  /* Error */
   error: {
     display: "flex",
     alignItems: "flex-start",
@@ -355,8 +326,6 @@ const styles = {
     fontSize: "14px",
     lineHeight: "1.5",
   },
-
-  /* Form */
   label: {
     display: "block",
     fontSize: "13px",
@@ -376,10 +345,7 @@ const styles = {
     color: "#1C1B18",
     boxSizing: "border-box",
     outline: "none",
-    transition: "border-color 0.15s",
   },
-
-  /* Password with toggle */
   passwordWrapper: {
     position: "relative",
     display: "flex",
@@ -407,10 +373,7 @@ const styles = {
     color: "#7A7870",
     cursor: "pointer",
     padding: "4px",
-    userSelect: "none",
   },
-
-  /* Forgot */
   forgotRow: {
     display: "flex",
     justifyContent: "flex-end",
@@ -422,8 +385,6 @@ const styles = {
     color: "#7A7870",
     textDecoration: "none",
   },
-
-  /* Submit */
   button: {
     display: "block",
     width: "100%",
@@ -442,20 +403,5 @@ const styles = {
   buttonDisabled: {
     opacity: 0.65,
     cursor: "not-allowed",
-  },
-  spinnerRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-  },
-  spinner: {
-    display: "inline-block",
-    width: "14px",
-    height: "14px",
-    border: "2px solid rgba(255,255,255,0.3)",
-    borderTopColor: "#FFFFFF",
-    borderRadius: "50%",
-    animation: "spin 0.7s linear infinite",
   },
 };
