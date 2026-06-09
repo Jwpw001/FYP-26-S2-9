@@ -50,7 +50,7 @@ export default function ShiftDetail() {
         // 3. Fetch assignments separately with staff -> users
         const { data: assignData } = await supabase
           .from("shift_assignments")
-          .select(`assignment_id, role_id, staff_id, status, acknowledged, staff:staff_id ( staff_id, users:user_id ( full_name, email ) )`)
+          .select(`assignment_id, role_id, staff_id, status, acknowledged, staff!shift_assignments_staff_id_fkey ( staff_id, users!staff_user_id_fkey ( full_name, email ) )`)
           .eq("shift_id", id);
 
         if (!cancelled) {
@@ -158,7 +158,7 @@ export default function ShiftDetail() {
 
       const { data: assignData } = await supabase
         .from("shift_assignments")
-        .select(`assignment_id, role_id, staff_id, status, acknowledged, staff:staff_id ( staff_id, users:user_id ( full_name, email ) )`)
+        .select(`assignment_id, role_id, staff_id, status, acknowledged, staff!shift_assignments_staff_id_fkey ( staff_id, users!staff_user_id_fkey ( full_name, email ) )`)
         .eq("shift_id", id);
 
       const rolesWithAssignments = (roleData || []).map(role => ({
