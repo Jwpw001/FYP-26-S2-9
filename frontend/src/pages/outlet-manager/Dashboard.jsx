@@ -18,7 +18,7 @@ export default function ManagerDashboard() {
       try {
         const [shiftsRes, staffRes, leaveRes] = await Promise.all([
           api.get("/api/shifts"),
-          api.get("/api/staff"),
+          api.get("/api/staff?is_active=true"),
           api.get("/api/availability"),
         ]);
         if (cancelled) return;
@@ -28,7 +28,7 @@ export default function ManagerDashboard() {
         const pendingLeave = (leaveRes.availability || leaveRes.availability || leaveRes.data || []).filter(r => r.status === "pending").length;
         setStats({
           upcomingShifts: upcoming.length,
-          totalStaff: (staffRes.staff || staffRes.staff || staffRes.data || []).length,
+          totalStaff: (staffRes.staff || staffRes.data || []).filter(s => s.is_active).length,
           pendingLeave,
           pendingSwaps: 0,
         });
