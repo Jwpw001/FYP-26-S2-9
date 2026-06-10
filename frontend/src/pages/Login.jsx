@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { api } from "../lib/api";
 import { setUser, getUser } from "../utils/auth";
 
 const ROLE_ROUTES = {
@@ -39,29 +39,12 @@ export default function Login() {
     setError("");
 
     try {
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-        });
+      const response = await api.post('/api/login', {
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
 
-      if (authError) {
-        setError("Invalid email or password. Please try again.");
-        return;
-      }
-
-      const email = authData.user.email?.toLowerCase().trim();
-
-      const { data: profile, error: profileError } = await supabase
-        .from("users")
-        .select("*")
-        .ilike("email", email)
-        .single();
-
-      if (profileError || !profile) {
-        setError("Account not found. Please contact your administrator.");
-        return;
-      }
+      const profile = response.data;
 
       const route = ROLE_ROUTES[profile.role];
       if (!route) {
@@ -71,8 +54,12 @@ export default function Login() {
 
       setUser(profile);
       navigate(route, { replace: true });
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

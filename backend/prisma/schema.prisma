@@ -8,6 +8,27 @@ datasource db {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  user_id         Int               @id @default(autoincrement())
+  username        String            @db.VarChar(100)
+  email           String            @unique @db.VarChar(100)
+  role            String            @db.VarChar(30)
+  is_active       Boolean           @default(true)
+  created_at      DateTime          @default(now()) @db.Timestamp(6)
+  full_name       String?           @db.VarChar(100)
+  attendance      attendance[]
+  availability    availability[]
+  krewby_workers  krewby_workers[]
+  notifications   notifications[]
+  reports         reports[]
+  shifts          shifts[]
+  skills          skills[]
+  staff           staff[]
+  swap_requests   swap_requests[]
+  user_skill_tags user_skill_tags[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model attendance {
   attendance_id     Int               @id @default(autoincrement())
   assignment_id     Int
@@ -31,7 +52,8 @@ model availability {
   status      String    @default("pending") @db.VarChar(20)
   reviewed_by Int?
   reviewed_at DateTime? @db.Timestamp(6)
-  users       users?    @relation(fields: [reviewed_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  users       users?    @relation(fields: [reviewed_by], references: [user_id], onUpdate: NoAction)
+  staff       staff     @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -46,7 +68,6 @@ model casual_availability {
   @@unique([staff_id, week_start_date, day_of_week])
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model krewby_workers {
   krewby_worker_id   Int                 @id @default(autoincrement())
   user_id            Int
@@ -59,14 +80,16 @@ model krewby_workers {
 }
 
 model notifications {
-  notification_id Int     @id @default(autoincrement())
+  notification_id Int       @id @default(autoincrement())
   recipient_id    Int
-  type            String  @db.VarChar(50)
-  title           String  @db.VarChar(200)
+  type            String    @db.VarChar(50)
+  title           String    @db.VarChar(200)
   message         String?
-  related_entity  String? @db.VarChar(50)
+  related_entity  String?   @db.VarChar(50)
   related_id      Int?
-  users           users   @relation(fields: [recipient_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  is_read         Boolean?  @default(false)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  users           users     @relation(fields: [recipient_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model outlets {
@@ -99,11 +122,13 @@ model shift_assignments {
   staff_id                                                        Int?
   krewby_worker_id                                                Int?
   status                                                          String          @default("assigned") @db.VarChar(20)
+  acknowledged                                                    Boolean?        @default(false)
   assigned_at                                                     DateTime?       @default(now()) @db.Timestamp(6)
   attendance                                                      attendance[]
-  krewby_workers                                                  krewby_workers? @relation(fields: [krewby_worker_id], references: [krewby_worker_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sa_krewby_worker")
+  krewby_workers                                                  krewby_workers? @relation(fields: [krewby_worker_id], references: [krewby_worker_id], onUpdate: NoAction)
   shift_roles                                                     shift_roles     @relation(fields: [role_id], references: [role_id], onDelete: Cascade, onUpdate: NoAction)
   shifts                                                          shifts          @relation(fields: [shift_id], references: [shift_id], onDelete: Cascade, onUpdate: NoAction)
+  staff                                                           staff?          @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
   swap_requests_swap_requests_requester_assignToshift_assignments swap_requests[] @relation("swap_requests_requester_assignToshift_assignments")
   swap_requests_swap_requests_target_assign_idToshift_assignments swap_requests[] @relation("swap_requests_target_assign_idToshift_assignments")
 
@@ -116,9 +141,10 @@ model shift_roles {
   shift_id          Int
   role_name         String              @db.VarChar(100)
   skill_id          Int?
+  headcount         Int                 @default(1)
   shift_assignments shift_assignments[]
   shifts            shifts              @relation(fields: [shift_id], references: [shift_id], onDelete: Cascade, onUpdate: NoAction)
-  skills            skills?             @relation(fields: [skill_id], references: [skill_id], onDelete: NoAction, onUpdate: NoAction)
+  skills            skills?             @relation(fields: [skill_id], references: [skill_id], onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -133,32 +159,35 @@ model shifts {
   created_by        Int?
   shift_assignments shift_assignments[]
   shift_roles       shift_roles[]
-  users             users?              @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  users             users?              @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
   outlets           outlets             @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([outlet_id, shift_date], map: "idx_shifts_outlet_date")
 }
 
 model skills {
-  skill_id    Int           @id @default(autoincrement())
-  name        String        @unique @db.VarChar(100)
-  description String?
-  created_by  Int?
-  shift_roles shift_roles[]
-  users       users?        @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  skill_id        Int               @id @default(autoincrement())
+  name            String            @unique @db.VarChar(100)
+  description     String?
+  created_by      Int?
+  shift_roles     shift_roles[]
+  users           users?            @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
+  user_skill_tags user_skill_tags[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model staff {
-  staff_id          Int       @id @default(autoincrement())
+  staff_id          Int                 @id @default(autoincrement())
   user_id           Int
   outlet_id         Int
-  staff_type        String    @db.VarChar(20)
-  default_work_days String?   @db.VarChar(7)
-  hired_at          DateTime? @db.Date
-  is_active         Boolean?  @default(true)
-  outlets           outlets   @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade, onUpdate: NoAction)
-  users             users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  staff_type        String              @db.VarChar(20)
+  default_work_days String?             @db.VarChar(7)
+  hired_at          DateTime?           @db.Date
+  is_active         Boolean?            @default(true)
+  availability      availability[]
+  shift_assignments shift_assignments[]
+  outlets           outlets             @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade, onUpdate: NoAction)
+  users             users               @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -174,29 +203,19 @@ model swap_requests {
   responded_at                                                        DateTime?          @db.Timestamp(6)
   manager_id                                                          Int?
   manager_decided_at                                                  DateTime?          @db.Timestamp(6)
-  users                                                               users?             @relation(fields: [manager_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  users                                                               users?             @relation(fields: [manager_id], references: [user_id], onUpdate: NoAction)
   shift_assignments_swap_requests_requester_assignToshift_assignments shift_assignments  @relation("swap_requests_requester_assignToshift_assignments", fields: [requester_assign], references: [assignment_id], onDelete: NoAction, onUpdate: NoAction)
-  shift_assignments_swap_requests_target_assign_idToshift_assignments shift_assignments? @relation("swap_requests_target_assign_idToshift_assignments", fields: [target_assign_id], references: [assignment_id], onDelete: NoAction, onUpdate: NoAction)
+  shift_assignments_swap_requests_target_assign_idToshift_assignments shift_assignments? @relation("swap_requests_target_assign_idToshift_assignments", fields: [target_assign_id], references: [assignment_id], onUpdate: NoAction)
 
   @@index([requester_id], map: "idx_swap_requester")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model users {
-  user_id       Int      @id @default(autoincrement())
-  username      String   @db.VarChar(100)
-  email         String   @unique @db.VarChar(100)
-  role          String   @db.VarChar(30)
-  is_active     Boolean  @default(true)
-  created_at    DateTime @default(now())
+model user_skill_tags {
+  id       Int    @id @default(autoincrement())
+  user_id  Int
+  skill_id Int
+  skills   skills @relation(fields: [skill_id], references: [skill_id], onDelete: Cascade, onUpdate: NoAction)
+  users    users  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
-  attendance    attendance[]
-  availability  availability[]
-  krewby_workers krewby_workers[]
-  notifications notifications[]
-  reports       reports[]
-  shifts        shifts[]
-  skills        skills[]
-  staff         staff[]
-  swap_requests swap_requests[]
+  @@unique([user_id, skill_id])
 }
