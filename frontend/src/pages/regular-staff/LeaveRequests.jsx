@@ -1,193 +1,123 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabaseClient";
-import { getUser } from "../../utils/auth";
+import { api } from "../../lib/api";
 import StaffLayout from "../../components/layout/StaffLayout";
 
-const LEAVE_TYPES = ["annual", "medical", "emergency"];
-
 export default function LeaveRequests() {
-  const user = getUser();
-  const userId = user?.user_id;
-
   const [requests, setRequests] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [showing, setShowing]   = useState(false);
-  const [saving, setSaving]     = useState(false);
-  const [error, setError]       = useState("");
-  const [success, setSuccess]   = useState("");
-  const [form, setForm]         = useState({
-    leave_type:"annual", start_date:"", end_date:"", reason:"",
-  });
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ leave_type:"annual", start_date:"", end_date:"", reason:"" });
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const { data } = await supabase
-        .from("availability")
-        .select("request_id, leave_type, start_date, end_date, reason, status, reviewed_at")
-        .eq("staff_id", userId)
-        .order("start_date", { ascending: false });
-      if (!cancelled) { setRequests(data || []); setLoading(false); }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [userId]);
+    api.get("/api/availability").then(res => setRequests(res.data || [])).catch(console.error).finally(() => setLoading(false));
+  }, []);
 
-  async function handleSubmit() {
-    if (!form.start_date || !form.end_date) {
-      setError("Start and end dates are required."); return;
-    }
-    if (new Date(form.end_date) < new Date(form.start_date)) {
-      setError("End date cannot be before start date."); return;
-    }
-    setSaving(true); setError(""); setSuccess("");
-    const { data, error: err } = await supabase
-      .from("availability")
-      .insert({
-        staff_id: userId, leave_type: form.leave_type,
-        start_date: form.start_date, end_date: form.end_date,
-        reason: form.reason.trim() || null, status:"pending",
-      })
-      .select().single();
-    setSaving(false);
-    if (err) { setError("Failed to submit. Please try again."); return; }
-    setRequests(prev => [data, ...prev]);
-    setForm({ leave_type:"annual", start_date:"", end_date:"", reason:"" });
-    setShowing(false);
-    setSuccess("Leave request submitted successfully.");
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSubmitting(true); setError("");
+    try {
+      const res = await api.post("/api/availability", form);
+      setRequests(prev => [res.data, ...prev]);
+      setShowForm(false);
+      setForm({ leave_type:"annual", start_date:"", end_date:"", reason:"" });
+      setSuccess("Leave request submitted!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
   }
 
   return (
     <StaffLayout title="Leave Requests">
       <div style={s.headerRow}>
-        <div>
-          <h2 style={s.heading}>Leave Requests</h2>
-          <p style={s.sub}>{requests.filter(r => r.status === "pending").length} pending</p>
-        </div>
-        <button style={s.addBtn} onClick={() => { setShowing(!showing); setError(""); }}>
-          {showing ? "Cancel" : "+ Request Leave"}
+        <h2 style={s.heading}>Leave Requests</h2>
+        <button style={s.addBtn} onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancel" : "+ New Request"}
         </button>
       </div>
-
-      {error   && <div style={s.error}>{error}</div>}
       {success && <div style={s.successMsg}>{success}</div>}
-
-      {showing && (
+      {showForm && (
         <div style={s.formCard}>
-          <h3 style={s.formTitle}>New Leave Request</h3>
-          <div style={s.fields}>
+          <h3 style={s.formTitle}>Submit Leave Request</h3>
+          {error && <div style={s.error}>{error}</div>}
+          <form onSubmit={handleSubmit}>
             <div style={s.field}>
               <label style={s.label}>Leave Type</label>
-              <select style={s.input} value={form.leave_type}
-                onChange={e => setForm(p => ({ ...p, leave_type:e.target.value }))}>
-                {LEAVE_TYPES.map(t => (
-                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                ))}
+              <select style={s.input} value={form.leave_type} onChange={e => setForm({...form, leave_type:e.target.value})}>
+                <option value="annual">Annual Leave</option>
+                <option value="medical">Medical Leave</option>
+                <option value="emergency">Emergency Leave</option>
               </select>
             </div>
-            <div style={s.row2}>
+            <div style={s.grid}>
               <div style={s.field}>
-                <label style={s.label}>Start Date *</label>
-                <input style={s.input} type="date" value={form.start_date}
-                  onChange={e => setForm(p => ({ ...p, start_date:e.target.value }))} />
+                <label style={s.label}>Start Date</label>
+                <input style={s.input} type="date" value={form.start_date} onChange={e => setForm({...form, start_date:e.target.value})} required />
               </div>
               <div style={s.field}>
-                <label style={s.label}>End Date *</label>
-                <input style={s.input} type="date" value={form.end_date}
-                  onChange={e => setForm(p => ({ ...p, end_date:e.target.value }))} />
+                <label style={s.label}>End Date</label>
+                <input style={s.input} type="date" value={form.end_date} onChange={e => setForm({...form, end_date:e.target.value})} required />
               </div>
             </div>
             <div style={s.field}>
               <label style={s.label}>Reason (optional)</label>
-              <textarea style={{ ...s.input, minHeight:"80px", resize:"vertical" }}
-                value={form.reason}
-                onChange={e => setForm(p => ({ ...p, reason:e.target.value }))} />
+              <textarea style={{ ...s.input, height:"80px", resize:"vertical" }} value={form.reason} onChange={e => setForm({...form, reason:e.target.value})} />
             </div>
+            <button type="submit" style={s.submitBtn} disabled={submitting}>{submitting ? "Submitting…" : "Submit Request"}</button>
+          </form>
+        </div>
+      )}
+      {loading ? <div style={s.empty}>Loading…</div>
+      : requests.length === 0 ? (
+        <div style={s.emptyCard}><p style={s.emptyIcon}>📋</p><p style={s.emptyTitle}>No leave requests yet</p></div>
+      ) : requests.map(req => (
+        <div key={req.request_id} style={s.card}>
+          <div style={s.cardTop}>
+            <div>
+              <p style={s.leaveType}>{req.leave_type.charAt(0).toUpperCase() + req.leave_type.slice(1)} Leave</p>
+              <p style={s.dates}>{fmtDate(req.start_date)} → {fmtDate(req.end_date)}</p>
+              {req.reason && <p style={s.reason}>"{req.reason}"</p>}
+            </div>
+            <span style={{ ...s.badge, ...statusStyle(req.status) }}>
+              {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+            </span>
           </div>
-          <button style={s.saveBtn} onClick={handleSubmit} disabled={saving}>
-            {saving ? "Submitting…" : "Submit Request"}
-          </button>
         </div>
-      )}
-
-      {loading ? (
-        <div style={s.empty}>Loading…</div>
-      ) : requests.length === 0 ? (
-        <div style={s.empty}>No leave requests yet.</div>
-      ) : (
-        <div style={s.list}>
-          {requests.map(r => (
-            <div key={r.request_id} style={s.card}>
-              <div style={s.cardTop}>
-                <div>
-                  <span style={s.leaveType}>
-                    {r.leave_type.charAt(0).toUpperCase() + r.leave_type.slice(1)} Leave
-                  </span>
-                  <p style={s.dateRange}>
-                    {fmtDate(r.start_date)} → {fmtDate(r.end_date)}
-                  </p>
-                  {r.reason && <p style={s.reason}>"{r.reason}"</p>}
-                </div>
-                <span style={{ ...s.badge, ...leaveBadge(r.status) }}>
-                  {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      ))}
     </StaffLayout>
   );
 }
-
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", { month:"short", day:"numeric", year:"numeric" });
 }
-
-function leaveBadge(status) {
-  const map = {
-    pending:  { background:"#FFFBEB", color:"#D97706" },
-    approved: { background:"#DCFCE7", color:"#166534" },
-    rejected: { background:"#FEE2E2", color:"#991B1B" },
-  };
+function statusStyle(status) {
+  const map = { pending:{ background:"#FFFBEB", color:"#D97706" }, approved:{ background:"#DCFCE7", color:"#166534" }, rejected:{ background:"#FEE2E2", color:"#991B1B" } };
   return map[status] || map.pending;
 }
-
 const s = {
-  headerRow: { display:"flex", justifyContent:"space-between",
-    alignItems:"flex-start", marginBottom:"20px", flexWrap:"wrap", gap:"12px" },
-  heading: { fontSize:"20px", fontWeight:"800", color:"#1C1B18" },
-  sub: { fontSize:"13px", color:"#7A7870", marginTop:"2px" },
-  addBtn: { background:"#1C1B18", color:"#FFFFFF", border:"none",
-    padding:"10px 18px", borderRadius:"10px", fontSize:"14px",
-    fontWeight:"600", cursor:"pointer" },
-  error: { background:"#FEF2F2", border:"1px solid #FECACA", color:"#991B1B",
-    padding:"10px 14px", borderRadius:"10px", fontSize:"13px", marginBottom:"16px" },
-  successMsg: { background:"#F0FDF4", border:"1px solid #BBF7D0", color:"#166534",
-    padding:"10px 14px", borderRadius:"10px", fontSize:"13px", marginBottom:"16px" },
-  formCard: { background:"#FFFFFF", border:"1px solid #E5E2DC",
-    borderRadius:"14px", padding:"24px", marginBottom:"20px" },
-  formTitle: { fontSize:"15px", fontWeight:"700", color:"#1C1B18", marginBottom:"16px" },
-  fields: { display:"flex", flexDirection:"column", gap:"14px", marginBottom:"20px" },
-  row2: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" },
-  field: {},
-  label: { display:"block", fontSize:"12px", fontWeight:"600",
-    color:"#7A7870", marginBottom:"5px" },
-  input: { display:"block", width:"100%", padding:"9px 13px",
-    border:"1.5px solid #D8D5CE", borderRadius:"9px",
-    fontSize:"14px", background:"#FFFFFF", color:"#1C1B18", boxSizing:"border-box" },
-  saveBtn: { background:"#1C1B18", color:"#FFFFFF", border:"none",
-    padding:"10px 20px", borderRadius:"10px", fontSize:"14px",
-    fontWeight:"600", cursor:"pointer" },
-  empty: { textAlign:"center", padding:"60px", color:"#7A7870", fontSize:"14px" },
-  list: { display:"flex", flexDirection:"column", gap:"10px" },
-  card: { background:"#FFFFFF", border:"1px solid #E5E2DC",
-    borderRadius:"12px", padding:"16px 20px" },
-  cardTop: { display:"flex", justifyContent:"space-between", alignItems:"flex-start" },
-  leaveType: { fontSize:"15px", fontWeight:"700", color:"#1C1B18" },
-  dateRange: { fontSize:"13px", color:"#55524A", marginTop:"4px" },
-  reason: { fontSize:"12px", color:"#7A7870", marginTop:"6px", fontStyle:"italic" },
-  badge: { display:"inline-block", padding:"4px 10px", borderRadius:"100px",
-    fontSize:"12px", fontWeight:"600", flexShrink:0 },
+  headerRow:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"20px" },
+  heading:{ fontSize:"20px", fontWeight:"800", color:"#1C1B18" },
+  addBtn:{ background:"#1C1B18", border:"none", borderRadius:"9px", padding:"9px 16px", fontSize:"13px", fontWeight:"600", color:"#FFFFFF", cursor:"pointer" },
+  successMsg:{ background:"#F0FDF4", border:"1px solid #BBF7D0", color:"#166534", padding:"10px 12px", borderRadius:"9px", fontSize:"13px", marginBottom:"16px" },
+  formCard:{ background:"#FFFFFF", border:"1px solid #E5E2DC", borderRadius:"14px", padding:"24px", marginBottom:"20px" },
+  formTitle:{ fontSize:"15px", fontWeight:"700", color:"#1C1B18", marginBottom:"16px" },
+  error:{ background:"#FEF2F2", border:"1px solid #FECACA", color:"#991B1B", padding:"10px 12px", borderRadius:"9px", fontSize:"13px", marginBottom:"12px" },
+  grid:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" },
+  field:{ display:"flex", flexDirection:"column", gap:"6px", marginBottom:"12px" },
+  label:{ fontSize:"13px", fontWeight:"600", color:"#55524A" },
+  input:{ padding:"10px 13px", border:"1.5px solid #D8D5CE", borderRadius:"9px", fontSize:"14px", background:"#FFFFFF" },
+  submitBtn:{ background:"#1C1B18", border:"none", borderRadius:"9px", padding:"10px 20px", fontSize:"13px", fontWeight:"700", color:"#FFFFFF", cursor:"pointer" },
+  empty:{ textAlign:"center", padding:"60px", color:"#7A7870" },
+  emptyCard:{ background:"#FFFFFF", border:"1px solid #E5E2DC", borderRadius:"14px", padding:"60px", textAlign:"center" },
+  emptyIcon:{ fontSize:"32px", marginBottom:"10px" },
+  emptyTitle:{ fontSize:"16px", fontWeight:"600", color:"#7A7870" },
+  card:{ background:"#FFFFFF", border:"1px solid #E5E2DC", borderRadius:"14px", padding:"20px", marginBottom:"12px" },
+  cardTop:{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" },
+  leaveType:{ fontSize:"15px", fontWeight:"700", color:"#1C1B18" },
+  dates:{ fontSize:"13px", color:"#7A7870", marginTop:"4px" },
+  reason:{ fontSize:"13px", color:"#7A7870", fontStyle:"italic", marginTop:"6px" },
+  badge:{ padding:"4px 10px", borderRadius:"100px", fontSize:"12px", fontWeight:"600", flexShrink:0 },
 };

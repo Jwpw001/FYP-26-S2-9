@@ -13,6 +13,7 @@ const recommendationRoutes = require("./routes/recommendationRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const krewbyRoutes = require("./routes/krewbyRoutes");
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/krewby", krewbyRoutes);
 
 app.use(errorHandler);
 

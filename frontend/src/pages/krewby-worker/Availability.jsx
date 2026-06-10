@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { api } from "../../lib/api";
-import CasualLayout from "../../components/layout/CasualLayout";
+import WorkerLayout from "../../components/layout/WorkerLayout";
 
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
-export default function WeeklyAvailability() {
+export default function WorkerAvailability() {
   const [availability, setAvailability] = useState(DAYS.map((_, i) => ({ day_of_week: i+1, available: false, available_from:"09:00", available_to:"17:00" })));
   const [weekStart, setWeekStart] = useState(getNextMonday());
+  const [preferredLocation, setPreferredLocation] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
@@ -35,32 +36,28 @@ export default function WeeklyAvailability() {
         available_from: a.available_from,
         available_to: a.available_to,
       }));
-      await api.post("/api/availability/casual", { week_start_date: weekStart, slots });
+      await api.post("/api/krewby/availability", { week_start_date: weekStart, slots, preferred_location: preferredLocation });
       setSuccess("Availability saved!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   }
 
-  function fmtWeekStart(d) {
-    if (!d) return "";
-    return new Date(d).toLocaleDateString("en-SG", { month:"short", day:"numeric", year:"numeric" });
-  }
-
   return (
-    <CasualLayout title="My Availability">
+    <WorkerLayout title="My Availability">
       <div style={s.headerRow}>
         <div>
-          <h2 style={s.heading}>Weekly Availability</h2>
-          <p style={s.sub}>Set your availability for week of {fmtWeekStart(weekStart)}</p>
+          <h2 style={s.heading}>My Availability</h2>
+          <p style={s.sub}>Set your availability for the upcoming week</p>
         </div>
-        <div style={s.weekSelector}>
-          <label style={s.label}>Week Starting</label>
-          <input style={s.input} type="date" value={weekStart} onChange={e => setWeekStart(e.target.value)} />
-        </div>
+        <input style={s.input} type="date" value={weekStart} onChange={e => setWeekStart(e.target.value)} />
       </div>
       {success && <div style={s.successMsg}>{success}</div>}
       {error && <div style={s.error}>{error}</div>}
+      <div style={s.field}>
+        <label style={s.label}>Preferred Work Area</label>
+        <input style={s.input} placeholder="e.g. Orchard, Tampines, Any" value={preferredLocation} onChange={e => setPreferredLocation(e.target.value)} />
+      </div>
       <div style={s.daysList}>
         {DAYS.map((day, i) => (
           <div key={day} style={{ ...s.dayCard, ...(availability[i].available ? s.dayCardActive : {}) }}>
@@ -84,18 +81,18 @@ export default function WeeklyAvailability() {
         <p style={s.footerNote}>{availability.filter(a => a.available).length} days selected</p>
         <button style={s.saveBtn} onClick={handleSave} disabled={loading}>{loading ? "Saving…" : "Save Availability"}</button>
       </div>
-    </CasualLayout>
+    </WorkerLayout>
   );
 }
 const s = {
   headerRow:{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"20px", flexWrap:"wrap", gap:"12px" },
   heading:{ fontSize:"20px", fontWeight:"800", color:"#1C1B18" },
   sub:{ fontSize:"13px", color:"#7A7870", marginTop:"2px" },
-  weekSelector:{ display:"flex", flexDirection:"column", gap:"4px" },
-  label:{ fontSize:"12px", fontWeight:"600", color:"#7A7870" },
-  input:{ padding:"9px 13px", border:"1.5px solid #D8D5CE", borderRadius:"9px", fontSize:"14px" },
   successMsg:{ background:"#F0FDF4", border:"1px solid #BBF7D0", color:"#166534", padding:"10px 12px", borderRadius:"9px", fontSize:"13px", marginBottom:"16px" },
   error:{ background:"#FEF2F2", border:"1px solid #FECACA", color:"#991B1B", padding:"10px 12px", borderRadius:"9px", fontSize:"13px", marginBottom:"16px" },
+  field:{ display:"flex", flexDirection:"column", gap:"6px", marginBottom:"16px" },
+  label:{ fontSize:"13px", fontWeight:"600", color:"#55524A" },
+  input:{ padding:"9px 13px", border:"1.5px solid #D8D5CE", borderRadius:"9px", fontSize:"14px", background:"#FFFFFF", maxWidth:"300px" },
   daysList:{ display:"flex", flexDirection:"column", gap:"8px", marginBottom:"24px" },
   dayCard:{ background:"#FFFFFF", border:"1.5px solid #E5E2DC", borderRadius:"12px", padding:"16px" },
   dayCardActive:{ border:"1.5px solid #1C1B18", background:"#F7F6F3" },

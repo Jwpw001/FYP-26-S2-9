@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { api } from "../lib/api";
 import { getUser } from "../utils/auth";
 
 export default function NotificationsPage({ Layout }) {
@@ -13,27 +13,22 @@ export default function NotificationsPage({ Layout }) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const { data } = await supabase
-        .from("notifications")
-        .select("notification_id, type, title, message, is_read, created_at, related_entity, related_id")
-        .eq("recipient_id", userId)
-        .order("created_at", { ascending: false });
-      if (!cancelled) { setNotifications(data || []); setLoading(false); }
+      const { data } = await api.get(`/api/notifications?recipient_id=${userId}&order=created_at_desc`);
+      if (!cancelled) { setNotifications(data?.notifications || []); setLoading(false); }
     }
     load();
     return () => { cancelled = true; };
   }, [userId]);
 
   async function markRead(id) {
-    await supabase.from("notifications").update({ is_read: true }).eq("notification_id", id);
+    await api.patch(`/api/notifications/${id}`, { is_read: true });
     setNotifications(prev => prev.map(n =>
       n.notification_id === id ? { ...n, is_read: true } : n
     ));
   }
 
   async function markAllRead() {
-    await supabase.from("notifications")
-      .update({ is_read: true }).eq("recipient_id", userId).eq("is_read", false);
+    await api.patch(`/api/notifications`, { recipient_id: userId, is_read: true });
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   }
 

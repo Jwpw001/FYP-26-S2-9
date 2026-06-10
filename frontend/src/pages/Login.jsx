@@ -39,12 +39,13 @@ export default function Login() {
     setError("");
 
     try {
-      const response = await api.post('/api/login', {
+      const response = await api.post('/api/auth/login', {
         email: form.email.trim().toLowerCase(),
         password: form.password,
       });
 
-      const profile = response.data;
+      const profile = response.user;
+      const token = response.token;
 
       const route = ROLE_ROUTES[profile.role];
       if (!route) {
@@ -52,7 +53,7 @@ export default function Login() {
         return;
       }
 
-      setUser(profile);
+      setUser({ ...profile, token });
       navigate(route, { replace: true });
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {

@@ -38,16 +38,20 @@ import CasualMyShifts     from "./pages/outlet-casual-staff/MyShifts";
 import WeeklyAvailability from "./pages/outlet-casual-staff/WeeklyAvailability";
 
 // Krewby Coordinator
-import CoordinatorDashboard from "./pages/krewby-coordinator/Dashboard";
-import CoordinatorLayout    from "./components/layout/CoordinatorLayout";
+import CoordinatorDashboard     from "./pages/krewby-coordinator/Dashboard";
+import CoordinatorRequests      from "./pages/krewby-coordinator/Requests";
+import CoordinatorRequestDetail from "./pages/krewby-coordinator/RequestDetail";
 
 // Krewby Worker
-import WorkerDashboard from "./pages/krewby-worker/Dashboard";
-import WorkerLayout    from "./components/layout/WorkerLayout";
+import WorkerDashboard    from "./pages/krewby-worker/Dashboard";
+import WorkerJobs         from "./pages/krewby-worker/Jobs";
+import WorkerAvailability from "./pages/krewby-worker/Availability";
 
 // Layouts
-import StaffLayout   from "./components/layout/StaffLayout";
-import CasualLayout  from "./components/layout/CasualLayout";
+import StaffLayout       from "./components/layout/StaffLayout";
+import CasualLayout      from "./components/layout/CasualLayout";
+import CoordinatorLayout from "./components/layout/CoordinatorLayout";
+import WorkerLayout      from "./components/layout/WorkerLayout";
 
 function PR({ roles, children }) {
   return <ProtectedRoute allowedRoles={roles}>{children}</ProtectedRoute>;
@@ -86,41 +90,25 @@ function App() {
         <Route path="/regular-staff/shifts"        element={<PR roles={["regular_staff"]}><MyShifts /></PR>} />
         <Route path="/regular-staff/leave"         element={<PR roles={["regular_staff"]}><LeaveRequests /></PR>} />
         <Route path="/regular-staff/swaps"         element={<PR roles={["regular_staff"]}><SwapRequests /></PR>} />
-        <Route path="/regular-staff/notifications" element={<PR roles={["regular_staff"]}>
-          <NotificationsPage Layout={StaffLayout} />
-        </PR>} />
+        <Route path="/regular-staff/notifications" element={<PR roles={["regular_staff"]}><NotificationsPage Layout={StaffLayout} /></PR>} />
 
         {/* ── Outlet Casual Staff ──────────────────────── */}
         <Route path="/outlet-casual-staff/dashboard"    element={<PR roles={["outlet_casual_staff"]}><CasualDashboard /></PR>} />
         <Route path="/outlet-casual-staff/shifts"       element={<PR roles={["outlet_casual_staff"]}><CasualMyShifts /></PR>} />
         <Route path="/outlet-casual-staff/availability" element={<PR roles={["outlet_casual_staff"]}><WeeklyAvailability /></PR>} />
-        <Route path="/outlet-casual-staff/notifications" element={<PR roles={["outlet_casual_staff"]}>
-          <NotificationsPage Layout={CasualLayout} />
-        </PR>} />
+        <Route path="/outlet-casual-staff/notifications" element={<PR roles={["outlet_casual_staff"]}><NotificationsPage Layout={CasualLayout} /></PR>} />
 
         {/* ── Krewby Coordinator ───────────────────────── */}
-        <Route path="/krewby-coordinator/dashboard"     element={<PR roles={["krewby_coordinator"]}><CoordinatorDashboard /></PR>} />
-        <Route path="/krewby-coordinator/requests"      element={<PR roles={["krewby_coordinator"]}>
-          <CoordinatorLayout title="Requests"><div style={{padding:"40px",textAlign:"center",color:"#7A7870"}}>Requests coming soon</div></CoordinatorLayout>
-        </PR>} />
-        <Route path="/krewby-coordinator/workers"       element={<PR roles={["krewby_coordinator"]}>
-          <CoordinatorLayout title="Workers"><div style={{padding:"40px",textAlign:"center",color:"#7A7870"}}>Workers coming soon</div></CoordinatorLayout>
-        </PR>} />
-        <Route path="/krewby-coordinator/notifications" element={<PR roles={["krewby_coordinator"]}>
-          <NotificationsPage Layout={CoordinatorLayout} />
-        </PR>} />
+        <Route path="/krewby-coordinator/dashboard"        element={<PR roles={["krewby_coordinator"]}><CoordinatorDashboard /></PR>} />
+        <Route path="/krewby-coordinator/requests"         element={<PR roles={["krewby_coordinator"]}><CoordinatorRequests /></PR>} />
+        <Route path="/krewby-coordinator/requests/:id"     element={<PR roles={["krewby_coordinator"]}><CoordinatorRequestDetail /></PR>} />
+        <Route path="/krewby-coordinator/notifications"    element={<PR roles={["krewby_coordinator"]}><NotificationsPage Layout={CoordinatorLayout} /></PR>} />
 
         {/* ── Krewby Worker ────────────────────────────── */}
         <Route path="/krewby-worker/dashboard"     element={<PR roles={["krewby_casual_worker"]}><WorkerDashboard /></PR>} />
-        <Route path="/krewby-worker/jobs"          element={<PR roles={["krewby_casual_worker"]}>
-          <WorkerLayout title="My Jobs"><div style={{padding:"40px",textAlign:"center",color:"#7A7870"}}>Jobs coming soon</div></WorkerLayout>
-        </PR>} />
-        <Route path="/krewby-worker/availability"  element={<PR roles={["krewby_casual_worker"]}>
-          <WorkerLayout title="Availability"><div style={{padding:"40px",textAlign:"center",color:"#7A7870"}}>Availability coming soon</div></WorkerLayout>
-        </PR>} />
-        <Route path="/krewby-worker/notifications" element={<PR roles={["krewby_casual_worker"]}>
-          <NotificationsPage Layout={WorkerLayout} />
-        </PR>} />
+        <Route path="/krewby-worker/jobs"          element={<PR roles={["krewby_casual_worker"]}><WorkerJobs /></PR>} />
+        <Route path="/krewby-worker/availability"  element={<PR roles={["krewby_casual_worker"]}><WorkerAvailability /></PR>} />
+        <Route path="/krewby-worker/notifications" element={<PR roles={["krewby_casual_worker"]}><NotificationsPage Layout={WorkerLayout} /></PR>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

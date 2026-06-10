@@ -13,8 +13,14 @@ export function setUser(profile) {
 
 export function clearUser() {
   localStorage.removeItem("user");
+  localStorage.removeItem("token");
 }
 
 export function isAuthenticated() {
   return getUser() !== null;
+}
+
+export function logout(navigate) {
+  clearUser();
+  navigate("/login", { replace: true });
 }

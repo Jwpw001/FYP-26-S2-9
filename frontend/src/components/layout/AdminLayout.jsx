@@ -1,6 +1,5 @@
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { supabase } from "../../lib/supabaseClient";
-import { clearUser, getUser } from "../../utils/auth";
+import { clearUser, getUser, logout } from "../../utils/auth";
 import { useState } from "react";
 
 const NAV = [
@@ -18,9 +17,7 @@ export default function AdminLayout({ children, title }) {
   const [open, setOpen] = useState(false);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    clearUser();
-    navigate("/login", { replace: true });
+    logout(navigate);
   }
 
   return (

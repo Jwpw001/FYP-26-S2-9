@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 
 const STATUS_STYLES = {
@@ -11,41 +11,40 @@ const STATUS_STYLES = {
 };
 
 async function fetchEnrichedAssignments(shiftId) {
-  const { data: assignData } = await supabase
-    .from("shift_assignments")
-    .select(`assignment_id, role_id, staff_id, status, acknowledged`)
-    .eq("shift_id", shiftId);
+  try {
+    const { data: assignData } = await api.get(`/api/shift-assignments?shift_id=${shiftId}`);
+    const assignments = assignData?.shift_assignments || [];
 
-  const staffIds = (assignData || []).map(a => a.staff_id).filter(Boolean);
-  let staffUserMap = {};
+    const staffIds = assignments.map(a => a.staff_id).filter(Boolean);
+    let staffUserMap = {};
 
-  if (staffIds.length > 0) {
-    const { data: staffRows } = await supabase
-      .from("staff")
-      .select(`staff_id, user_id`)
-      .in("staff_id", staffIds);
+    if (staffIds.length > 0) {
+      const { data: staffData } = await api.get(`/api/staff?ids=${staffIds.join(',')}`);
+      const staffRows = staffData?.staff || [];
 
-    const userIds = (staffRows || []).map(s => s.user_id).filter(Boolean);
-    let userMap = {};
+      const userIds = staffRows.map(s => s.user_id).filter(Boolean);
+      let userMap = {};
 
-    if (userIds.length > 0) {
-      const { data: userRows } = await supabase
-        .from("users")
-        .select(`user_id, full_name, email`)
-        .in("user_id", userIds);
+      if (userIds.length > 0) {
+        const { data: userData } = await api.get(`/api/users?ids=${userIds.join(',')}`);
+        const userRows = userData?.users || [];
 
-      (userRows || []).forEach(u => { userMap[u.user_id] = u; });
+        userRows.forEach(u => { userMap[u.user_id] = u; });
+      }
+
+      staffRows.forEach(s => {
+        staffUserMap[s.staff_id] = userMap[s.user_id] || {};
+      });
     }
 
-    (staffRows || []).forEach(s => {
-      staffUserMap[s.staff_id] = userMap[s.user_id] || {};
-    });
+    return assignments.map(a => ({
+      ...a,
+      userInfo: staffUserMap[a.staff_id] || {},
+    }));
+  } catch (err) {
+    console.error("Error fetching enriched assignments:", err);
+    return [];
   }
-
-  return (assignData || []).map(a => ({
-    ...a,
-    userInfo: staffUserMap[a.staff_id] || {},
-  }));
 }
 
 export default function ShiftDetail() {
@@ -70,24 +69,19 @@ export default function ShiftDetail() {
       setLoading(true);
       try {
         // 1. Fetch shift
-        const { data: shiftData } = await supabase
-          .from("shifts")
-          .select(`shift_id, title, shift_date, start_time, end_time, status, outlet_id, outlets ( name, address )`)
-          .eq("shift_id", id).single();
-        if (!shiftData || cancelled) return;
-        setShift(shiftData);
+        const { data: shiftData } = await api.get(`/api/shifts/${id}`);
+        const shift = shiftData?.shift;
+        if (!shift || cancelled) return;
+        setShift(shift);
 
         // 2. Fetch roles
-        const { data: roleData } = await supabase
-          .from("shift_roles")
-          .select(`role_id, role_name, skill_id, headcount, skills ( name )`)
-          .eq("shift_id", id);
+        const { data: roleData } = await api.get(`/api/shift-roles?shift_id=${id}`);
 
         // 3. Fetch assignments with user info via separate queries
         const enriched = await fetchEnrichedAssignments(id);
 
         if (!cancelled) {
-          const rolesWithAssignments = (roleData || []).map(role => ({
+          const rolesWithAssignments = (roleData?.shift_roles || []).map(role => ({
             ...role,
             shift_assignments: enriched.filter(a => a.role_id === role.role_id),
           }));
@@ -110,32 +104,25 @@ export default function ShiftDetail() {
     setRecommendations([]);
     try {
       // Get staff in outlet
-      const { data: staffRows } = await supabase
-        .from("staff")
-        .select(`staff_id, staff_type, user_id`)
-        .eq("outlet_id", shift.outlet_id)
-        .eq("is_active", true);
+      const { data: staffData } = await api.get(`/api/staff?outlet_id=${shift.outlet_id}&is_active=true`);
+      const staffRows = staffData?.staff || [];
 
       // Get user info for staff
-      const userIds = (staffRows || []).map(s => s.user_id).filter(Boolean);
+      const userIds = staffRows.map(s => s.user_id).filter(Boolean);
       let userMap = {};
       if (userIds.length > 0) {
-        const { data: userRows } = await supabase
-          .from("users")
-          .select(`user_id, full_name, email`)
-          .in("user_id", userIds);
-        (userRows || []).forEach(u => { userMap[u.user_id] = u; });
+        const { data: userData } = await api.get(`/api/users?ids=${userIds.join(',')}`);
+        const userRows = userData?.users || [];
+        userRows.forEach(u => { userMap[u.user_id] = u; });
       }
 
       // Get skill tags for staff
-      const staffIds = (staffRows || []).map(s => s.staff_id);
+      const staffIds = staffRows.map(s => s.staff_id);
       let skillMap = {};
       if (staffIds.length > 0) {
-        const { data: skillRows } = await supabase
-          .from("user_skill_tags")
-          .select(`user_id, skill_id`)
-          .in("user_id", userIds);
-        (skillRows || []).forEach(r => {
+        const { data: skillData } = await api.get(`/api/user-skill-tags?user_ids=${userIds.join(',')}`);
+        const skillRows = skillData?.user_skill_tags || [];
+        skillRows.forEach(r => {
           if (!skillMap[r.user_id]) skillMap[r.user_id] = [];
           skillMap[r.user_id].push(r.skill_id);
         });
@@ -145,15 +132,11 @@ export default function ShiftDetail() {
       const assignedStaffIds = assignments.map(a => a.staff_id).filter(Boolean);
 
       // Get staff on leave
-      const { data: leaveRows } = await supabase
-        .from("availability")
-        .select("staff_id")
-        .eq("status", "approved")
-        .lte("start_date", shift.shift_date)
-        .gte("end_date", shift.shift_date);
-      const onLeaveIds = (leaveRows || []).map(l => l.staff_id);
+      const { data: leaveData } = await api.get(`/api/availability?outlet_id=${shift.outlet_id}&status=approved&start_date_lte=${shift.shift_date}&end_date_gte=${shift.shift_date}`);
+      const leaveRows = leaveData?.availability || [];
+      const onLeaveIds = leaveRows.map(l => l.staff_id);
 
-      const candidates = (staffRows || [])
+      const candidates = staffRows
         .map(staff => {
           const user = userMap[staff.user_id] || {};
           const skillIds = skillMap[staff.user_id] || [];
@@ -184,27 +167,19 @@ export default function ShiftDetail() {
   async function assignStaff(staffId, roleId) {
     setAssigning(true);
     try {
-      const { error: err } = await supabase
-        .from("shift_assignments")
-        .insert({
-          shift_id: Number(id),
-          role_id: roleId,
-          staff_id: staffId,
-          status: "assigned",
-          acknowledged: false,
-        });
-
-      if (err) throw err;
+      await api.post("/api/shift-assignments", {
+        shift_id: Number(id),
+        role_id: roleId,
+        staff_id: staffId,
+        status: "assigned",
+        acknowledged: false,
+      });
 
       // Refresh
-      const { data: roleData } = await supabase
-        .from("shift_roles")
-        .select(`role_id, role_name, skill_id, headcount, skills ( name )`)
-        .eq("shift_id", id);
-
+      const { data: roleData } = await api.get(`/api/shift-roles?shift_id=${id}`);
       const enriched = await fetchEnrichedAssignments(id);
 
-      const rolesWithAssignments = (roleData || []).map(role => ({
+      const rolesWithAssignments = (roleData?.shift_roles || []).map(role => ({
         ...role,
         shift_assignments: enriched.filter(a => a.role_id === role.role_id),
       }));
@@ -223,8 +198,7 @@ export default function ShiftDetail() {
   }
 
   async function removeAssignment(assignmentId) {
-    await supabase.from("shift_assignments")
-      .delete().eq("assignment_id", assignmentId);
+    await api.delete(`/api/shift-assignments/${assignmentId}`);
     setRoles(prev => prev.map(r => ({
       ...r,
       shift_assignments: (r.shift_assignments || [])
@@ -247,13 +221,17 @@ export default function ShiftDetail() {
       if (!proceed) return;
     }
     setPublishing(true);
-    const { error: err } = await supabase
-      .from("shifts").update({ status: "published" }).eq("shift_id", id);
-    setPublishing(false);
-    if (err) { setError("Failed to publish."); return; }
-    setShift(prev => ({ ...prev, status: "published" }));
-    setSuccess("Shift published successfully!");
-    setTimeout(() => setSuccess(""), 3000);
+    try {
+      await api.patch(`/api/shifts/${id}`, { status: "published" });
+      setPublishing(false);
+      setShift(prev => ({ ...prev, status: "published" }));
+      setSuccess("Shift published successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setPublishing(false);
+      setError("Failed to publish.");
+      console.error(err);
+    }
   }
 
   async function handleUnpublish() {
