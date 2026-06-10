@@ -10,42 +10,7 @@ const STATUS_STYLES = {
   cancelled: { background:"#FEE2E2", color:"#991B1B" },
 };
 
-async function fetchEnrichedAssignments(shiftId) {
-  try {
-    const assignData = await api.get(`/api/shift-assignments?shift_id=${shiftId}`);
-    const assignments = assignData?.shift_assignments || [];
-
-    const staffIds = assignments.map(a => a.staff_id).filter(Boolean);
-    let staffUserMap = {};
-
-    if (staffIds.length > 0) {
-      const staffData = await api.get(`/api/staff?ids=${staffIds.join(',')}`);
-      const staffRows = staffData?.staff || [];
-
-      const userIds = staffRows.map(s => s.user_id).filter(Boolean);
-      let userMap = {};
-
-      if (userIds.length > 0) {
-        const userData = await api.get(`/api/users?ids=${userIds.join(',')}`);
-        const userRows = userData?.users || [];
-
-        userRows.forEach(u => { userMap[u.user_id] = u; });
-      }
-
-      staffRows.forEach(s => {
-        staffUserMap[s.staff_id] = userMap[s.user_id] || {};
-      });
-    }
-
-    return assignments.map(a => ({
-      ...a,
-      userInfo: staffUserMap[a.staff_id] || {},
-    }));
-  } catch (err) {
-    console.error("Error fetching enriched assignments:", err);
-    return [];
-  }
-}
+// No longer needed — getShiftById returns all assignment + user data in one query
 
 export default function ShiftDetail() {
   const { id } = useParams();
@@ -68,25 +33,28 @@ export default function ShiftDetail() {
     async function load() {
       setLoading(true);
       try {
-        // 1. Fetch shift
+        // Single call — backend returns shift + roles + assignments + staff names
         const shiftData = await api.get(`/api/shifts/${id}`);
         const shift = shiftData?.shift;
         if (!shift || cancelled) return;
         setShift(shift);
 
-        // 2. Fetch roles
-        const roleData = await api.get(`/api/shift-roles?shift_id=${id}`);
+        // Enrich assignments with userInfo from nested staff.users
+        const rolesWithAssignments = (shift.shift_roles || []).map(role => ({
+          ...role,
+          shift_assignments: (role.shift_assignments || []).map(a => ({
+            ...a,
+            userInfo: a.staff?.users || {},
+          })),
+        }));
 
-        // 3. Fetch assignments with user info via separate queries
-        const enriched = await fetchEnrichedAssignments(id);
+        const allAssignments = rolesWithAssignments.flatMap(r =>
+          r.shift_assignments.map(a => ({ ...a, role_id: r.role_id }))
+        );
 
         if (!cancelled) {
-          const rolesWithAssignments = (roleData?.shift_roles || []).map(role => ({
-            ...role,
-            shift_assignments: enriched.filter(a => a.role_id === role.role_id),
-          }));
           setRoles(rolesWithAssignments);
-          setAssignments(enriched);
+          setAssignments(allAssignments);
         }
       } catch (err) {
         console.error(err);
@@ -103,38 +71,31 @@ export default function ShiftDetail() {
     setLoadingRec(true);
     setRecommendations([]);
     try {
-      // Get staff in outlet
-      const staffData = await api.get(`/api/staff?outlet_id=${shift.outlet_id}&is_active=true`);
+      // Two parallel calls instead of 4 sequential ones
+      const [staffData, leaveData] = await Promise.all([
+        api.get("/api/staff"),
+        api.get(`/api/availability?status=approved`),
+      ]);
       const staffRows = staffData?.staff || [];
 
-      // Get user info for staff
-      const userIds = staffRows.map(s => s.user_id).filter(Boolean);
-      let userMap = {};
-      if (userIds.length > 0) {
-        const userData = await api.get(`/api/users?ids=${userIds.join(',')}`);
-        const userRows = userData?.users || [];
-        userRows.forEach(u => { userMap[u.user_id] = u; });
-      }
+      // user info already nested in staff.users
+      const userMap = {};
+      staffRows.forEach(s => { if (s.users) userMap[s.user_id] = s.users; });
 
-      // Get skill tags for staff
-      const staffIds = staffRows.map(s => s.staff_id);
-      let skillMap = {};
-      if (staffIds.length > 0) {
-        const skillData = await api.get(`/api/user-skill-tags?user_ids=${userIds.join(',')}`);
-        const skillRows = skillData?.user_skill_tags || [];
-        skillRows.forEach(r => {
-          if (!skillMap[r.user_id]) skillMap[r.user_id] = [];
-          skillMap[r.user_id].push(r.skill_id);
-        });
-      }
+      // skill tags from user_skill_tags nested in staff (if available) or derive from tags
+      const skillMap = {};
+      staffRows.forEach(s => {
+        if (s.user_skill_tags) {
+          skillMap[s.user_id] = s.user_skill_tags.map(t => t.skill_id);
+        }
+      });
 
-      // Get already assigned staff
       const assignedStaffIds = assignments.map(a => a.staff_id).filter(Boolean);
 
-      // Get staff on leave
-      const leaveData = await api.get(`/api/availability?outlet_id=${shift.outlet_id}&status=approved&start_date_lte=${shift.shift_date}&end_date_gte=${shift.shift_date}`);
       const leaveRows = leaveData?.availability || [];
-      const onLeaveIds = leaveRows.map(l => l.staff_id);
+      const onLeaveIds = leaveRows
+        .filter(l => l.start_date <= shift.shift_date && l.end_date >= shift.shift_date)
+        .map(l => l.staff_id);
 
       const candidates = staffRows
         .map(staff => {
@@ -175,16 +136,23 @@ export default function ShiftDetail() {
         acknowledged: false,
       });
 
-      // Refresh
-      const roleData = await api.get(`/api/shift-roles?shift_id=${id}`);
-      const enriched = await fetchEnrichedAssignments(id);
-
-      const rolesWithAssignments = (roleData?.shift_roles || []).map(role => ({
-        ...role,
-        shift_assignments: enriched.filter(a => a.role_id === role.role_id),
-      }));
-      setRoles(rolesWithAssignments);
-      setAssignments(enriched);
+      // Refresh — single call
+      const refreshData = await api.get(`/api/shifts/${id}`);
+      const refreshedShift = refreshData?.shift;
+      if (refreshedShift) {
+        const rolesWithAssignments = (refreshedShift.shift_roles || []).map(role => ({
+          ...role,
+          shift_assignments: (role.shift_assignments || []).map(a => ({
+            ...a,
+            userInfo: a.staff?.users || {},
+          })),
+        }));
+        const allAssignments = rolesWithAssignments.flatMap(r =>
+          r.shift_assignments.map(a => ({ ...a, role_id: r.role_id }))
+        );
+        setRoles(rolesWithAssignments);
+        setAssignments(allAssignments);
+      }
       setActiveRole(null);
       setRecommendations([]);
       setSuccess("Staff assigned successfully.");
@@ -395,23 +363,12 @@ export default function ShiftDetail() {
 
 function fmtTime(t) {
   if (!t) return "—";
-  try {
-    const s = String(t);
-    if (s.length === 5 && s[2] === ':') return s;
-    if (s.length >= 8 && s[2] === ':') return s.slice(0, 5);
-    if (s.includes("T")) return s.split("T")[1].slice(0, 5);
-    return "—";
-  } catch { return "—"; }
+  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
+    .toISOString().slice(11, 16);
 }
 function fmtDate(d) {
   if (!d) return "—";
-  try {
-    const s = String(d);
-    const clean = s.includes("T") ? s.split("T")[0] : s;
-    const dt = new Date(clean + "T00:00:00Z");
-    if (isNaN(dt.getTime())) return s;
-    return dt.toLocaleDateString("en-SG", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
-  } catch { return "—"; }
+  return new Date(d).toLocaleDateString("en-SG", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
 }
 
 const s = {

@@ -1,25 +1,33 @@
 const prisma = require("../config/prisma");
 
+// Helper — get outlet_id for the requesting user
+async function getOutletId(userId) {
+  const record = await prisma.staff.findFirst({
+    where: { user_id: userId }
+  });
+  return record?.outlet_id || null;
+}
+
 const getShifts = async (req, res) => {
   try {
-    const { outlet_id } = req.query;
-    const where = outlet_id ? { outlet_id: Number(outlet_id) } : {};
+    const outletId = await getOutletId(req.user.user_id);
+    const where = outletId ? { outlet_id: outletId } : {};
 
     const shifts = await prisma.shifts.findMany({
       where,
       include: {
         outlets: true,
-        users: { select: { user_id: true, full_name: true, email: true, role: true } },
         shift_roles: {
           include: {
-            skills: { select: { skill_id: true, name: true } }
-          }
-        },
-        shift_assignments: {
-          include: {
-            staff: {
+            skills: { select: { skill_id: true, name: true } },
+            shift_assignments: {
               include: {
-                users: { select: { user_id: true, full_name: true, email: true } }
+                staff: {
+                  include: {
+                    users: { select: { user_id: true, full_name: true, email: true } }
+                  }
+                },
+                attendance: true
               }
             }
           }
@@ -40,7 +48,6 @@ const getShiftById = async (req, res) => {
       where: { shift_id: Number(req.params.id) },
       include: {
         outlets: true,
-        users: { select: { user_id: true, full_name: true, email: true, role: true } },
         shift_roles: {
           include: {
             skills: { select: { skill_id: true, name: true } },
@@ -54,16 +61,6 @@ const getShiftById = async (req, res) => {
                 attendance: true
               }
             }
-          }
-        },
-        shift_assignments: {
-          include: {
-            staff: {
-              include: {
-                users: { select: { user_id: true, full_name: true, email: true } }
-              }
-            },
-            attendance: true
           }
         }
       }
@@ -79,20 +76,11 @@ const getShiftById = async (req, res) => {
   }
 };
 
-// POST /api/shifts
-// Body: { outlet_id, title, shift_date, start_time, end_time, status, roles[] }
 const createShift = async (req, res) => {
   try {
     const { outlet_id, title, shift_date, start_time, end_time, status, roles } = req.body;
 
-    // If outlet_id not provided, look up from manager's staff record
-    let resolvedOutletId = outlet_id ? Number(outlet_id) : null;
-    if (!resolvedOutletId) {
-      const staffRecord = await prisma.staff.findFirst({
-        where: { user_id: req.user.user_id, is_active: true }
-      });
-      resolvedOutletId = staffRecord?.outlet_id;
-    }
+    let resolvedOutletId = outlet_id ? Number(outlet_id) : await getOutletId(req.user.user_id);
 
     if (!resolvedOutletId) {
       return res.status(400).json({ success: false, message: "outlet_id is required" });
@@ -110,7 +98,6 @@ const createShift = async (req, res) => {
       }
     });
 
-    // Persist roles if provided
     if (Array.isArray(roles) && roles.length > 0) {
       const validRoles = roles.filter(r => r.role_name?.trim());
       if (validRoles.length > 0) {
@@ -125,7 +112,6 @@ const createShift = async (req, res) => {
       }
     }
 
-    // Return shift with roles included
     const shiftWithRoles = await prisma.shifts.findUnique({
       where: { shift_id: shift.shift_id },
       include: {
@@ -142,12 +128,11 @@ const createShift = async (req, res) => {
 
 const updateShift = async (req, res) => {
   try {
-    const { outlet_id, title, shift_date, start_time, end_time, status } = req.body;
+    const { title, shift_date, start_time, end_time, status } = req.body;
 
     const shift = await prisma.shifts.update({
       where: { shift_id: Number(req.params.id) },
       data: {
-        outlet_id: outlet_id ? Number(outlet_id) : undefined,
         title,
         shift_date: shift_date ? new Date(shift_date) : undefined,
         start_time: start_time ? new Date(`1970-01-01T${start_time}:00Z`) : undefined,
@@ -164,9 +149,7 @@ const updateShift = async (req, res) => {
 
 const deleteShift = async (req, res) => {
   try {
-    await prisma.shifts.delete({
-      where: { shift_id: Number(req.params.id) }
-    });
+    await prisma.shifts.delete({ where: { shift_id: Number(req.params.id) } });
     res.json({ success: true, message: "Shift deleted successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -27,16 +27,8 @@ export default function ShiftsList() {
     async function load() {
       setLoading(true);
       try {
-        // Get user's staff record to find their outlet
-        const myStaffData = await api.get(`/api/staff`);
-        const myStaffRecord = myStaffData?.staff?.find(s => s.users?.user_id === userId && s.is_active);
-        const oid = myStaffRecord?.outlet_id;
-
-        if (!oid || cancelled) return;
-
-        // Fetch shifts for the outlet
-        const shiftsData = await api.get(`/api/shifts?outlet_id=${oid}`);
-
+        // Backend auto-filters by manager's outlet — no pre-call needed
+        const shiftsData = await api.get("/api/shifts");
         if (!cancelled) setShifts(shiftsData?.shifts || []);
       } catch (err) {
         console.error(err);
@@ -46,7 +38,7 @@ export default function ShiftsList() {
     }
     load();
     return () => { cancelled = true; };
-  }, [userId]);
+  }, []);
 
   // Get week dates for calendar view
   function getWeekDates() {
@@ -232,23 +224,15 @@ export default function ShiftsList() {
 
 function fmtTime(t) {
   if (!t) return "—";
-  try {
-    const s = String(t);
-    if (s.length === 5 && s[2] === ':') return s;
-    if (s.length >= 8 && s[2] === ':') return s.slice(0, 5);
-    if (s.includes("T")) return s.split("T")[1].slice(0, 5);
-    return "—";
-  } catch { return "—"; }
+  // Handles both "08:00:00" and "1970-01-01T08:00:00.000Z"
+  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
+    .toISOString().slice(11, 16);
 }
 function fmtDate(d) {
   if (!d) return "—";
-  try {
-    const s = String(d);
-    const clean = s.includes("T") ? s.split("T")[0] : s;
-    const dt = new Date(clean + "T00:00:00Z");
-    if (isNaN(dt.getTime())) return s;
-    return dt.toLocaleDateString("en-SG", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
-  } catch { return "—"; }
+  return new Date(d).toLocaleDateString("en-SG", {
+    weekday:"short", month:"short", day:"numeric",
+  });
 }
 function fmtDateShort(d) {
   return d.toLocaleDateString("en-SG", { month:"short", day:"numeric" });
