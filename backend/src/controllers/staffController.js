@@ -2,7 +2,17 @@ const prisma = require("../config/prisma");
 
 const getStaff = async (req, res) => {
     try {
+        // Find the requesting user's staff record to get their outlet
+        const myRecord = await prisma.staff.findFirst({
+            where: { user_id: req.user.user_id }
+        });
+
+        const where = myRecord?.outlet_id
+            ? { outlet_id: myRecord.outlet_id }
+            : {};
+
         const staff = await prisma.staff.findMany({
+            where,
             include: {
                 users: {
                     select: {
@@ -16,15 +26,9 @@ const getStaff = async (req, res) => {
             }
         });
 
-        res.json({
-            success: true,
-            staff
-        });
+        res.json({ success: true, staff });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
