@@ -1,48 +1,16 @@
-const { createClient } = require("@supabase/supabase-js");
-
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
-);
-
-const verifyToken = async (req, res, next) => {
-    try {
-
-        const authHeader = req.headers.authorization;
-
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return res.status(401).json({
-                success: false,
-                message: "No token provided"
-            });
-        }
-
-        const token = authHeader.split(" ")[1];
-
-        const {
-            data: { user },
-            error
-        } = await supabase.auth.getUser(token);
-
-        if (error || !user) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid token"
-            });
-        }
-
-        req.user = user;
-
-        next();
-
-    } catch (error) {
-
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
-
+const jwt = require("jsonwebtoken");
+const verifyToken = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, message: "No token provided" });
     }
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  }
 };
-
 module.exports = verifyToken;

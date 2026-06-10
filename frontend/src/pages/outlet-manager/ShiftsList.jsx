@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 
@@ -27,25 +27,17 @@ export default function ShiftsList() {
     async function load() {
       setLoading(true);
       try {
-        const { data: myStaff } = await supabase
-          .from("staff").select("outlet_id")
-          .eq("user_id", userId).eq("is_active", true).limit(1);
+        // Get user's staff record to find their outlet
+        const { data: myStaffData } = await api.get(`/api/staff`);
+        const myStaffRecord = myStaffData?.staff?.find(s => s.users?.user_id === userId && s.is_active);
+        const oid = myStaffRecord?.outlet_id;
 
-        const oid = myStaff?.[0]?.outlet_id;
         if (!oid || cancelled) return;
 
-        const { data } = await supabase
-          .from("shifts")
-          .select(`
-            shift_id, title, shift_date, start_time, end_time, status, created_by,
-            shift_roles ( role_id, role_name, skill_id,
-              shift_assignments ( assignment_id, staff_id, status )
-            )
-          `)
-          .eq("outlet_id", oid)
-          .order("shift_date", { ascending: true });
+        // Fetch shifts for the outlet
+        const { data: shiftsData } = await api.get(`/api/shifts?outlet_id=${oid}`);
 
-        if (!cancelled) setShifts(data || []);
+        if (!cancelled) setShifts(shiftsData?.shifts || []);
       } catch (err) {
         console.error(err);
       } finally {

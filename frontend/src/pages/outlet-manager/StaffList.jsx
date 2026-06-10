@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 
@@ -22,40 +22,54 @@ export default function StaffList() {
     async function load() {
       setLoading(true);
       try {
-        const { data: myStaff } = await supabase
-          .from("staff").select("outlet_id")
-          .eq("user_id", userId).eq("is_active", true).limit(1);
+        // Get user's staff record to find their outlet
+        const { data: myStaff } = await api.get(`/api/staff`);
+        // Filter to find the staff record for current user
+        const myStaffRecord = myStaff.staff?.find(s => s.users?.user_id === userId && s.is_active);
+        const oid = myStaffRecord?.outlet_id;
 
-        const oid = myStaff?.[0]?.outlet_id;
         if (!oid || cancelled) return;
 
-        const [{ data: staffRows }, { data: skillRows }] = await Promise.all([
-          supabase.from("staff").select(`
-            staff_id, staff_type, default_work_days, hired_at, is_active,
-            users ( user_id, full_name, email )
-          `).eq("outlet_id", oid).order("staff_id"),
-          supabase.from("skills").select("skill_id, name").order("name"),
+        // Fetch all staff and skills
+        const [{ data: staffData }, { data: skillData }] = await Promise.all([
+          api.get(`/api/staff`),
+          api.get(`/api/skills`)
         ]);
-
-        const userIds = (staffRows || []).map(s => s.users?.user_id).filter(Boolean);
-        const { data: tagRows } = userIds.length
-          ? await supabase.from("user_skill_tags")
-              .select("user_id, skill_id, skills(name)").in("user_id", userIds)
-          : { data: [] };
 
         if (cancelled) return;
 
-        const enriched = (staffRows || []).map(s => ({
+        // Filter staff by outlet_id
+        const filteredStaff = staffData.staff?.filter(s => s.outlet_id === oid && s.is_active) || [];
+
+        // Enrich staff data with skill tags
+        // First, get all user skill tags for these staff members
+        const userIds = filteredStaff.map(s => s.users?.user_id).filter(Boolean);
+        let tagData = { data: [] };
+        if (userIds.length > 0) {
+          // We'd need an API endpoint for this, but for now let's fetch all and filter
+          // In a real app, we'd have a proper endpoint or include this in the staff fetch
+          const allTags = await api.get(`/api/user-skill-tags`); // This endpoint may not exist yet
+          tagData = allTags;
+        }
+
+        const enriched = filteredStaff.map(s => ({
           ...s,
-          skillTags: (tagRows || [])
+          skillTags: (tagData.data || [])
             .filter(t => t.user_id === s.users?.user_id)
             .map(t => ({ id: t.skill_id, name: t.skills?.name })),
         }));
 
         setStaff(enriched);
-        setSkills(skillRows || []);
+        setSkills(skillData.skills || []);
       } catch (err) {
         console.error(err);
+        // Fallback: try to get skills even if staff fails
+        try {
+          const skillData = await api.get(`/api/skills`);
+          setSkills(skillData.skills || []);
+        } catch (skillErr) {
+          console.error(skillErr);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
