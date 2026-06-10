@@ -24,11 +24,11 @@ export default function ManagerDashboard() {
         if (cancelled) return;
         const today = new Date().toISOString().split("T")[0];
         const future = new Date(Date.now() + 7*86400000).toISOString().split("T")[0];
-        const upcoming = (shiftsRes.data || []).filter(s => s.shift_date >= today && s.shift_date <= future);
-        const pendingLeave = (leaveRes.data || []).filter(r => r.status === "pending").length;
+        const upcoming = (shiftsRes.shifts || shiftsRes.data || []).filter(s => s.shift_date >= today && s.shift_date <= future);
+        const pendingLeave = (leaveRes.availability || leaveRes.availability || leaveRes.data || []).filter(r => r.status === "pending").length;
         setStats({
           upcomingShifts: upcoming.length,
-          totalStaff: (staffRes.data || []).length,
+          totalStaff: (staffRes.staff || staffRes.staff || staffRes.data || []).length,
           pendingLeave,
           pendingSwaps: 0,
         });

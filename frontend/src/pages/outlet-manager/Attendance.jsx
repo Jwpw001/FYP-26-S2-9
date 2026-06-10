@@ -24,7 +24,7 @@ export default function Attendance() {
       try {
         const res = await api.get("/api/shifts");
         if (cancelled) return;
-        const filtered = (res.data || []).filter(s => s.shift_date === dateFilter && s.status === "published");
+        const filtered = (res.attendance || res.data || []).filter(s => s.shift_date === dateFilter && s.status === "published");
         setShifts(filtered);
         setSelectedShift(null);
         setAssignments([]);

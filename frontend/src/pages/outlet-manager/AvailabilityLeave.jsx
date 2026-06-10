@@ -16,7 +16,7 @@ export default function AvailabilityLeave() {
       setLoading(true);
       try {
         const res = await api.get("/api/availability");
-        if (!cancelled) setRequests(res.data || []);
+        if (!cancelled) setRequests(res.availability || res.data || []);
       } catch (err) { console.error(err); }
       finally { if (!cancelled) setLoading(false); }
     }

@@ -12,7 +12,7 @@ export default function LeaveRequests() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api.get("/api/availability").then(res => setRequests(res.data || [])).catch(console.error).finally(() => setLoading(false));
+    api.get("/api/availability").then(res => setRequests(res.availability || res.data || [])).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   async function handleSubmit(e) {

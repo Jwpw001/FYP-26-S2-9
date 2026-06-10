@@ -11,7 +11,7 @@ export default function WorkerJobs() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    api.get("/api/krewby/my-assignments").then(res => setJobs(res.data || [])).catch(console.error).finally(() => setLoading(false));
+    api.get("/api/krewby/my-assignments").then(res => setJobs(res.assignments || res.data || [])).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   async function handleConfirm(assignmentId) {

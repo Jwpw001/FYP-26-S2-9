@@ -18,10 +18,10 @@ export default function CoordinatorDashboard() {
           api.get("/api/krewby/requests"),
           api.get("/api/krewby/workers"),
         ]);
-        const requests = reqRes.data || [];
+        const requests = reqRes.requests || reqRes.data || [];
         const pending = requests.filter(r => r.status === "pending_review").length;
         const confirmed = requests.filter(r => r.status === "confirmed").length;
-        const activeWorkers = (workersRes.data || []).filter(w => w.is_active).length;
+        const activeWorkers = (workersRes.workers || workersRes.data || []).filter(w => w.is_active).length;
         setStats({ pendingRequests: pending, activeWorkers, confirmedToday: confirmed });
         setRecentRequests(requests.slice(0, 5));
       } catch (err) { console.error(err); }

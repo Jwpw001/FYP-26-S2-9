@@ -13,7 +13,7 @@ export default function CasualMyShifts() {
   useEffect(() => {
     api.get("/api/shifts").then(res => {
       const today = new Date().toISOString().split("T")[0];
-      const upcoming = (res.data || []).filter(s => s.shift_date >= today).sort((a,b) => a.shift_date.localeCompare(b.shift_date));
+      const upcoming = (res.shifts || res.data || []).filter(s => s.shift_date >= today).sort((a,b) => a.shift_date.localeCompare(b.shift_date));
       setShifts(upcoming);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);

@@ -22,7 +22,7 @@ export default function Reports() {
     setLoading(true); setError(""); setData(null);
     try {
       const res = await api.get(`/api/reports?type=${reportType}&start_date=${startDate}&end_date=${endDate}`);
-      setData(res.data || []);
+      setData(res.reports || res.data || []);
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   }

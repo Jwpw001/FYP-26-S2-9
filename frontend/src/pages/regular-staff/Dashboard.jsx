@@ -21,8 +21,8 @@ export default function RegularDashboard() {
         ]);
         if (cancelled) return;
         const today = new Date().toISOString().split("T")[0];
-        const upcoming = (shiftsRes.data || []).filter(s => s.shift_date >= today).sort((a,b) => a.shift_date.localeCompare(b.shift_date));
-        const pendingLeave = (leaveRes.data || []).filter(r => r.status === "pending").length;
+        const upcoming = (shiftsRes.shifts || shiftsRes.data || []).filter(s => s.shift_date >= today).sort((a,b) => a.shift_date.localeCompare(b.shift_date));
+        const pendingLeave = (leaveRes.availability || leaveRes.data || []).filter(r => r.status === "pending").length;
         setStats({ upcomingShifts: upcoming.length, pendingLeave });
         setNextShift(upcoming[0] || null);
       } catch (err) { console.error(err); }

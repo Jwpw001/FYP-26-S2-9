@@ -10,7 +10,7 @@ export default function CoordinatorRequests() {
   const [filter, setFilter] = useState("pending_review");
 
   useEffect(() => {
-    api.get("/api/krewby/requests").then(res => setRequests(res.data || [])).catch(console.error).finally(() => setLoading(false));
+    api.get("/api/krewby/requests").then(res => setRequests(res.requests || res.data || [])).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   const filtered = requests.filter(r => filter === "all" ? true : r.status === filter);

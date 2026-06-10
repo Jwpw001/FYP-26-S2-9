@@ -15,7 +15,7 @@ export default function WorkerDashboard() {
     async function load() {
       try {
         const res = await api.get("/api/krewby/my-assignments");
-        const jobs = res.data || [];
+        const jobs = res.assignments || res.data || [];
         const today = new Date().toISOString().split("T")[0];
         const upcoming = jobs.filter(j => j.shift_date >= today).sort((a,b) => a.shift_date.localeCompare(b.shift_date));
         setStats({
