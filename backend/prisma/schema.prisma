@@ -242,7 +242,7 @@ model swap_requests {
   shift_assignments_swap_requests_requester_assignToshift_assignments shift_assignments  @relation("swap_requests_requester_assignToshift_assignments", fields: [requester_assign], references: [assignment_id], onDelete: NoAction, onUpdate: NoAction)
   shift_assignments_swap_requests_target_assign_idToshift_assignments shift_assignments? @relation("swap_requests_target_assign_idToshift_assignments", fields: [target_assign_id], references: [assignment_id], onUpdate: NoAction)
 
-  @@index([requester_id], map: "idx_swap_requester"]
+  @@index([requester_id], map: "idx_swap_requester")
 }
 
 model user_skill_tags {
