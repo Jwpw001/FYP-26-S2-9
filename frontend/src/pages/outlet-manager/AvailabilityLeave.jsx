@@ -10,7 +10,6 @@ export default function AvailabilityLeave() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [filter, setFilter]     = useState("pending");
-  
   const [processing, setProcessing] = useState(null);
 
   useEffect(() => {
@@ -23,7 +22,6 @@ export default function AvailabilityLeave() {
           .eq("user_id", userId).eq("is_active", true).limit(1);
         const oid = myStaff?.[0]?.outlet_id;
         if (!oid || cancelled) return;
-        
 
         // Get staff IDs in this outlet
         const { data: staffRows } = await supabase
@@ -32,16 +30,21 @@ export default function AvailabilityLeave() {
         const staffIds = (staffRows || []).map(s => s.staff_id);
         if (staffIds.length === 0) { setLoading(false); return; }
 
-        const { data: reqs } = await supabase
+        // Fetch availability requests with staff -> users join
+        const { data: reqs, error } = await supabase
           .from("availability")
           .select(`
             request_id, leave_type, start_date, end_date,
-            reason, status, reviewed_at,
-            users:staff_id ( user_id, full_name, email )
+            reason, status, reviewed_at, staff_id,
+            staff:staff_id (
+              staff_id, user_id,
+              users:user_id ( full_name, email )
+            )
           `)
           .in("staff_id", staffIds)
           .order("start_date", { ascending: false });
 
+        if (error) console.error("availability fetch error:", error);
         if (!cancelled) setRequests(reqs || []);
       } catch (err) {
         console.error(err);
@@ -72,6 +75,17 @@ export default function AvailabilityLeave() {
   );
 
   const pending = requests.filter(r => r.status === "pending").length;
+
+  // Helper to get name/email from nested join
+  function getStaffName(req) {
+    return req.staff?.users?.full_name || req.staff?.users?.email || "Unknown";
+  }
+  function getStaffEmail(req) {
+    return req.staff?.users?.email || "";
+  }
+  function getInitial(req) {
+    return getStaffName(req)?.[0]?.toUpperCase() || "?";
+  }
 
   return (
     <ManagerLayout title="Availability & Leave">
@@ -109,11 +123,11 @@ export default function AvailabilityLeave() {
               <div style={s.cardTop}>
                 <div style={s.staffInfo}>
                   <div style={s.avatar}>
-                    {req.users?.full_name?.[0]?.toUpperCase() || "?"}
+                    {getInitial(req)}
                   </div>
                   <div>
-                    <p style={s.staffName}>{req.users?.full_name || "Unknown"}</p>
-                    <p style={s.staffEmail}>{req.users?.email}</p>
+                    <p style={s.staffName}>{getStaffName(req)}</p>
+                    <p style={s.staffEmail}>{getStaffEmail(req)}</p>
                   </div>
                 </div>
                 <span style={{ ...s.statusBadge, ...statusStyle(req.status) }}>
