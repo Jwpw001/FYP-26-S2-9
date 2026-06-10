@@ -18,7 +18,7 @@ export default function ManagerDashboard() {
       try {
         const [shiftsRes, staffRes, leaveRes] = await Promise.all([
           api.get("/api/shifts"),
-          api.get("/api/staff?is_active=true"),
+          api.get("/api/staff"),
           api.get("/api/availability"),
         ]);
         if (cancelled) return;
