@@ -21,7 +21,7 @@ export default function SwapRequests() {
         ]);
         setRequests(reqRes.data || []);
         const today = new Date().toISOString().split("T")[0];
-        setMyShifts((shiftsRes.data || []).filter(s => s.shift_date >= today));
+        setMyShifts((shiftsRes.shifts || []).filter(s => s.shift_date >= today));
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     }

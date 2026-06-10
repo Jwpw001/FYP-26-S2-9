@@ -12,21 +12,21 @@ const STATUS_STYLES = {
 
 async function fetchEnrichedAssignments(shiftId) {
   try {
-    const { data: assignData } = await api.get(`/api/shift-assignments?shift_id=${shiftId}`);
+    const assignData = await api.get(`/api/shift-assignments?shift_id=${shiftId}`);
     const assignments = assignData?.shift_assignments || [];
 
     const staffIds = assignments.map(a => a.staff_id).filter(Boolean);
     let staffUserMap = {};
 
     if (staffIds.length > 0) {
-      const { data: staffData } = await api.get(`/api/staff?ids=${staffIds.join(',')}`);
+      const staffData = await api.get(`/api/staff?ids=${staffIds.join(',')}`);
       const staffRows = staffData?.staff || [];
 
       const userIds = staffRows.map(s => s.user_id).filter(Boolean);
       let userMap = {};
 
       if (userIds.length > 0) {
-        const { data: userData } = await api.get(`/api/users?ids=${userIds.join(',')}`);
+        const userData = await api.get(`/api/users?ids=${userIds.join(',')}`);
         const userRows = userData?.users || [];
 
         userRows.forEach(u => { userMap[u.user_id] = u; });
@@ -69,13 +69,13 @@ export default function ShiftDetail() {
       setLoading(true);
       try {
         // 1. Fetch shift
-        const { data: shiftData } = await api.get(`/api/shifts/${id}`);
+        const shiftData = await api.get(`/api/shifts/${id}`);
         const shift = shiftData?.shift;
         if (!shift || cancelled) return;
         setShift(shift);
 
         // 2. Fetch roles
-        const { data: roleData } = await api.get(`/api/shift-roles?shift_id=${id}`);
+        const roleData = await api.get(`/api/shift-roles?shift_id=${id}`);
 
         // 3. Fetch assignments with user info via separate queries
         const enriched = await fetchEnrichedAssignments(id);
@@ -104,14 +104,14 @@ export default function ShiftDetail() {
     setRecommendations([]);
     try {
       // Get staff in outlet
-      const { data: staffData } = await api.get(`/api/staff?outlet_id=${shift.outlet_id}&is_active=true`);
+      const staffData = await api.get(`/api/staff?outlet_id=${shift.outlet_id}&is_active=true`);
       const staffRows = staffData?.staff || [];
 
       // Get user info for staff
       const userIds = staffRows.map(s => s.user_id).filter(Boolean);
       let userMap = {};
       if (userIds.length > 0) {
-        const { data: userData } = await api.get(`/api/users?ids=${userIds.join(',')}`);
+        const userData = await api.get(`/api/users?ids=${userIds.join(',')}`);
         const userRows = userData?.users || [];
         userRows.forEach(u => { userMap[u.user_id] = u; });
       }
@@ -120,7 +120,7 @@ export default function ShiftDetail() {
       const staffIds = staffRows.map(s => s.staff_id);
       let skillMap = {};
       if (staffIds.length > 0) {
-        const { data: skillData } = await api.get(`/api/user-skill-tags?user_ids=${userIds.join(',')}`);
+        const skillData = await api.get(`/api/user-skill-tags?user_ids=${userIds.join(',')}`);
         const skillRows = skillData?.user_skill_tags || [];
         skillRows.forEach(r => {
           if (!skillMap[r.user_id]) skillMap[r.user_id] = [];
@@ -132,7 +132,7 @@ export default function ShiftDetail() {
       const assignedStaffIds = assignments.map(a => a.staff_id).filter(Boolean);
 
       // Get staff on leave
-      const { data: leaveData } = await api.get(`/api/availability?outlet_id=${shift.outlet_id}&status=approved&start_date_lte=${shift.shift_date}&end_date_gte=${shift.shift_date}`);
+      const leaveData = await api.get(`/api/availability?outlet_id=${shift.outlet_id}&status=approved&start_date_lte=${shift.shift_date}&end_date_gte=${shift.shift_date}`);
       const leaveRows = leaveData?.availability || [];
       const onLeaveIds = leaveRows.map(l => l.staff_id);
 
@@ -176,7 +176,7 @@ export default function ShiftDetail() {
       });
 
       // Refresh
-      const { data: roleData } = await api.get(`/api/shift-roles?shift_id=${id}`);
+      const roleData = await api.get(`/api/shift-roles?shift_id=${id}`);
       const enriched = await fetchEnrichedAssignments(id);
 
       const rolesWithAssignments = (roleData?.shift_roles || []).map(role => ({
@@ -235,7 +235,7 @@ export default function ShiftDetail() {
   }
 
   async function handleUnpublish() {
-    await supabase.from("shifts").update({ status: "draft" }).eq("shift_id", id);
+    await api.patch(`/api/shifts/${id}`, { status: "draft" });
     setShift(prev => ({ ...prev, status: "draft" }));
     setSuccess("Shift moved back to draft.");
     setTimeout(() => setSuccess(""), 3000);
@@ -243,7 +243,7 @@ export default function ShiftDetail() {
 
   async function handleDelete() {
     if (!window.confirm("Delete this shift? This cannot be undone.")) return;
-    await supabase.from("shifts").delete().eq("shift_id", id);
+    await api.delete(`/api/shifts/${id}`);
     navigate("/outlet-manager/shifts");
   }
 
@@ -269,7 +269,7 @@ export default function ShiftDetail() {
               <span style={{ ...s.badge, ...STATUS_STYLES[shift.status] }}>{shift.status}</span>
             </div>
             <p style={s.shiftMeta}>
-              {fmtDate(shift.shift_date)} · {shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}
+              {fmtDate(shift.shift_date)} · {fmtTime(shift.start_time)} – {fmtTime(shift.end_time)}
               {shift.outlets?.name && ` · ${shift.outlets.name}`}
             </p>
           </div>
@@ -393,6 +393,11 @@ export default function ShiftDetail() {
   );
 }
 
+function fmtTime(t) {
+  if (!t) return "—";
+  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
+    .toISOString().slice(11, 16);
+}
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", { weekday:"long", year:"numeric", month:"long", day:"numeric" });

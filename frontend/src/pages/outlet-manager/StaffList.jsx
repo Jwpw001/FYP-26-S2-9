@@ -23,7 +23,7 @@ export default function StaffList() {
       setLoading(true);
       try {
         // Get user's staff record to find their outlet
-        const { data: myStaff } = await api.get(`/api/staff`);
+        const myStaff = await api.get(`/api/staff`);
         // Filter to find the staff record for current user
         const myStaffRecord = myStaff.staff?.find(s => s.users?.user_id === userId && s.is_active);
         const oid = myStaffRecord?.outlet_id;
@@ -31,7 +31,7 @@ export default function StaffList() {
         if (!oid || cancelled) return;
 
         // Fetch all staff and skills
-        const [{ data: staffData }, { data: skillData }] = await Promise.all([
+        const [staffData, skillData] = await Promise.all([
           api.get(`/api/staff`),
           api.get(`/api/skills`)
         ]);

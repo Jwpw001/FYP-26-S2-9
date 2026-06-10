@@ -24,7 +24,7 @@ export default function Attendance() {
       try {
         const res = await api.get("/api/shifts");
         if (cancelled) return;
-        const filtered = (res.attendance || res.data || []).filter(s => s.shift_date === dateFilter && s.status === "published");
+        const filtered = (res.shifts || []).filter(s => s.shift_date === dateFilter && s.status === "published");
         setShifts(filtered);
         setSelectedShift(null);
         setAssignments([]);
@@ -40,7 +40,7 @@ export default function Attendance() {
     setLoadingAssign(true);
     try {
       const res = await api.get(`/api/shifts/${shiftId}`);
-      const shift = res.data;
+      const shift = res.shift || res.data;
       const flat = (shift.shift_roles || []).flatMap(r =>
         (r.shift_assignments || []).map(a => ({
           ...a,
@@ -93,7 +93,7 @@ export default function Attendance() {
               style={{ ...s.shiftCard, ...(selectedShift === shift.shift_id ? s.shiftCardActive : {}) }}
               onClick={() => loadAssignments(shift.shift_id)}>
               <p style={s.shiftTitle}>{shift.title || "Shift"}</p>
-              <p style={s.shiftTime}>{shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}</p>
+              <p style={s.shiftTime}>{fmtTime(shift.start_time)} – {fmtTime(shift.end_time)}</p>
             </div>
           ))}
         </div>
@@ -138,6 +138,11 @@ export default function Attendance() {
   );
 }
 
+function fmtTime(t) {
+  if (!t) return "—";
+  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
+    .toISOString().slice(11, 16);
+}
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", { weekday:"long", month:"long", day:"numeric" });

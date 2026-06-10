@@ -20,7 +20,7 @@ export default function LeaveRequests() {
     setSubmitting(true); setError("");
     try {
       const res = await api.post("/api/availability", form);
-      setRequests(prev => [res.data, ...prev]);
+      setRequests(prev => [res.availability || res.data, ...prev]);
       setShowForm(false);
       setForm({ leave_type:"annual", start_date:"", end_date:"", reason:"" });
       setSuccess("Leave request submitted!");

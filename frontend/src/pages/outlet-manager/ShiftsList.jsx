@@ -28,14 +28,14 @@ export default function ShiftsList() {
       setLoading(true);
       try {
         // Get user's staff record to find their outlet
-        const { data: myStaffData } = await api.get(`/api/staff`);
+        const myStaffData = await api.get(`/api/staff`);
         const myStaffRecord = myStaffData?.staff?.find(s => s.users?.user_id === userId && s.is_active);
         const oid = myStaffRecord?.outlet_id;
 
         if (!oid || cancelled) return;
 
         // Fetch shifts for the outlet
-        const { data: shiftsData } = await api.get(`/api/shifts?outlet_id=${oid}`);
+        const shiftsData = await api.get(`/api/shifts?outlet_id=${oid}`);
 
         if (!cancelled) setShifts(shiftsData?.shifts || []);
       } catch (err) {
@@ -153,7 +153,7 @@ export default function ShiftsList() {
                   <span style={s.dateCell}>{fmtDate(shift.shift_date)}</span>
                   <span style={s.nameCell}>{shift.title || "Untitled Shift"}</span>
                   <span style={s.cell}>
-                    {shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}
+                    {fmtTime(shift.start_time)} – {fmtTime(shift.end_time)}
                   </span>
                   <span style={s.cell}>
                     <span style={s.roleCount}>
@@ -209,7 +209,7 @@ export default function ShiftsList() {
                         onClick={() => navigate(`/outlet-manager/shifts/${shift.shift_id}`)}>
                         <p style={s.calEventTitle}>{shift.title || "Shift"}</p>
                         <p style={s.calEventTime}>
-                          {shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}
+                          {fmtTime(shift.start_time)} – {fmtTime(shift.end_time)}
                         </p>
                       </div>
                     ))}
@@ -230,6 +230,12 @@ export default function ShiftsList() {
   );
 }
 
+function fmtTime(t) {
+  if (!t) return "—";
+  // Handles both "08:00:00" and "1970-01-01T08:00:00.000Z"
+  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
+    .toISOString().slice(11, 16);
+}
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", {

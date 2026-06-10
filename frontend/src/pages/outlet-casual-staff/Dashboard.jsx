@@ -46,7 +46,7 @@ export default function CasualDashboard() {
             <div style={s.nextShift}>
               <p style={s.nextShiftLabel}>Next Shift</p>
               <p style={s.nextShiftTitle}>{nextShift.title || "Shift"}</p>
-              <p style={s.nextShiftMeta}>{fmtDate(nextShift.shift_date)} · {nextShift.start_time?.slice(0,5)} – {nextShift.end_time?.slice(0,5)}</p>
+              <p style={s.nextShiftMeta}>{fmtDate(nextShift.shift_date)} · {fmtTime(nextShift.start_time)} – {fmtTime(nextShift.end_time)}</p>
             </div>
           )}
           <div style={s.actions}>
@@ -63,6 +63,11 @@ export default function CasualDashboard() {
       )}
     </CasualLayout>
   );
+}
+function fmtTime(t) {
+  if (!t) return '—';
+  return new Date(`1970-01-01T${t.includes('T') ? t.split('T')[1] : t}Z`)
+    .toISOString().slice(11, 16);
 }
 function fmtDate(d) {
   if (!d) return "—";

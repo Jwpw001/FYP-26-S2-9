@@ -84,7 +84,7 @@ export default function ManagerDashboard() {
                   <div key={shift.shift_id} style={s.tableRow} onClick={() => navigate(`/outlet-manager/shifts/${shift.shift_id}`)}>
                     <span>{fmtDate(shift.shift_date)}</span>
                     <span>{shift.title || "Untitled"}</span>
-                    <span>{shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}</span>
+                    <span>{fmtTime(shift.start_time)} – {fmtTime(shift.end_time)}</span>
                     <span><span style={{ ...s.badge, ...badgeStyle(shift.status) }}>{shift.status}</span></span>
                   </div>
                 ))}
@@ -112,6 +112,11 @@ export default function ManagerDashboard() {
   );
 }
 
+function fmtTime(t) {
+  if (!t) return "—";
+  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
+    .toISOString().slice(11, 16);
+}
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", { weekday:"short", month:"short", day:"numeric" });
