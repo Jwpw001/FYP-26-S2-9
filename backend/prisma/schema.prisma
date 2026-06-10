@@ -18,6 +18,7 @@ model users {
   full_name       String?           @db.VarChar(100)
   attendance      attendance[]
   availability    availability[]
+  krewby_requests krewby_requests[]
   krewby_workers  krewby_workers[]
   notifications   notifications[]
   reports         reports[]
@@ -68,6 +69,35 @@ model casual_availability {
   @@unique([staff_id, week_start_date, day_of_week])
 }
 
+model krewby_requests {
+  request_id         Int             @id @default(autoincrement())
+  outlet_id          Int
+  skill_id           Int?
+  role_name          String          @db.VarChar(100)
+  shift_date         DateTime        @db.Date
+  start_time         DateTime        @db.Time(6)
+  end_time           DateTime        @db.Time(6)
+  outlet_address     String?
+  headcount          Int             @default(1)
+  status             String          @default("pending_review") @db.VarChar(30)
+  assigned_worker_id Int?
+  override_note      String?
+  created_by         Int?
+  shift_id           Int?
+  role_id            Int?
+  created_at         DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?       @db.Timestamptz(6)
+  krewby_workers     krewby_workers? @relation(fields: [assigned_worker_id], references: [krewby_worker_id], onDelete: SetNull, onUpdate: NoAction)
+  users              users?          @relation(fields: [created_by], references: [user_id], onDelete: SetNull, onUpdate: NoAction)
+  outlets            outlets         @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade, onUpdate: NoAction)
+  shift_roles        shift_roles?    @relation(fields: [role_id], references: [role_id], onDelete: SetNull, onUpdate: NoAction)
+  shifts             shifts?         @relation(fields: [shift_id], references: [shift_id], onDelete: SetNull, onUpdate: NoAction)
+  skills             skills?         @relation(fields: [skill_id], references: [skill_id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([outlet_id], map: "idx_krewby_requests_outlet")
+  @@index([status], map: "idx_krewby_requests_status")
+}
+
 model krewby_workers {
   krewby_worker_id   Int                 @id @default(autoincrement())
   user_id            Int
@@ -75,6 +105,7 @@ model krewby_workers {
   rating             Decimal?            @default(5.00) @db.Decimal(3, 2)
   total_jobs         Int?                @default(0)
   is_active          Boolean?            @default(true)
+  krewby_requests    krewby_requests[]
   users              users               @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
   shift_assignments  shift_assignments[]
 }
@@ -93,12 +124,13 @@ model notifications {
 }
 
 model outlets {
-  outlet_id Int       @id @default(autoincrement())
-  name      String    @db.VarChar(100)
-  address   String?
-  reports   reports[]
-  shifts    shifts[]
-  staff     staff[]
+  outlet_id       Int               @id @default(autoincrement())
+  name            String            @db.VarChar(100)
+  address         String?
+  krewby_requests krewby_requests[]
+  reports         reports[]
+  shifts          shifts[]
+  staff           staff[]
 }
 
 model reports {
@@ -142,6 +174,7 @@ model shift_roles {
   role_name         String              @db.VarChar(100)
   skill_id          Int?
   headcount         Int                 @default(1)
+  krewby_requests   krewby_requests[]
   shift_assignments shift_assignments[]
   shifts            shifts              @relation(fields: [shift_id], references: [shift_id], onDelete: Cascade, onUpdate: NoAction)
   skills            skills?             @relation(fields: [skill_id], references: [skill_id], onUpdate: NoAction)
@@ -157,6 +190,7 @@ model shifts {
   end_time          DateTime            @db.Time(6)
   status            String              @default("draft") @db.VarChar(20)
   created_by        Int?
+  krewby_requests   krewby_requests[]
   shift_assignments shift_assignments[]
   shift_roles       shift_roles[]
   users             users?              @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
@@ -170,6 +204,7 @@ model skills {
   name            String            @unique @db.VarChar(100)
   description     String?
   created_by      Int?
+  krewby_requests krewby_requests[]
   shift_roles     shift_roles[]
   users           users?            @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
   user_skill_tags user_skill_tags[]
@@ -207,7 +242,7 @@ model swap_requests {
   shift_assignments_swap_requests_requester_assignToshift_assignments shift_assignments  @relation("swap_requests_requester_assignToshift_assignments", fields: [requester_assign], references: [assignment_id], onDelete: NoAction, onUpdate: NoAction)
   shift_assignments_swap_requests_target_assign_idToshift_assignments shift_assignments? @relation("swap_requests_target_assign_idToshift_assignments", fields: [target_assign_id], references: [assignment_id], onUpdate: NoAction)
 
-  @@index([requester_id], map: "idx_swap_requester")
+  @@index([requester_id], map: "idx_swap_requester"]
 }
 
 model user_skill_tags {
