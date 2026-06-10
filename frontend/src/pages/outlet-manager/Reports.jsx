@@ -138,7 +138,13 @@ export default function Reports() {
 
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-SG", { month:"short", day:"numeric", year:"numeric" });
+  try {
+    const s = String(d);
+    const clean = s.includes("T") ? s.split("T")[0] : s;
+    const dt = new Date(clean + "T00:00:00Z");
+    if (isNaN(dt.getTime())) return s;
+    return dt.toLocaleDateString("en-SG", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  } catch { return "—"; }
 }
 function attStyle(s) {
   const map = { present:{ background:"#DCFCE7", color:"#166534" }, absent:{ background:"#FEE2E2", color:"#991B1B" }, late:{ background:"#FFFBEB", color:"#D97706" } };

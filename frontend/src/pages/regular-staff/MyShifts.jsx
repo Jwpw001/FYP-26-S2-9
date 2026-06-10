@@ -89,11 +89,23 @@ export default function RegularMyShifts() {
 
 function fmtTime(t) {
   if (!t) return "—";
-  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`).toISOString().slice(11, 16);
+  try {
+    const s = String(t);
+    if (s.length === 5 && s[2] === ':') return s;
+    if (s.length >= 8 && s[2] === ':') return s.slice(0, 5);
+    if (s.includes("T")) return s.split("T")[1].slice(0, 5);
+    return "—";
+  } catch { return "—"; }
 }
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-SG", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  try {
+    const s = String(d);
+    const clean = s.includes("T") ? s.split("T")[0] : s;
+    const dt = new Date(clean + "T00:00:00Z");
+    if (isNaN(dt.getTime())) return s;
+    return dt.toLocaleDateString("en-SG", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  } catch { return "—"; }
 }
 const s = {
   heading: { fontSize: "20px", fontWeight: "800", color: "#1C1B18", marginBottom: "16px" },

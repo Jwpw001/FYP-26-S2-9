@@ -91,7 +91,13 @@ export default function LeaveRequests() {
 }
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-SG", { month:"short", day:"numeric", year:"numeric" });
+  try {
+    const s = String(d);
+    const clean = s.includes("T") ? s.split("T")[0] : s;
+    const dt = new Date(clean + "T00:00:00Z");
+    if (isNaN(dt.getTime())) return s;
+    return dt.toLocaleDateString("en-SG", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  } catch { return "—"; }
 }
 function statusStyle(status) {
   const map = { pending:{ background:"#FFFBEB", color:"#D97706" }, approved:{ background:"#DCFCE7", color:"#166534" }, rejected:{ background:"#FEE2E2", color:"#991B1B" } };
