@@ -44,7 +44,7 @@ export default function StaffList() {
         // skill tags are already nested in each staff record via user_skill_tags include
         const enriched = filteredStaff.map(s => ({
           ...s,
-          skillTags: (s.user_skill_tags || []).map(t => ({
+          skillTags: (s.users?.user_skill_tags || []).map(t => ({
             id: t.skill_id,
             name: t.skills?.name || `Skill ${t.skill_id}`
           }))
