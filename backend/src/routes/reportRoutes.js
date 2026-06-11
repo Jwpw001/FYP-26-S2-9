@@ -1,79 +1,15 @@
 const express = require("express");
+const router  = express.Router();
 
-const router = express.Router();
+const { getReports, getReportById } = require("../controllers/reportController");
 
-const {
-    getReports,
-    getReportById,
-    createReport,
-    updateReport,
-    deleteReport
-} = require("../controllers/reportController");
-
-const validate = require("../middleware/validateMiddleware");
 const verifyToken = require("../middleware/authMiddleware");
-const allowRoles = require("../middleware/roleMiddleware");
-const ROLES = require("../constants/roles");
+const allowRoles  = require("../middleware/roleMiddleware");
+const ROLES       = require("../constants/roles");
 
-const {
-    createReportSchema,
-    updateReportSchema
-} = require("../validators/reportValidator");
+const REPORT_ROLES = [ROLES.SYSTEM_ADMIN, ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR];
 
-router.get(
-    "/",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
-    ),
-    getReports
-);
-
-router.get(
-    "/:id",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
-    ),
-    getReportById
-);
-
-router.post(
-    "/",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
-    ),
-    validate(createReportSchema),
-    createReport
-);
-
-router.patch(
-    "/:id",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
-    ),
-    validate(updateReportSchema),
-    updateReport
-);
-
-router.delete(
-    "/:id",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER
-    ),
-    deleteReport
-);
+router.get("/",    verifyToken, allowRoles(...REPORT_ROLES), getReports);
+router.get("/:id", verifyToken, allowRoles(...REPORT_ROLES), getReportById);
 
 module.exports = router;
