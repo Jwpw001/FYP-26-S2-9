@@ -13,7 +13,6 @@ const getStaff = async (req, res) => {
             where,
             include: {
                 users: {
-                    select: { user_id: true, full_name: true, email: true, role: true },
                     include: {
                         user_skill_tags: {
                             include: { skills: { select: { skill_id: true, name: true } } }
@@ -36,7 +35,6 @@ const getStaffById = async (req, res) => {
             where: { staff_id: Number(req.params.id) },
             include: {
                 users: {
-                    select: { user_id: true, full_name: true, email: true, role: true },
                     include: {
                         user_skill_tags: {
                             include: { skills: { select: { skill_id: true, name: true } } }
