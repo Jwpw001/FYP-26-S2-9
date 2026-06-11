@@ -220,6 +220,7 @@ export default function SkillTags() {
   const [editId, setEditId]     = useState(null);
   const [editName, setEditName] = useState("");
   const [toast, setToast]       = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // skill row pending delete confirmation
 
   useEffect(() => {
     let cancelled = false;
@@ -282,9 +283,14 @@ export default function SkillTags() {
     showToast("Skill tag updated.");
   }
 
-  async function handleDelete(id) {
-    if (!window.confirm("Delete this skill tag? It will be removed from all assigned staff.")) return;
+  function handleDelete(id) {
+    setDeleteTarget(skills.find(s => s.skill_id === id) || { skill_id: id });
+  }
+
+  async function confirmDelete() {
+    const id = deleteTarget.skill_id;
     const { error } = await supabase.from("skills").delete().eq("skill_id", id);
+    setDeleteTarget(null);
     if (error) { showToast("Cannot delete — skill may be in use.", "error"); return; }
     setSkills(prev => prev.filter(s => s.skill_id !== id));
     showToast("Skill tag deleted.");
@@ -294,6 +300,44 @@ export default function SkillTags() {
     <AdminLayout title="Skill Tags">
       {toast && (
         <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            style={{ background: "#FFF", borderRadius: 16, padding: 28, width: "100%", maxWidth: 400, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: 48, height: 48, borderRadius: "50%", margin: "0 auto 14px", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#1E293B", marginBottom: 8 }}>Delete skill tag?</h3>
+            <p style={{ fontSize: 13.5, color: "#64748B", lineHeight: 1.6, marginBottom: 22 }}>
+              <strong>{deleteTarget.name || "This skill"}</strong> will be removed from all assigned staff. This cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button
+                style={{ background: "#F1F5F9", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#64748B", cursor: "pointer" }}
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                style={{ background: "#EF4444", border: "none", borderRadius: 9, padding: "8px 18px", fontSize: 13, fontWeight: 700, color: "#FFF", cursor: "pointer" }}
+                onClick={confirmDelete}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div style={{ animation: "fadeSlideUp 0.4s ease both" }}>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api } from "../../lib/api";
+import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
@@ -65,13 +65,18 @@ export default function ShiftsList() {
     async function load() {
       setLoading(true);
       try {
-        const { data: myStaffData } = await api.get(`/api/staff`);
-        const myStaffRecord = myStaffData?.staff?.find(s => s.users?.user_id === userId && s.is_active);
-        const oid = myStaffRecord?.outlet_id;
+        const { data: myStaff } = await supabase
+          .from("staff").select("outlet_id")
+          .eq("user_id", userId).eq("is_active", true).limit(1);
+        const oid = myStaff?.[0]?.outlet_id;
         if (!oid || cancelled) return;
 
-        const { data: shiftsData } = await api.get(`/api/shifts?outlet_id=${oid}`);
-        if (!cancelled) setShifts(shiftsData?.shifts || []);
+        const { data: shiftRows } = await supabase
+          .from("shifts")
+          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id")
+          .eq("outlet_id", oid)
+          .order("shift_date", { ascending: false });
+        if (!cancelled) setShifts(shiftRows || []);
       } catch (err) {
         console.error(err);
       } finally {

@@ -75,6 +75,11 @@ export default function AvailabilityLeave() {
   const [processing, setProcessing]     = useState(null);
   const [toast, setToast]               = useState(null);
 
+  // Staff picker modal for swap approval
+  const [swapApproveModal, setSwapApproveModal] = useState(null); // { sw, availableStaff }
+  const [pickedStaffId, setPickedStaffId]       = useState("");
+  const [approving, setApproving]               = useState(false);
+
   function showToast(msg, type = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
@@ -222,6 +227,25 @@ export default function AvailabilityLeave() {
         reviewed_at: new Date().toISOString(),
       }).eq("request_id", requestId);
 
+      // If approved, remove shift assignments that fall within the leave period
+      if (action === "approved" && req) {
+        // Step 1: get all shift_ids in the leave date range
+        const { data: shiftsInRange } = await supabase
+          .from("shifts")
+          .select("shift_id")
+          .gte("shift_date", req.start_date)
+          .lte("shift_date", req.end_date);
+
+        if (shiftsInRange && shiftsInRange.length > 0) {
+          const shiftIds = shiftsInRange.map(s => s.shift_id);
+          // Step 2: delete assignments for this staff in those shifts
+          await supabase.from("shift_assignments")
+            .delete()
+            .eq("staff_id", req.staff_id)
+            .in("shift_id", shiftIds);
+        }
+      }
+
       // Insert notification for staff member
       if (req) {
         const staffUserId = req.staff?.user_id || staffUserMap[req.staff_id];
@@ -232,8 +256,8 @@ export default function AvailabilityLeave() {
             type: "leave_decision",
             title: isApproved ? "Leave Request Approved" : "Leave Request Rejected",
             message: isApproved
-              ? `Your ${req.leave_type} leave request (${fmtDate(req.start_date)} – ${fmtDate(req.end_date)}) has been approved.`
-              : `Your ${req.leave_type} leave request (${fmtDate(req.start_date)} – ${fmtDate(req.end_date)}) has been rejected.`,
+              ? `Your ${req.leave_type} leave (${fmtDate(req.start_date)} – ${fmtDate(req.end_date)}) has been approved. Any shifts during this period have been removed.`
+              : `Your ${req.leave_type} leave request (${fmtDate(req.start_date)} – ${fmtDate(req.end_date)}) was rejected.`,
             related_entity: "availability",
             related_id: String(requestId),
             is_read: false,
@@ -245,7 +269,7 @@ export default function AvailabilityLeave() {
       setRequests(prev => prev.map(r =>
         r.request_id === requestId ? { ...r, status: action } : r
       ));
-      showToast(action === "approved" ? "Request approved." : "Request rejected.", action === "approved" ? "success" : "error");
+      showToast(action === "approved" ? "Leave approved. Shifts in this period removed." : "Request rejected.", action === "approved" ? "success" : "error");
     } catch (err) {
       console.error(err);
       showToast("Action failed. Please try again.", "error");
@@ -256,23 +280,121 @@ export default function AvailabilityLeave() {
 
   // ── Handle swap action ────────────────────────────────────────────────────
   async function handleSwapAction(swapId, action) {
-    setProcessing(swapId);
+    if (action === "rejected") {
+      // Reject immediately, no staff picker needed
+      setProcessing(swapId);
+      try {
+        await supabase.from("swap_requests").update({
+          status: "rejected",
+          manager_id: userId,
+          manager_decided_at: new Date().toISOString(),
+        }).eq("swap_id", swapId);
+        setSwaps(prev => prev.map(s =>
+          s.swap_id === swapId ? { ...s, status: "rejected" } : s
+        ));
+        showToast("Request rejected.", "error");
+      } catch (err) {
+        console.error(err);
+        showToast("Action failed. Please try again.", "error");
+      } finally {
+        setProcessing(null);
+      }
+      return;
+    }
+
+    // Approve — fetch available staff (same outlet, active, not the requester)
+    const sw = swaps.find(s => s.swap_id === swapId);
+    if (!sw) return;
+
+    // Get all outlet staff except the requester
+    const { data: outletStaff } = await supabase
+      .from("staff")
+      .select("staff_id, user_id, users:user_id(full_name, email)")
+      .eq("outlet_id", outletId)
+      .eq("is_active", true)
+      .neq("staff_id", sw.requester_id);
+
+    setPickedStaffId("");
+    setSwapApproveModal({ sw, availableStaff: outletStaff || [] });
+  }
+
+  async function confirmSwapApproval() {
+    if (!pickedStaffId) { showToast("Please select a staff member to cover the shift.", "error"); return; }
+    const { sw } = swapApproveModal;
+    setApproving(true);
     try {
+      // Get the requester's shift_assignment to find shift_id and role_id
+      const { data: assignRow } = await supabase
+        .from("shift_assignments")
+        .select("assignment_id, shift_id, role_id")
+        .eq("assignment_id", sw.requester_assign)
+        .single();
+
+      if (!assignRow) throw new Error("Original assignment not found");
+
+      // 1. Create new assignment for the cover staff
+      const { error: insertErr } = await supabase.from("shift_assignments").insert({
+        shift_id: assignRow.shift_id,
+        staff_id: Number(pickedStaffId),
+        role_id: assignRow.role_id,
+        status: "assigned",
+      });
+      if (insertErr) throw insertErr;
+
+      // 2. Delete requester's original assignment
+      await supabase.from("shift_assignments")
+        .delete().eq("assignment_id", sw.requester_assign);
+
+      // 3. Update swap request status
       await supabase.from("swap_requests").update({
-        status: action,
+        status: "approved",
+        target_staff_id: Number(pickedStaffId),
         manager_id: userId,
         manager_decided_at: new Date().toISOString(),
-      }).eq("swap_id", swapId);
+      }).eq("swap_id", sw.swap_id);
+
+      // 4. Notify requester
+      const requesterUserId = staffUserMap[sw.requester_id];
+      if (requesterUserId) {
+        const coverStaff = swapApproveModal.availableStaff.find(s => String(s.staff_id) === String(pickedStaffId));
+        const coverName = coverStaff?.users?.full_name || "a colleague";
+        await supabase.from("notifications").insert({
+          recipient_id: requesterUserId,
+          type: "swap_decision",
+          title: "Swap Request Approved",
+          message: `Your swap request has been approved. ${coverName} will cover your shift.`,
+          related_entity: "swap_requests",
+          related_id: String(sw.swap_id),
+          is_read: false,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      // 5. Notify the cover staff
+      const coverUserId = staffUserMap[pickedStaffId] || staffUserMap[Number(pickedStaffId)];
+      if (coverUserId) {
+        await supabase.from("notifications").insert({
+          recipient_id: coverUserId,
+          type: "shift_assigned",
+          title: "New Shift Assignment",
+          message: `You have been assigned to cover a shift as part of a swap approval.`,
+          related_entity: "shift_assignments",
+          related_id: String(assignRow.shift_id),
+          is_read: false,
+          created_at: new Date().toISOString(),
+        });
+      }
 
       setSwaps(prev => prev.map(s =>
-        s.swap_id === swapId ? { ...s, status: action } : s
+        s.swap_id === sw.swap_id ? { ...s, status: "approved" } : s
       ));
-      showToast(action === "approved" ? "Request approved." : "Request rejected.", action === "approved" ? "success" : "error");
+      setSwapApproveModal(null);
+      showToast("Swap approved. Assignment transferred.", "success");
     } catch (err) {
       console.error(err);
-      showToast("Action failed. Please try again.", "error");
+      showToast("Failed to approve swap. Please try again.", "error");
     } finally {
-      setProcessing(null);
+      setApproving(false);
     }
   }
 
@@ -428,6 +550,70 @@ export default function AvailabilityLeave() {
         )}
 
       </div>
+
+      {/* Staff picker modal for swap approval */}
+      {swapApproveModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+          zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#FFFFFF", borderRadius: "18px", padding: "28px",
+            width: "100%", maxWidth: "440px", boxShadow: "0 24px 60px rgba(0,0,0,0.2)",
+            animation: "popIn 0.2s ease both",
+          }}>
+            <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "6px" }}>
+              Choose Cover Staff
+            </h3>
+            <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>
+              Select a staff member to take over the shift from{" "}
+              <strong>{swapApproveModal.sw.requesterUser?.full_name || "the requester"}</strong>.
+              Their original shift assignment will be removed.
+            </p>
+
+            {swapApproveModal.sw.requesterShift && (
+              <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "10px", padding: "12px 14px", marginBottom: "16px" }}>
+                <p style={{ fontSize: "11px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", marginBottom: "4px" }}>Shift to cover</p>
+                <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>
+                  {swapApproveModal.sw.requesterShift.title || "Shift"} · {fmtDate(swapApproveModal.sw.requesterShift.shift_date)}
+                </p>
+              </div>
+            )}
+
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "6px" }}>
+              Select Cover Staff *
+            </label>
+            <select
+              value={pickedStaffId}
+              onChange={e => setPickedStaffId(e.target.value)}
+              style={{ width: "100%", padding: "10px 13px", border: "1.5px solid #D8D5CE", borderRadius: "9px", fontSize: "14px", color: "#1E293B", background: "#FFFFFF", marginBottom: "20px", boxSizing: "border-box" }}
+            >
+              <option value="">Choose a staff member…</option>
+              {swapApproveModal.availableStaff.map(s => (
+                <option key={s.staff_id} value={s.staff_id}>
+                  {s.users?.full_name || s.users?.email || `Staff #${s.staff_id}`}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <button
+                onClick={() => setSwapApproveModal(null)}
+                disabled={approving}
+                style={{ padding: "9px 18px", background: "#F1F5F9", border: "none", borderRadius: "9px", fontSize: "13px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button
+                onClick={confirmSwapApproval}
+                disabled={approving || !pickedStaffId}
+                style={{ padding: "9px 18px", background: pickedStaffId ? "#22C55E" : "#A7F3D0", border: "none", borderRadius: "9px", fontSize: "13px", fontWeight: "700", color: "#FFFFFF", cursor: pickedStaffId ? "pointer" : "default", transition: "background 0.15s" }}>
+                {approving ? "Approving…" : "Confirm Approval"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (

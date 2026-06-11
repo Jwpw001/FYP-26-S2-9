@@ -95,6 +95,12 @@ export default function ShiftDetail() {
   const [publishing, setPublishing]   = useState(false);
   const [toast, setToast]             = useState(null);
 
+  // Add role form
+  const [showRoleForm, setShowRoleForm] = useState(false);
+  const [roleForm, setRoleForm]         = useState({ role_name: "", headcount: 1, skill_id: "" });
+  const [skillOptions, setSkillOptions] = useState([]);
+  const [savingRole, setSavingRole]     = useState(false);
+
   // Assign modal state
   const [assignModal, setAssignModal]         = useState(null); // { role }
   const [candidates, setCandidates]           = useState([]);
@@ -103,6 +109,10 @@ export default function ShiftDetail() {
 
   // Conflict modal state
   const [conflictModal, setConflictModal] = useState(null); // { hardBlocks, warnings }
+
+  // Confirm modal state — { title, body, confirmLabel, danger, onConfirm }
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
@@ -128,7 +138,11 @@ export default function ShiftDetail() {
 
         const enriched = await fetchEnrichedAssignments(id);
 
+        // Load skills for the Add Role dropdown
+        const { data: skillsData } = await supabase.from("skills").select("skill_id, name").order("name");
+
         if (!cancelled) {
+          setSkillOptions(skillsData || []);
           const rolesWithAssignments = (roleData || []).map(role => ({
             ...role,
             shift_assignments: enriched.filter(a => a.role_id === role.role_id),
@@ -146,6 +160,32 @@ export default function ShiftDetail() {
     return () => { cancelled = true; };
   }, [id]);
 
+  // ── Add role to shift ──────────────────────────────────────────────────────
+  async function addRole() {
+    if (!roleForm.role_name.trim()) { showToast("Role name is required.", "error"); return; }
+    if (Number(roleForm.headcount) < 1) { showToast("Headcount must be at least 1.", "error"); return; }
+    setSavingRole(true);
+    try {
+      const { data, error } = await supabase.from("shift_roles").insert({
+        shift_id:  Number(id),
+        role_name: roleForm.role_name.trim(),
+        headcount: Number(roleForm.headcount),
+        skill_id:  roleForm.skill_id ? Number(roleForm.skill_id) : null,
+      }).select(`role_id, role_name, skill_id, headcount, skills ( name )`).single();
+
+      if (error) throw error;
+      setRoles(prev => [...prev, { ...data, shift_assignments: [] }]);
+      setRoleForm({ role_name: "", headcount: 1, skill_id: "" });
+      setShowRoleForm(false);
+      showToast(`Role "${data.role_name}" added.`);
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to add role.", "error");
+    } finally {
+      setSavingRole(false);
+    }
+  }
+
   // ── Open assign modal ──────────────────────────────────────────────────────
   async function openAssignModal(role) {
     setAssignModal({ role });
@@ -162,11 +202,11 @@ export default function ShiftDetail() {
       const userIds = (staffRows || []).map(s => s.user_id).filter(Boolean);
       const staffIds = (staffRows || []).map(s => s.staff_id);
 
-      // Fetch user info
+      // Fetch user info (incl. role so we can exclude managers)
       let userMap = {};
       if (userIds.length > 0) {
         const { data: userRows } = await supabase
-          .from("users").select(`user_id, full_name, email`).in("user_id", userIds);
+          .from("users").select(`user_id, full_name, email, role`).in("user_id", userIds);
         (userRows || []).forEach(u => { userMap[u.user_id] = u; });
       }
 
@@ -214,6 +254,7 @@ export default function ShiftDetail() {
           const isAlreadyAssigned = assignedStaffIds.has(staff.staff_id);
 
           if (isAlreadyAssigned) return null; // already on this shift
+          if (user.role === "outlet_manager") return null; // managers cannot be assigned shifts
 
           let score = 0;
           const badges = [];
@@ -250,6 +291,12 @@ export default function ShiftDetail() {
 
   // ── Assign staff ──────────────────────────────────────────────────────────
   async function assignStaff(staffId, roleId) {
+    const targetRole = roles.find(r => r.role_id === roleId);
+    const filled = targetRole?.shift_assignments?.length || 0;
+    if (targetRole && filled >= (targetRole.headcount || 1)) {
+      showToast(`"${targetRole.role_name}" is already fully staffed (${filled}/${targetRole.headcount}).`, "error");
+      return;
+    }
     setAssigning(true);
     try {
       const { error: err } = await supabase.from("shift_assignments").insert({
@@ -285,7 +332,7 @@ export default function ShiftDetail() {
   }
 
   // ── Remove assignment ─────────────────────────────────────────────────────
-  async function removeAssignment(assignmentId) {
+  async function doRemoveAssignment(assignmentId) {
     await supabase.from("shift_assignments").delete().eq("assignment_id", assignmentId);
     setRoles(prev => prev.map(r => ({
       ...r,
@@ -293,6 +340,23 @@ export default function ShiftDetail() {
     })));
     setAssignments(prev => prev.filter(a => a.assignment_id !== assignmentId));
     showToast("Assignment removed.");
+  }
+
+  function removeAssignment(assignmentId) {
+    // On a published shift, the staff member may have already seen it — confirm first
+    if (shift.status === "published") {
+      const a = assignments.find(x => x.assignment_id === assignmentId);
+      const name = a?.userInfo?.full_name || "this staff member";
+      setConfirmModal({
+        title: "Remove from shift?",
+        body: <>This shift is already published. <strong>{name}</strong> may have seen their schedule. Remove them anyway?</>,
+        confirmLabel: "Remove",
+        danger: true,
+        onConfirm: () => doRemoveAssignment(assignmentId),
+      });
+      return;
+    }
+    doRemoveAssignment(assignmentId);
   }
 
   // ── Publish with conflict checks ──────────────────────────────────────────
@@ -380,10 +444,17 @@ export default function ShiftDetail() {
     showToast("Shift moved back to draft.");
   }
 
-  async function handleDelete() {
-    if (!window.confirm("Delete this shift? This cannot be undone.")) return;
-    await supabase.from("shifts").delete().eq("shift_id", id);
-    goTo("/outlet-manager/shifts");
+  function handleDelete() {
+    setConfirmModal({
+      title: "Delete this shift?",
+      body: <>This will permanently delete <strong>{shift?.title || "this shift"}</strong> and all its role assignments. This cannot be undone.</>,
+      confirmLabel: "Delete Shift",
+      danger: true,
+      onConfirm: async () => {
+        await supabase.from("shifts").delete().eq("shift_id", id);
+        goTo("/outlet-manager/shifts");
+      },
+    });
   }
 
   if (loading) {
@@ -460,10 +531,63 @@ export default function ShiftDetail() {
         </div>
       </div>
 
-      <h3 style={s.sectionTitle}>Roles & Assignments</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <h3 style={{ ...s.sectionTitle, margin: 0 }}>Roles & Assignments</h3>
+        {shift.status !== "completed" && shift.status !== "cancelled" && (
+          <button
+            onClick={() => { setShowRoleForm(v => !v); setRoleForm({ role_name: "", headcount: 1, skill_id: "" }); }}
+            style={{ background: showRoleForm ? "#F1F5F9" : "#2563EB", color: showRoleForm ? "#64748B" : "#FFFFFF", border: "none", padding: "8px 16px", borderRadius: "9px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
+            {showRoleForm ? "Cancel" : "+ Add Role"}
+          </button>
+        )}
+      </div>
+
+      {/* Add Role form */}
+      {showRoleForm && (
+        <div style={{ background: "#F8FAFC", border: "1.5px solid #BFDBFE", borderRadius: "14px", padding: "20px", marginBottom: "20px" }}>
+          <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", marginBottom: "16px" }}>New Role</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 1fr", gap: "12px", marginBottom: "16px" }}>
+            <div>
+              <label style={s.formLabel}>Role Name *</label>
+              <input
+                style={s.formInput}
+                placeholder="e.g. Cashier, Barista, Server…"
+                value={roleForm.role_name}
+                onChange={e => setRoleForm(p => ({ ...p, role_name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label style={s.formLabel}>Headcount *</label>
+              <input
+                style={s.formInput}
+                type="number" min="1" max="20"
+                value={roleForm.headcount}
+                onChange={e => setRoleForm(p => ({ ...p, headcount: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label style={s.formLabel}>Required Skill (optional)</label>
+              <select style={s.formInput} value={roleForm.skill_id} onChange={e => setRoleForm(p => ({ ...p, skill_id: e.target.value }))}>
+                <option value="">No specific skill</option>
+                {skillOptions.map(sk => (
+                  <option key={sk.skill_id} value={sk.skill_id}>{sk.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button onClick={addRole} disabled={savingRole}
+            style={{ background: savingRole ? "#93C5FD" : "#2563EB", color: "#FFFFFF", border: "none", padding: "9px 22px", borderRadius: "9px", fontSize: "14px", fontWeight: "700", cursor: savingRole ? "default" : "pointer" }}>
+            {savingRole ? "Adding…" : "Add Role"}
+          </button>
+        </div>
+      )}
 
       {roles.length === 0 ? (
-        <div style={s.empty}>No roles defined for this shift.</div>
+        <div style={{ ...s.empty, padding: "40px", textAlign: "center" }}>
+          <div style={{ fontSize: "32px", marginBottom: "10px" }}>👥</div>
+          <p style={{ fontSize: "15px", fontWeight: "600", color: "#64748B", marginBottom: "4px" }}>No roles defined yet</p>
+          <p style={{ fontSize: "13px", color: "#94A3B8" }}>Click "+ Add Role" above to define positions for this shift, then assign staff to each role.</p>
+        </div>
       ) : (
         roles.map(role => {
           const filled = role.shift_assignments?.length || 0;
@@ -504,8 +628,14 @@ export default function ShiftDetail() {
                       ? <span style={s.ackTagYes}>✓ Acknowledged</span>
                       : <span style={s.ackTagNo}>Pending acknowledgement</span>
                     }
-                    {shift.status === "draft" && (
-                      <button style={s.removeBtn} onClick={() => removeAssignment(a.assignment_id)}>✕</button>
+                    {(shift.status === "draft" || shift.status === "published") && (
+                      <button
+                        style={s.removeBtn}
+                        title="Remove from shift"
+                        onClick={() => removeAssignment(a.assignment_id)}
+                        onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "#94A3B8"; }}
+                      >✕</button>
                     )}
                   </div>
                 </div>
@@ -632,6 +762,60 @@ export default function ShiftDetail() {
         </div>
       )}
 
+      {/* ── Confirm Modal ──────────────────────────────────────────────────── */}
+      {confirmModal && (
+        <div style={s.modalOverlay} onClick={() => !confirmBusy && setConfirmModal(null)}>
+          <div style={{ ...s.modal, maxWidth: "400px", textAlign: "center" }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              width: "48px", height: "48px", borderRadius: "50%", margin: "0 auto 14px",
+              background: confirmModal.danger ? "#FEF2F2" : "#EFF6FF",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                stroke={confirmModal.danger ? "#EF4444" : "#2563EB"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>
+              {confirmModal.title}
+            </h3>
+            <p style={{ fontSize: "13.5px", color: "#64748B", lineHeight: 1.6, marginBottom: "22px" }}>
+              {confirmModal.body}
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button
+                style={s.cancelConflictBtn}
+                onClick={() => setConfirmModal(null)}
+                disabled={confirmBusy}
+              >
+                Cancel
+              </button>
+              <button
+                style={{
+                  background: confirmModal.danger ? "#EF4444" : "#2563EB",
+                  border: "none", borderRadius: "9px", padding: "8px 18px",
+                  fontSize: "13px", fontWeight: "700", color: "#FFF", cursor: "pointer",
+                  opacity: confirmBusy ? 0.6 : 1,
+                }}
+                disabled={confirmBusy}
+                onClick={async () => {
+                  setConfirmBusy(true);
+                  try {
+                    await confirmModal.onConfirm();
+                    setConfirmModal(null);
+                  } finally {
+                    setConfirmBusy(false);
+                  }
+                }}
+              >
+                {confirmBusy ? "Working…" : confirmModal.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Toast ─────────────────────────────────────────────────────────── */}
       {toast && (
         <div style={{
@@ -673,6 +857,8 @@ const s = {
   staffingFill: { height: "100%", borderRadius: "100px", transition: "width 0.3s ease" },
   staffingText: { fontSize: "13px", color: "#64748B", fontWeight: "500", whiteSpace: "nowrap" },
   sectionTitle: { fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "14px" },
+  formLabel: { display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "6px" },
+  formInput: { display: "block", width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", color: "#1E293B", background: "#FFFFFF", boxSizing: "border-box" },
   roleCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginBottom: "12px" },
   roleCardTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px", flexWrap: "wrap", gap: "8px" },
   roleName: { fontSize: "15px", fontWeight: "700", color: "#1E293B" },
