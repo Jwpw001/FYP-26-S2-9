@@ -5,6 +5,13 @@ const login = async (req, res) => {
     try {
         const { email } = req.body;
 
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required"
+            });
+        }
+
         const user = await prisma.users.findUnique({
             where: { email }
         });
@@ -16,8 +23,16 @@ const login = async (req, res) => {
             });
         }
 
+        if (!user.is_active) {
+            return res.status(403).json({
+                success: false,
+                message: "Account is inactive. Please contact your administrator."
+            });
+        }
+
         const token = generateToken({
             user_id: user.user_id,
+            supabase_auth_id: user.supabase_auth_id,
             email: user.email,
             role: user.role
         });
@@ -28,13 +43,18 @@ const login = async (req, res) => {
             token,
             user: {
                 user_id: user.user_id,
-                full_name: user.full_name,
+                supabase_auth_id: user.supabase_auth_id,
+                username: user.username,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                outlet_id: user.outlet_id,
+                is_active: user.is_active
             }
         });
 
     } catch (error) {
+        console.error("Login error:", error);
+
         return res.status(500).json({
             success: false,
             message: error.message
