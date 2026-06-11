@@ -109,9 +109,6 @@ export default function AdminLayout({ children, title }) {
 
       <div style={s.main}>
         <header style={s.topbar}>
-          <button style={s.menuBtn} onClick={() => setOpen(!open)}>
-            <HamburgerIcon />
-          </button>
           <h1 style={s.pageTitle}>{title}</h1>
         </header>
         <div style={s.content}>{children}</div>

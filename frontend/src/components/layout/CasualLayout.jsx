@@ -58,7 +58,7 @@ export default function CasualLayout({ children, title }) {
       {open && <div style={s.overlay} onClick={() => setOpen(false)} />}
       <div style={s.main}>
         <header style={s.topbar}>
-          <button style={s.menuBtn} onClick={() => setOpen(!open)}>☰</button>
+          
           <h1 style={s.pageTitle}>{title}</h1>
         </header>
         <div style={s.content}>{children}</div>

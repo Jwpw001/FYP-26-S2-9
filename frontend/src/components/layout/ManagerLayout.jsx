@@ -77,9 +77,6 @@ export default function ManagerLayout({ children, title }) {
       <div style={s.main}>
         {/* Top bar */}
         <header style={s.topbar}>
-          <button style={s.menuBtn} onClick={() => setOpen(!open)}>
-            ☰
-          </button>
           <h1 style={s.pageTitle}>{title}</h1>
         </header>
 
