@@ -57,33 +57,58 @@ export default function AvailabilityLeave() {
   const user = getUser();
   const userId = user?.user_id;
 
-  const [requests, setRequests]     = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [filter, setFilter]         = useState("pending");
-  const [processing, setProcessing] = useState(null);
-  const [toast, setToast]           = useState(null);
+  // Main tab: "leave" | "swap"
+  const [mainTab, setMainTab] = useState("leave");
+
+  // Leave state
+  const [requests, setRequests]         = useState([]);
+  const [loadingLeave, setLoadingLeave] = useState(true);
+  const [leaveFilter, setLeaveFilter]   = useState("pending");
+  const [outletId, setOutletId]         = useState(null);
+  const [staffUserMap, setStaffUserMap] = useState({}); // staff_id -> user_id
+
+  // Swap state
+  const [swaps, setSwaps]               = useState([]);
+  const [loadingSwap, setLoadingSwap]   = useState(true);
+  const [swapFilter, setSwapFilter]     = useState("pending");
+
+  const [processing, setProcessing]     = useState(null);
+  const [toast, setToast]               = useState(null);
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   }
 
+  // ── Load outlet + staff info once ─────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    async function loadBase() {
+      const { data: myStaff } = await supabase
+        .from("staff").select("outlet_id").eq("user_id", userId).eq("is_active", true).limit(1);
+      const oid = myStaff?.[0]?.outlet_id;
+      if (!oid || cancelled) return;
+      setOutletId(oid);
+
+      const { data: staffRows } = await supabase
+        .from("staff").select("staff_id, user_id").eq("outlet_id", oid);
+      const map = {};
+      (staffRows || []).forEach(s => { map[s.staff_id] = s.user_id; });
+      if (!cancelled) setStaffUserMap(map);
+    }
+    loadBase();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  // ── Load leave requests ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!outletId) return;
+    let cancelled = false;
     async function load() {
-      setLoading(true);
+      setLoadingLeave(true);
       try {
-        const { data: myStaff } = await supabase
-          .from("staff").select("outlet_id")
-          .eq("user_id", userId).eq("is_active", true).limit(1);
-        const oid = myStaff?.[0]?.outlet_id;
-        if (!oid || cancelled) return;
-
-        const { data: staffRows } = await supabase
-          .from("staff").select("staff_id, user_id").eq("outlet_id", oid);
-
-        const staffIds = (staffRows || []).map(s => s.staff_id);
-        if (staffIds.length === 0) { if (!cancelled) setLoading(false); return; }
+        const staffIds = Object.keys(staffUserMap);
+        if (staffIds.length === 0) { if (!cancelled) setLoadingLeave(false); return; }
 
         const { data: reqs, error } = await supabase
           .from("availability")
@@ -103,29 +128,124 @@ export default function AvailabilityLeave() {
       } catch (err) {
         console.error(err);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadingLeave(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [outletId, staffUserMap]);
 
-  async function handleAction(requestId, action) {
+  // ── Load swap requests ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!outletId) return;
+    let cancelled = false;
+    async function load() {
+      setLoadingSwap(true);
+      try {
+        const staffIds = Object.keys(staffUserMap);
+        if (staffIds.length === 0) { if (!cancelled) setLoadingSwap(false); return; }
+
+        // Fetch swap requests where requester is in this outlet's staff
+        const { data: swapRows, error } = await supabase
+          .from("swap_requests")
+          .select(`
+            swap_id, request_type, reason, status,
+            responded_at, manager_decided_at,
+            requester_id, requester_assign, target_staff_id, target_assign_id
+          `)
+          .in("requester_id", staffIds)
+          .order("swap_id", { ascending: false });
+
+        if (error) console.error("swap_requests fetch error:", error);
+
+        const rawSwaps = swapRows || [];
+
+        // Collect user_ids to resolve names
+        const userIdsToFetch = new Set();
+        rawSwaps.forEach(sw => {
+          if (staffUserMap[sw.requester_id]) userIdsToFetch.add(staffUserMap[sw.requester_id]);
+          if (staffUserMap[sw.target_staff_id]) userIdsToFetch.add(staffUserMap[sw.target_staff_id]);
+        });
+
+        let userMap = {};
+        if (userIdsToFetch.size > 0) {
+          const { data: userRows } = await supabase
+            .from("users").select("user_id, full_name, email")
+            .in("user_id", [...userIdsToFetch]);
+          (userRows || []).forEach(u => { userMap[u.user_id] = u; });
+        }
+
+        // Fetch assignment shift dates for requester_assign and target_assign_id
+        const assignIds = [...new Set(
+          rawSwaps.flatMap(sw => [sw.requester_assign, sw.target_assign_id].filter(Boolean))
+        )];
+        let assignMap = {};
+        if (assignIds.length > 0) {
+          const { data: assignRows } = await supabase
+            .from("shift_assignments")
+            .select(`assignment_id, shifts!inner(shift_date, title)`)
+            .in("assignment_id", assignIds);
+          (assignRows || []).forEach(a => { assignMap[a.assignment_id] = a.shifts; });
+        }
+
+        const enriched = rawSwaps.map(sw => {
+          const requesterUid = staffUserMap[sw.requester_id];
+          const targetUid = staffUserMap[sw.target_staff_id];
+          return {
+            ...sw,
+            requesterUser: userMap[requesterUid] || {},
+            targetUser: userMap[targetUid] || {},
+            requesterShift: assignMap[sw.requester_assign] || null,
+            targetShift: assignMap[sw.target_assign_id] || null,
+          };
+        });
+
+        if (!cancelled) setSwaps(enriched);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoadingSwap(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [outletId, staffUserMap]);
+
+  // ── Handle leave action ────────────────────────────────────────────────────
+  async function handleLeaveAction(requestId, action) {
     setProcessing(requestId);
     try {
+      const req = requests.find(r => r.request_id === requestId);
       await supabase.from("availability").update({
         status: action,
         reviewed_by: userId,
         reviewed_at: new Date().toISOString(),
       }).eq("request_id", requestId);
 
+      // Insert notification for staff member
+      if (req) {
+        const staffUserId = req.staff?.user_id || staffUserMap[req.staff_id];
+        if (staffUserId) {
+          const isApproved = action === "approved";
+          await supabase.from("notifications").insert({
+            recipient_id: staffUserId,
+            type: "leave_decision",
+            title: isApproved ? "Leave Request Approved" : "Leave Request Rejected",
+            message: isApproved
+              ? `Your ${req.leave_type} leave request (${fmtDate(req.start_date)} – ${fmtDate(req.end_date)}) has been approved.`
+              : `Your ${req.leave_type} leave request (${fmtDate(req.start_date)} – ${fmtDate(req.end_date)}) has been rejected.`,
+            related_entity: "availability",
+            related_id: String(requestId),
+            is_read: false,
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+
       setRequests(prev => prev.map(r =>
         r.request_id === requestId ? { ...r, status: action } : r
       ));
-      showToast(
-        action === "approved" ? "Request approved." : "Request rejected.",
-        action === "approved" ? "success" : "error"
-      );
+      showToast(action === "approved" ? "Request approved." : "Request rejected.", action === "approved" ? "success" : "error");
     } catch (err) {
       console.error(err);
       showToast("Action failed. Please try again.", "error");
@@ -134,14 +254,45 @@ export default function AvailabilityLeave() {
     }
   }
 
-  const filtered = requests.filter(r => filter === "all" ? true : r.status === filter);
-  const pending  = requests.filter(r => r.status === "pending").length;
+  // ── Handle swap action ────────────────────────────────────────────────────
+  async function handleSwapAction(swapId, action) {
+    setProcessing(swapId);
+    try {
+      await supabase.from("swap_requests").update({
+        status: action,
+        manager_id: userId,
+        manager_decided_at: new Date().toISOString(),
+      }).eq("swap_id", swapId);
+
+      setSwaps(prev => prev.map(s =>
+        s.swap_id === swapId ? { ...s, status: action } : s
+      ));
+      showToast(action === "approved" ? "Request approved." : "Request rejected.", action === "approved" ? "success" : "error");
+    } catch (err) {
+      console.error(err);
+      showToast("Action failed. Please try again.", "error");
+    } finally {
+      setProcessing(null);
+    }
+  }
+
+  const filteredLeave = requests.filter(r => leaveFilter === "all" ? true : r.status === leaveFilter);
+  const pendingLeave  = requests.filter(r => r.status === "pending").length;
+  const filteredSwap  = swaps.filter(s => swapFilter === "all" ? true : s.status === swapFilter);
+  const pendingSwap   = swaps.filter(s => s.status === "pending").length;
 
   function getStaffName(req) { return req.staff?.users?.full_name || req.staff?.users?.email || "Unknown"; }
   function getStaffEmail(req) { return req.staff?.users?.email || ""; }
   function getInitial(req) { return getStaffName(req)?.[0]?.toUpperCase() || "?"; }
 
-  const FILTER_TABS = [
+  const LEAVE_FILTER_TABS = [
+    { value: "pending",  label: "Pending" },
+    { value: "approved", label: "Approved" },
+    { value: "rejected", label: "Rejected" },
+    { value: "all",      label: "All" },
+  ];
+
+  const SWAP_FILTER_TABS = [
     { value: "pending",  label: "Pending" },
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
@@ -152,70 +303,128 @@ export default function AvailabilityLeave() {
     <ManagerLayout title="Availability & Leave">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
-          <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Leave Requests</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {pending > 0 ? `${pending} pending approval` : "No pending requests"}
-            </p>
-          </div>
-        </div>
-
-        {/* Filter tabs */}
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
-          {FILTER_TABS.map(tab => (
-            <FilterTab
-              key={tab.value}
-              label={tab.label}
-              active={filter === tab.value}
-              badge={tab.value === "pending" && pending > 0 ? pending : null}
-              onClick={() => setFilter(tab.value)}
-            />
+        {/* ── Main tabs ─────────────────────────────────────── */}
+        <div style={{ display: "flex", gap: "0", marginBottom: "24px", borderBottom: "2px solid #E2E8F0" }}>
+          {[
+            { key: "leave", label: "Leave Requests", badge: pendingLeave },
+            { key: "swap",  label: "Swap & Replacement", badge: pendingSwap },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setMainTab(tab.key)}
+              style={{
+                padding: "10px 20px",
+                background: "none",
+                border: "none",
+                borderBottom: mainTab === tab.key ? "2px solid #2563EB" : "2px solid transparent",
+                marginBottom: "-2px",
+                fontSize: "14px",
+                fontWeight: mainTab === tab.key ? "700" : "500",
+                color: mainTab === tab.key ? "#2563EB" : "#64748B",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s",
+              }}
+            >
+              {tab.label}
+              {tab.badge > 0 && (
+                <span style={{ background: "#EF4444", color: "#FFF", fontSize: "10px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
           ))}
         </div>
 
-        {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <Shimmer w="40px" h="40px" r="50%" />
-                    <div>
-                      <Shimmer w="120px" h="15px" r="6px" style={{ marginBottom: "7px" }} />
-                      <Shimmer w="80px" h="12px" r="6px" />
-                    </div>
-                  </div>
-                  <Shimmer w="72px" h="26px" r="100px" />
-                </div>
-                <div style={{ display: "flex", gap: "20px", paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
-                  <Shimmer w="100px" h="36px" r="8px" />
-                  <Shimmer w="140px" h="36px" r="8px" />
-                  <Shimmer w="80px" h="36px" r="8px" />
-                </div>
+        {/* ── LEAVE TAB ──────────────────────────────────────── */}
+        {mainTab === "leave" && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+              <div>
+                <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Leave Requests</h2>
+                <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+                  {pendingLeave > 0 ? `${pendingLeave} pending approval` : "No pending requests"}
+                </p>
               </div>
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px", textAlign: "center" }}>
-            <div style={{ fontSize: "32px", marginBottom: "10px" }}>📋</div>
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No {filter} requests</p>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {filtered.map(req => (
-              <LeaveCard
-                key={req.request_id}
-                req={req}
-                processing={processing}
-                getStaffName={getStaffName}
-                getStaffEmail={getStaffEmail}
-                getInitial={getInitial}
-                onAction={handleAction}
-              />
-            ))}
-          </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "6px", marginBottom: "20px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+              {LEAVE_FILTER_TABS.map(tab => (
+                <FilterTab
+                  key={tab.value}
+                  label={tab.label}
+                  active={leaveFilter === tab.value}
+                  badge={tab.value === "pending" && pendingLeave > 0 ? pendingLeave : null}
+                  onClick={() => setLeaveFilter(tab.value)}
+                />
+              ))}
+            </div>
+
+            {loadingLeave ? (
+              <ShimmerCards />
+            ) : filteredLeave.length === 0 ? (
+              <EmptyState label={`No ${leaveFilter} requests`} />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {filteredLeave.map(req => (
+                  <LeaveCard
+                    key={req.request_id}
+                    req={req}
+                    processing={processing}
+                    getStaffName={getStaffName}
+                    getStaffEmail={getStaffEmail}
+                    getInitial={getInitial}
+                    onAction={handleLeaveAction}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── SWAP TAB ───────────────────────────────────────── */}
+        {mainTab === "swap" && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+              <div>
+                <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Swap & Replacement Requests</h2>
+                <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+                  {pendingSwap > 0 ? `${pendingSwap} pending review` : "No pending requests"}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "6px", marginBottom: "20px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+              {SWAP_FILTER_TABS.map(tab => (
+                <FilterTab
+                  key={tab.value}
+                  label={tab.label}
+                  active={swapFilter === tab.value}
+                  badge={tab.value === "pending" && pendingSwap > 0 ? pendingSwap : null}
+                  onClick={() => setSwapFilter(tab.value)}
+                />
+              ))}
+            </div>
+
+            {loadingSwap ? (
+              <ShimmerCards />
+            ) : filteredSwap.length === 0 ? (
+              <EmptyState label={`No ${swapFilter} swap/replacement requests`} />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {filteredSwap.map(sw => (
+                  <SwapCard
+                    key={sw.swap_id}
+                    sw={sw}
+                    processing={processing}
+                    onAction={handleSwapAction}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
       </div>
@@ -261,6 +470,40 @@ function FilterTab({ label, active, badge, onClick }) {
   );
 }
 
+function ShimmerCards() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <Shimmer w="40px" h="40px" r="50%" />
+              <div>
+                <Shimmer w="120px" h="15px" r="6px" style={{ marginBottom: "7px" }} />
+                <Shimmer w="80px" h="12px" r="6px" />
+              </div>
+            </div>
+            <Shimmer w="72px" h="26px" r="100px" />
+          </div>
+          <div style={{ display: "flex", gap: "20px", paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
+            <Shimmer w="100px" h="36px" r="8px" />
+            <Shimmer w="140px" h="36px" r="8px" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ label }) {
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px", textAlign: "center" }}>
+      <div style={{ fontSize: "32px", marginBottom: "10px" }}>📋</div>
+      <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>{label}</p>
+    </div>
+  );
+}
+
 function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, onAction }) {
   const [hoverApprove, setHoverApprove] = useState(false);
   const [hoverReject, setHoverReject]   = useState(false);
@@ -268,7 +511,6 @@ function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, o
 
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px", animation: "fadeSlideUp 0.3s ease both" }}>
-      {/* Top row */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: avatarColor(name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", fontWeight: "700", flexShrink: 0 }}>
@@ -284,7 +526,6 @@ function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, o
         </span>
       </div>
 
-      {/* Info row */}
       <div style={{ display: "flex", gap: "28px", flexWrap: "wrap", padding: "14px 0", borderTop: "1px solid #F1F5F9", borderBottom: "1px solid #F1F5F9", marginBottom: "14px" }}>
         <InfoItem label="Type" value={`${req.leave_type.charAt(0).toUpperCase() + req.leave_type.slice(1)} Leave`} />
         <InfoItem label="Dates" value={`${fmtDate(req.start_date)} → ${fmtDate(req.end_date)}`} />
@@ -328,6 +569,91 @@ function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, o
               transition: "background 0.15s",
             }}>
             {processing === req.request_id ? "…" : "Approve"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SwapCard({ sw, processing, onAction }) {
+  const [hoverApprove, setHoverApprove] = useState(false);
+  const [hoverReject, setHoverReject]   = useState(false);
+  const requesterName = sw.requesterUser?.full_name || sw.requesterUser?.email || "Unknown";
+  const targetName    = sw.targetUser?.full_name    || sw.targetUser?.email    || "—";
+
+  const typeLabel = sw.request_type === "swap" ? "Shift Swap" : "Shift Replacement";
+  const typeColor = sw.request_type === "swap"
+    ? { background: "#EFF6FF", color: "#1D4ED8" }
+    : { background: "#F5F3FF", color: "#6D28D9" };
+
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px", animation: "fadeSlideUp 0.3s ease both" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: avatarColor(requesterName), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", fontWeight: "700", flexShrink: 0 }}>
+            {requesterName[0]?.toUpperCase() || "?"}
+          </div>
+          <div>
+            <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{requesterName}</p>
+            <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{sw.requesterUser?.email || ""}</p>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", ...typeColor }}>{typeLabel}</span>
+          <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", ...statusStyle(sw.status) }}>
+            {sw.status.charAt(0).toUpperCase() + sw.status.slice(1)}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", padding: "14px 0", borderTop: "1px solid #F1F5F9", borderBottom: "1px solid #F1F5F9", marginBottom: "14px" }}>
+        <InfoItem label="Requester's Shift" value={sw.requesterShift ? `${fmtDate(sw.requesterShift.shift_date)} · ${sw.requesterShift.title || "Shift"}` : "—"} />
+        {sw.request_type === "swap" && (
+          <InfoItem label="Target Staff" value={targetName} />
+        )}
+        {sw.targetShift && (
+          <InfoItem label="Target Shift" value={`${fmtDate(sw.targetShift.shift_date)} · ${sw.targetShift.title || "Shift"}`} />
+        )}
+      </div>
+
+      {sw.reason && (
+        <p style={{ fontSize: "13px", color: "#64748B", fontStyle: "italic", marginBottom: "14px" }}>
+          "{sw.reason}"
+        </p>
+      )}
+
+      {sw.status === "pending" && (
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+          <button
+            onMouseEnter={() => setHoverReject(true)}
+            onMouseLeave={() => setHoverReject(false)}
+            onClick={() => onAction(sw.swap_id, "rejected")}
+            disabled={processing === sw.swap_id}
+            style={{
+              background: hoverReject ? "#FEE2E2" : "#FEF2F2",
+              border: "1px solid #FECACA", borderRadius: "9px",
+              padding: "8px 18px", fontSize: "13px", fontWeight: "600",
+              color: "#991B1B", cursor: "pointer",
+              opacity: processing === sw.swap_id ? 0.6 : 1,
+              transition: "all 0.15s",
+            }}>
+            {processing === sw.swap_id ? "…" : "Reject"}
+          </button>
+          <button
+            onMouseEnter={() => setHoverApprove(true)}
+            onMouseLeave={() => setHoverApprove(false)}
+            onClick={() => onAction(sw.swap_id, "approved")}
+            disabled={processing === sw.swap_id}
+            style={{
+              background: hoverApprove ? "#16A34A" : "#22C55E",
+              border: "none", borderRadius: "9px",
+              padding: "8px 18px", fontSize: "13px", fontWeight: "700",
+              color: "#FFFFFF", cursor: "pointer",
+              opacity: processing === sw.swap_id ? 0.6 : 1,
+              transition: "background 0.15s",
+            }}>
+            {processing === sw.swap_id ? "…" : "Approve"}
           </button>
         </div>
       )}

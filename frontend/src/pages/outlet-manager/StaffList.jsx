@@ -78,7 +78,7 @@ export default function StaffList() {
         const [{ data: staffData }, { data: skillData }, { data: tagData }] = await Promise.all([
           supabase.from("staff")
             .select("staff_id, outlet_id, staff_type, is_active, users(user_id, full_name, email, role)")
-            .eq("outlet_id", oid).eq("is_active", true),
+            .eq("outlet_id", oid),
           supabase.from("skills").select("skill_id, name"),
           supabase.from("user_skill_tags")
             .select("user_id, skill_id, skills(name)"),

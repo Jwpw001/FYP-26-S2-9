@@ -10,7 +10,8 @@ const NAV = [
   { label: "Shifts",      path: "/outlet-manager/shifts",       icon: "📅" },
   { label: "Availability",path: "/outlet-manager/availability", icon: "🗓" },
   { label: "Attendance",  path: "/outlet-manager/attendance",   icon: "✅" },
-  { label: "Reports",     path: "/outlet-manager/reports",      icon: "📊" },
+  { label: "Reports",       path: "/outlet-manager/reports",        icon: "📊" },
+  { label: "Notifications", path: "/outlet-manager/notifications",  icon: "🔔" },
 ];
 
 export default function ManagerLayout({ children, title }) {

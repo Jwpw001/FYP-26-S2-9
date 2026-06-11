@@ -19,6 +19,7 @@ import ShiftDetail        from "./pages/outlet-manager/ShiftDetail";
 import AvailabilityLeave  from "./pages/outlet-manager/AvailabilityLeave";
 import Attendance         from "./pages/outlet-manager/Attendance";
 import Reports            from "./pages/outlet-manager/Reports";
+import ManagerNotifications from "./pages/outlet-manager/Notifications";
 
 // System Admin
 import AdminDashboard from "./pages/system-admin/Dashboard";
@@ -81,7 +82,8 @@ function App() {
         <Route path="/outlet-manager/shifts/:id"   element={<PR roles={["outlet_manager"]}><ShiftDetail /></PR>} />
         <Route path="/outlet-manager/availability" element={<PR roles={["outlet_manager"]}><AvailabilityLeave /></PR>} />
         <Route path="/outlet-manager/attendance"   element={<PR roles={["outlet_manager"]}><Attendance /></PR>} />
-        <Route path="/outlet-manager/reports"      element={<PR roles={["outlet_manager"]}><Reports /></PR>} />
+        <Route path="/outlet-manager/reports"        element={<PR roles={["outlet_manager"]}><Reports /></PR>} />
+        <Route path="/outlet-manager/notifications" element={<PR roles={["outlet_manager"]}><ManagerNotifications /></PR>} />
 
         {/* ── Regular Staff ────────────────────────────── */}
         <Route path="/regular-staff/dashboard"     element={<PR roles={["regular_staff"]}><StaffDashboard /></PR>} />
