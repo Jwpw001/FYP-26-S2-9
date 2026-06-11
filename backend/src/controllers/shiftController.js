@@ -1,17 +1,18 @@
 const prisma = require("../config/prisma");
+const { getOutletId } = require("../utils/getOutletId");
 
 // Helper — get outlet_id for the requesting user
-async function getOutletId(userId) {
-  const record = await prisma.staff.findFirst({
-    where: { user_id: userId }
-  });
-  return record?.outlet_id || null;
+async function getOutletIdForUser(userId, role) {
+  return getOutletId(userId, role);
 }
 
 const getShifts = async (req, res) => {
   try {
-    const outletId = await getOutletId(req.user.user_id);
-    const where = outletId ? { outlet_id: outletId } : {};
+    const outletId = await getOutletId(req.user.user_id, req.user.role);
+    if (!outletId) {
+      return res.status(400).json({ success: false, message: "No outlet linked to this account. Ask your system admin to set up your outlet." });
+    }
+    const where = { outlet_id: outletId };
 
     const shifts = await prisma.shifts.findMany({
       where,
@@ -80,7 +81,7 @@ const createShift = async (req, res) => {
   try {
     const { outlet_id, title, shift_date, start_time, end_time, status, roles } = req.body;
 
-    let resolvedOutletId = outlet_id ? Number(outlet_id) : await getOutletId(req.user.user_id);
+    let resolvedOutletId = outlet_id ? Number(outlet_id) : await getOutletId(req.user.user_id, req.user.role);
 
     if (!resolvedOutletId) {
       return res.status(400).json({ success: false, message: "outlet_id is required" });

@@ -1,14 +1,13 @@
 const prisma = require("../config/prisma");
+const { getOutletId } = require("../utils/getOutletId");
 
 const getStaff = async (req, res) => {
     try {
-        const myRecord = await prisma.staff.findFirst({
-            where: { user_id: req.user.user_id }
-        });
-
-        const where = myRecord?.outlet_id
-            ? { outlet_id: myRecord.outlet_id }
-            : {};
+        const outletId = await getOutletId(req.user.user_id, req.user.role);
+        if (!outletId) {
+            return res.status(400).json({ success: false, message: "No outlet linked to this account. Ask your system admin to set up your outlet." });
+        }
+        const where = { outlet_id: outletId };
 
         const staff = await prisma.staff.findMany({
             where,
@@ -61,11 +60,9 @@ const createStaff = async (req, res) => {
         const { full_name, email, staff_type, hired_at, skill_ids, role } = req.body;
 
         // Get manager's outlet
-        const managerRecord = await prisma.staff.findFirst({
-            where: { user_id: req.user.user_id }
-        });
+        const outletId = await getOutletId(req.user.user_id, req.user.role);
 
-        if (!managerRecord?.outlet_id) {
+        if (!outletId) {
             return res.status(400).json({ success: false, message: "Manager outlet not found" });
         }
 
@@ -93,7 +90,7 @@ const createStaff = async (req, res) => {
         const staff = await prisma.staff.create({
             data: {
                 user_id: newUser.user_id,
-                outlet_id: managerRecord.outlet_id,
+                outlet_id: outletId,
                 staff_type,
                 hired_at: hired_at ? new Date(hired_at) : null,
                 is_active: true,

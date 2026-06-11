@@ -1,8 +1,29 @@
 const prisma = require("../config/prisma");
+const { getOutletId } = require("../utils/getOutletId");
 
 const getAvailability = async (req, res) => {
     try {
+        const { role, user_id } = req.user;
+        let where = {};
+
+        if (role === "outlet_manager") {
+            // Filter to only show leave requests for staff in this manager's outlet
+            const outletId = await getOutletId(user_id, role);
+            if (outletId) {
+                const outletStaff = await prisma.staff.findMany({
+                    where: { outlet_id: outletId },
+                    select: { staff_id: true }
+                });
+                where = { staff_id: { in: outletStaff.map(s => s.staff_id) } };
+            }
+        } else if (role === "regular_staff" || role === "outlet_casual_staff") {
+            // Staff only see their own requests
+            const staffRecord = await prisma.staff.findFirst({ where: { user_id } });
+            where = { staff_id: staffRecord?.staff_id };
+        }
+
         const availability = await prisma.availability.findMany({
+            where,
             include: {
                 users: {
                     select: {
@@ -11,8 +32,14 @@ const getAvailability = async (req, res) => {
                         email: true,
                         role: true
                     }
+                },
+                staff: {
+                    include: {
+                        users: { select: { user_id: true, full_name: true } }
+                    }
                 }
-            }
+            },
+            orderBy: { request_id: "desc" }
         });
 
         res.json({
@@ -74,21 +101,29 @@ const createAvailability = async (req, res) => {
             start_date,
             end_date,
             reason,
-            status,
-            reviewed_by,
-            reviewed_at
+            status
         } = req.body;
+
+        // Resolve staff_id from token if not supplied by frontend
+        let resolvedStaffId = staff_id;
+        if (!resolvedStaffId) {
+            const staffRecord = await prisma.staff.findFirst({
+                where: { user_id: req.user.user_id }
+            });
+            resolvedStaffId = staffRecord?.staff_id;
+        }
+        if (!resolvedStaffId) {
+            return res.status(400).json({ success: false, message: "Staff record not found for this user" });
+        }
 
         const availability = await prisma.availability.create({
             data: {
-                staff_id,
+                staff_id: resolvedStaffId,
                 leave_type,
                 start_date: new Date(start_date),
                 end_date: new Date(end_date),
-                reason,
-                status,
-                reviewed_by,
-                reviewed_at: reviewed_at ? new Date(reviewed_at) : null
+                reason: reason || null,
+                status: status || "pending"
             }
         });
 
@@ -129,8 +164,12 @@ const updateAvailability = async (req, res) => {
                 end_date: end_date ? new Date(end_date) : undefined,
                 reason,
                 status,
-                reviewed_by,
-                reviewed_at: reviewed_at ? new Date(reviewed_at) : undefined
+                reviewed_by: status === "approved" || status === "rejected"
+                    ? req.user.user_id
+                    : (reviewed_by || undefined),
+                reviewed_at: (status === "approved" || status === "rejected")
+                    ? new Date()
+                    : (reviewed_at ? new Date(reviewed_at) : undefined)
             }
         });
 

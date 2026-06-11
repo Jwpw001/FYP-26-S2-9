@@ -1,12 +1,12 @@
 const { z } = require("zod");
 
 const createAvailabilitySchema = z.object({
-    staff_id: z.number(),
+    staff_id: z.number().optional(),    // resolved server-side from JWT if omitted
     leave_type: z.string().min(2, "Leave type is required"),
     start_date: z.string(),
     end_date: z.string(),
     reason: z.string().optional(),
-    status: z.enum(["pending", "approved", "rejected"])
+    status: z.enum(["pending", "approved", "rejected"]).optional()  // defaults to "pending"
 });
 
 const updateAvailabilitySchema = z.object({

@@ -30,7 +30,7 @@ export default function StaffList() {
 
         if (!oid || cancelled) return;
 
-        // Fetch all staff and skills
+        // Fetch all staff and skills in one parallel call
         const [staffData, skillData] = await Promise.all([
           api.get(`/api/staff`),
           api.get(`/api/skills`)
@@ -38,25 +38,16 @@ export default function StaffList() {
 
         if (cancelled) return;
 
-        // Filter staff by outlet_id
-        const filteredStaff = staffData.staff?.filter(s => s.outlet_id === oid && s.is_active) || [];
+        // Backend already filters by outlet; is_active guard as safety net
+        const filteredStaff = staffData.staff?.filter(s => s.is_active) || [];
 
-        // Enrich staff data with skill tags
-        // First, get all user skill tags for these staff members
-        const userIds = filteredStaff.map(s => s.users?.user_id).filter(Boolean);
-        let tagData = { data: [] };
-        if (userIds.length > 0) {
-          // We'd need an API endpoint for this, but for now let's fetch all and filter
-          // In a real app, we'd have a proper endpoint or include this in the staff fetch
-          const allTags = await api.get(`/api/user-skill-tags`); // This endpoint may not exist yet
-          tagData = allTags;
-        }
-
+        // skill tags are already nested in each staff record via user_skill_tags include
         const enriched = filteredStaff.map(s => ({
           ...s,
-          skillTags: (tagData.data || [])
-            .filter(t => t.user_id === s.users?.user_id)
-            .map(t => ({ id: t.skill_id, name: t.skills?.name })),
+          skillTags: (s.user_skill_tags || []).map(t => ({
+            id: t.skill_id,
+            name: t.skills?.name || `Skill ${t.skill_id}`
+          }))
         }));
 
         setStaff(enriched);

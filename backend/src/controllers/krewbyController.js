@@ -4,12 +4,12 @@ const {
   getMyAssignments, confirmAssignment, declineAssignment, clockIn, clockOut,
   submitWorkerAvailability, rateWorker,
 } = require("../services/krewbyService");
+const { getOutletId } = require("../utils/getOutletId");
 const prisma = require("../config/prisma");
 
 // Helper to get outlet_id for manager
-async function getManagerOutletId(userId) {
-  const staff = await prisma.staff.findFirst({ where: { user_id: userId, is_active: true } });
-  return staff?.outlet_id;
+async function getManagerOutletId(userId, role) {
+  return getOutletId(userId, role || "outlet_manager");
 }
 
 // ─── Requests ─────────────────────────────────────────────────
@@ -18,7 +18,7 @@ const getRequests = async (req, res) => {
     const { role, user_id } = req.user;
     let data;
     if (role === "outlet_manager") {
-      const outletId = await getManagerOutletId(user_id);
+      const outletId = await getManagerOutletId(user_id, role);
       data = await getRequestsByOutlet(outletId);
     } else {
       data = await getAllRequests();
@@ -37,7 +37,7 @@ const getRequestByIdController = async (req, res) => {
 
 const createRequestController = async (req, res) => {
   try {
-    const outletId = await getManagerOutletId(req.user.user_id);
+    const outletId = await getManagerOutletId(req.user.user_id, req.user.role);
     if (!outletId) return res.status(404).json({ success: false, message: "Outlet not found" });
     const data = await createRequest(req.body, outletId, req.user.user_id);
     res.status(201).json({ success: true, data });
@@ -154,7 +154,7 @@ const submitAvailabilityController = async (req, res) => {
 // ─── Rating ────────────────────────────────────────────────────
 const rateWorkerController = async (req, res) => {
   try {
-    const outletId = await getManagerOutletId(req.user.user_id);
+    const outletId = await getManagerOutletId(req.user.user_id, req.user.role);
     const { rating, comment } = req.body;
     const data = await rateWorker(Number(req.params.id), rating, comment, outletId);
     res.json({ success: true, data });

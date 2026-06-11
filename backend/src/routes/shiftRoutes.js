@@ -8,6 +8,8 @@ const allowRoles = require("../middleware/roleMiddleware");
 const { createShiftSchema, updateShiftSchema } = require("../validators/shiftValidator");
 const prisma = require("../config/prisma");
 
+const { getOutletId } = require("../utils/getOutletId");
+
 const ALL_STAFF = [
   ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR,
   ROLES.REGULAR_STAFF, ROLES.OUTLET_CASUAL_STAFF, ROLES.KREWBY_CASUAL_WORKER
@@ -155,10 +157,25 @@ router.get("/swap-requests", verifyToken, async (req, res) => {
   try {
     const userId = req.user.user_id;
     const staff = await prisma.staff.findFirst({ where: { user_id: userId } });
-    const data = await prisma.swap_requests.findMany({
-      where: { requester_id: staff?.staff_id },
-      orderBy: { swap_id: "desc" }
-    });
+    // Managers see all swap requests for their outlet; staff see only their own
+    let data;
+    if (req.user.role === "outlet_manager") {
+      const outletId = await getOutletId(userId, req.user.role);
+      // Get all staff_ids in this outlet, then find their requests
+      const outletStaff = outletId
+        ? await prisma.staff.findMany({ where: { outlet_id: outletId }, select: { staff_id: true } })
+        : [];
+      const staffIds = outletStaff.map(s => s.staff_id);
+      data = await prisma.swap_requests.findMany({
+        where: { requester_id: { in: staffIds } },
+        orderBy: { swap_id: "desc" }
+      });
+    } else {
+      data = await prisma.swap_requests.findMany({
+        where: { requester_id: staff?.staff_id },
+        orderBy: { swap_id: "desc" }
+      });
+    }
     res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
