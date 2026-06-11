@@ -1,6 +1,6 @@
-import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { getUser } from "../utils/auth";
+import { useGoTo } from "../components/PageTransition";
 
 /* ─────────────────────────────────────────────
    Hook: fade-in on scroll (IntersectionObserver)
@@ -236,19 +236,17 @@ if (typeof document !== "undefined" && !document.getElementById("krewby-home-sty
    Main Page
 ───────────────────────────────────────────── */
 export default function Home() {
-  const navigate = useNavigate();
   const user = getUser();
-  const [fading, setFading] = useState(false);
+  const goTo = useGoTo();
 
   function go(dest) {
     const target = dest || (user && ROLE_ROUTES[user.role] ? ROLE_ROUTES[user.role] : "/login");
-    setFading(true);
-    setTimeout(() => navigate(target), 300);
+    goTo(target);
   }
   function scroll(id) { document.getElementById(id)?.scrollIntoView({ behavior:"smooth" }); }
 
   return (
-    <main style={{ ...s.page, animation: fading?"fadeOut 0.3s ease forwards":"fadeIn 0.4s ease both" }}>
+    <main style={{ ...s.page, animation: "fadeIn 0.4s ease both" }}>
 
       {/* ══ NAVBAR ══════════════════════════════════════════ */}
       <nav style={s.navbar}>
