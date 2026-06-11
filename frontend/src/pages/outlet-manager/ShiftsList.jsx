@@ -228,14 +228,27 @@ function fmtTime(t) {
   return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
     .toISOString().slice(11, 16);
 }
+function fmtTime(t) {
+  if (!t) return "—";
+  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
+    .toISOString().slice(11, 16);
+}
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-SG", {
-    weekday:"short", month:"short", day:"numeric",
-  });
+  try {
+    const clean = String(d).includes("T") ? String(d).split("T")[0] : String(d);
+    return new Date(clean + "T00:00:00Z").toLocaleDateString("en-SG", {
+      weekday: "short", month: "short", day: "numeric", timeZone: "UTC"
+    });
+  } catch { return "—"; }
 }
 function fmtDateShort(d) {
-  return d.toLocaleDateString("en-SG", { month:"short", day:"numeric" });
+  if (!d) return "—";
+  try {
+    // d can be a Date object or string
+    const dt = d instanceof Date ? d : new Date(String(d).split("T")[0] + "T00:00:00Z");
+    return dt.toLocaleDateString("en-SG", { month: "short", day: "numeric", timeZone: "UTC" });
+  } catch { return "—"; }
 }
 
 const s = {
