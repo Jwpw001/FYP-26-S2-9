@@ -224,9 +224,13 @@ export default function ShiftsList() {
 
 function fmtTime(t) {
   if (!t) return "—";
-  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
-    .toISOString().slice(11, 16);
+  try {
+    const time = t.includes("T") ? t.split("T")[1] : t;
+    const clean = time.endsWith("Z") ? time.slice(0, -1) : time;
+    return new Date(`1970-01-01T${clean}Z`).toISOString().slice(11, 16);
+  } catch { return "—"; }
 }
+
 function fmtDate(d) {
   if (!d) return "—";
   try {
