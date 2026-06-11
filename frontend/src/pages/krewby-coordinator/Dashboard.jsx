@@ -56,12 +56,12 @@ export default function CoordinatorDashboard() {
           { data: assignmentRows },
         ] = await Promise.all([
           supabase.from("krewby_workers").select("*", { count: "exact", head: true }).eq("is_active", true),
-          supabase.from("shift_assignments").select("*", { count: "exact", head: true }).not("krewby_worker_id", "is", null).eq("status", "pending"),
+          supabase.from("krewby_requests").select("*", { count: "exact", head: true }).eq("status", "pending_review"),
           supabase.from("notifications").select("*", { count: "exact", head: true }).eq("recipient_id", userId).eq("is_read", false),
-          supabase.from("shift_assignments")
-            .select(`assignment_id, status, krewby_worker_id, shifts(title, shift_date)`)
-            .not("krewby_worker_id", "is", null).eq("status", "pending")
-            .order("assignment_id", { ascending: false }).limit(6),
+          supabase.from("krewby_requests")
+            .select(`request_id, role_name, shift_date, status, outlets(name)`)
+            .eq("status", "pending_review")
+            .order("created_at", { ascending: false }).limit(6),
         ]);
 
         if (cancelled) return;
@@ -71,23 +71,10 @@ export default function CoordinatorDashboard() {
           unread: unread || 0,
         });
 
-        // Resolve worker names for recent assignments
-        const workerIds = [...new Set((assignmentRows || []).map(r => r.krewby_worker_id).filter(Boolean))];
-        let workerNameMap = {};
-        if (workerIds.length > 0) {
-          const { data: workers } = await supabase.from("krewby_workers").select("krewby_worker_id, user_id").in("krewby_worker_id", workerIds);
-          const userIds = [...new Set((workers || []).map(w => w.user_id))];
-          if (userIds.length > 0) {
-            const { data: users } = await supabase.from("users").select("user_id, full_name, email").in("user_id", userIds);
-            const uMap = {};
-            (users || []).forEach(u => { uMap[u.user_id] = u; });
-            (workers || []).forEach(w => { workerNameMap[w.krewby_worker_id] = uMap[w.user_id]?.full_name || uMap[w.user_id]?.email || "Unknown"; });
-          }
-        }
         setRecentRequests((assignmentRows || []).map(r => ({
-          type: "assignment", id: r.assignment_id,
-          name: workerNameMap[r.krewby_worker_id] || "Unknown",
-          detail: r.shifts?.title ? `${r.shifts.title} · ${fmtDate(r.shifts.shift_date)}` : "Shift assignment",
+          type: "request", id: r.request_id,
+          name: r.outlets?.name || "Unknown outlet",
+          detail: `${r.role_name} · ${fmtDate(r.shift_date)}`,
         })));
       } catch (err) {
         console.error(err);

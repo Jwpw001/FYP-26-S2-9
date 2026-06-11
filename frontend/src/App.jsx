@@ -46,7 +46,9 @@ import CoordinatorWorkers   from "./pages/krewby-coordinator/Workers";
 import CoordinatorLayout    from "./components/layout/CoordinatorLayout";
 
 // Krewby Worker
-import WorkerDashboard from "./pages/krewby-worker/Dashboard";
+import WorkerDashboard    from "./pages/krewby-worker/Dashboard";
+import WorkerMyJobs       from "./pages/krewby-worker/MyJobs";
+import WorkerAvailability from "./pages/krewby-worker/Availability";
 import WorkerLayout    from "./components/layout/WorkerLayout";
 
 // Layouts
@@ -114,12 +116,8 @@ function App() {
 
         {/* ── Krewby Worker ────────────────────────────── */}
         <Route path="/krewby-worker/dashboard"     element={<PR roles={["krewby_casual_worker"]}><WorkerDashboard /></PR>} />
-        <Route path="/krewby-worker/jobs"          element={<PR roles={["krewby_casual_worker"]}>
-          <WorkerLayout title="My Jobs"><div style={{padding:"40px",textAlign:"center",color:"#7A7870"}}>Jobs coming soon</div></WorkerLayout>
-        </PR>} />
-        <Route path="/krewby-worker/availability"  element={<PR roles={["krewby_casual_worker"]}>
-          <WorkerLayout title="Availability"><div style={{padding:"40px",textAlign:"center",color:"#7A7870"}}>Availability coming soon</div></WorkerLayout>
-        </PR>} />
+        <Route path="/krewby-worker/jobs"          element={<PR roles={["krewby_casual_worker"]}><WorkerMyJobs /></PR>} />
+        <Route path="/krewby-worker/availability"  element={<PR roles={["krewby_casual_worker"]}><WorkerAvailability /></PR>} />
         <Route path="/krewby-worker/notifications" element={<PR roles={["krewby_casual_worker"]}>
           <NotificationsPage Layout={WorkerLayout} />
         </PR>} />
