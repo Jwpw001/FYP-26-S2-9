@@ -31,7 +31,7 @@ export default function CreateShift() {
       const res = await api.post("/api/shifts", {
         ...form,
         status,
-        roles: roles.filter(r => r.role_name.trim())
+        roles: roles.filter(r => r.role_name.trim()).map(r => ({ ...r, skill_id: Number(r.skill_id), headcount: Number(r.headcount) }))
       });
       // Backend returns { success, shift } — navigate to the new shift
       const newShiftId = res.shift?.shift_id;
@@ -85,7 +85,7 @@ export default function CreateShift() {
               </div>
               <div style={s.field}>
                 <label style={s.label}>Required Skill</label>
-                <select style={s.input} value={role.skill_id} onChange={e => updateRole(i, "skill_id", e.target.value)}>
+                <select style={s.input} value={role.skill_id} onChange={e => updateRole(i, "skill_id", Number(e.target.value))}>
                   <option value="">No specific skill</option>
                   {skills.map(sk => <option key={sk.skill_id} value={sk.skill_id}>{sk.name}</option>)}
                 </select>

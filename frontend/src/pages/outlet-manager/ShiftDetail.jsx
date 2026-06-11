@@ -363,12 +363,20 @@ export default function ShiftDetail() {
 
 function fmtTime(t) {
   if (!t) return "—";
-  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
-    .toISOString().slice(11, 16);
+  try {
+    const s = String(t);
+    if (s.length === 5 && s[2] === ':') return s;
+    if (s.length >= 8 && s[2] === ':') return s.slice(0, 5);
+    if (s.includes("T")) return s.split("T")[1].slice(0, 5);
+    return s.slice(0, 5);
+  } catch { return "—"; }
 }
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-SG", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+  try {
+    const clean = String(d).includes("T") ? String(d).split("T")[0] : String(d);
+    return new Date(clean + "T00:00:00Z").toLocaleDateString("en-SG", { weekday:"long", year:"numeric", month:"long", day:"numeric", timeZone:"UTC" });
+  } catch { return "—"; }
 }
 
 const s = {
