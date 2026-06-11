@@ -17,7 +17,6 @@ const ALL_STAFF = [
 
 // ─── Core shift CRUD ─────────────────────────────────────────────────────────
 router.get("/", verifyToken, allowRoles(...ALL_STAFF), getShifts);
-router.get("/:id", verifyToken, allowRoles(...ALL_STAFF), getShiftById);
 router.post("/", verifyToken, allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR), validate(createShiftSchema), createShift);
 router.patch("/:id", verifyToken, allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR), validate(updateShiftSchema), updateShift);
 router.delete("/:id", verifyToken, allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR), deleteShift);
@@ -225,5 +224,7 @@ router.patch("/swap-requests/:id", verifyToken, allowRoles(ROLES.OUTLET_MANAGER)
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+router.get("/:id", verifyToken, allowRoles(...ALL_STAFF), getShiftById);
 
 module.exports = router;
