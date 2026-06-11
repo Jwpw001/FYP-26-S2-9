@@ -85,8 +85,8 @@ export default function ShiftDetail() {
       // skill tags from user_skill_tags nested in staff (if available) or derive from tags
       const skillMap = {};
       staffRows.forEach(s => {
-        if (s.user_skill_tags) {
-          skillMap[s.user_id] = s.user_skill_tags.map(t => t.skill_id);
+        if (s.users?.user_skill_tags) {
+          skillMap[s.user_id] = s.users.user_skill_tags.map(t => t.skill_id);
         }
       });
 
