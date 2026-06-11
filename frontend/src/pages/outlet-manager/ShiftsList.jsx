@@ -224,12 +224,6 @@ export default function ShiftsList() {
 
 function fmtTime(t) {
   if (!t) return "—";
-  // Handles both "08:00:00" and "1970-01-01T08:00:00.000Z"
-  return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
-    .toISOString().slice(11, 16);
-}
-function fmtTime(t) {
-  if (!t) return "—";
   return new Date(`1970-01-01T${t.includes("T") ? t.split("T")[1] : t}Z`)
     .toISOString().slice(11, 16);
 }
