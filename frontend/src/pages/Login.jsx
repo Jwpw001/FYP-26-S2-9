@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { setUser, getUser } from "../utils/auth";
+import { supabase } from "../lib/supabaseClient";
 
 const ROLE_ROUTES = {
   system_admin: "/system-admin/dashboard",
@@ -20,7 +21,6 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Redirect already-logged-in users
   useEffect(() => {
     const user = getUser();
     if (user && ROLE_ROUTES[user.role]) {
@@ -39,12 +39,24 @@ export default function Login() {
     setError("");
 
     try {
-      const response = await api.post('/api/login', {
+      // Step 1: Verify password with Supabase Auth
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email: form.email.trim().toLowerCase(),
         password: form.password,
       });
 
-      const profile = response.data;
+      if (authError) {
+        setError("Invalid email or password.");
+        return;
+      }
+
+      // Step 2: Get user profile + JWT from backend
+      const response = await api.post('/api/auth/login', {
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
+
+      const profile = { ...response.user, token: response.token };
 
       const route = ROLE_ROUTES[profile.role];
       if (!route) {
@@ -67,14 +79,12 @@ export default function Login() {
 
   return (
     <main style={styles.page}>
-      {/* ── Left panel ───────────────────────────────────── */}
       <section style={styles.left} aria-hidden="true">
         <div style={styles.leftInner}>
           <Link to="/" style={styles.logoLink}>
             <div style={styles.logoBox}>K</div>
             <span style={styles.logoText}>Krewby</span>
           </Link>
-
           <div style={styles.leftBody}>
             <h1 style={styles.leftTitle}>
               Workforce scheduling,
@@ -86,7 +96,6 @@ export default function Login() {
               requests — all in one place.
             </p>
           </div>
-
           <div style={styles.leftFooter}>
             <p style={styles.leftFooterText}>
               © {new Date().getFullYear()} Krewby · CSIT321 FYP-26-S2-9
@@ -95,7 +104,6 @@ export default function Login() {
         </div>
       </section>
 
-      {/* ── Right panel ──────────────────────────────────── */}
       <section style={styles.right}>
         <form
           style={styles.card}
@@ -103,7 +111,6 @@ export default function Login() {
           noValidate
           aria-label="Login form"
         >
-          {/* Mobile logo — only shown below 768px via inline media query workaround */}
           <div style={styles.mobileLogo}>
             <Link to="/" style={styles.logoLink}>
               <div style={{ ...styles.logoBox, ...styles.logoBoxDark }}>K</div>
@@ -114,7 +121,6 @@ export default function Login() {
           <h2 style={styles.cardTitle}>Welcome back</h2>
           <p style={styles.cardSub}>Sign in to your account to continue.</p>
 
-          {/* Error banner */}
           {error && (
             <div style={styles.error} role="alert">
               <span style={styles.errorIcon}>⚠</span>
@@ -122,10 +128,7 @@ export default function Login() {
             </div>
           )}
 
-          {/* Email */}
-          <label htmlFor="email" style={styles.label}>
-            Email address
-          </label>
+          <label htmlFor="email" style={styles.label}>Email address</label>
           <input
             id="email"
             style={styles.input}
@@ -139,10 +142,7 @@ export default function Login() {
             disabled={loading}
           />
 
-          {/* Password */}
-          <label htmlFor="password" style={styles.label}>
-            Password
-          </label>
+          <label htmlFor="password" style={styles.label}>Password</label>
           <div style={styles.passwordWrapper}>
             <input
               id="password"
@@ -166,19 +166,14 @@ export default function Login() {
             </button>
           </div>
 
-          {/* Forgot password */}
           <div style={styles.forgotRow}>
             <Link to="/forgot-password" style={styles.forgotLink}>
               Forgot password?
             </Link>
           </div>
 
-          {/* Submit */}
           <button
-            style={{
-              ...styles.button,
-              ...(loading ? styles.buttonDisabled : {}),
-            }}
+            style={{ ...styles.button, ...(loading ? styles.buttonDisabled : {}) }}
             disabled={loading}
           >
             {loading ? (
@@ -204,8 +199,6 @@ const styles = {
     background: "#F7F6F3",
     color: "#1C1B18",
   },
-
-  /* Left */
   left: {
     background: "#1C1B18",
     color: "#FFFFFF",
@@ -213,7 +206,6 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     boxSizing: "border-box",
-    "@media(max-width:768px)": { display: "none" },
   },
   leftInner: {
     display: "flex",
@@ -279,8 +271,6 @@ const styles = {
     fontSize: "12px",
     color: "rgba(255,255,255,0.35)",
   },
-
-  /* Right */
   right: {
     display: "flex",
     alignItems: "center",
@@ -289,8 +279,6 @@ const styles = {
     boxSizing: "border-box",
     background: "#F7F6F3",
   },
-
-  /* Card */
   card: {
     width: "100%",
     maxWidth: "400px",
@@ -322,8 +310,6 @@ const styles = {
     marginBottom: "24px",
     lineHeight: "1.5",
   },
-
-  /* Error */
   error: {
     display: "flex",
     alignItems: "flex-start",
@@ -342,8 +328,6 @@ const styles = {
     fontSize: "14px",
     lineHeight: "1.5",
   },
-
-  /* Form */
   label: {
     display: "block",
     fontSize: "13px",
@@ -365,8 +349,6 @@ const styles = {
     outline: "none",
     transition: "border-color 0.15s",
   },
-
-  /* Password with toggle */
   passwordWrapper: {
     position: "relative",
     display: "flex",
@@ -396,8 +378,6 @@ const styles = {
     padding: "4px",
     userSelect: "none",
   },
-
-  /* Forgot */
   forgotRow: {
     display: "flex",
     justifyContent: "flex-end",
@@ -409,8 +389,6 @@ const styles = {
     color: "#7A7870",
     textDecoration: "none",
   },
-
-  /* Submit */
   button: {
     display: "block",
     width: "100%",
