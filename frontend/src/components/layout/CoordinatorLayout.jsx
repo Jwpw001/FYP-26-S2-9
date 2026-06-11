@@ -2,6 +2,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { clearUser, getUser } from "../../utils/auth";
 import { useState } from "react";
+import AIAssistantWidget from "../AIAssistantWidget";
 
 const NAV = [
   { label: "Dashboard",    path: "/krewby-coordinator/dashboard",  icon: "⊞" },
@@ -64,6 +65,7 @@ export default function CoordinatorLayout({ children, title }) {
         </header>
         <div style={s.content}>{children}</div>
       </div>
+      <AIAssistantWidget />
     </div>
   );
 }

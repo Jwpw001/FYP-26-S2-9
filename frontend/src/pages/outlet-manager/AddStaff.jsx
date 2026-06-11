@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import { useGoTo } from "../../components/PageTransition";
 
 export default function AddStaff() {
-  const navigate = useNavigate();
+  const goTo = useGoTo();
   const user = getUser();
   const userId = user?.user_id;
 
@@ -16,8 +17,9 @@ export default function AddStaff() {
   const [success, setSuccess]   = useState("");
   const [selectedSkills, setSelectedSkills] = useState([]);
 
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
-    full_name: "", email: "", staff_type: "regular",
+    full_name: "", username: "", email: "", password: "", staff_type: "regular",
     default_work_days: "1111100", hired_at: "",
   });
 
@@ -45,69 +47,33 @@ export default function AddStaff() {
   }
 
   async function handleSubmit() {
-    if (!form.full_name.trim()) { setError("Full name is required."); return; }
-    if (!form.email.trim())     { setError("Email is required."); return; }
-    if (!outletId)              { setError("No outlet found for your account."); return; }
+    if (!form.full_name.trim())        { setError("Full name is required."); return; }
+    if (!form.username.trim())         { setError("Username is required."); return; }
+    if (!form.email.trim())            { setError("Email is required."); return; }
+    if (!form.password.trim())         { setError("Password is required."); return; }
+    if (form.password.length < 6)      { setError("Password must be at least 6 characters."); return; }
+    if (!outletId)                     { setError("No outlet found for your account."); return; }
 
     setSaving(true); setError("");
 
     try {
-      // Check if user already exists
-      const { data: existing } = await supabase
-        .from("users").select("user_id").eq("email", form.email.trim().toLowerCase()).single();
-
-      let newUserId;
-
-      if (existing) {
-        newUserId = existing.user_id;
-      } else {
-        // Create user record
-        const { data: newUser, error: userErr } = await supabase
-          .from("users")
-          .insert({
-            username: form.full_name.trim().toLowerCase().replace(/\s+/g, "_"),
-            email: form.email.trim().toLowerCase(),
-            role: form.staff_type === "regular" ? "regular_staff" : "outlet_casual_staff",
-            is_active: true,
-          })
-          .select().single();
-
-        if (userErr) {
-          if (userErr.message.includes("unique")) {
-            setError("A user with this email already exists.");
-          } else {
-            setError(userErr.message);
-          }
-          return;
-        }
-        newUserId = newUser.user_id;
-      }
-
-      // Create staff record
-      const { error: staffErr } = await supabase
-        .from("staff")
-        .insert({
-          user_id: newUserId,
-          outlet_id: outletId,
-          staff_type: form.staff_type,
-          default_work_days: form.staff_type === "regular" ? form.default_work_days : null,
-          hired_at: form.hired_at || null,
-          is_active: true,
-        });
-
-      if (staffErr) throw staffErr;
-
-      // Assign skills
-      if (selectedSkills.length > 0) {
-        await supabase.from("user_skill_tags").insert(
-          selectedSkills.map(skill_id => ({ user_id: newUserId, skill_id }))
-        );
-      }
+      await api.post("/api/auth/create-staff", {
+        full_name: form.full_name.trim(),
+        username: form.username.trim().toLowerCase().replace(/\s+/g, "_"),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        role: form.staff_type === "regular" ? "regular_staff" : "outlet_casual_staff",
+        outlet_id: outletId,
+        staff_type: form.staff_type,
+        default_work_days: form.staff_type === "regular" ? form.default_work_days : null,
+        hired_at: form.hired_at || null,
+        skill_ids: selectedSkills,
+      });
 
       setSuccess("Staff member added successfully!");
-      setTimeout(() => navigate("/outlet-manager/staff"), 1500);
+      setTimeout(() => goTo("/outlet-manager/staff"), 1500);
     } catch (err) {
-      setError("Failed to add staff. Please try again.");
+      setError(err.message || "Failed to add staff. Please try again.");
       console.error(err);
     } finally {
       setSaving(false);
@@ -118,7 +84,7 @@ export default function AddStaff() {
 
   return (
     <ManagerLayout title="Add New Staff">
-      <button style={s.back} onClick={() => navigate("/outlet-manager/staff")}>
+      <button style={s.back} onClick={() => goTo("/outlet-manager/staff")}>
         ← Back to Staff
       </button>
 
@@ -134,7 +100,24 @@ export default function AddStaff() {
               <label style={s.label}>Full Name *</label>
               <input style={s.input} placeholder="e.g. Sarah Tan"
                 value={form.full_name}
-                onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} />
+                onChange={e => {
+                  const name = e.target.value;
+                  setForm(p => ({
+                    ...p,
+                    full_name: name,
+                    // Auto-fill username only if user hasn't manually changed it
+                    username: p.username === p.full_name.trim().toLowerCase().replace(/\s+/g, "_")
+                      ? name.trim().toLowerCase().replace(/\s+/g, "_")
+                      : p.username,
+                  }));
+                }} />
+            </div>
+            <div style={s.field}>
+              <label style={s.label}>Username *</label>
+              <input style={s.input} placeholder="e.g. sarah_tan"
+                value={form.username}
+                onChange={e => setForm(p => ({ ...p, username: e.target.value.toLowerCase().replace(/\s+/g, "_") }))} />
+              <p style={s.hint}>Auto-filled from name. You can edit it.</p>
             </div>
             <div style={s.field}>
               <label style={s.label}>Email Address *</label>
@@ -142,6 +125,29 @@ export default function AddStaff() {
                 value={form.email}
                 onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
               <p style={s.hint}>They will use this email to log in.</p>
+            </div>
+            <div style={s.field}>
+              <label style={s.label}>Password *</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  style={{ ...s.input, paddingRight: "40px" }}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Minimum 6 characters"
+                  value={form.password}
+                  onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: "2px" }}>
+                  {showPassword
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </div>
+              <p style={s.hint}>Staff will use this password to log in.</p>
             </div>
             <div style={s.field}>
               <label style={s.label}>Staff Type</label>
@@ -202,7 +208,7 @@ export default function AddStaff() {
       </div>
 
       <div style={s.actions}>
-        <button style={s.cancelBtn} onClick={() => navigate("/outlet-manager/staff")}>
+        <button style={s.cancelBtn} onClick={() => goTo("/outlet-manager/staff")}>
           Cancel
         </button>
         <button style={s.saveBtn} onClick={handleSubmit} disabled={saving}>

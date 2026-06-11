@@ -5,7 +5,8 @@ const {
     register,
     login,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    createStaffAccount,
 } = require("../controllers/authController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -27,6 +28,7 @@ router.get("/me", protect, (req, res) => {
 });
 
 router.post("/register", validate(registerSchema), register);
+router.post("/create-staff", protect, createStaffAccount);
 router.post("/login", validate(loginSchema), login);
 router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
 router.post("/reset-password", validate(resetPasswordSchema), resetPassword);

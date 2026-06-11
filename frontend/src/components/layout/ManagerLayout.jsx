@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { clearUser, getUser } from "../../utils/auth";
+import AIAssistantWidget from "../AIAssistantWidget";
 
 const NAV = [
   { label: "Dashboard",   path: "/outlet-manager/dashboard",    icon: "⊞" },
@@ -84,6 +85,7 @@ export default function ManagerLayout({ children, title }) {
           {children}
         </div>
       </div>
+      <AIAssistantWidget />
     </div>
   );
 }
@@ -92,14 +94,14 @@ const s = {
   shell: {
     display: "flex",
     minHeight: "100vh",
-    background: "#F7F6F3",
+    background: "#F8FAFC",
   },
 
   /* Sidebar */
   sidebar: {
     width: "240px",
     minHeight: "100vh",
-    background: "#1C1B18",
+    background: "#0F172A",
     display: "flex",
     flexDirection: "column",
     position: "sticky",
@@ -128,7 +130,7 @@ const s = {
     width: "34px",
     height: "34px",
     borderRadius: "9px",
-    background: "rgba(255,255,255,0.12)",
+    background: "#3B82F6",
     color: "#FFFFFF",
     fontSize: "16px",
     fontWeight: "700",
@@ -166,8 +168,8 @@ const s = {
     transition: "background 0.15s, color 0.15s",
   },
   navItemActive: {
-    background: "rgba(255,255,255,0.1)",
-    color: "#FFFFFF",
+    background: "rgba(59,130,246,0.15)",
+    color: "#93C5FD",
   },
   navIcon: {
     fontSize: "16px",
@@ -191,7 +193,7 @@ const s = {
     width: "34px",
     height: "34px",
     borderRadius: "50%",
-    background: "rgba(255,255,255,0.15)",
+    background: "#3B82F6",
     color: "#FFFFFF",
     fontSize: "14px",
     fontWeight: "700",
@@ -219,7 +221,7 @@ const s = {
   logoutBtn: {
     width: "100%",
     padding: "8px",
-    background: "rgba(255,255,255,0.07)",
+    background: "rgba(255,255,255,0.05)",
     border: "none",
     borderRadius: "8px",
     color: "rgba(255,255,255,0.6)",
