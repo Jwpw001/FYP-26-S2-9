@@ -3,288 +3,72 @@ import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AdminLayout from "../../components/layout/AdminLayout";
 
-/* ─── Keyframes ─────────────────────────────────────────────────────────── */
-const injectKeyframes = () => {
-  if (document.getElementById("sa-skill-kf")) return;
-  const style = document.createElement("style");
-  style.id = "sa-skill-kf";
-  style.textContent = `
-    @keyframes fadeSlideUp {
-      from { opacity: 0; transform: translateY(18px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes popIn {
-      0%   { opacity: 0; transform: scale(0.92); }
-      60%  { transform: scale(1.03); }
-      100% { opacity: 1; transform: scale(1); }
-    }
-    @keyframes shimmer {
-      0%   { background-position: -600px 0; }
-      100% { background-position:  600px 0; }
-    }
-    @keyframes toastSlideIn {
-      from { opacity: 0; transform: translateX(60px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
+if (typeof document !== "undefined" && !document.getElementById("sa-skill-kf")) {
+  const s = document.createElement("style");
+  s.id = "sa-skill-kf";
+  s.textContent = `
+    @keyframes fadeSlideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes shimmer { from{background-position:-600px 0} to{background-position:600px 0} }
+    @keyframes pageIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes toastIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .skill-card{transition:box-shadow 0.18s,transform 0.18s}
+    .skill-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.08)!important}
   `;
-  document.head.appendChild(style);
-};
-
-/* ─── Shimmer skeleton ───────────────────────────────────────────────────── */
-const SHIMMER_BG = "linear-gradient(90deg,#f0f4f8 25%,#e2e8f0 50%,#f0f4f8 75%)";
-
-function SkeletonRow() {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "2fr 3fr 160px", gap: 12, padding: "14px 20px", borderTop: "1px solid #E2E8F0", alignItems: "center" }}>
-      <div style={{ height: 14, width: 100, borderRadius: 7, background: SHIMMER_BG, backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
-      <div style={{ height: 13, width: 200, borderRadius: 6, background: SHIMMER_BG, backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
-      <div style={{ display: "flex", gap: 8 }}>
-        <div style={{ height: 28, width: 50, borderRadius: 8, background: SHIMMER_BG, backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
-        <div style={{ height: 28, width: 58, borderRadius: 8, background: SHIMMER_BG, backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
-      </div>
-    </div>
-  );
+  document.head.appendChild(s);
 }
 
-/* ─── Toast ──────────────────────────────────────────────────────────────── */
-function Toast({ message, type, onDone }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 3000);
-    return () => clearTimeout(t);
-  }, [onDone]);
-
-  const bg     = type === "error" ? "#FEF2F2" : "#F0FDF4";
-  const border = type === "error" ? "#FECACA" : "#BBF7D0";
-  const color  = type === "error" ? "#991B1B" : "#166534";
-
-  return (
-    <div style={{
-      position: "fixed", top: 20, right: 20, zIndex: 1000,
-      background: bg, border: `1px solid ${border}`, color,
-      padding: "12px 18px", borderRadius: 12, fontSize: 13, fontWeight: 600,
-      boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-      animation: "toastSlideIn 0.3s ease both",
-      maxWidth: 340,
-    }}>
-      {message}
-    </div>
-  );
+const TAG_BG   = ["#EFF6FF","#F5F3FF","#FFF7ED","#F0FDF4","#FFF1F2","#ECFEFF","#FEFCE8"];
+const TAG_TEXT = ["#1D4ED8","#6D28D9","#C2410C","#15803D","#BE123C","#0E7490","#A16207"];
+function chipStyle(name) {
+  const i = (name?.charCodeAt(0)||0) % TAG_BG.length;
+  return { background: TAG_BG[i], color: TAG_TEXT[i] };
+}
+function Shimmer({ w="100%", h="16px", r="8px" }) {
+  return <div style={{ width:w, height:h, borderRadius:r, background:"linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize:"600px 100%", animation:"shimmer 1.4s infinite linear" }} />;
 }
 
-/* ─── FocusInput ─────────────────────────────────────────────────────────── */
-function FocusInput({ style: extraStyle = {}, ...props }) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <input
-      {...props}
-      onFocus={e => { setFocused(true); props.onFocus?.(e); }}
-      onBlur={e => { setFocused(false); props.onBlur?.(e); }}
-      style={{
-        display: "block", width: "100%", padding: "10px 14px",
-        border: `1.5px solid ${focused ? "#3B82F6" : "#E2E8F0"}`,
-        borderRadius: 10, fontSize: 14,
-        background: "#FFFFFF", color: "#0F172A",
-        boxSizing: "border-box", outline: "none",
-        boxShadow: focused ? "0 0 0 3px rgba(59,130,246,0.12)" : "none",
-        transition: "border-color 0.15s, box-shadow 0.15s",
-        ...extraStyle,
-      }}
-    />
-  );
-}
-
-/* ─── HoverRow ───────────────────────────────────────────────────────────── */
-function HoverRow({ children, style: extraStyle = {} }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{ background: hovered ? "#F8FAFC" : "#FFFFFF", transition: "background 0.12s", ...extraStyle }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* ─── SmallButton ────────────────────────────────────────────────────────── */
-function SmallButton({ children, onClick, variant = "default", style: extra = {} }) {
-  const [hov, setHov] = useState(false);
-  const [press, setPress] = useState(false);
-
-  const variants = {
-    default: { background: "#F1F5F9", color: "#0F172A", border: "1px solid #E2E8F0" },
-    danger:  { background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" },
-    primary: { background: "#3B82F6", color: "#FFFFFF", border: "none" },
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => { setHov(false); setPress(false); }}
-      onMouseDown={() => setPress(true)}
-      onMouseUp={() => setPress(false)}
-      style={{
-        ...variants[variant],
-        padding: "5px 13px", borderRadius: 8,
-        fontSize: 12, fontWeight: 600, cursor: "pointer",
-        transform: press ? "scale(0.97)" : hov ? "scale(1.02)" : "scale(1)",
-        boxShadow: hov && !press ? "0 2px 8px rgba(0,0,0,0.10)" : "none",
-        transition: "transform 0.12s, box-shadow 0.12s",
-        ...extra,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ─── ActionButton ───────────────────────────────────────────────────────── */
-function ActionButton({ children, onClick, disabled, style: extra = {} }) {
-  const [hov, setHov] = useState(false);
-  const [press, setPress] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => { setHov(false); setPress(false); }}
-      onMouseDown={() => setPress(true)}
-      onMouseUp={() => setPress(false)}
-      style={{
-        background: "#3B82F6", color: "#FFFFFF",
-        border: "none", padding: "10px 20px", borderRadius: 10,
-        fontSize: 14, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer",
-        transform: press ? "scale(0.97)" : hov ? "scale(1.02)" : "scale(1)",
-        boxShadow: hov && !press ? "0 4px 14px rgba(59,130,246,0.25)" : "none",
-        transition: "transform 0.12s, box-shadow 0.12s",
-        opacity: disabled ? 0.6 : 1,
-        ...extra,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ─── Tag chip ───────────────────────────────────────────────────────────── */
-const TAG_COLORS = ["#EFF6FF","#F5F3FF","#FFF7ED","#F0FDF4","#FFF1F2","#ECFEFF"];
-const TAG_TEXT   = ["#1D4ED8","#6D28D9","#C2410C","#15803D","#BE123C","#0E7490"];
-function SkillChip({ name }) {
-  const idx = (name?.charCodeAt(0) || 0) % TAG_COLORS.length;
-  return (
-    <span style={{
-      display: "inline-block",
-      background: TAG_COLORS[idx],
-      color: TAG_TEXT[idx],
-      padding: "3px 10px",
-      borderRadius: 100,
-      fontSize: 12,
-      fontWeight: 600,
-    }}>
-      {name}
-    </span>
-  );
-}
-
-/* ─── Empty state ────────────────────────────────────────────────────────── */
-function EmptyState() {
-  return (
-    <div style={{ textAlign: "center", padding: "60px 20px", animation: "popIn 0.4s ease both" }}>
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" style={{ margin: "0 auto 16px" }}>
-        <rect x="10" y="16" width="52" height="44" rx="8" fill="#E2E8F0" />
-        <rect x="18" y="26" width="20" height="4" rx="2" fill="#94A3B8" />
-        <rect x="18" y="34" width="36" height="4" rx="2" fill="#CBD5E1" />
-        <rect x="18" y="42" width="28" height="4" rx="2" fill="#CBD5E1" />
-        <circle cx="56" cy="16" r="10" fill="#DBEAFE" />
-        <line x1="56" y1="11" x2="56" y2="21" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="51" y1="16" x2="61" y2="16" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
-      <p style={{ color: "#64748B", fontSize: 14, margin: 0 }}>No skill tags yet.</p>
-      <p style={{ color: "#94A3B8", fontSize: 13, marginTop: 4 }}>Use the form above to add your first skill tag.</p>
-    </div>
-  );
-}
-
-/* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function SkillTags() {
-  injectKeyframes();
-
   const user = getUser();
-  const [skills, setSkills]     = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [newName, setNewName]   = useState("");
-  const [newDesc, setNewDesc]   = useState("");
-  const [adding, setAdding]     = useState(false);
-  const [editId, setEditId]     = useState(null);
-  const [editName, setEditName] = useState("");
-  const [toast, setToast]       = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null); // skill row pending delete confirmation
+  const [skills,       setSkills]       = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [newName,      setNewName]      = useState("");
+  const [newDesc,      setNewDesc]      = useState("");
+  const [adding,       setAdding]       = useState(false);
+  const [editId,       setEditId]       = useState(null);
+  const [editName,     setEditName]     = useState("");
+  const [editDesc,     setEditDesc]     = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [toast,        setToast]        = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      const { data, error } = await supabase
-        .from("skills")
-        .select("skill_id, name, description, created_by")
-        .order("name");
-      if (!cancelled) {
-        if (error) showToast(error.message, "error");
-        setSkills(data || []);
-        setLoading(false);
-      }
-    }
-    load();
+    supabase.from("skills").select("skill_id,name,description,created_by").order("name")
+      .then(({ data }) => { if (!cancelled) { setSkills(data||[]); setLoading(false); } });
     return () => { cancelled = true; };
   }, []);
 
-  function showToast(message, type = "success") {
-    setToast({ message, type });
-  }
+  function showToast(msg, type="success") { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }
 
   async function handleAdd() {
     if (!newName.trim()) { showToast("Skill name is required.", "error"); return; }
     setAdding(true);
-    const { data, error } = await supabase
-      .from("skills")
-      .insert({
-        name: newName.trim(),
-        description: newDesc.trim() || null,
-        created_by: user?.user_id ?? null,
-      })
-      .select()
-      .single();
+    const { data, error } = await supabase.from("skills")
+      .insert({ name: newName.trim(), description: newDesc.trim()||null, created_by: user?.user_id??null })
+      .select().single();
     setAdding(false);
-    if (error) {
-      showToast(
-        error.message.includes("unique") ? "A skill with that name already exists." : error.message,
-        "error"
-      );
-      return;
-    }
-    setSkills(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-    setNewName("");
-    setNewDesc("");
+    if (error) { showToast(error.message.includes("unique") ? "A skill with that name already exists." : error.message, "error"); return; }
+    setSkills(prev => [...prev, data].sort((a,b) => a.name.localeCompare(b.name)));
+    setNewName(""); setNewDesc("");
     showToast("Skill tag added.");
   }
 
   async function handleUpdate(id) {
     if (!editName.trim()) return;
-    const { error } = await supabase
-      .from("skills")
-      .update({ name: editName.trim() })
-      .eq("skill_id", id);
+    const { error } = await supabase.from("skills").update({ name: editName.trim(), description: editDesc.trim()||null }).eq("skill_id", id);
     if (error) { showToast(error.message, "error"); return; }
-    setSkills(prev =>
-      prev.map(s => s.skill_id === id ? { ...s, name: editName.trim() } : s)
-    );
+    setSkills(prev => prev.map(s => s.skill_id===id ? { ...s, name:editName.trim(), description:editDesc.trim()||null } : s));
     setEditId(null);
     showToast("Skill tag updated.");
-  }
-
-  function handleDelete(id) {
-    setDeleteTarget(skills.find(s => s.skill_id === id) || { skill_id: id });
   }
 
   async function confirmDelete() {
@@ -298,168 +82,132 @@ export default function SkillTags() {
 
   return (
     <AdminLayout title="Skill Tags">
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />
-      )}
 
-      {/* Delete confirmation modal */}
+      {/* Delete confirm modal */}
       {deleteTarget && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
-          onClick={() => setDeleteTarget(null)}
-        >
-          <div
-            style={{ background: "#FFF", borderRadius: 16, padding: 28, width: "100%", maxWidth: 400, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ width: 48, height: 48, borderRadius: "50%", margin: "0 auto 14px", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.45)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:"24px" }}
+          onClick={() => setDeleteTarget(null)}>
+          <div style={{ background:"#FFF", borderRadius:"16px", padding:"28px", width:"100%", maxWidth:"400px", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ width:"48px", height:"48px", borderRadius:"50%", margin:"0 auto 14px", background:"#FEF2F2", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <span style={{ fontSize:"22px" }}>⚠️</span>
             </div>
-            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#1E293B", marginBottom: 8 }}>Delete skill tag?</h3>
-            <p style={{ fontSize: 13.5, color: "#64748B", lineHeight: 1.6, marginBottom: 22 }}>
-              <strong>{deleteTarget.name || "This skill"}</strong> will be removed from all assigned staff. This cannot be undone.
+            <h3 style={{ fontSize:"17px", fontWeight:"800", color:"#1E293B", marginBottom:"8px" }}>Delete skill tag?</h3>
+            <p style={{ fontSize:"13px", color:"#64748B", lineHeight:1.6, marginBottom:"22px" }}>
+              <strong>{deleteTarget.name}</strong> will be removed from all assigned staff.
             </p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <button
-                style={{ background: "#F1F5F9", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#64748B", cursor: "pointer" }}
-                onClick={() => setDeleteTarget(null)}
-              >
-                Cancel
-              </button>
-              <button
-                style={{ background: "#EF4444", border: "none", borderRadius: 9, padding: "8px 18px", fontSize: 13, fontWeight: 700, color: "#FFF", cursor: "pointer" }}
-                onClick={confirmDelete}
-              >
-                Delete
-              </button>
+            <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>
+              <button onClick={() => setDeleteTarget(null)}
+                style={{ background:"#F1F5F9", border:"none", borderRadius:"9px", padding:"8px 16px", fontSize:"13px", fontWeight:"600", color:"#64748B", cursor:"pointer" }}>Cancel</button>
+              <button onClick={confirmDelete}
+                style={{ background:"#EF4444", border:"none", borderRadius:"9px", padding:"8px 18px", fontSize:"13px", fontWeight:"700", color:"#FFF", cursor:"pointer" }}>Delete</button>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ animation: "fadeSlideUp 0.4s ease both" }}>
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: "#0F172A", margin: 0 }}>
-              Skill Tags
-            </h2>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-              <span style={{
-                background: "#EFF6FF", color: "#3B82F6",
-                padding: "2px 10px", borderRadius: 100,
-                fontSize: 12, fontWeight: 600,
-              }}>
-                {skills.length} tag{skills.length !== 1 ? "s" : ""}
-              </span>
-              <span style={{ color: "#94A3B8", fontSize: 12 }}>used for staff and shift role matching</span>
-            </div>
-          </div>
+      <div style={{ animation:"pageIn 0.4s ease both" }}>
+
+        <div style={{ marginBottom:"24px" }}>
+          <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#0F172A" }}>Skill Tags</h2>
+          <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
+            {loading ? "Loading…" : `${skills.length} tag${skills.length!==1?"s":""} · used for staff and shift role matching`}
+          </p>
         </div>
 
-        {/* Add Form */}
-        <div style={{
-          background: "#FFFFFF", border: "1px solid #E2E8F0",
-          borderRadius: 16, padding: 24, marginBottom: 24,
-          boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-          animation: "fadeSlideUp 0.3s 0.05s ease both",
-        }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0F172A", margin: "0 0 16px" }}>
-            Add New Skill Tag
-          </h3>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div style={{ flex: "1 1 160px" }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748B", marginBottom: 6 }}>
-                Skill Name *
-              </label>
-              <FocusInput
+        {/* Add form */}
+        <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"22px", marginBottom:"24px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)" }}>
+          <h3 style={{ fontSize:"14px", fontWeight:"700", color:"#0F172A", marginBottom:"14px" }}>Add New Skill Tag</h3>
+          <div style={{ display:"flex", gap:"12px", flexWrap:"wrap", alignItems:"flex-end" }}>
+            <div style={{ flex:"1 1 160px" }}>
+              <label style={{ display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"5px" }}>Skill Name *</label>
+              <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key==="Enter" && handleAdd()}
                 placeholder="e.g. Barista"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleAdd()}
-              />
+                style={{ width:"100%", padding:"9px 13px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"13px", outline:"none", boxSizing:"border-box" }} />
             </div>
-            <div style={{ flex: "2 1 220px" }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748B", marginBottom: 6 }}>
-                Description (optional)
-              </label>
-              <FocusInput
+            <div style={{ flex:"2 1 220px" }}>
+              <label style={{ display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"5px" }}>Description (optional)</label>
+              <input value={newDesc} onChange={e => setNewDesc(e.target.value)} onKeyDown={e => e.key==="Enter" && handleAdd()}
                 placeholder="Brief description of this skill…"
-                value={newDesc}
-                onChange={e => setNewDesc(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleAdd()}
-              />
+                style={{ width:"100%", padding:"9px 13px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"13px", outline:"none", boxSizing:"border-box" }} />
             </div>
-            <ActionButton onClick={handleAdd} disabled={adding} style={{ flexShrink: 0 }}>
+            <button onClick={handleAdd} disabled={adding}
+              style={{ padding:"9px 20px", borderRadius:"9px", fontSize:"13px", fontWeight:"600", border:"none", background: adding ? "#93C5FD" : "#3B82F6", color:"#FFF", cursor: adding ? "not-allowed" : "pointer", flexShrink:0, height:"38px" }}>
               {adding ? "Adding…" : "+ Add Tag"}
-            </ActionButton>
+            </button>
           </div>
         </div>
 
-        {/* Table */}
+        {/* Cards grid */}
         {loading ? (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 16, overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 3fr 160px", gap: 12, padding: "10px 20px", background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
-              {["Skill Name", "Description", "Actions"].map(h => (
-                <span key={h} style={{ fontSize: 12, fontWeight: 600, color: "#64748B" }}>{h}</span>
-              ))}
-            </div>
-            <SkeletonRow />
-            <SkeletonRow />
-            <SkeletonRow />
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:"14px" }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"20px" }}>
+                <Shimmer w="100px" h="22px" r="100px" />
+                <div style={{ marginTop:"10px" }}><Shimmer w="80%" h="13px" r="5px" /></div>
+                <div style={{ marginTop:"14px", display:"flex", gap:"8px" }}>
+                  <Shimmer w="50px" h="28px" r="8px" />
+                  <Shimmer w="58px" h="28px" r="8px" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : skills.length === 0 ? (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 16 }}>
-            <EmptyState />
+          <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"60px", textAlign:"center" }}>
+            <p style={{ fontSize:"32px", marginBottom:"10px" }}>🏷️</p>
+            <p style={{ fontSize:"16px", fontWeight:"600", color:"#64748B" }}>No skill tags yet</p>
           </div>
         ) : (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 3fr 160px", gap: 12, padding: "10px 20px", background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
-              {["Skill Name", "Description", "Actions"].map(h => (
-                <span key={h} style={{ fontSize: 12, fontWeight: 600, color: "#64748B" }}>{h}</span>
-              ))}
-            </div>
-            {skills.map(sk => (
-              <HoverRow
-                key={sk.skill_id}
-                style={{ display: "grid", gridTemplateColumns: "2fr 3fr 160px", gap: 12, padding: "13px 20px", borderTop: "1px solid #E2E8F0", alignItems: "center", fontSize: 13 }}
-              >
-                {editId === sk.skill_id ? (
-                  <>
-                    <FocusInput
-                      value={editName}
-                      onChange={e => setEditName(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === "Enter") handleUpdate(sk.skill_id);
-                        if (e.key === "Escape") setEditId(null);
-                      }}
-                      style={{ margin: 0 }}
-                      autoFocus
-                    />
-                    <span style={{ color: "#64748B" }}>{sk.description || "—"}</span>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <SmallButton variant="primary" onClick={() => handleUpdate(sk.skill_id)}>Save</SmallButton>
-                      <SmallButton onClick={() => setEditId(null)}>Cancel</SmallButton>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <SkillChip name={sk.name} />
-                    <span style={{ color: "#64748B" }}>{sk.description || <span style={{ color: "#CBD5E1" }}>—</span>}</span>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <SmallButton onClick={() => { setEditId(sk.skill_id); setEditName(sk.name); }}>Edit</SmallButton>
-                      <SmallButton variant="danger" onClick={() => handleDelete(sk.skill_id)}>Delete</SmallButton>
-                    </div>
-                  </>
-                )}
-              </HoverRow>
-            ))}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:"14px" }}>
+            {skills.map((sk, i) => {
+              const cs = chipStyle(sk.name);
+              const isEditing = editId === sk.skill_id;
+              return (
+                <div key={sk.skill_id} className="skill-card"
+                  style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"18px", boxShadow:"0 1px 3px rgba(0,0,0,0.04)", animation:`fadeSlideUp 0.3s ease ${i*0.04}s both` }}>
+
+                  {isEditing ? (
+                    <>
+                      <input autoFocus value={editName} onChange={e => setEditName(e.target.value)}
+                        onKeyDown={e => { if(e.key==="Enter") handleUpdate(sk.skill_id); if(e.key==="Escape") setEditId(null); }}
+                        style={{ width:"100%", padding:"7px 11px", border:"1.5px solid #BFDBFE", borderRadius:"8px", fontSize:"13px", fontWeight:"600", outline:"none", boxSizing:"border-box", marginBottom:"8px" }} />
+                      <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description (optional)"
+                        style={{ width:"100%", padding:"7px 11px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"12px", outline:"none", boxSizing:"border-box", marginBottom:"12px" }} />
+                      <div style={{ display:"flex", gap:"8px" }}>
+                        <button onClick={() => handleUpdate(sk.skill_id)}
+                          style={{ padding:"5px 12px", borderRadius:"7px", border:"none", background:"#3B82F6", color:"#FFF", fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>Save</button>
+                        <button onClick={() => setEditId(null)}
+                          style={{ padding:"5px 12px", borderRadius:"7px", border:"1px solid #E2E8F0", background:"#F1F5F9", color:"#64748B", fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>Cancel</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ display:"inline-block", padding:"4px 12px", borderRadius:"100px", fontSize:"13px", fontWeight:"700", marginBottom:"10px", ...cs }}>
+                        {sk.name}
+                      </span>
+                      <p style={{ fontSize:"12px", color: sk.description ? "#64748B" : "#CBD5E1", marginBottom:"14px", minHeight:"18px" }}>
+                        {sk.description || "No description"}
+                      </p>
+                      <div style={{ display:"flex", gap:"8px", paddingTop:"12px", borderTop:"1px solid #F1F5F9" }}>
+                        <button onClick={() => { setEditId(sk.skill_id); setEditName(sk.name); setEditDesc(sk.description||""); }}
+                          style={{ padding:"5px 12px", borderRadius:"7px", border:"1.5px solid #E2E8F0", background:"#FFF", color:"#475569", fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>Edit</button>
+                        <button onClick={() => setDeleteTarget(sk)}
+                          style={{ padding:"5px 12px", borderRadius:"7px", border:"1.5px solid #FECACA", background:"#FEF2F2", color:"#991B1B", fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>Delete</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
+
+      {toast && (
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", zIndex:9999, background: toast.type==="success" ? "#22C55E" : "#EF4444", color:"#FFF", padding:"12px 20px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)", animation:"toastIn 0.3s ease both" }}>
+          {toast.msg}
+        </div>
+      )}
     </AdminLayout>
   );
 }

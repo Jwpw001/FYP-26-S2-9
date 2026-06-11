@@ -2,526 +2,246 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 
-/* ─── Keyframes ─────────────────────────────────────────────────────────── */
-const injectKeyframes = () => {
-  if (document.getElementById("sa-kw-kf")) return;
-  const style = document.createElement("style");
-  style.id = "sa-kw-kf";
-  style.textContent = `
-    @keyframes fadeSlideUp {
-      from { opacity: 0; transform: translateY(18px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes popIn {
-      0%   { opacity: 0; transform: scale(0.92); }
-      60%  { transform: scale(1.03); }
-      100% { opacity: 1; transform: scale(1); }
-    }
-    @keyframes shimmer {
-      0%   { background-position: -600px 0; }
-      100% { background-position:  600px 0; }
-    }
-    @keyframes toastSlideIn {
-      from { opacity: 0; transform: translateX(60px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
+if (typeof document !== "undefined" && !document.getElementById("sa-kw-kf")) {
+  const s = document.createElement("style");
+  s.id = "sa-kw-kf";
+  s.textContent = `
+    @keyframes fadeSlideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes shimmer { from{background-position:-600px 0} to{background-position:600px 0} }
+    @keyframes pageIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes toastIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .kw-card{transition:box-shadow 0.18s,transform 0.18s}
+    .kw-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.1)!important}
   `;
-  document.head.appendChild(style);
-};
-
-/* ─── Shimmer skeleton ───────────────────────────────────────────────────── */
-const SHIMMER_BG = "linear-gradient(90deg,#f0f4f8 25%,#e2e8f0 50%,#f0f4f8 75%)";
-
-function SkeletonRow() {
-  return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "2fr 2fr 0.8fr 0.6fr 1.5fr 1fr 100px",
-      gap: 8, padding: "14px 20px", borderTop: "1px solid #E2E8F0", alignItems: "center",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 34, height: 34, borderRadius: "50%", background: SHIMMER_BG, backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear", flexShrink: 0 }} />
-        <div style={{ height: 13, width: 100, borderRadius: 6, background: SHIMMER_BG, backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
-      </div>
-      {[140, 50, 30, 90, 50, 70].map((w, i) => (
-        <div key={i} style={{ height: 13, width: w, borderRadius: 6, background: SHIMMER_BG, backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
-      ))}
-    </div>
-  );
+  document.head.appendChild(s);
 }
 
-/* ─── Toast ──────────────────────────────────────────────────────────────── */
-function Toast({ message, type, onDone }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 3000);
-    return () => clearTimeout(t);
-  }, [onDone]);
-
-  const bg     = type === "error" ? "#FEF2F2" : "#F0FDF4";
-  const border = type === "error" ? "#FECACA" : "#BBF7D0";
-  const color  = type === "error" ? "#991B1B" : "#166534";
-
-  return (
-    <div style={{
-      position: "fixed", top: 20, right: 20, zIndex: 1000,
-      background: bg, border: `1px solid ${border}`, color,
-      padding: "12px 18px", borderRadius: 12, fontSize: 13, fontWeight: 600,
-      boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-      animation: "toastSlideIn 0.3s ease both",
-      maxWidth: 340,
-    }}>
-      {message}
-    </div>
-  );
-}
-
-/* ─── FocusInput ─────────────────────────────────────────────────────────── */
-function FocusInput({ style: extraStyle = {}, ...props }) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <input
-      {...props}
-      onFocus={e => { setFocused(true); props.onFocus?.(e); }}
-      onBlur={e => { setFocused(false); props.onBlur?.(e); }}
-      style={{
-        display: "block", width: "100%", padding: "10px 14px",
-        border: `1.5px solid ${focused ? "#3B82F6" : "#E2E8F0"}`,
-        borderRadius: 10, fontSize: 14,
-        background: "#FFFFFF", color: "#0F172A",
-        boxSizing: "border-box", outline: "none",
-        boxShadow: focused ? "0 0 0 3px rgba(59,130,246,0.12)" : "none",
-        transition: "border-color 0.15s, box-shadow 0.15s",
-        ...extraStyle,
-      }}
-    />
-  );
-}
-
-/* ─── HoverRow ───────────────────────────────────────────────────────────── */
-function HoverRow({ children, style: extraStyle = {} }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{ background: hovered ? "#F8FAFC" : "#FFFFFF", transition: "background 0.12s", ...extraStyle }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* ─── ActionButton ───────────────────────────────────────────────────────── */
-function ActionButton({ children, onClick, disabled, style: extra = {} }) {
-  const [hov, setHov] = useState(false);
-  const [press, setPress] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => { setHov(false); setPress(false); }}
-      onMouseDown={() => setPress(true)}
-      onMouseUp={() => setPress(false)}
-      style={{
-        background: "#3B82F6", color: "#FFFFFF",
-        border: "none", padding: "10px 20px", borderRadius: 10,
-        fontSize: 14, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer",
-        transform: press ? "scale(0.97)" : hov ? "scale(1.02)" : "scale(1)",
-        boxShadow: hov && !press ? "0 4px 14px rgba(59,130,246,0.25)" : "none",
-        transition: "transform 0.12s, box-shadow 0.12s",
-        opacity: disabled ? 0.6 : 1,
-        ...extra,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ─── ToggleButton ───────────────────────────────────────────────────────── */
-function ToggleButton({ active, onClick }) {
-  const [hov, setHov] = useState(false);
-  const [press, setPress] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => { setHov(false); setPress(false); }}
-      onMouseDown={() => setPress(true)}
-      onMouseUp={() => setPress(false)}
-      style={{
-        background: active ? "#FEF2F2" : "#F0FDF4",
-        color: active ? "#991B1B" : "#166534",
-        border: `1px solid ${active ? "#FECACA" : "#BBF7D0"}`,
-        padding: "5px 10px", borderRadius: 8,
-        fontSize: 12, fontWeight: 600, cursor: "pointer",
-        transform: press ? "scale(0.97)" : hov ? "scale(1.02)" : "scale(1)",
-        boxShadow: hov && !press ? "0 2px 8px rgba(0,0,0,0.10)" : "none",
-        transition: "transform 0.12s, box-shadow 0.12s",
-      }}
-    >
-      {active ? "Deactivate" : "Activate"}
-    </button>
-  );
-}
-
-/* ─── Avatar ─────────────────────────────────────────────────────────────── */
 const AVATAR_COLORS = ["#3B82F6","#8B5CF6","#EC4899","#F59E0B","#10B981","#EF4444","#06B6D4"];
-function Avatar({ letter }) {
-  const idx = (letter?.charCodeAt(0) || 0) % AVATAR_COLORS.length;
-  return (
-    <div style={{
-      width: 34, height: 34, borderRadius: "50%",
-      background: AVATAR_COLORS[idx], color: "#FFFFFF",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 13, fontWeight: 700, flexShrink: 0,
-    }}>
-      {letter?.toUpperCase() || "?"}
-    </div>
-  );
+function avatarColor(name = "") {
+  return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 }
-
-/* ─── StarRating ─────────────────────────────────────────────────────────── */
-function StarRating({ value }) {
-  const rating = Number(value || 5);
-  const full = Math.floor(rating);
-  const half = rating - full >= 0.5;
+function Shimmer({ w="100%", h="16px", r="8px" }) {
+  return <div style={{ width:w, height:h, borderRadius:r, background:"linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize:"600px 100%", animation:"shimmer 1.4s infinite linear" }} />;
+}
+function Stars({ value }) {
+  const n = Number(value || 5);
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
-      {[1, 2, 3, 4, 5].map(i => {
-        const filled = i <= full || (i === full + 1 && half);
-        return (
-          <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill={filled ? "#F59E0B" : "none"} stroke={filled ? "#F59E0B" : "#CBD5E1"} strokeWidth="2">
-            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
-          </svg>
-        );
-      })}
-      <span style={{ color: "#64748B", fontSize: 11, marginLeft: 3 }}>{rating.toFixed(1)}</span>
+    <span style={{ display:"inline-flex", alignItems:"center", gap:"2px" }}>
+      {[1,2,3,4,5].map(i => (
+        <svg key={i} width="11" height="11" viewBox="0 0 24 24" fill={i<=Math.round(n)?"#F59E0B":"none"} stroke={i<=Math.round(n)?"#F59E0B":"#CBD5E1"} strokeWidth="2">
+          <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+        </svg>
+      ))}
+      <span style={{ fontSize:"11px", color:"#64748B", marginLeft:"3px" }}>{n.toFixed(1)}</span>
     </span>
   );
 }
 
-/* ─── Empty state ────────────────────────────────────────────────────────── */
-function EmptyState({ search }) {
-  return (
-    <div style={{ textAlign: "center", padding: "60px 20px", animation: "popIn 0.4s ease both" }}>
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" style={{ margin: "0 auto 16px" }}>
-        <circle cx="36" cy="28" r="16" fill="#E2E8F0" />
-        <circle cx="36" cy="24" r="9" fill="#CBD5E1" />
-        <path d="M12 60c0-13.25 10.75-24 24-24s24 10.75 24 24" stroke="#CBD5E1" strokeWidth="4" strokeLinecap="round" fill="none" />
-        {search && (
-          <>
-            <circle cx="56" cy="14" r="9" fill="#FEF2F2" stroke="#FECACA" strokeWidth="1.5" />
-            <line x1="53" y1="14" x2="59" y2="14" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" />
-          </>
-        )}
-      </svg>
-      <p style={{ color: "#64748B", fontSize: 14, margin: 0 }}>
-        {search ? `No workers match "${search}".` : "No Krewby Workers yet."}
-      </p>
-      <p style={{ color: "#94A3B8", fontSize: 13, marginTop: 4 }}>
-        {search ? "Try a different search term." : "Click \"Add Krewby Worker\" to get started."}
-      </p>
-    </div>
-  );
-}
-
-/* ─── Merge workers with users using flat data ───────────────────────────── */
-function mergeWorkersWithUsers(workers, usersMap) {
-  return workers.map(w => ({
-    ...w,
-    user: usersMap[w.user_id] || null,
-  }));
-}
-
-/* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function KrewbyWorkers() {
-  injectKeyframes();
-
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch]   = useState("");
+  const [search,  setSearch]  = useState("");
+  const [filter,  setFilter]  = useState("all");
   const [showing, setShowing] = useState(false);
-  const [saving, setSaving]   = useState(false);
-  const [toast, setToast]     = useState(null);
-  const [form, setForm]       = useState({
-    full_name: "", email: "", username: "", preferred_location: "",
-  });
+  const [saving,  setSaving]  = useState(false);
+  const [toast,   setToast]   = useState(null);
+  const [form,    setForm]    = useState({ full_name:"", email:"", username:"", preferred_location:"" });
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      // Flat queries — no nested joins
-      const { data: workerRows, error: workerErr } = await supabase
-        .from("krewby_workers")
-        .select("krewby_worker_id, user_id, preferred_location, rating, total_jobs, is_active")
-        .order("krewby_worker_id");
-
-      if (workerErr) {
-        if (!cancelled) { showToast(workerErr.message, "error"); setLoading(false); }
-        return;
-      }
-
-      const userIds = [...new Set((workerRows || []).map(w => w.user_id))];
+      const { data: workerRows } = await supabase.from("krewby_workers")
+        .select("krewby_worker_id,user_id,preferred_location,rating,total_jobs,is_active").order("krewby_worker_id");
+      const userIds = [...new Set((workerRows||[]).map(w => w.user_id))];
       let usersMap = {};
-
-      if (userIds.length > 0) {
-        const { data: userRows } = await supabase
-          .from("users")
-          .select("user_id, full_name, email")
-          .in("user_id", userIds);
-        (userRows || []).forEach(u => { usersMap[u.user_id] = u; });
+      if (userIds.length) {
+        const { data: userRows } = await supabase.from("users").select("user_id,full_name,email").in("user_id", userIds);
+        (userRows||[]).forEach(u => { usersMap[u.user_id] = u; });
       }
-
-      if (!cancelled) {
-        setWorkers(mergeWorkersWithUsers(workerRows || [], usersMap));
-        setLoading(false);
-      }
+      if (!cancelled) { setWorkers((workerRows||[]).map(w => ({ ...w, user: usersMap[w.user_id]||null }))); setLoading(false); }
     }
     load();
     return () => { cancelled = true; };
   }, []);
 
-  function showToast(message, type = "success") {
-    setToast({ message, type });
-  }
+  function showToast(msg, type="success") { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }
 
-  async function toggleActive(workerId, current) {
-    const { error } = await supabase
-      .from("krewby_workers")
-      .update({ is_active: !current })
-      .eq("krewby_worker_id", workerId);
+  async function toggleActive(id, current) {
+    const { error } = await supabase.from("krewby_workers").update({ is_active: !current }).eq("krewby_worker_id", id);
     if (error) { showToast(error.message, "error"); return; }
-    setWorkers(prev => prev.map(w =>
-      w.krewby_worker_id === workerId ? { ...w, is_active: !current } : w
-    ));
+    setWorkers(prev => prev.map(w => w.krewby_worker_id === id ? { ...w, is_active: !current } : w));
+    showToast(!current ? "Worker activated." : "Worker deactivated.");
   }
 
   async function handleAdd() {
     if (!form.full_name.trim()) { showToast("Full name is required.", "error"); return; }
     if (!form.email.trim())     { showToast("Email is required.", "error"); return; }
     if (!form.username.trim())  { showToast("Username is required.", "error"); return; }
-
     setSaving(true);
     try {
-      // Step 1: Insert into users table
-      const { data: userData, error: userErr } = await supabase
-        .from("users")
-        .insert({
-          full_name: form.full_name.trim(),
-          email: form.email.trim().toLowerCase(),
-          username: form.username.trim(),
-          role: "krewby_casual_worker",
-        })
-        .select("user_id, full_name, email")
-        .single();
-
-      if (userErr) {
-        showToast(
-          userErr.message.includes("unique") ? "Email or username already exists." : userErr.message,
-          "error"
-        );
-        return;
-      }
-
-      // Step 2: Insert into krewby_workers table
-      const { data: workerData, error: workerErr } = await supabase
-        .from("krewby_workers")
-        .insert({
-          user_id: userData.user_id,
-          preferred_location: form.preferred_location.trim() || null,
-          rating: 5.0,
-          total_jobs: 0,
-          is_active: true,
-        })
-        .select("krewby_worker_id, user_id, preferred_location, rating, total_jobs, is_active")
-        .single();
-
-      if (workerErr) { showToast(workerErr.message, "error"); return; }
-
-      setWorkers(prev => [...prev, { ...workerData, user: userData }]);
-      setForm({ full_name: "", email: "", username: "", preferred_location: "" });
+      const { data: userData, error: uErr } = await supabase.from("users")
+        .insert({ full_name: form.full_name.trim(), email: form.email.trim().toLowerCase(), username: form.username.trim(), role: "krewby_casual_worker" })
+        .select("user_id,full_name,email").single();
+      if (uErr) { showToast(uErr.message.includes("unique") ? "Email or username already exists." : uErr.message, "error"); return; }
+      const { data: wData, error: wErr } = await supabase.from("krewby_workers")
+        .insert({ user_id: userData.user_id, preferred_location: form.preferred_location.trim()||null, rating:5.0, total_jobs:0, is_active:true })
+        .select().single();
+      if (wErr) { showToast(wErr.message, "error"); return; }
+      setWorkers(prev => [...prev, { ...wData, user: userData }]);
+      setForm({ full_name:"", email:"", username:"", preferred_location:"" });
       setShowing(false);
-      showToast("Krewby Worker added successfully.");
-    } catch {
-      showToast("Failed to add worker.", "error");
-    } finally {
-      setSaving(false);
-    }
+      showToast("Worker added successfully.");
+    } catch { showToast("Failed to add worker.", "error"); }
+    finally { setSaving(false); }
   }
+
+  const activeCount   = workers.filter(w => w.is_active).length;
+  const inactiveCount = workers.filter(w => !w.is_active).length;
 
   const filtered = workers.filter(w => {
     const q = search.toLowerCase();
-    return (w.user?.full_name?.toLowerCase() || "").includes(q) ||
-           (w.user?.email?.toLowerCase() || "").includes(q);
+    const matchSearch = (w.user?.full_name?.toLowerCase()||"").includes(q) || (w.user?.email?.toLowerCase()||"").includes(q);
+    const matchFilter = filter==="all" || (filter==="active" && w.is_active) || (filter==="inactive" && !w.is_active);
+    return matchSearch && matchFilter;
   });
 
-  const activeCount = workers.filter(w => w.is_active).length;
+  const TABS = [
+    { value:"all",      label:`All (${workers.length})` },
+    { value:"active",   label:`Active (${activeCount})` },
+    { value:"inactive", label:`Inactive (${inactiveCount})` },
+  ];
 
   return (
     <AdminLayout title="Krewby Workers">
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />
-      )}
+      <div style={{ animation:"pageIn 0.4s ease both" }}>
 
-      <div style={{ animation: "fadeSlideUp 0.4s ease both" }}>
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"24px", flexWrap:"wrap", gap:"12px" }}>
           <div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: "#0F172A", margin: 0 }}>
-              Krewby Workers
-            </h2>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-              <span style={{
-                background: "#F0FDF4", color: "#166534",
-                padding: "2px 10px", borderRadius: 100,
-                fontSize: 12, fontWeight: 600,
-              }}>
-                {activeCount} active
-              </span>
-              <span style={{
-                background: "#F8FAFC", color: "#64748B",
-                padding: "2px 10px", borderRadius: 100,
-                fontSize: 12, fontWeight: 600,
-              }}>
-                {workers.length} total
-              </span>
-            </div>
+            <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#0F172A" }}>Krewby Workers</h2>
+            <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
+              {loading ? "Loading…" : `${activeCount} active · ${inactiveCount} inactive · ${workers.length} total`}
+            </p>
           </div>
-          <ActionButton onClick={() => setShowing(s => !s)}>
+          <button onClick={() => setShowing(s => !s)}
+            style={{ padding:"10px 18px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", border:"none", background: showing ? "#F1F5F9" : "#3B82F6", color: showing ? "#64748B" : "#FFF", cursor:"pointer" }}>
             {showing ? "Cancel" : "+ Add Krewby Worker"}
-          </ActionButton>
+          </button>
         </div>
 
-        {/* Add Form */}
         {showing && (
-          <div style={{
-            background: "#FFFFFF", border: "1px solid #E2E8F0",
-            borderRadius: 16, padding: 24, marginBottom: 24,
-            boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-            animation: "fadeSlideUp 0.3s ease both",
-          }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0F172A", margin: "0 0 20px" }}>
-              Add New Krewby Worker
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, animation: "fadeSlideUp 0.3s 0.05s ease both" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748B", marginBottom: 6 }}>Full Name *</label>
-                  <FocusInput
-                    placeholder="e.g. John Tan"
-                    value={form.full_name}
-                    onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
-                    autoFocus
-                  />
+          <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"24px", marginBottom:"24px", boxShadow:"0 2px 12px rgba(0,0,0,0.06)", animation:"fadeSlideUp 0.3s ease both" }}>
+            <h3 style={{ fontSize:"15px", fontWeight:"700", color:"#0F172A", marginBottom:"18px" }}>Add New Krewby Worker</h3>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", marginBottom:"18px" }}>
+              {[
+                { label:"Full Name *",        key:"full_name",          placeholder:"e.g. John Tan",          autoFocus:true },
+                { label:"Username *",         key:"username",           placeholder:"e.g. john_worker" },
+                { label:"Email *",            key:"email",              placeholder:"e.g. john@gmail.com", type:"email" },
+                { label:"Preferred Location", key:"preferred_location", placeholder:"e.g. Central Singapore" },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"6px" }}>{f.label}</label>
+                  <input type={f.type||"text"} autoFocus={f.autoFocus} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                    placeholder={f.placeholder}
+                    style={{ width:"100%", padding:"10px 14px", border:"1.5px solid #E2E8F0", borderRadius:"10px", fontSize:"14px", outline:"none", boxSizing:"border-box" }} />
                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748B", marginBottom: 6 }}>Username *</label>
-                  <FocusInput
-                    placeholder="e.g. john_worker"
-                    value={form.username}
-                    onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, animation: "fadeSlideUp 0.3s 0.10s ease both" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748B", marginBottom: 6 }}>Email *</label>
-                  <FocusInput
-                    type="email"
-                    placeholder="e.g. john@gmail.com"
-                    value={form.email}
-                    onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748B", marginBottom: 6 }}>Preferred Location</label>
-                  <FocusInput
-                    placeholder="e.g. Central Singapore"
-                    value={form.preferred_location}
-                    onChange={e => setForm(p => ({ ...p, preferred_location: e.target.value }))}
-                  />
-                </div>
-              </div>
+              ))}
             </div>
-            <ActionButton onClick={handleAdd} disabled={saving}>
+            <button onClick={handleAdd} disabled={saving}
+              style={{ padding:"10px 22px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", border:"none", background: saving ? "#93C5FD" : "#3B82F6", color:"#FFF", cursor: saving ? "not-allowed" : "pointer" }}>
               {saving ? "Adding…" : "Add Worker"}
-            </ActionButton>
+            </button>
           </div>
         )}
 
-        {/* Search bar */}
-        <div style={{ position: "relative", maxWidth: 360, marginBottom: 20 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"
-            style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <FocusInput
-            placeholder="Search by name or email…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ paddingLeft: 36 }}
-          />
+        {/* Filter tabs */}
+        <div style={{ display:"flex", gap:"4px", background:"#F1F5F9", padding:"4px", borderRadius:"10px", marginBottom:"16px", width:"fit-content" }}>
+          {TABS.map(t => (
+            <button key={t.value} onClick={() => setFilter(t.value)}
+              style={{ padding:"7px 16px", background: filter===t.value ? "#FFF" : "transparent", border:"none", borderRadius:"7px", fontSize:"13px", fontWeight: filter===t.value ? "600" : "500", color: filter===t.value ? "#1E293B" : "#64748B", cursor:"pointer", boxShadow: filter===t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition:"all 0.15s", whiteSpace:"nowrap" }}>
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Table */}
+        {/* Search */}
+        <div style={{ position:"relative", maxWidth:"360px", marginBottom:"20px" }}>
+          <svg style={{ position:"absolute", left:"12px", top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }} width="15" height="15" fill="none" stroke="#94A3B8" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…"
+            style={{ width:"100%", padding:"9px 13px 9px 36px", border:"1.5px solid #E2E8F0", borderRadius:"10px", fontSize:"13px", background:"#FFF", color:"#1E293B", outline:"none", boxSizing:"border-box" }} />
+        </div>
+
         {loading ? (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 16, overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 0.8fr 0.6fr 1.5fr 1fr 100px", gap: 8, padding: "10px 20px", background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
-              {["Name", "Email", "Rating", "Jobs", "Location", "Status", ""].map((h, i) => (
-                <span key={i} style={{ fontSize: 12, fontWeight: 600, color: "#64748B" }}>{h}</span>
-              ))}
-            </div>
-            <SkeletonRow />
-            <SkeletonRow />
-            <SkeletonRow />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 16 }}>
-            <EmptyState search={search} />
-          </div>
-        ) : (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 0.8fr 0.6fr 1.5fr 1fr 100px", gap: 8, padding: "10px 20px", background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
-              {["Name", "Email", "Rating", "Jobs", "Location", "Status", ""].map((h, i) => (
-                <span key={i} style={{ fontSize: 12, fontWeight: 600, color: "#64748B" }}>{h}</span>
-              ))}
-            </div>
-            {filtered.map(w => (
-              <HoverRow
-                key={w.krewby_worker_id}
-                style={{ display: "grid", gridTemplateColumns: "2fr 2fr 0.8fr 0.6fr 1.5fr 1fr 100px", gap: 8, padding: "13px 20px", borderTop: "1px solid #E2E8F0", alignItems: "center", fontSize: 13 }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
-                  <Avatar letter={w.user?.full_name?.[0]} />
-                  <span style={{ fontWeight: 600, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {w.user?.full_name || "—"}
-                  </span>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:"16px" }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"22px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"16px" }}>
+                  <Shimmer w="44px" h="44px" r="50%" />
+                  <div style={{ flex:1 }}><Shimmer w="120px" h="14px" r="6px" /><div style={{ marginTop:"6px" }}><Shimmer w="160px" h="12px" r="5px" /></div></div>
                 </div>
-                <span style={{ color: "#64748B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {w.user?.email || "—"}
-                </span>
-                <StarRating value={w.rating} />
-                <span style={{ color: "#64748B", fontWeight: 600 }}>{w.total_jobs || 0}</span>
-                <span style={{ color: "#64748B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {w.preferred_location || <span style={{ color: "#CBD5E1" }}>—</span>}
-                </span>
-                <span style={{
-                  display: "inline-block",
-                  background: w.is_active ? "#DCFCE7" : "#F1F5F9",
-                  color: w.is_active ? "#166534" : "#64748B",
-                  padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                }}>
-                  {w.is_active ? "Active" : "Inactive"}
-                </span>
-                <ToggleButton active={w.is_active} onClick={() => toggleActive(w.krewby_worker_id, w.is_active)} />
-              </HoverRow>
+                <div style={{ display:"flex", gap:"12px", marginBottom:"14px" }}>
+                  <Shimmer w="80px" h="13px" r="5px" />
+                  <Shimmer w="40px" h="13px" r="5px" />
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between" }}>
+                  <Shimmer w="60px" h="22px" r="100px" />
+                  <Shimmer w="80px" h="28px" r="8px" />
+                </div>
+              </div>
             ))}
           </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"60px", textAlign:"center" }}>
+            <p style={{ fontSize:"32px", marginBottom:"10px" }}>👷</p>
+            <p style={{ fontSize:"16px", fontWeight:"600", color:"#64748B" }}>No workers found</p>
+          </div>
+        ) : (
+          <>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:"16px" }}>
+              {filtered.map((w, i) => (
+                <div key={w.krewby_worker_id} className="kw-card"
+                  style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"20px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", animation:`fadeSlideUp 0.3s ease ${i*0.05}s both` }}>
+
+                  <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"16px" }}>
+                    <div style={{ width:"44px", height:"44px", borderRadius:"50%", background:avatarColor(w.user?.full_name||""), color:"#FFF", fontSize:"16px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      {w.user?.full_name?.[0]?.toUpperCase()||"?"}
+                    </div>
+                    <div style={{ minWidth:0 }}>
+                      <p style={{ fontSize:"14px", fontWeight:"700", color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{w.user?.full_name||"—"}</p>
+                      <p style={{ fontSize:"12px", color:"#64748B", marginTop:"2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{w.user?.email||"—"}</p>
+                    </div>
+                  </div>
+
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"10px", marginBottom:"16px" }}>
+                    <div><p style={{ fontSize:"11px", fontWeight:"600", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.05em" }}>Jobs</p><p style={{ fontSize:"16px", fontWeight:"800", color:"#1E293B" }}>{w.total_jobs||0}</p></div>
+                    <div><p style={{ fontSize:"11px", fontWeight:"600", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.05em" }}>Rating</p><Stars value={w.rating} /></div>
+                    <div><p style={{ fontSize:"11px", fontWeight:"600", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.05em" }}>Area</p><p style={{ fontSize:"12px", color:"#475569", fontWeight:"500", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{w.preferred_location||"—"}</p></div>
+                  </div>
+
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:"12px", borderTop:"1px solid #F1F5F9" }}>
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:"6px", fontSize:"13px", fontWeight:"600", color: w.is_active ? "#16A34A" : "#94A3B8" }}>
+                      <span style={{ width:"7px", height:"7px", borderRadius:"50%", background: w.is_active ? "#22C55E" : "#D1D5DB", display:"inline-block" }} />
+                      {w.is_active ? "Active" : "Inactive"}
+                    </span>
+                    <button onClick={() => toggleActive(w.krewby_worker_id, w.is_active)}
+                      style={{ padding:"5px 12px", borderRadius:"8px", fontSize:"12px", fontWeight:"600", border: w.is_active ? "1.5px solid #FECACA" : "1.5px solid #BBF7D0", background: w.is_active ? "#FEF2F2" : "#F0FDF4", color: w.is_active ? "#991B1B" : "#166534", cursor:"pointer" }}>
+                      {w.is_active ? "Deactivate" : "Activate"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p style={{ textAlign:"center", fontSize:"13px", color:"#94A3B8", marginTop:"20px" }}>
+              Showing {filtered.length} of {workers.length} workers
+            </p>
+          </>
         )}
       </div>
+
+      {toast && (
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", zIndex:9999, background: toast.type==="success" ? "#22C55E" : "#EF4444", color:"#FFF", padding:"12px 20px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)", animation:"toastIn 0.3s ease both" }}>
+          {toast.msg}
+        </div>
+      )}
     </AdminLayout>
   );
 }
