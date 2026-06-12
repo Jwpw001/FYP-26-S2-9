@@ -1,22 +1,42 @@
-const allowRoles=(...roles)=>{
+const prisma = require("../config/prisma");
 
-    return(req,res,next)=>{
+const allowRoles = (...allowedRoles) => {
+    return async (req, res, next) => {
+        try {
 
-        const userRole=req.user?.role;
+            const email = req.user.email;
 
-        if(!roles.includes(userRole)){
-
-            return res.status(403).json({
-                success:false,
-                message:"Access denied"
+            const user = await prisma.users.findUnique({
+                where: {
+                    email
+                }
             });
 
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User profile not found"
+                });
+            }
+
+            if (!allowedRoles.includes(user.role)) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Access denied"
+                });
+            }
+
+            req.dbUser = user;
+
+            next();
+
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
         }
-
-        next();
-
     };
-
 };
 
-module.exports=allowRoles;
+module.exports = allowRoles;

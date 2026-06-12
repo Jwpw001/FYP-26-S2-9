@@ -5,6 +5,16 @@ const morgan = require("morgan");
 const errorHandler = require("./middleware/errorMiddleware");
 const authRoutes = require("./routes/authRoutes");
 
+const accountRoutes = require("./routes/accountRoutes");
+const staffRoutes = require("./routes/staffRoutes");
+const availabilityRoutes = require("./routes/availabilityRoutes");
+const shiftRoutes = require("./routes/shiftRoutes");
+const recommendationRoutes = require("./routes/recommendationRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const attendanceRoutes = require("./routes/attendanceRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const aiAssistantRoutes = require("./routes/aiAssistantRoutes");
+
 const app = express();
 
 app.use(cors());
@@ -19,6 +29,16 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+
+app.use("/api/account", accountRoutes);
+app.use("/api/staff", staffRoutes);
+app.use("/api/availability", availabilityRoutes);
+app.use("/api/shifts", shiftRoutes);
+app.use("/api/recommendations", recommendationRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/ai-assistant", aiAssistantRoutes);
 
 app.use(errorHandler);
 
