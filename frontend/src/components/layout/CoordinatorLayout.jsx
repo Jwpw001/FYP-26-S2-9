@@ -5,6 +5,7 @@ import SignOutButton from "../SignOutButton";
 import AIAssistantWidget from "../AIAssistantWidget";
 import { supabase } from "../../lib/supabaseClient";
 import { LayoutDashboard, ClipboardList, Users } from "lucide-react";
+import "./sidebarStyles.js";
 
 const NAV = [
   { label: "Dashboard", path: "/krewby-coordinator/dashboard", Icon: LayoutDashboard },
@@ -51,6 +52,7 @@ export default function CoordinatorLayout({ children, title }) {
             const active = location.pathname === item.path;
             return (
               <Link key={item.path} to={item.path} title={item.label}
+                className={`sidebar-nav-item${active ? " sidebar-nav-active" : ""}`}
                 style={{ ...s.navItem, ...(active ? s.navItemActive : {}) }}>
                 <span style={s.navIcon}><item.Icon size={18} strokeWidth={1.8} /></span>
                 <span style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "160px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>

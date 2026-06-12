@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import WorkerLayout from "../../components/layout/WorkerLayout";
@@ -26,6 +27,7 @@ function fmtDate(d) {
 
 const STATUS_STYLE = {
   assigned:  { bg: "#EFF6FF", color: "#1D4ED8", label: "Assigned" },
+  approved:  { bg: "#DCFCE7", color: "#166534", label: "Approved" },
   confirmed: { bg: "#DCFCE7", color: "#166534", label: "Confirmed" },
   completed: { bg: "#F0FDF4", color: "#15803D", label: "Completed" },
   cancelled: { bg: "#FEE2E2", color: "#991B1B", label: "Cancelled" },
@@ -34,11 +36,12 @@ const STATUS_STYLE = {
 export default function WorkerMyJobs() {
   const user = getUser();
   const userId = user?.user_id;
+  const location = useLocation();
 
   const [jobs, setJobs]         = useState([]);
   const [workerId, setWorkerId] = useState(null);
   const [loading, setLoading]   = useState(true);
-  const [filter, setFilter]     = useState("upcoming");
+  const [filter, setFilter]     = useState(location.state?.filter || "upcoming");
   const [toast, setToast]       = useState(null);
   const [acking, setAcking]     = useState(null);
 
@@ -57,15 +60,50 @@ export default function WorkerMyJobs() {
         if (!worker || cancelled) return;
         setWorkerId(worker.krewby_worker_id);
 
-        const { data } = await supabase
-          .from("shift_assignments")
-          .select(`assignment_id, status, acknowledged, assigned_at,
-            shifts ( shift_id, title, shift_date, start_time, end_time, status,
-              outlets ( name, address ) )`)
-          .eq("krewby_worker_id", worker.krewby_worker_id)
-          .order("assignment_id", { ascending: false });
+        const [assignRes, reqRes] = await Promise.all([
+          supabase
+            .from("shift_assignments")
+            .select(`assignment_id, status, acknowledged, assigned_at,
+              shifts ( shift_id, title, shift_date, start_time, end_time, status,
+                outlets ( name, address ) )`)
+            .eq("krewby_worker_id", worker.krewby_worker_id)
+            .order("assignment_id", { ascending: false }),
+          supabase
+            .from("krewby_requests")
+            .select(`request_id, role_name, shift_date, start_time, end_time, status, override_note, clock_out, manager_rating,
+              outlets ( name, address )`)
+            .eq("assigned_worker_id", worker.krewby_worker_id)
+            .in("status", ["assigned", "approved", "completed"])
+            .order("shift_date", { ascending: false }),
+        ]);
 
-        if (!cancelled) setJobs((data || []).filter(j => j.shifts));
+        const regularJobs = (assignRes.data || []).filter(j => j.shifts);
+
+        // Normalise krewby_requests rows into the same shape
+        const krewbyJobs = (reqRes.data || []).map(r => ({
+          _type: "krewby_request",
+          assignment_id: `kr-${r.request_id}`,
+          request_id: r.request_id,
+          // treat as completed if clocked out, regardless of DB status lag
+          status: r.clock_out ? "completed" : r.status,
+          manager_rating: r.manager_rating || null,
+          acknowledged: true,
+          assigned_at: null,
+          shifts: {
+            title: r.role_name,
+            shift_date: r.shift_date,
+            start_time: r.start_time,
+            end_time: r.end_time,
+            outlets: r.outlets,
+          },
+          override_note: r.override_note,
+        }));
+
+        if (!cancelled) setJobs([...regularJobs, ...krewbyJobs].sort((a, b) => {
+          const da = a.shifts?.shift_date || "";
+          const db = b.shifts?.shift_date || "";
+          return db.localeCompare(da);
+        }));
       } catch (err) { console.error(err); }
       finally { if (!cancelled) setLoading(false); }
     }
@@ -88,8 +126,8 @@ export default function WorkerMyJobs() {
   const today = new Date().toISOString().split("T")[0];
   const filtered = jobs.filter(j => {
     const d = j.shifts?.shift_date;
-    if (filter === "upcoming") return d >= today && j.status !== "cancelled";
-    if (filter === "past")     return d < today || j.status === "completed";
+    if (filter === "upcoming") return d >= today && !["cancelled", "completed"].includes(j.status);
+    if (filter === "past")     return d < today  || ["completed", "cancelled"].includes(j.status);
     return true;
   });
 
@@ -150,7 +188,14 @@ export default function WorkerMyJobs() {
 
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
                     <div>
-                      <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{j.shifts.title || "Shift"}</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{j.shifts.title || "Shift"}</p>
+                        {j._type === "krewby_request" && (
+                          <span style={{ fontSize: "10px", fontWeight: "700", background: "#FFF7ED", color: "#C2410C", border: "1px solid #FED7AA", padding: "2px 7px", borderRadius: "100px", letterSpacing: "0.04em" }}>
+                            KREWBY REQUEST
+                          </span>
+                        )}
+                      </div>
                       <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>{j.shifts.outlets?.name || ""}</p>
                     </div>
                     <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", background: st.bg, color: st.color, flexShrink: 0 }}>
@@ -158,11 +203,37 @@ export default function WorkerMyJobs() {
                     </span>
                   </div>
 
-                  <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", padding: "14px 0", borderTop: "1px solid #F1F5F9", borderBottom: !j.acknowledged && j.status === "assigned" ? "1px solid #F1F5F9" : "none", marginBottom: !j.acknowledged && j.status === "assigned" ? "14px" : "0" }}>
+                  <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", padding: "14px 0", borderTop: "1px solid #F1F5F9", borderBottom: (!j.acknowledged && j.status === "assigned") || j.override_note ? "1px solid #F1F5F9" : "none", marginBottom: (!j.acknowledged && j.status === "assigned") || j.override_note ? "14px" : "0" }}>
                     <InfoItem label="Date"  value={fmtDate(j.shifts.shift_date)} />
                     <InfoItem label="Time"  value={`${j.shifts.start_time?.slice(0,5)} – ${j.shifts.end_time?.slice(0,5)}`} />
                     {j.shifts.outlets?.address && <InfoItem label="Address" value={j.shifts.outlets.address} />}
                   </div>
+
+                  {j.override_note && (
+                    <p style={{ fontSize: "13px", color: "#64748B", fontStyle: "italic", marginBottom: "10px" }}>
+                      "{j.override_note}"
+                    </p>
+                  )}
+
+                  {j.status === "completed" && j._type === "krewby_request" && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingTop: "12px", borderTop: "1px solid #F1F5F9", marginTop: "4px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Manager Rating</span>
+                      {j.manager_rating ? (
+                        <>
+                          <div style={{ display: "flex", gap: "1px" }}>
+                            {[1,2,3,4,5].map(n => (
+                              <svg key={n} width="14" height="14" viewBox="0 0 24 24" fill={n <= j.manager_rating ? "#F59E0B" : "#E2E8F0"} stroke="none">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                              </svg>
+                            ))}
+                          </div>
+                          <span style={{ fontSize: "12px", fontWeight: "700", color: "#F59E0B" }}>{j.manager_rating}/5</span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: "12px", color: "#CBD5E1", fontStyle: "italic" }}>Not rated yet</span>
+                      )}
+                    </div>
+                  )}
 
                   {!j.acknowledged && j.status === "assigned" && (
                     <div style={{ display: "flex", justifyContent: "flex-end" }}>

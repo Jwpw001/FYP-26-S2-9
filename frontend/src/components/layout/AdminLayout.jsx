@@ -3,6 +3,7 @@ import { getUser } from "../../utils/auth";
 import { useState } from "react";
 import SignOutButton from "../SignOutButton";
 import { LayoutDashboard, Building2, UserCog, Users, Tag, Briefcase } from "lucide-react";
+import "./sidebarStyles.js";
 
 const NAV = [
   { label: "Dashboard",      path: "/system-admin/dashboard",      Icon: LayoutDashboard },
@@ -39,6 +40,7 @@ export default function AdminLayout({ children, title }) {
             const active = location.pathname === item.path;
             return (
               <Link key={item.path} to={item.path} title={item.label}
+                className={`sidebar-nav-item${active ? " sidebar-nav-active" : ""}`}
                 style={{ ...s.navItem, ...(active ? s.navItemActive : {}) }}>
                 <span style={{ ...s.navIcon, color: active ? "#93C5FD" : "rgba(255,255,255,0.55)" }}>
                   <item.Icon size={18} strokeWidth={1.8} />

@@ -4,7 +4,8 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2 } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus } from "lucide-react";
+import "./sidebarStyles.js";
 
 const NAV = [
   { label: "Dashboard",    path: "/outlet-manager/dashboard",    Icon: LayoutDashboard },
@@ -13,6 +14,7 @@ const NAV = [
   { label: "Availability", path: "/outlet-manager/availability", Icon: CalendarClock },
   { label: "Attendance",   path: "/outlet-manager/attendance",   Icon: ClipboardCheck },
   { label: "Reports",      path: "/outlet-manager/reports",      Icon: BarChart2 },
+  { label: "Manpower",     path: "/outlet-manager/manpower",     Icon: UserPlus },
 ];
 
 export default function ManagerLayout({ children, title }) {
@@ -55,6 +57,7 @@ export default function ManagerLayout({ children, title }) {
                 key={item.path}
                 to={item.path}
                 title={item.label}
+                className={`sidebar-nav-item${active ? " sidebar-nav-active" : ""}`}
                 style={{ ...s.navItem, ...(active ? s.navItemActive : {}) }}
                 onClick={() => setOpen(false)}
               >
