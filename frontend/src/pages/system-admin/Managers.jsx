@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
+import { useGoTo } from "../../components/PageTransition";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-mgr-kf")) {
   const s = document.createElement("style");
@@ -25,6 +26,7 @@ function Shimmer({ w="100%", h="16px", r="8px" }) {
 }
 
 export default function Managers() {
+  const goTo = useGoTo();
   const [managers, setManagers] = useState([]);
   const [outlets,  setOutlets]  = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -132,8 +134,8 @@ export default function Managers() {
           <>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:"16px" }}>
               {managers.map((m, i) => (
-                <div key={m.user_id} className="mgr-card"
-                  style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"20px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", animation:`fadeSlideUp 0.3s ease ${i*0.05}s both` }}>
+                <div key={m.user_id} className="mgr-card" onClick={() => goTo(`/system-admin/managers/${m.user_id}`)}
+                  style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"20px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", animation:`fadeSlideUp 0.3s ease ${i*0.05}s both`, cursor:"pointer" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"16px" }}>
                     <div style={{ width:"44px", height:"44px", borderRadius:"50%", background:avatarColor(m.full_name), color:"#FFF", fontSize:"16px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                       {m.full_name?.[0]?.toUpperCase() || "?"}

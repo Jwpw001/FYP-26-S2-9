@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
+import { useGoTo } from "../../components/PageTransition";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-biz-kf")) {
   const s = document.createElement("style");
@@ -25,6 +26,7 @@ function Shimmer({ w="100%", h="16px", r="8px" }) {
 }
 
 export default function Businesses() {
+  const goTo = useGoTo();
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showing, setShowing] = useState(false);
@@ -117,8 +119,8 @@ export default function Businesses() {
           <>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:"16px" }}>
               {outlets.map((o, i) => (
-                <div key={o.outlet_id} className="biz-card"
-                  style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"20px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", animation:`fadeSlideUp 0.3s ease ${i*0.05}s both` }}>
+                <div key={o.outlet_id} className="biz-card" onClick={() => goTo(`/system-admin/businesses/${o.outlet_id}`)}
+                  style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"20px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", animation:`fadeSlideUp 0.3s ease ${i*0.05}s both`, cursor:"pointer" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"14px" }}>
                     <div style={{ width:"44px", height:"44px", borderRadius:"12px", background:avatarColor(o.name), color:"#FFF", fontSize:"18px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                       {o.name?.[0]?.toUpperCase() || "?"}
