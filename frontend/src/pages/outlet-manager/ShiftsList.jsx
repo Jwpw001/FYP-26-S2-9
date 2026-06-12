@@ -73,7 +73,7 @@ export default function ShiftsList() {
 
         const { data: shiftRows } = await supabase
           .from("shifts")
-          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id")
+          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id, shift_roles ( role_id, shift_assignments ( assignment_id ) )")
           .eq("outlet_id", oid)
           .order("shift_date", { ascending: false });
         if (!cancelled) setShifts(shiftRows || []);

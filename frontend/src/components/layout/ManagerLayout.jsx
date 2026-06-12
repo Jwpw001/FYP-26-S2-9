@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { clearUser, getUser } from "../../utils/auth";
@@ -11,7 +11,6 @@ const NAV = [
   { label: "Availability",path: "/outlet-manager/availability", icon: "🗓" },
   { label: "Attendance",  path: "/outlet-manager/attendance",   icon: "✅" },
   { label: "Reports",       path: "/outlet-manager/reports",        icon: "📊" },
-  { label: "Notifications", path: "/outlet-manager/notifications",  icon: "🔔" },
 ];
 
 export default function ManagerLayout({ children, title }) {
@@ -19,6 +18,17 @@ export default function ManagerLayout({ children, title }) {
   const location   = useLocation();
   const user       = getUser();
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!user?.user_id) return;
+    supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("recipient_id", user.user_id)
+      .eq("is_read", false)
+      .then(({ count }) => setUnread(count || 0));
+  }, [user?.user_id]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -80,6 +90,35 @@ export default function ManagerLayout({ children, title }) {
         {/* Top bar */}
         <header style={s.topbar}>
           <h1 style={s.pageTitle}>{title}</h1>
+          <div style={{ flex: 1 }} />
+          {/* Notification bell */}
+          <button
+            onClick={() => navigate("/outlet-manager/notifications")}
+            style={{
+              position: "relative",
+              background: location.pathname === "/outlet-manager/notifications" ? "#EFF6FF" : "none",
+              border: location.pathname === "/outlet-manager/notifications" ? "1.5px solid #BFDBFE" : "1px solid transparent",
+              borderRadius: "10px", padding: "7px 9px", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 0.15s",
+            }}>
+            <svg width="20" height="20" fill="none" stroke={location.pathname === "/outlet-manager/notifications" ? "#2563EB" : "#64748B"} strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            {unread > 0 && (
+              <span style={{
+                position: "absolute", top: "4px", right: "4px",
+                background: "#EF4444", color: "#FFF",
+                fontSize: "10px", fontWeight: "700",
+                width: "16px", height: "16px", borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                lineHeight: 1,
+              }}>
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </button>
         </header>
 
         <div style={s.content}>
