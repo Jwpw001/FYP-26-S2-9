@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { api } from "../../lib/api";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-mgr-kf")) {
   const s = document.createElement("style");
@@ -33,7 +34,8 @@ export default function Managers() {
   const [showing,  setShowing]  = useState(false);
   const [saving,   setSaving]   = useState(false);
   const [toast,    setToast]    = useState(null);
-  const [form,     setForm]     = useState({ full_name:"", email:"", outlet_id:"" });
+  const [form,     setForm]     = useState({ full_name:"", email:"", username:"", password:"", outlet_id:"" });
+  const [showPass, setShowPass] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,18 +53,25 @@ export default function Managers() {
   async function handleAdd() {
     if (!form.full_name.trim()) { showToast("Full name is required.", "error"); return; }
     if (!form.email.trim())     { showToast("Email is required.", "error"); return; }
+    if (!form.username.trim())  { showToast("Username is required.", "error"); return; }
+    if (!form.password.trim())  { showToast("Password is required.", "error"); return; }
+    if (form.password.length < 6) { showToast("Password must be at least 6 characters.", "error"); return; }
     setSaving(true);
     try {
-      const { data: newUser, error } = await supabase.from("users")
-        .insert({ full_name: form.full_name.trim(), email: form.email.trim().toLowerCase(), username: form.email.trim().toLowerCase(), role: "outlet_manager" })
-        .select().single();
-      if (error) { showToast(error.message.includes("unique") ? "Email already exists." : error.message, "error"); return; }
-      setManagers(prev => [...prev, newUser].sort((a,b) => a.full_name.localeCompare(b.full_name)));
-      setForm({ full_name:"", email:"", outlet_id:"" });
+      const res = await api.post("/api/auth/create-manager", {
+        full_name: form.full_name.trim(),
+        email: form.email.trim().toLowerCase(),
+        username: form.username.trim().toLowerCase(),
+        password: form.password,
+        outlet_id: form.outlet_id || null,
+      });
+      setManagers(prev => [...prev, res.user].sort((a,b) => a.full_name.localeCompare(b.full_name)));
+      setForm({ full_name:"", email:"", username:"", password:"", outlet_id:"" });
       setShowing(false);
       showToast("Manager account created successfully.");
-    } catch { showToast("Failed to create account.", "error"); }
-    finally { setSaving(false); }
+    } catch (err) {
+      showToast(err.message || "Failed to create account.", "error");
+    } finally { setSaving(false); }
   }
 
   return (
@@ -85,23 +94,38 @@ export default function Managers() {
         {showing && (
           <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"24px", marginBottom:"24px", boxShadow:"0 2px 12px rgba(0,0,0,0.06)", animation:"fadeSlideUp 0.3s ease both" }}>
             <h3 style={{ fontSize:"15px", fontWeight:"700", color:"#0F172A", marginBottom:"18px" }}>Create Manager Account</h3>
-            <div style={{ display:"flex", flexDirection:"column", gap:"14px", marginBottom:"18px" }}>
-              {[
-                { label:"Full Name *", key:"full_name", placeholder:"e.g. Sarah Tan", type:"text", autoFocus:true },
-                { label:"Email *",     key:"email",     placeholder:"e.g. sarah@krewby.com", type:"email" },
-              ].map(f => (
-                <div key={f.key}>
-                  <label style={{ display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"6px" }}>{f.label}</label>
-                  <input type={f.type} autoFocus={f.autoFocus} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                    placeholder={f.placeholder}
-                    style={{ width:"100%", padding:"10px 14px", border:"1.5px solid #E2E8F0", borderRadius:"10px", fontSize:"14px", outline:"none", boxSizing:"border-box" }} />
-                </div>
-              ))}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", marginBottom:"18px" }}>
               <div>
-                <label style={{ display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"6px" }}>Assign to Outlet</label>
+                <label style={fl}>Full Name *</label>
+                <input autoFocus value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
+                  placeholder="e.g. Sarah Tan" style={fi} />
+              </div>
+              <div>
+                <label style={fl}>Email *</label>
+                <input type="email" autoComplete="off" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder="e.g. sarah@krewby.com" style={fi} />
+              </div>
+              <div>
+                <label style={fl}>Username *</label>
+                <input autoComplete="off" value={form.username} onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
+                  placeholder="e.g. sarah.tan" style={fi} />
+              </div>
+              <div>
+                <label style={fl}>Password *</label>
+                <div style={{ position:"relative" }}>
+                  <input type={showPass ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                    placeholder="Min. 6 characters" style={{ ...fi, paddingRight:"44px" }} />
+                  <button type="button" onClick={() => setShowPass(s => !s)}
+                    style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#64748B", fontSize:"12px", fontWeight:"600" }}>
+                    {showPass ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+              <div style={{ gridColumn:"1 / -1" }}>
+                <label style={fl}>Assign to Outlet (optional)</label>
                 <select value={form.outlet_id} onChange={e => setForm(p => ({ ...p, outlet_id: e.target.value }))}
-                  style={{ width:"100%", padding:"10px 14px", border:"1.5px solid #E2E8F0", borderRadius:"10px", fontSize:"14px", outline:"none", boxSizing:"border-box", background:"#FFF" }}>
-                  <option value="">Select outlet (optional)</option>
+                  style={{ ...fi, background:"#FFF" }}>
+                  <option value="">Select outlet</option>
                   {outlets.map(o => <option key={o.outlet_id} value={o.outlet_id}>{o.name}</option>)}
                 </select>
               </div>
@@ -169,3 +193,6 @@ export default function Managers() {
     </AdminLayout>
   );
 }
+
+const fl = { display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"6px" };
+const fi = { width:"100%", padding:"10px 14px", border:"1.5px solid #E2E8F0", borderRadius:"10px", fontSize:"14px", outline:"none", boxSizing:"border-box" };

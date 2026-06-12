@@ -213,6 +213,46 @@ const createWorkerAccount = async (req, res) => {
     }
 };
 
+// Used by system admin to create outlet manager accounts
+const createManagerAccount = async (req, res) => {
+    try {
+        const { full_name, username, email, password, outlet_id } = req.body;
+
+        if (!email || !password || !full_name || !username) {
+            return res.status(400).json({ success: false, message: "Missing required fields." });
+        }
+
+        const existing = await prisma.users.findUnique({ where: { email } });
+        if (existing) {
+            return res.status(409).json({ success: false, message: "A user with this email already exists." });
+        }
+
+        const { error: authErr } = await supabaseAdmin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name },
+        });
+
+        if (authErr) {
+            return res.status(400).json({ success: false, message: authErr.message });
+        }
+
+        const newUser = await prisma.users.create({
+            data: { full_name, username, email, role: "outlet_manager", is_active: true },
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Manager account created successfully.",
+            user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role },
+        });
+    } catch (error) {
+        console.error("createManagerAccount error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // GET /api/auth/worker-availability?week_start=YYYY-MM-DD
 const getWorkerAvailability = async (req, res) => {
     try {
@@ -286,6 +326,7 @@ module.exports = {
     forgotPassword,
     resetPassword,
     createStaffAccount,
+    createManagerAccount,
     createWorkerAccount,
     getKrewbyWorkers,
     getWorkerAvailability,

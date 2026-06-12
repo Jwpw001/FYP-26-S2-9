@@ -245,7 +245,7 @@ export default function AdminDashboard() {
   const cards = [
     { label: "Outlets",         value: stats.businesses,    icon: icons.outlets,  color: "#2563EB", bg: "#EFF6FF", link: "/system-admin/businesses" },
     { label: "Outlet Managers", value: stats.managers,      icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
-    { label: "Active Staff",    value: stats.staff,         icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/managers" },
+    { label: "Active Staff",    value: stats.staff,         icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
     { label: "Skill Tags",      value: stats.skills,        icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
     { label: "Krewby Workers",  value: stats.krewbyWorkers, icon: icons.workers,  color: "#DB2777", bg: "#FDF2F8", link: "/system-admin/krewby-workers" },
   ];
