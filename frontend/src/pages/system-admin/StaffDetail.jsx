@@ -19,13 +19,6 @@ export default function AdminStaffDetail() {
   const [allSkills, setAllSkills] = useState([]);
   const [assigned,  setAssigned]  = useState([]);
   const [loading,   setLoading]   = useState(true);
-  const [saving,    setSaving]    = useState(false);
-  const [deleting,  setDeleting]  = useState(false);
-  const [showDel,   setShowDel]   = useState(false);
-  const [editing,   setEditing]   = useState(false);
-  const [error,     setError]     = useState("");
-  const [success,   setSuccess]   = useState("");
-  const [form, setForm] = useState({ full_name:"", staff_type:"regular", default_work_days:"1111100", is_active:true });
 
   useEffect(() => { fetchProfile(); }, [id]);
 
@@ -46,64 +39,13 @@ export default function AdminStaffDetail() {
     setMember(staffRow);
     setAllSkills(skillRows || []);
     setAssigned((tagRows||[]).map(t => t.skill_id));
-    setForm({
-      full_name: staffRow.users?.full_name || "",
-      staff_type: staffRow.staff_type || "regular",
-      default_work_days: staffRow.default_work_days || "1111100",
-      is_active: staffRow.is_active ?? true,
-    });
     setLoading(false);
-  }
-
-  function toggleSkill(skillId) {
-    setAssigned(prev => prev.includes(skillId) ? prev.filter(s=>s!==skillId) : [...prev,skillId]);
-  }
-  function toggleDay(idx) {
-    const arr = form.default_work_days.padEnd(7,"0").split("");
-    arr[idx] = arr[idx]==="1" ? "0" : "1";
-    setForm(p => ({ ...p, default_work_days: arr.join("") }));
-  }
-
-  async function handleSave() {
-    if (!form.full_name.trim()) { setError("Full name is required."); return; }
-    setSaving(true); setError(""); setSuccess("");
-    await supabase.from("users").update({ full_name: form.full_name.trim() }).eq("user_id", member.users.user_id);
-    await supabase.from("staff").update({
-      staff_type: form.staff_type,
-      default_work_days: form.staff_type==="regular" ? form.default_work_days : null,
-      is_active: form.is_active,
-    }).eq("staff_id", id);
-    await supabase.from("user_skill_tags").delete().eq("user_id", member.users.user_id);
-    if (assigned.length > 0) {
-      await supabase.from("user_skill_tags").insert(assigned.map(skill_id => ({ user_id: member.users.user_id, skill_id })));
-    }
-    setSaving(false);
-    setSuccess("Profile updated successfully.");
-    setEditing(false);
-    await fetchProfile();
-  }
-
-  async function toggleActive() {
-    const newVal = !member.is_active;
-    await supabase.from("staff").update({ is_active: newVal }).eq("staff_id", id);
-    setMember(prev => ({ ...prev, is_active: newVal }));
-    setForm(prev => ({ ...prev, is_active: newVal }));
-  }
-
-  async function handleDelete() {
-    setDeleting(true);
-    const userId = member.users?.user_id;
-    await supabase.from("user_skill_tags").delete().eq("user_id", userId);
-    await supabase.from("staff").delete().eq("staff_id", id);
-    await supabase.from("users").delete().eq("user_id", userId);
-    goTo("/system-admin/staff");
   }
 
   if (loading) return <AdminLayout title="Staff Profile"><div style={{ padding:"60px", textAlign:"center", color:"#64748B" }}>Loading…</div></AdminLayout>;
 
   const name = member.users?.full_name || "?";
   const initials = name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
-  const workDays = (form.default_work_days||"0000000").padEnd(7,"0");
 
   return (
     <AdminLayout title="Staff Profile">
@@ -138,117 +80,52 @@ export default function AdminStaffDetail() {
             </div>
           )}
 
-          <div style={s.cardActions}>
-            <button onClick={toggleActive}
-              style={{ ...s.actionBtn, background: member.is_active?"#FEF3C7":"#DCFCE7", color: member.is_active?"#92400E":"#166534", border: member.is_active?"1px solid #FDE68A":"1px solid #BBF7D0" }}>
-              {member.is_active?"Deactivate":"Reactivate"}
-            </button>
-            <button onClick={() => setShowDel(true)}
-              style={{ ...s.actionBtn, marginTop:"8px", background:"#FEF2F2", color:"#991B1B", border:"1px solid #FECACA" }}>
-              Delete Staff
-            </button>
+          <div style={{ marginTop:"16px", padding:"12px", background:"#F8FAFC", borderRadius:"9px", border:"1px solid #F1F5F9" }}>
+            <p style={{ fontSize:"12px", color:"#94A3B8", textAlign:"center", lineHeight:1.5 }}>
+              Staff management is handled by the outlet manager.
+            </p>
           </div>
         </div>
 
-        {/* Right form */}
+        {/* Right — read-only details */}
         <div style={s.formCard}>
-          <div style={s.formHeader}>
-            <h3 style={s.formTitle}>Profile Details</h3>
-            {!editing
-              ? <button style={s.editBtn} onClick={() => { setEditing(true); setError(""); setSuccess(""); }}>Edit</button>
-              : <div style={{ display:"flex", gap:"8px" }}>
-                  <button style={s.cancelBtn} onClick={() => { setEditing(false); setError(""); fetchProfile(); }}>Cancel</button>
-                  <button style={s.saveBtn} onClick={handleSave} disabled={saving}>{saving?"Saving…":"Save"}</button>
-                </div>
-            }
-          </div>
-
-          {error   && <div style={s.errBox}>{error}</div>}
-          {success && <div style={s.okBox}>{success}</div>}
+          <h3 style={{ ...s.formTitle, marginBottom:"20px" }}>Profile Details</h3>
 
           <div style={s.fields}>
-            <Field label="Full Name">
-              {editing ? <input style={s.input} value={form.full_name} onChange={e=>setForm(p=>({...p,full_name:e.target.value}))} />
-                       : <p style={s.value}>{member.users?.full_name}</p>}
-            </Field>
-            <Field label="Email">
-              <p style={s.value}>{member.users?.email}</p>
-              {editing && <p style={s.hint}>Email cannot be changed here.</p>}
-            </Field>
-            <Field label="Staff Type">
-              {editing
-                ? <select style={s.input} value={form.staff_type} onChange={e=>setForm(p=>({...p,staff_type:e.target.value}))}>
-                    <option value="regular">Regular Staff</option>
-                    <option value="casual">Outlet Casual Staff</option>
-                  </select>
-                : <p style={s.value}>{member.staff_type==="regular"?"Regular Staff":"Outlet Casual Staff"}</p>}
-            </Field>
-
-            {form.staff_type==="regular" && (
+            <Field label="Full Name"><p style={s.value}>{member.users?.full_name}</p></Field>
+            <Field label="Email"><p style={s.value}>{member.users?.email}</p></Field>
+            <Field label="Staff Type"><p style={s.value}>{member.staff_type==="regular"?"Regular Staff":"Outlet Casual Staff"}</p></Field>
+            {member.staff_type==="regular" && (
               <Field label="Default Work Days">
-                {editing ? (
-                  <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
-                    {DAYS.map((day,idx) => {
-                      const on = workDays[idx]==="1";
-                      return <button key={day} type="button" onClick={() => toggleDay(idx)}
-                        style={{ padding:"7px 11px", borderRadius:"8px", fontSize:"12px", fontWeight:"700", cursor:"pointer",
-                          background:on?"#2563EB":"#F1F5F9", color:on?"#FFF":"#64748B", border:`1.5px solid ${on?"#2563EB":"#E2E8F0"}` }}>
-                        {day}
-                      </button>;
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
-                    {DAYS.map((day,idx) => {
-                      const on = (member.default_work_days||"0000000").padEnd(7,"0")[idx]==="1";
-                      return <span key={day} style={{ padding:"5px 10px", borderRadius:"8px", fontSize:"12px", fontWeight:"700",
-                        background:on?"#DBEAFE":"#F1F5F9", color:on?"#1E40AF":"#94A3B8", border:`1.5px solid ${on?"#BFDBFE":"#E2E8F0"}` }}>{day}</span>;
-                    })}
-                  </div>
-                )}
+                <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
+                  {DAYS.map((day,idx) => {
+                    const on = (member.default_work_days||"0000000").padEnd(7,"0")[idx]==="1";
+                    return <span key={day} style={{ padding:"5px 10px", borderRadius:"8px", fontSize:"12px", fontWeight:"700",
+                      background:on?"#DBEAFE":"#F1F5F9", color:on?"#1E40AF":"#94A3B8", border:`1.5px solid ${on?"#BFDBFE":"#E2E8F0"}` }}>{day}</span>;
+                  })}
+                </div>
               </Field>
             )}
           </div>
 
           <div style={{ borderTop:"1px solid #F1F5F9", paddingTop:"20px" }}>
             <h4 style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", marginBottom:"12px" }}>Skill Tags</h4>
-            {editing && <p style={s.hint}>Click to toggle skill tags.</p>}
-            <div style={{ display:"flex", flexWrap:"wrap", gap:"8px", marginTop:"8px" }}>
-              {allSkills.map(sk => {
-                const on = assigned.includes(sk.skill_id);
-                return (
-                  <button key={sk.skill_id}
-                    onClick={() => editing && toggleSkill(sk.skill_id)} disabled={!editing}
-                    style={{ padding:"6px 12px", borderRadius:"100px", fontSize:"13px", fontWeight:"500", transition:"all 0.15s", cursor:editing?"pointer":"default",
-                      background:on?"#0F172A":"#F1F5F9", color:on?"#FFF":"#64748B",
-                      border:`1.5px solid ${on?"#0F172A":"#E2E8F0"}`, opacity:editing?1:on?1:0.6 }}>
-                    {sk.name}
-                  </button>
-                );
-              })}
-            </div>
+            {assigned.length === 0
+              ? <p style={{ fontSize:"13px", color:"#94A3B8" }}>No skill tags assigned.</p>
+              : <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
+                  {allSkills.filter(sk => assigned.includes(sk.skill_id)).map(sk => (
+                    <span key={sk.skill_id}
+                      style={{ padding:"6px 12px", borderRadius:"100px", fontSize:"13px", fontWeight:"500",
+                        background:"#0F172A", color:"#FFF", border:"1.5px solid #0F172A" }}>
+                      {sk.name}
+                    </span>
+                  ))}
+                </div>
+            }
           </div>
         </div>
       </div>
 
-      {showDel && (
-        <div style={s.overlay} onClick={() => setShowDel(false)}>
-          <div style={s.modal} onClick={e=>e.stopPropagation()}>
-            <div style={{ fontSize:"36px", marginBottom:"12px" }}>🗑</div>
-            <h3 style={{ fontSize:"18px", fontWeight:"800", color:"#1E293B", marginBottom:"10px" }}>Delete Staff Member?</h3>
-            <p style={{ fontSize:"14px", color:"#64748B", lineHeight:1.6, marginBottom:"24px" }}>
-              This will permanently remove <strong>{name}</strong> and all their records.
-            </p>
-            <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>
-              <button style={s.cancelBtn} onClick={() => setShowDel(false)} disabled={deleting}>Cancel</button>
-              <button onClick={handleDelete} disabled={deleting}
-                style={{ background:"#EF4444", border:"none", borderRadius:"8px", padding:"8px 20px", fontSize:"13px", fontWeight:"700", color:"#FFF", cursor:"pointer" }}>
-                {deleting?"Deleting…":"Yes, Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AdminLayout>
   );
 }

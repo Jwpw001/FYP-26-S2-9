@@ -118,7 +118,7 @@ export default function Attendance() {
           role_id, role_name,
           shift_assignments (
             assignment_id, staff_id, status,
-            users:staff_id ( full_name, email ),
+            staff ( users ( full_name, email ) ),
             attendance ( attendance_id, status, clock_in, clock_out )
           )
         `)
@@ -128,6 +128,7 @@ export default function Attendance() {
         (r.shift_assignments || []).map(a => ({
           ...a,
           role_name: r.role_name,
+          users: a.staff?.users || null,
           attendanceStatus: a.attendance?.[0]?.status || "pending",
           attendanceId: a.attendance?.[0]?.attendance_id || null,
           clockIn: a.attendance?.[0]?.clock_in || null,
@@ -145,6 +146,7 @@ export default function Attendance() {
   async function markAttendance(assignment, status) {
     setSaving(assignment.assignment_id);
     try {
+      const now = new Date().toISOString();
       if (assignment.attendanceId) {
         await supabase.from("attendance").update({ status }).eq("attendance_id", assignment.attendanceId);
       } else {
@@ -152,16 +154,115 @@ export default function Attendance() {
           assignment_id: assignment.assignment_id,
           status,
           marked_by: userId,
-          clock_in: status === "present" || status === "late" ? new Date().toISOString() : null,
+          clock_in: status === "present" || status === "late" ? now : null,
         });
       }
       setAssignments(prev => prev.map(a =>
-        a.assignment_id === assignment.assignment_id ? { ...a, attendanceStatus: status } : a
+        a.assignment_id === assignment.assignment_id
+          ? { ...a, attendanceStatus: status, clockIn: !a.attendanceId && (status === "present" || status === "late") ? now : a.clockIn }
+          : a
       ));
       showToast("Attendance updated.", "success");
     } catch (err) {
       console.error(err);
       showToast("Failed to update.", "error");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function clockIn(assignment) {
+    setSaving(assignment.assignment_id);
+    try {
+      const now = new Date().toISOString();
+      if (assignment.attendanceId) {
+        await supabase.from("attendance").update({ clock_in: now, status: "present" }).eq("attendance_id", assignment.attendanceId);
+      } else {
+        await supabase.from("attendance").insert({
+          assignment_id: assignment.assignment_id,
+          status: "present",
+          marked_by: userId,
+          clock_in: now,
+        });
+      }
+      const { data: updated } = await supabase.from("attendance")
+        .select("attendance_id,status,clock_in,clock_out")
+        .eq("assignment_id", assignment.assignment_id).single();
+      setAssignments(prev => prev.map(a =>
+        a.assignment_id === assignment.assignment_id
+          ? { ...a, attendanceStatus: updated?.status || "present", attendanceId: updated?.attendance_id || a.attendanceId, clockIn: updated?.clock_in || now, clockOut: updated?.clock_out || null }
+          : a
+      ));
+      showToast("Clocked in.", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to clock in.", "error");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function clockOut(assignment) {
+    setSaving(assignment.assignment_id);
+    try {
+      const now = new Date().toISOString();
+      if (assignment.attendanceId) {
+        await supabase.from("attendance").update({ clock_out: now }).eq("attendance_id", assignment.attendanceId);
+      } else {
+        await supabase.from("attendance").insert({
+          assignment_id: assignment.assignment_id,
+          status: "present",
+          marked_by: userId,
+          clock_out: now,
+        });
+      }
+      const { data: updated } = await supabase.from("attendance")
+        .select("attendance_id,status,clock_in,clock_out")
+        .eq("assignment_id", assignment.assignment_id).single();
+      setAssignments(prev => prev.map(a =>
+        a.assignment_id === assignment.assignment_id
+          ? { ...a, clockOut: updated?.clock_out || now, attendanceId: updated?.attendance_id || a.attendanceId }
+          : a
+      ));
+      showToast("Clocked out.", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to clock out.", "error");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function saveClockTimes(assignment, clockInISO, clockOutISO) {
+    setSaving(assignment.assignment_id);
+    try {
+      const updates = {};
+      if (clockInISO !== undefined) updates.clock_in = clockInISO;
+      if (clockOutISO !== undefined) updates.clock_out = clockOutISO;
+      if (Object.keys(updates).length === 0) return;
+
+      if (assignment.attendanceId) {
+        await supabase.from("attendance").update(updates).eq("attendance_id", assignment.attendanceId);
+      } else {
+        await supabase.from("attendance").insert({
+          assignment_id: assignment.assignment_id,
+          status: "present",
+          marked_by: userId,
+          ...updates,
+        });
+      }
+      const { data: updated } = await supabase.from("attendance")
+        .select("attendance_id,status,clock_in,clock_out")
+        .eq("assignment_id", assignment.assignment_id).single();
+      setAssignments(prev => prev.map(a =>
+        a.assignment_id === assignment.assignment_id
+          ? { ...a, attendanceId: updated?.attendance_id || a.attendanceId, attendanceStatus: updated?.status || a.attendanceStatus, clockIn: updated?.clock_in || null, clockOut: updated?.clock_out || null }
+          : a
+      ));
+      showToast("Times saved.", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to save times.", "error");
     } finally {
       setSaving(null);
     }
@@ -285,9 +386,13 @@ export default function Attendance() {
                     key={a.assignment_id}
                     assignment={a}
                     saving={saving}
+                    shiftDate={shifts.find(s => s.shift_id === selectedShift)?.shift_date || dateFilter}
                     getAttendanceStyle={getAttendanceStyle}
                     getStatusBtnStyle={getStatusBtnStyle}
                     onMark={markAttendance}
+                    onClockIn={clockIn}
+                    onClockOut={clockOut}
+                    onSaveTimes={saveClockTimes}
                   />
                 ))}
               </>
@@ -339,39 +444,102 @@ function ShiftCard({ shift, active, onClick }) {
   );
 }
 
-function AttendanceRow({ assignment: a, saving, getAttendanceStyle, getStatusBtnStyle, onMark }) {
+function isoToTimeInput(iso) {
+  if (!iso) return "";
+  const u = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
+  return new Date(u).toLocaleTimeString("en-SG", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Singapore" });
+}
+
+function timeInputToISO(timeStr, shiftDate) {
+  if (!timeStr || !shiftDate) return null;
+  return new Date(`${shiftDate}T${timeStr}:00+08:00`).toISOString();
+}
+
+function AttendanceRow({ assignment: a, saving, shiftDate, getAttendanceStyle, getStatusBtnStyle, onMark, onClockIn, onClockOut, onSaveTimes }) {
   const name = a.users?.full_name || "Staff";
+  const isSaving = saving === a.assignment_id;
+
+  const [inVal,  setInVal]  = useState(() => isoToTimeInput(a.clockIn));
+  const [outVal, setOutVal] = useState(() => isoToTimeInput(a.clockOut));
+  const [dirty,  setDirty]  = useState(false);
+
+  // Sync when parent updates the assignment (e.g. after clock in button)
+  useEffect(() => { setInVal(isoToTimeInput(a.clockIn));  }, [a.clockIn]);
+  useEffect(() => { setOutVal(isoToTimeInput(a.clockOut)); }, [a.clockOut]);
+
+  function handleSave() {
+    onSaveTimes(a, timeInputToISO(inVal, shiftDate), timeInputToISO(outVal, shiftDate));
+    setDirty(false);
+  }
+
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0", borderBottom: "1px solid #F1F5F9", flexWrap: "wrap", gap: "10px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: avatarColor(name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: "700", flexShrink: 0 }}>
-          {name?.[0]?.toUpperCase() || "?"}
+    <div style={{ padding: "14px 0", borderBottom: "1px solid #F1F5F9" }}>
+      {/* Top row: avatar + name + status badge + status buttons */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: avatarColor(name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: "700", flexShrink: 0 }}>
+            {name?.[0]?.toUpperCase() || "?"}
+          </div>
+          <div>
+            <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>{name}</p>
+            <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{a.role_name}</p>
+          </div>
         </div>
-        <div>
-          <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>{name}</p>
-          <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{a.role_name}</p>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", ...getAttendanceStyle(a.attendanceStatus) }}>
+            {a.attendanceStatus.charAt(0).toUpperCase() + a.attendanceStatus.slice(1)}
+          </span>
+          <div style={{ display: "flex", gap: "5px" }}>
+            {STATUS_OPTIONS.map(status => (
+              <button
+                key={status}
+                onClick={() => onMark(a, status)}
+                disabled={isSaving}
+                style={{
+                  padding: "6px 12px", borderRadius: "8px", fontSize: "12px", cursor: "pointer",
+                  transition: "all 0.15s", opacity: isSaving ? 0.6 : 1,
+                  ...getStatusBtnStyle(status, a.attendanceStatus),
+                }}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-        <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", ...getAttendanceStyle(a.attendanceStatus) }}>
-          {a.attendanceStatus.charAt(0).toUpperCase() + a.attendanceStatus.slice(1)}
-        </span>
-        <div style={{ display: "flex", gap: "5px" }}>
-          {STATUS_OPTIONS.map(status => (
-            <button
-              key={status}
-              onClick={() => onMark(a, status)}
-              disabled={saving === a.assignment_id}
-              style={{
-                padding: "6px 12px", borderRadius: "8px", fontSize: "12px", cursor: "pointer",
-                transition: "all 0.15s", opacity: saving === a.assignment_id ? 0.6 : 1,
-                ...getStatusBtnStyle(status, a.attendanceStatus),
-              }}>
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
+      {/* Clock in/out editable row */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", paddingLeft: "46px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <label style={{ fontSize: "11px", fontWeight: "700", color: "#16A34A", minWidth: "24px" }}>In</label>
+          <input
+            type="time"
+            value={inVal}
+            onChange={e => { setInVal(e.target.value); setDirty(true); }}
+            style={{ padding: "4px 8px", border: "1.5px solid #BBF7D0", borderRadius: "8px", fontSize: "13px", fontWeight: "600", color: "#166534", background: "#F0FDF4", outline: "none", cursor: "pointer" }}
+          />
         </div>
+
+        <span style={{ color: "#CBD5E1", fontSize: "14px" }}>→</span>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <label style={{ fontSize: "11px", fontWeight: "700", color: "#9F1239", minWidth: "28px" }}>Out</label>
+          <input
+            type="time"
+            value={outVal}
+            onChange={e => { setOutVal(e.target.value); setDirty(true); }}
+            style={{ padding: "4px 8px", border: "1.5px solid #FECACA", borderRadius: "8px", fontSize: "13px", fontWeight: "600", color: "#9F1239", background: "#FFF1F2", outline: "none", cursor: "pointer" }}
+          />
+        </div>
+
+        {dirty && (
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            style={{ padding: "5px 14px", borderRadius: "8px", border: "none", background: "#2563EB", color: "#FFF", fontSize: "12px", fontWeight: "700", cursor: isSaving ? "not-allowed" : "pointer", opacity: isSaving ? 0.7 : 1, transition: "all 0.15s" }}>
+            {isSaving ? "Saving…" : "Save"}
+          </button>
+        )}
       </div>
     </div>
   );
