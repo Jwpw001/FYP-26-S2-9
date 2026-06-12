@@ -30,6 +30,8 @@ import Managers            from "./pages/system-admin/Managers";
 import ManagerDetail       from "./pages/system-admin/ManagerDetail";
 import KrewbyWorkers       from "./pages/system-admin/KrewbyWorkers";
 import KrewbyWorkerDetail  from "./pages/system-admin/KrewbyWorkerDetail";
+import AdminStaff          from "./pages/system-admin/Staff";
+import AdminStaffDetail    from "./pages/system-admin/StaffDetail";
 
 // Regular Staff
 import StaffDashboard from "./pages/regular-staff/Dashboard";
@@ -81,6 +83,8 @@ function App() {
         <Route path="/system-admin/skills"                element={<PR roles={["system_admin"]}><SkillTags /></PR>} />
         <Route path="/system-admin/krewby-workers"        element={<PR roles={["system_admin"]}><KrewbyWorkers /></PR>} />
         <Route path="/system-admin/krewby-workers/:id"    element={<PR roles={["system_admin"]}><KrewbyWorkerDetail /></PR>} />
+        <Route path="/system-admin/staff"                 element={<PR roles={["system_admin"]}><AdminStaff /></PR>} />
+        <Route path="/system-admin/staff/:id"             element={<PR roles={["system_admin"]}><AdminStaffDetail /></PR>} />
 
         {/* ── Outlet Manager ───────────────────────────── */}
         <Route path="/outlet-manager/dashboard"    element={<PR roles={["outlet_manager"]}><ManagerDashboard /></PR>} />

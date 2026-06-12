@@ -7,6 +7,7 @@ const {
     forgotPassword,
     resetPassword,
     createStaffAccount,
+    createManagerAccount,
     createWorkerAccount,
     getKrewbyWorkers,
     getWorkerAvailability,
@@ -33,6 +34,7 @@ router.get("/me", protect, (req, res) => {
 
 router.post("/register", validate(registerSchema), register);
 router.post("/create-staff", protect, createStaffAccount);
+router.post("/create-manager", protect, createManagerAccount);
 router.get("/krewby-workers", protect, getKrewbyWorkers);
 router.post("/create-worker", protect, createWorkerAccount);
 router.get("/worker-availability", protect, getWorkerAvailability);
