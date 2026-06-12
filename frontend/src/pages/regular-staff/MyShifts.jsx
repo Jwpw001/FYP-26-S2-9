@@ -65,6 +65,9 @@ export default function MyShifts() {
           .eq("staff_id", staffId);
 
         let rows = (data || []).filter(a => a.shifts);
+        // Deduplicate — staff can have multiple assignments for the same shift
+        const seen = new Set();
+        rows = rows.filter(a => { if (seen.has(a.shifts.shift_id)) return false; seen.add(a.shifts.shift_id); return true; });
         if (filter === "upcoming") rows = rows.filter(a => a.shifts.shift_date >= today);
         else if (filter === "past") rows = rows.filter(a => a.shifts.shift_date < today);
         rows.sort((a, b) => a.shifts.shift_date.localeCompare(b.shifts.shift_date));

@@ -197,7 +197,8 @@ function StaffCard({ member: m, index, onNav }) {
 
   return (
     <div className="staff-card"
-      style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${index * 0.05}s both` }}>
+      onClick={onNav}
+      style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${index * 0.05}s both`, cursor: "pointer" }}>
 
       {/* Avatar + name */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
@@ -223,16 +224,12 @@ function StaffCard({ member: m, index, onNav }) {
         )}
       </div>
 
-      {/* Footer: status + view */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
+      {/* Footer: status only */}
+      <div style={{ paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
         <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "600", color: m.is_active ? "#16A34A" : "#94A3B8" }}>
           <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: m.is_active ? "#22C55E" : "#D1D5DB", display: "inline-block" }} />
           {m.is_active ? "Active" : "Inactive"}
         </span>
-        <button onClick={onNav}
-          style={{ padding: "6px 14px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", fontSize: "12px", fontWeight: "600", color: "#2563EB", cursor: "pointer" }}>
-          View →
-        </button>
       </div>
     </div>
   );

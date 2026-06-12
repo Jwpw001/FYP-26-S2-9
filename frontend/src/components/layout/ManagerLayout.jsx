@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
+import SignOutButton from "../SignOutButton";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
-import { clearUser, getUser } from "../../utils/auth";
+import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2 } from "lucide-react";
 
 const NAV = [
-  { label: "Dashboard",   path: "/outlet-manager/dashboard",    icon: "⊞" },
-  { label: "Staff",       path: "/outlet-manager/staff",        icon: "👥" },
-  { label: "Shifts",      path: "/outlet-manager/shifts",       icon: "📅" },
-  { label: "Availability",path: "/outlet-manager/availability", icon: "🗓" },
-  { label: "Attendance",  path: "/outlet-manager/attendance",   icon: "✅" },
-  { label: "Reports",       path: "/outlet-manager/reports",        icon: "📊" },
+  { label: "Dashboard",    path: "/outlet-manager/dashboard",    Icon: LayoutDashboard },
+  { label: "Staff",        path: "/outlet-manager/staff",        Icon: Users },
+  { label: "Shifts",       path: "/outlet-manager/shifts",       Icon: CalendarDays },
+  { label: "Availability", path: "/outlet-manager/availability", Icon: CalendarClock },
+  { label: "Attendance",   path: "/outlet-manager/attendance",   Icon: ClipboardCheck },
+  { label: "Reports",      path: "/outlet-manager/reports",      Icon: BarChart2 },
 ];
 
 export default function ManagerLayout({ children, title }) {
@@ -18,6 +20,7 @@ export default function ManagerLayout({ children, title }) {
   const location   = useLocation();
   const user       = getUser();
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -30,20 +33,17 @@ export default function ManagerLayout({ children, title }) {
       .then(({ count }) => setUnread(count || 0));
   }, [user?.user_id]);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    clearUser();
-    navigate("/login", { replace: true });
-  }
-
   return (
     <div style={s.shell}>
       {/* ── Sidebar ───────────────────────────────────── */}
-      <aside style={{ ...s.sidebar, ...(open ? s.sidebarOpen : {}) }}>
-        <div style={s.sidebarTop}>
+      <aside
+        onMouseEnter={() => setExpanded(true)}
+        onMouseLeave={() => setExpanded(false)}
+        style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
+        <div style={{ ...s.sidebarTop, padding: "20px 14px 16px" }}>
           <Link to="/outlet-manager/dashboard" style={s.logoRow}>
             <div style={s.logoBox}>K</div>
-            <span style={s.logoText}>Krewby</span>
+            <span style={{ ...s.logoText, opacity: expanded ? 1 : 0, maxWidth: expanded ? "120px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>Krewby</span>
           </Link>
         </div>
 
@@ -54,29 +54,30 @@ export default function ManagerLayout({ children, title }) {
               <Link
                 key={item.path}
                 to={item.path}
+                title={item.label}
                 style={{ ...s.navItem, ...(active ? s.navItemActive : {}) }}
                 onClick={() => setOpen(false)}
               >
-                <span style={s.navIcon}>{item.icon}</span>
-                <span>{item.label}</span>
+                <span style={s.navIcon}><item.Icon size={18} strokeWidth={1.8} /></span>
+                <span style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "160px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>
+                  {item.label}
+                </span>
               </Link>
             );
           })}
         </nav>
 
-        <div style={s.sidebarBottom}>
-          <div style={s.userRow}>
-            <div style={s.avatar}>
-              {user?.full_name?.[0]?.toUpperCase() || "M"}
-            </div>
-            <div style={s.userInfo}>
+        <div style={{ ...s.sidebarBottom, padding: "12px" }}>
+          <div style={{ ...s.userRow, marginBottom: "10px" }}>
+            <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "M"}</div>
+            <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Manager"}</p>
               <p style={s.userRole}>Outlet Manager</p>
             </div>
           </div>
-          <button style={s.logoutBtn} onClick={handleLogout}>
-            Sign out
-          </button>
+          <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
+            <SignOutButton />
+          </div>
         </div>
       </aside>
 
@@ -139,16 +140,18 @@ const s = {
 
   /* Sidebar */
   sidebar: {
-    width: "240px",
-    minHeight: "100vh",
+    width: "64px",
+    height: "100vh",
     background: "#0F172A",
     display: "flex",
     flexDirection: "column",
-    position: "sticky",
+    position: "fixed",
     top: 0,
+    left: 0,
+    zIndex: 300,
+    transition: "width 0.25s ease",
+    overflow: "hidden",
     flexShrink: 0,
-    zIndex: 200,
-    transition: "transform 0.25s ease",
   },
   sidebarOpen: {
     position: "fixed",
@@ -286,6 +289,7 @@ const s = {
     display: "flex",
     flexDirection: "column",
     minWidth: 0,
+    marginLeft: "64px",
   },
   topbar: {
     height: "60px",
