@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
+import { useGoTo } from "../../components/PageTransition";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-kw-kf")) {
   const s = document.createElement("style");
@@ -38,6 +39,7 @@ function Stars({ value }) {
 }
 
 export default function KrewbyWorkers() {
+  const goTo = useGoTo();
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
@@ -198,8 +200,8 @@ export default function KrewbyWorkers() {
           <>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:"16px" }}>
               {filtered.map((w, i) => (
-                <div key={w.krewby_worker_id} className="kw-card"
-                  style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"20px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", animation:`fadeSlideUp 0.3s ease ${i*0.05}s both` }}>
+                <div key={w.krewby_worker_id} className="kw-card" onClick={() => goTo(`/system-admin/krewby-workers/${w.krewby_worker_id}`)}
+                  style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"20px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", animation:`fadeSlideUp 0.3s ease ${i*0.05}s both`, cursor:"pointer" }}>
 
                   <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"16px" }}>
                     <div style={{ width:"44px", height:"44px", borderRadius:"50%", background:avatarColor(w.user?.full_name||""), color:"#FFF", fontSize:"16px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
