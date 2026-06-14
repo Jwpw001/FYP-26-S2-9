@@ -5,6 +5,10 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import NotFound from "./pages/NotFound";
+import GetStarted from "./pages/GetStarted";
+import RegisterBusiness from "./pages/RegisterBusiness";
+import CreateAccount from "./pages/CreateAccount";
+import JoinWorker from "./pages/JoinWorker";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotificationsPage from "./components/NotificationsPage";
 
@@ -76,6 +80,10 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/get-started" element={<GetStarted />} />
+        <Route path="/register/business" element={<RegisterBusiness />} />
+        <Route path="/register/account" element={<CreateAccount />} />
+        <Route path="/join" element={<JoinWorker />} />
 
         {/* ── System Admin ─────────────────────────────── */}
         <Route path="/system-admin/dashboard"              element={<PR roles={["system_admin"]}><AdminDashboard /></PR>} />

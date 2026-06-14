@@ -105,7 +105,7 @@ function RosterGraphic() {
   const W=LEFT+DAYS.length*COL_W+16, H=TOP+STAFF.length*ROW_H+48;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg"
-      style={{ width:"100%", maxWidth:"520px", filter:"drop-shadow(0 20px 40px rgba(15,23,42,0.18))" }}>
+      style={{ width:"100%", maxWidth:"680px", filter:"drop-shadow(0 24px 48px rgba(15,23,42,0.22))" }}>
       <rect width={W} height={H} rx="16" fill="#FFFFFF"/>
       <rect width={W} height="40" rx="16" fill="#F8FAFC"/>
       <rect y="30" width={W} height="10" fill="#F8FAFC"/>
@@ -233,6 +233,42 @@ if (typeof document !== "undefined" && !document.getElementById("krewby-home-sty
 }
 
 /* ─────────────────────────────────────────────
+   Component: scroll-to-top button
+───────────────────────────────────────────── */
+function ScrollToTop() {
+  const [visible, setVisible] = useState(false);
+  const [hov, setHov] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 300);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  if (!visible) return null;
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        position: "fixed", bottom: "32px", right: "32px", zIndex: 1001,
+        width: "46px", height: "46px", borderRadius: "12px",
+        background: hov ? "#1E293B" : "#0F172A",
+        color: "#FFF", border: "none", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        boxShadow: "0 4px 20px rgba(15,23,42,0.3)",
+        transform: hov ? "translateY(-3px)" : "translateY(0)",
+        transition: "all 0.2s ease",
+      }}
+      title="Back to top"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="18 15 12 9 6 15"/>
+      </svg>
+    </button>
+  );
+}
+
+/* ─────────────────────────────────────────────
    Main Page
 ───────────────────────────────────────────── */
 export default function Home() {
@@ -240,7 +276,7 @@ export default function Home() {
   const goTo = useGoTo();
 
   function go(dest) {
-    const target = dest || (user && ROLE_ROUTES[user.role] ? ROLE_ROUTES[user.role] : "/login");
+    const target = dest || (user && ROLE_ROUTES[user.role] ? ROLE_ROUTES[user.role] : "/get-started");
     goTo(target);
   }
   function scroll(id) { document.getElementById(id)?.scrollIntoView({ behavior:"smooth" }); }
@@ -249,6 +285,7 @@ export default function Home() {
     <main style={{ ...s.page, animation: "fadeIn 0.4s ease both" }}>
 
       {/* ══ NAVBAR ══════════════════════════════════════════ */}
+      <div style={s.navSpacer}/>
       <nav style={s.navbar}>
         <div style={s.navLeft}>
           <div style={s.logoMark}>K</div>
@@ -260,10 +297,23 @@ export default function Home() {
           <NavLink label="How it works" onClick={e=>{e.preventDefault();scroll("how");}}/>
           <NavLink label="FAQ"          onClick={e=>{e.preventDefault();scroll("faq");}}/>
         </div>
-        <Btn baseStyle={s.navCta} onClick={()=>go()}>
-          {user?"Go to dashboard":"Log in"} <span style={{marginLeft:6}}>{Icon.arrow}</span>
-        </Btn>
+        <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+          {!user && (
+            <Btn baseStyle={s.navJoin} onClick={()=>goTo("/join")}>
+              Join as Worker
+            </Btn>
+          )}
+          {!user && (
+            <Btn baseStyle={{ ...s.navCta, background:"transparent", color:"#0F172A", border:"1.5px solid #E2E8F0", boxShadow:"none" }} onClick={()=>goTo("/get-started")}>
+              Sign up
+            </Btn>
+          )}
+          <Btn baseStyle={s.navCta} onClick={()=>user ? go() : goTo("/login")}>
+            {user?"Go to dashboard":"Log in"} <span style={{marginLeft:6}}>{Icon.arrow}</span>
+          </Btn>
+        </div>
       </nav>
+
 
       {/* ══ HERO ════════════════════════════════════════════ */}
       <section style={s.heroWrap}>
@@ -413,6 +463,75 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ══ JOIN AS WORKER ══════════════════════════════════ */}
+      <section id="join-worker" style={s.workerSection}>
+        <div style={s.inner}>
+          <div style={s.workerInner}>
+            {/* Left copy */}
+            <Reveal style={{ flex:"1 1 420px" }}>
+              <p style={{ ...s.sectionEyebrow, color:"#A78BFA" }}>FOR CASUAL WORKERS</p>
+              <h2 style={{ ...s.sectionTitle, color:"#F8FAFC" }}>Earn flexibly.<br/>Work on your terms.</h2>
+              <p style={{ fontSize:"15px", color:"#94A3B8", lineHeight:1.8, marginBottom:"32px", maxWidth:"440px" }}>
+                The Krewby Worker Pool connects vetted casual workers with F&amp;B outlets that need extra hands.
+                You choose your availability, pick up shifts that fit your schedule, and build a track record across multiple outlets.
+              </p>
+              <div style={s.workerPerks}>
+                {[
+                  { icon:"📅", title:"Flexible schedule", desc:"Set your availability week by week. No fixed hours, no long-term commitment." },
+                  { icon:"📍", title:"Multiple outlets", desc:"Get matched to cafés, restaurants, and events that need your skills." },
+                  { icon:"⭐", title:"Build your rating", desc:"A strong profile earns you more shift offers and better opportunities." },
+                  { icon:"💰", title:"Earn on your terms", desc:"Work as much or as little as you want. You're fully in control." },
+                ].map(p => (
+                  <div key={p.title} style={s.workerPerk}>
+                    <span style={s.workerPerkIcon}>{p.icon}</span>
+                    <div>
+                      <p style={s.workerPerkTitle}>{p.title}</p>
+                      <p style={s.workerPerkDesc}>{p.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Btn baseStyle={s.workerJoinBtn} onClick={()=>goTo("/join")}>
+                Join the worker pool <span style={{marginLeft:8}}>{Icon.arrow}</span>
+              </Btn>
+            </Reveal>
+
+            {/* Right visual */}
+            <Reveal delay={150} style={{ flex:"0 0 auto" }}>
+              <div style={s.workerCard}>
+                <div style={s.workerCardHeader}>
+                  <div style={s.workerCardAvatar}>P</div>
+                  <div>
+                    <p style={s.workerCardName}>Priya N.</p>
+                    <p style={s.workerCardRole}>Krewby Worker · Singapore</p>
+                  </div>
+                  <div style={s.workerCardBadge}>⭐ 4.9</div>
+                </div>
+                <div style={s.workerCardDivider}/>
+                <p style={s.workerCardLabel}>Upcoming shifts</p>
+                {[
+                  { outlet:"The Daily Grind", date:"Sat, 21 Jun", time:"08:00 – 14:00", tag:"Confirmed" },
+                  { outlet:"Horizon Bistro", date:"Sun, 22 Jun", time:"17:00 – 23:00", tag:"Confirmed" },
+                  { outlet:"Bloom Café", date:"Mon, 23 Jun", time:"09:00 – 15:00", tag:"Pending" },
+                ].map(sh => (
+                  <div key={sh.outlet} style={s.workerShiftRow}>
+                    <div style={{ flex:1 }}>
+                      <p style={s.workerShiftOutlet}>{sh.outlet}</p>
+                      <p style={s.workerShiftTime}>{sh.date} · {sh.time}</p>
+                    </div>
+                    <span style={{ ...s.workerShiftTag, background: sh.tag==="Confirmed"?"rgba(34,197,94,0.12)":"rgba(245,158,11,0.12)", color: sh.tag==="Confirmed"?"#22C55E":"#F59E0B" }}>{sh.tag}</span>
+                  </div>
+                ))}
+                <div style={s.workerCardFooter}>
+                  <span style={s.workerCardStat}>12 shifts completed</span>
+                  <span style={s.workerCardStat}>3 outlets</span>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
       {/* ══ HOW IT WORKS ════════════════════════════════════ */}
       <section id="how" style={s.howSection}>
         <div style={s.inner}>
@@ -482,6 +601,8 @@ export default function Home() {
         </div>
         </Reveal>
       </section>
+
+      <ScrollToTop />
 
       {/* ══ FOOTER ══════════════════════════════════════════ */}
       <footer id="contact" style={s.footer}>
@@ -621,9 +742,9 @@ const FEATURES = [
 
 const ROLES = [
   {
-    icon: Icon.shield, title:"System Admin", color:"#3B82F6", bg:"#EFF6FF",
-    desc:"Full visibility and control across every outlet, user, and configuration in the system.",
-    bullets:["Register and manage outlets","Assign outlet managers","Manage skill tag library","Access platform-wide reports"],
+    icon: Icon.briefcase, title:"Business Owner", color:"#3B82F6", bg:"#EFF6FF",
+    desc:"Full visibility and control across your outlets, staff, and operations — all from one place.",
+    bullets:["Register your business and outlets","Appoint and manage outlet managers","Access platform-wide reports","Oversee your entire workforce"],
   },
   {
     icon: Icon.users, title:"Outlet Manager", color:"#059669", bg:"#ECFDF5",
@@ -671,16 +792,18 @@ const FAQ = [
    Styles
 ───────────────────────────────────────────── */
 const s = {
-  page:     { minHeight:"100vh", background:"#F8FAFC", color:"#0F172A", overflowX:"hidden" },
+  page:     { minHeight:"100vh", background:"#F8FAFC", color:"#0F172A" },
   inner:    { maxWidth:"1100px", margin:"0 auto" },
 
   /* Navbar */
-  navbar:   { height:"64px", background:"rgba(255,255,255,0.93)", backdropFilter:"blur(12px)", borderBottom:"1px solid #E2E8F0", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 60px", boxSizing:"border-box", position:"sticky", top:0, zIndex:100 },
+  navbar:   { height:"64px", background:"rgba(255,255,255,0.93)", backdropFilter:"blur(12px)", borderBottom:"1px solid #E2E8F0", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 60px", boxSizing:"border-box", position:"fixed", top:0, left:0, right:0, zIndex:1000 },
+  navSpacer:{ height:"64px" },
   navLeft:  { display:"flex", alignItems:"center", gap:"10px" },
   logoMark: { width:"30px", height:"30px", borderRadius:"8px", background:"#0F172A", color:"#FFF", fontSize:"14px", fontWeight:"800", display:"flex", alignItems:"center", justifyContent:"center" },
   logoText: { fontSize:"17px", fontWeight:"800", letterSpacing:"-0.02em", color:"#0F172A" },
   navLinks: { display:"flex", gap:"32px" },
   navLink:  { color:"#64748B", fontSize:"14px", fontWeight:"500", textDecoration:"none" },
+  navJoin:  { background:"#F5F3FF", color:"#7C3AED", border:"1.5px solid #DDD6FE", padding:"8px 16px", borderRadius:"9px", fontWeight:"600", fontSize:"13px", cursor:"pointer" },
   navCta:   { display:"flex", alignItems:"center", gap:"4px", background:"#0F172A", color:"#FFF", border:"none", padding:"9px 18px", borderRadius:"9px", fontWeight:"600", fontSize:"14px", cursor:"pointer" },
 
   /* Hero */
@@ -697,6 +820,52 @@ const s = {
   trustRow:   { display:"flex", gap:"16px", flexWrap:"wrap" },
   trustPill:  { display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", color:"#64748B", fontWeight:"500" },
   trustDot:   { width:"6px", height:"6px", borderRadius:"50%", background:"#22C55E", flexShrink:0 },
+
+  /* Worker CTA */
+  workerCta:        { marginBottom:"28px" },
+  workerCtaDivider: { display:"flex", alignItems:"center", gap:"12px", marginBottom:"12px" },
+  workerCtaLine:    { flex:1, height:"1px", background:"#E2E8F0" },
+  workerCtaDividerText: { fontSize:"11px", fontWeight:"600", color:"#94A3B8", letterSpacing:"0.04em", whiteSpace:"nowrap" },
+  workerCtaBtn:     { width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", background:"transparent", border:"1px solid rgba(124,58,237,0.3)", borderRadius:"12px", padding:"14px 18px", cursor:"pointer", transition:"all 0.2s ease", textAlign:"left" },
+  workerCtaBtnLeft: { display:"flex", alignItems:"center", gap:"12px" },
+  workerCtaIcon:    { width:"32px", height:"32px", borderRadius:"8px", background:"#F5F3FF", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
+  workerCtaTitle:   { display:"block", fontSize:"13px", fontWeight:"700", color:"#7C3AED", marginBottom:"2px" },
+  workerCtaSub:     { display:"block", fontSize:"12px", color:"#94A3B8" },
+  workerCtaArrow:   { color:"#7C3AED", flexShrink:0 },
+
+  /* Roster card */
+  rosterCard:   { position:"relative" },
+  floatBadge1:  { display:"none" },
+  floatBadge2:  { display:"none" },
+
+  /* Eyebrow (new markup compat) */
+  eyebrowWrap:{ display:"inline-block" },
+  eyebrowDot: {},
+  eyebrowText:{},
+
+  /* Join as Worker section */
+  workerSection:  { padding:"96px 60px", boxSizing:"border-box", background:"#0F172A", borderTop:"1px solid rgba(255,255,255,0.06)" },
+  workerInner:    { display:"flex", alignItems:"center", gap:"72px", flexWrap:"wrap" },
+  workerPerks:    { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"20px", marginBottom:"36px" },
+  workerPerk:     { display:"flex", gap:"12px", alignItems:"flex-start" },
+  workerPerkIcon: { fontSize:"22px", flexShrink:0 },
+  workerPerkTitle:{ fontSize:"13px", fontWeight:"700", color:"#F1F5F9", marginBottom:"4px" },
+  workerPerkDesc: { fontSize:"12px", color:"#64748B", lineHeight:1.6 },
+  workerJoinBtn:  { display:"inline-flex", alignItems:"center", background:"#7C3AED", color:"#FFF", border:"none", padding:"13px 24px", borderRadius:"10px", fontSize:"15px", fontWeight:"700", cursor:"pointer" },
+  workerCard:       { background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"20px", padding:"28px", width:"320px", boxSizing:"border-box" },
+  workerCardHeader: { display:"flex", alignItems:"center", gap:"12px", marginBottom:"20px" },
+  workerCardAvatar: { width:"42px", height:"42px", borderRadius:"50%", background:"linear-gradient(135deg,#7C3AED,#3B82F6)", color:"#FFF", fontSize:"16px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
+  workerCardName:   { fontSize:"14px", fontWeight:"700", color:"#F1F5F9", marginBottom:"2px" },
+  workerCardRole:   { fontSize:"11px", color:"#64748B" },
+  workerCardBadge:  { marginLeft:"auto", background:"rgba(245,158,11,0.12)", color:"#F59E0B", fontSize:"12px", fontWeight:"700", padding:"4px 10px", borderRadius:"8px", flexShrink:0 },
+  workerCardDivider:{ height:"1px", background:"rgba(255,255,255,0.07)", marginBottom:"16px" },
+  workerCardLabel:  { fontSize:"11px", fontWeight:"700", color:"#475569", letterSpacing:"0.05em", textTransform:"uppercase", marginBottom:"12px" },
+  workerShiftRow:   { display:"flex", alignItems:"center", gap:"10px", paddingBottom:"12px", marginBottom:"12px", borderBottom:"1px solid rgba(255,255,255,0.05)" },
+  workerShiftOutlet:{ fontSize:"13px", fontWeight:"600", color:"#E2E8F0", marginBottom:"3px" },
+  workerShiftTime:  { fontSize:"11px", color:"#475569" },
+  workerShiftTag:   { fontSize:"11px", fontWeight:"700", padding:"3px 9px", borderRadius:"6px", flexShrink:0 },
+  workerCardFooter: { display:"flex", gap:"16px", marginTop:"4px" },
+  workerCardStat:   { fontSize:"11px", color:"#475569", fontWeight:"600" },
 
   /* Stats */
   statsBar:   { background:"#0F172A", display:"flex", justifyContent:"center", flexWrap:"wrap", padding:"32px 60px" },
@@ -786,6 +955,7 @@ const s = {
 
   /* Hero wrapper with orbs */
   heroWrap: { position:"relative", overflow:"hidden", background:"linear-gradient(160deg,#F0F7FF 0%,#F8FAFC 60%,#F0FDF4 100%)" },
+  heroGrid: { display:"none" },
   orb1: { position:"absolute", top:"-80px", left:"-80px", width:"420px", height:"420px", borderRadius:"50%", background:"radial-gradient(circle,rgba(59,130,246,0.18) 0%,transparent 70%)", animation:"orbDrift1 12s ease-in-out infinite", pointerEvents:"none" },
   orb2: { position:"absolute", top:"60px", right:"-60px", width:"360px", height:"360px", borderRadius:"50%", background:"radial-gradient(circle,rgba(34,197,94,0.12) 0%,transparent 70%)", animation:"orbDrift2 15s ease-in-out infinite", pointerEvents:"none" },
   orb3: { position:"absolute", bottom:"-40px", left:"40%", width:"280px", height:"280px", borderRadius:"50%", background:"radial-gradient(circle,rgba(167,139,250,0.12) 0%,transparent 70%)", animation:"orbDrift3 10s ease-in-out infinite", pointerEvents:"none" },

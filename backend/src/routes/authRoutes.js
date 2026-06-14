@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
     register,
+    registerBusiness,
     login,
     forgotPassword,
     resetPassword,
@@ -34,6 +35,7 @@ router.get("/me", protect, (req, res) => {
 });
 
 router.post("/register", validate(registerSchema), register);
+router.post("/register-business", registerBusiness);
 router.post("/create-staff", protect, createStaffAccount);
 router.post("/create-manager", protect, createManagerAccount);
 router.get("/krewby-workers", protect, getKrewbyWorkers);

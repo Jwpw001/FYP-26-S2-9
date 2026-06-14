@@ -219,6 +219,12 @@ export default function Login() {
           <p style={s.backRow}>
             <Link to="/" style={s.backLink}>← Back to home</Link>
           </p>
+          <p style={{ textAlign:"center", marginTop:"14px", fontSize:"13px", color:"#94A3B8" }}>
+            Don't have an account?{" "}
+            <Link to="/get-started" style={{ color:"#3B82F6", fontWeight:"700", textDecoration:"none" }}>
+              Click here to sign up
+            </Link>
+          </p>
         </form>
       </section>
     </main>

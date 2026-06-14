@@ -44,10 +44,97 @@ const login = async (req, res) => {
 };
 
 const register = async (req, res) => {
-    return res.status(403).json({
-        success: false,
-        message: "Registration is disabled. Please contact administrator."
-    });
+    try {
+        const { full_name, username: rawUsername, email, password, role } = req.body;
+
+        if (!rawUsername || rawUsername.trim().length < 2) {
+            return res.status(400).json({ success: false, message: "Username is required (min 2 characters)." });
+        }
+
+        const username = rawUsername.trim().toLowerCase();
+
+        const existing = await prisma.users.findUnique({ where: { email } });
+        if (existing) {
+            return res.status(409).json({ success: false, message: "An account with this email already exists." });
+        }
+
+        const existingUsername = await prisma.users.findFirst({ where: { username } });
+        if (existingUsername) {
+            return res.status(409).json({ success: false, message: "This username is already taken." });
+        }
+
+        const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name },
+        });
+        if (authErr) return res.status(400).json({ success: false, message: authErr.message });
+
+        const newUser = await prisma.users.create({
+            data: { full_name, username, email, role: role || null, is_active: true },
+        });
+
+        if (role === "krewby_casual_worker") {
+            await prisma.krewby_workers.create({
+                data: { user_id: newUser.user_id, is_available: true },
+            });
+        }
+
+        const token = generateToken({ user_id: newUser.user_id, email: newUser.email, role: newUser.role });
+
+        return res.status(201).json({
+            success: true,
+            message: "Account created successfully.",
+            token,
+            user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role },
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const registerBusiness = async (req, res) => {
+    try {
+        const { business_name, owner_name, email, phone, password } = req.body;
+
+        if (!business_name || !owner_name || !email || !password) {
+            return res.status(400).json({ success: false, message: "Missing required fields." });
+        }
+
+        const existing = await prisma.users.findUnique({ where: { email } });
+        if (existing) {
+            return res.status(409).json({ success: false, message: "An account with this email already exists." });
+        }
+
+        const username = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") + Math.floor(Math.random() * 1000);
+
+        const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: owner_name },
+        });
+        if (authErr) return res.status(400).json({ success: false, message: authErr.message });
+
+        const newUser = await prisma.users.create({
+            data: { full_name: owner_name, username, email, role: "outlet_manager", is_active: true },
+        });
+
+        // Create the business record via Supabase (businesses table not in Prisma schema)
+        await supabaseAdmin.from("businesses").insert({ name: business_name, description: phone ? `Contact: ${phone}` : null });
+
+        const token = generateToken({ user_id: newUser.user_id, email: newUser.email, role: newUser.role });
+
+        return res.status(201).json({
+            success: true,
+            message: "Business registered successfully.",
+            token,
+            user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role },
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 const forgotPassword = async (req, res) => {
@@ -343,6 +430,7 @@ const getWorkerAvailabilityById = async (req, res) => {
 
 module.exports = {
     register,
+    registerBusiness,
     login,
     forgotPassword,
     resetPassword,
