@@ -27,6 +27,7 @@ import AdminDashboard      from "./pages/system-admin/Dashboard";
 import SkillTags           from "./pages/system-admin/SkillTags";
 import Businesses          from "./pages/system-admin/Businesses";
 import BusinessDetail      from "./pages/system-admin/BusinessDetail";
+import OutletDetail        from "./pages/system-admin/OutletDetail";
 import Managers            from "./pages/system-admin/Managers";
 import ManagerDetail       from "./pages/system-admin/ManagerDetail";
 import KrewbyWorkers       from "./pages/system-admin/KrewbyWorkers";
@@ -80,6 +81,7 @@ function App() {
         <Route path="/system-admin/dashboard"              element={<PR roles={["system_admin"]}><AdminDashboard /></PR>} />
         <Route path="/system-admin/businesses"            element={<PR roles={["system_admin"]}><Businesses /></PR>} />
         <Route path="/system-admin/businesses/:id"        element={<PR roles={["system_admin"]}><BusinessDetail /></PR>} />
+        <Route path="/system-admin/outlets/:id"           element={<PR roles={["system_admin"]}><OutletDetail /></PR>} />
         <Route path="/system-admin/managers"              element={<PR roles={["system_admin"]}><Managers /></PR>} />
         <Route path="/system-admin/managers/:id"          element={<PR roles={["system_admin"]}><ManagerDetail /></PR>} />
         <Route path="/system-admin/skills"                element={<PR roles={["system_admin"]}><SkillTags /></PR>} />

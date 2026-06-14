@@ -26,15 +26,15 @@ export function PageTransitionProvider({ children }) {
   const [phase, setPhase] = useState("idle"); // idle | covering | uncovering
   const pending = useRef(null);
 
-  function goTo(path) {
+  function goTo(path, opts) {
     if (phase !== "idle") return;
-    pending.current = path;
+    pending.current = { path, opts };
     setPhase("covering");
   }
 
   function handleAnimationEnd() {
     if (phase === "covering") {
-      navigate(pending.current);
+      navigate(pending.current.path, pending.current.opts);
       setTimeout(() => setPhase("uncovering"), 100);
     } else if (phase === "uncovering") {
       setPhase("idle");

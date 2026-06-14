@@ -108,51 +108,6 @@ function StatCard({ card, index, ready, goTo }) {
   );
 }
 
-/* ── Animated action card ── */
-function ActionCard({ action, index, ready, goTo }) {
-  const [hov, setHov] = useState(false);
-  const [pressed, setPressed] = useState(false);
-
-  return (
-    <button
-      style={{
-        ...s.actionCard,
-        animation: ready ? `fadeSlideUp 0.4s ease ${index * 60 + 200}ms both` : "none",
-        background: hov ? "#0F172A" : "#FFFFFF",
-        borderColor: hov ? "#0F172A" : "#E2E8F0",
-        transform: pressed ? "scale(0.97)" : "scale(1)",
-        boxShadow: hov && !pressed ? "0 6px 20px rgba(15,23,42,0.15)" : "none",
-        transition: "background 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease",
-        color: hov ? "#FFFFFF" : "#0F172A",
-      }}
-      onClick={() => goTo(action.link)}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => { setHov(false); setPressed(false); }}
-      onMouseDown={() => setPressed(true)}
-      onMouseUp={() => setPressed(false)}
-    >
-      <div style={{
-        ...s.actionIconWrap,
-        background: hov ? "rgba(255,255,255,0.12)" : "#F1F5F9",
-        color: hov ? "#FFFFFF" : "#475569",
-        transition: "background 0.15s ease, color 0.15s ease",
-      }}>
-        {action.icon}
-      </div>
-      <div style={s.actionBody}>
-        <span style={{ ...s.actionLabel, color: hov ? "#FFFFFF" : "#0F172A" }}>{action.label}</span>
-        <span style={{ ...s.actionDesc, color: hov ? "rgba(255,255,255,0.55)" : "#94A3B8" }}>{action.desc}</span>
-      </div>
-      <div style={{
-        color: hov ? "rgba(255,255,255,0.6)" : "#CBD5E1",
-        transition: "transform 0.2s ease, color 0.15s ease",
-        transform: hov ? "translateX(3px)" : "translateX(0)",
-      }}>
-        {icons.chevron}
-      </div>
-    </button>
-  );
-}
 
 /* ── Skeleton loader card ── */
 function SkeletonCard() {
@@ -169,34 +124,177 @@ function SkeletonCard() {
   );
 }
 
-/* ── Mini activity graphic ── */
-function ActivityGraphic({ stats }) {
+/* ── Bottom section: Platform overview + Quick actions ── */
+function BottomSection({ stats, actions, ready, goTo }) {
   const bars = [
-    { label: "Outlets",  val: stats.businesses,  color: "#2563EB" },
-    { label: "Managers", val: stats.managers,     color: "#059669" },
-    { label: "Staff",    val: stats.staff,        color: "#D97706" },
-    { label: "Skills",   val: stats.skills,       color: "#7C3AED" },
-    { label: "Workers",  val: stats.krewbyWorkers,color: "#DB2777" },
+    { label: "Outlets",  val: stats.outlets,      color: "#2563EB", bg: "#EFF6FF" },
+    { label: "Managers", val: stats.managers,      color: "#059669", bg: "#ECFDF5" },
+    { label: "Staff",    val: stats.staff,         color: "#D97706", bg: "#FFFBEB" },
+    { label: "Skills",   val: stats.skills,        color: "#7C3AED", bg: "#F5F3FF" },
+    { label: "Workers",  val: stats.krewbyWorkers, color: "#DB2777", bg: "#FDF2F8" },
   ];
-  const max = Math.max(...bars.map(b => b.val), 1);
+  const max   = Math.max(...bars.map(b => b.val), 1);
+  const total = bars.reduce((acc, b) => acc + b.val, 0);
+
   return (
-    <div style={s.activityCard}>
-      <p style={s.activityTitle}>Platform at a glance</p>
-      <div style={s.activityBars}>
-        {bars.map((b, i) => (
-          <div key={b.label} style={s.activityBarRow}>
-            <span style={s.activityBarLabel}>{b.label}</span>
-            <div style={s.activityBarTrack}>
-              <div style={{
-                height: "100%", borderRadius: "4px", background: b.color,
-                width: `${(b.val / max) * 100}%`,
-                transition: `width 0.8s cubic-bezier(.4,0,.2,1) ${i * 80}ms`,
-                minWidth: b.val > 0 ? "6px" : "0",
-              }} />
-            </div>
-            <span style={{ ...s.activityBarVal, color: b.color }}>{b.val}</span>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "14px", animation: "fadeSlideUp 0.45s ease 350ms both" }}>
+
+      {/* Left — Platform at a glance */}
+      <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "22px" }}>
+          <div>
+            <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>Summary</p>
+            <h3 style={{ fontSize: "15px", fontWeight: "800", color: "#0F172A" }}>Platform at a Glance</h3>
           </div>
-        ))}
+          <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "10px", padding: "8px 16px", textAlign: "center" }}>
+            <p style={{ fontSize: "20px", fontWeight: "800", color: "#2563EB", lineHeight: 1 }}>{stats.businesses}</p>
+            <p style={{ fontSize: "10px", fontWeight: "600", color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "3px", opacity: 0.7 }}>Businesses</p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "13px" }}>
+          {bars.map((b, i) => {
+            const pct = total > 0 ? Math.round((b.val / total) * 100) : 0;
+            return (
+              <div key={b.label}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: b.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: "13px", fontWeight: "600", color: "#374151" }}>{b.label}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: "600", color: "#CBD5E1" }}>{pct}%</span>
+                    <span style={{ fontSize: "13px", fontWeight: "800", color: b.color, minWidth: "22px", textAlign: "right" }}>{b.val}</span>
+                  </div>
+                </div>
+                <div style={{ height: "6px", background: b.bg, borderRadius: "100px", overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%", borderRadius: "100px",
+                    background: `linear-gradient(90deg,${b.color}99,${b.color})`,
+                    width: ready ? `${(b.val / max) * 100}%` : "0%",
+                    transition: `width 0.9s cubic-bezier(.4,0,.2,1) ${i * 80}ms`,
+                    minWidth: b.val > 0 ? "6px" : "0",
+                  }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Right — Quick actions */}
+      <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+        <div style={{ marginBottom: "22px" }}>
+          <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>Navigation</p>
+          <h3 style={{ fontSize: "15px", fontWeight: "800", color: "#0F172A" }}>Quick Actions</h3>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {actions.map((a, i) => (
+            <QuickActionRow key={a.label} action={a} index={i} ready={ready} goTo={goTo} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuickActionRow({ action, index, ready, goTo }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      onClick={() => goTo(action.link)}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: "flex", alignItems: "center", gap: "14px",
+        padding: "13px 14px", borderRadius: "12px", cursor: "pointer",
+        background: hov ? "#F8FAFC" : "transparent",
+        border: `1px solid ${hov ? "#E2E8F0" : "transparent"}`,
+        transition: "background 0.15s, border-color 0.15s",
+        animation: ready ? `fadeSlideUp 0.35s ease ${index * 55 + 100}ms both` : "none",
+      }}>
+      <div style={{
+        width: "40px", height: "40px", borderRadius: "10px", flexShrink: 0,
+        background: action.bg, color: action.color,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        transform: hov ? "scale(1.08)" : "scale(1)",
+        transition: "transform 0.2s cubic-bezier(.34,1.56,.64,1)",
+      }}>
+        {action.icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: "13px", fontWeight: "700", color: "#0F172A" }}>{action.label}</p>
+        <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "1px" }}>{action.desc}</p>
+      </div>
+      <div style={{
+        color: hov ? action.color : "#CBD5E1",
+        transform: hov ? "translateX(3px)" : "translateX(0)",
+        transition: "transform 0.2s ease, color 0.15s",
+        flexShrink: 0,
+      }}>
+        {icons.chevron}
+      </div>
+    </div>
+  );
+}
+
+/* ── Combined Businesses + Outlets card ── */
+function BizOutletCard({ stats, ready, goTo }) {
+  const [hov, setHov] = useState(false);
+  const [pressed, setPressed] = useState(false);
+  const bizCount    = useCountUp(stats.businesses, 900, ready);
+  const outletCount = useCountUp(stats.outlets,    900, ready);
+
+  return (
+    <div
+      style={{
+        ...s.statCard,
+        animation: ready ? "popIn 0.45s cubic-bezier(.22,1,.36,1) 0ms both" : "none",
+        transform: pressed ? "scale(0.97)" : hov ? "translateY(-4px)" : "translateY(0)",
+        boxShadow: hov && !pressed ? "0 8px 24px #2563EB22, 0 2px 8px rgba(0,0,0,0.08)" : "0 1px 4px rgba(0,0,0,0.06)",
+        borderColor: hov ? "#2563EB55" : "#E2E8F0",
+        transition: "transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s ease, border-color 0.2s ease",
+        cursor: "pointer",
+      }}
+      onClick={() => goTo("/system-admin/businesses")}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => { setHov(false); setPressed(false); }}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+    >
+      <div style={s.statCardHeader}>
+        <div style={{
+          ...s.statIconBox, background: "#EFF6FF", color: "#2563EB",
+          transform: hov ? "scale(1.1) rotate(-4deg)" : "scale(1) rotate(0deg)",
+          transition: "transform 0.25s cubic-bezier(.34,1.56,.64,1)",
+        }}>
+          {icons.outlets}
+        </div>
+        <div style={{ color: "#2563EB", opacity: hov ? 1 : 0.4, transition: "opacity 0.2s" }}>
+          {icons.arrowUpRight}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "6px" }}>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ ...s.statValue, fontSize: "26px" }}>{bizCount}</p>
+          <p style={{ fontSize: "10px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Businesses</p>
+        </div>
+        <div style={{ width: "1px", height: "32px", background: "#E2E8F0", flexShrink: 0 }} />
+        <div style={{ textAlign: "center" }}>
+          <p style={{ ...s.statValue, fontSize: "26px", color: "#2563EB" }}>{outletCount}</p>
+          <p style={{ fontSize: "10px", fontWeight: "600", color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Outlets</p>
+        </div>
+      </div>
+
+      <p style={{ ...s.statLabel, marginBottom: "14px" }}>Businesses &amp; Outlets</p>
+
+      <div style={{ ...s.statBar, background: "#EFF6FF" }}>
+        <div style={{
+          height: "100%", borderRadius: "100px", background: "#2563EB",
+          width: ready ? `${Math.min((stats.outlets / Math.max(stats.outlets, 20)) * 100, 100)}%` : "0%",
+          transition: ready ? "width 1s cubic-bezier(.4,0,.2,1) 0ms" : "none",
+        }} />
       </div>
     </div>
   );
@@ -206,7 +304,7 @@ function ActivityGraphic({ stats }) {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const user = getUser();
-  const [stats, setStats] = useState({ businesses: 0, managers: 0, staff: 0, skills: 0, krewbyWorkers: 0 });
+  const [stats, setStats] = useState({ businesses: 0, outlets: 0, managers: 0, staff: 0, skills: 0, krewbyWorkers: 0 });
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const [fading, setFading] = useState(false);
@@ -219,8 +317,9 @@ export default function AdminDashboard() {
     async function load() {
       try {
         const [
-          { count: biz }, { count: mgr }, { count: stf }, { count: skl }, { count: kw },
+          { count: bizCount }, { count: outletCount }, { count: mgr }, { count: stf }, { count: skl }, { count: kw },
         ] = await Promise.all([
+          supabase.from("businesses").select("*", { count: "exact", head: true }),
           supabase.from("outlets").select("*", { count: "exact", head: true }),
           supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "outlet_manager"),
           supabase.from("staff").select("*", { count: "exact", head: true }).eq("is_active", true),
@@ -228,7 +327,7 @@ export default function AdminDashboard() {
           supabase.from("krewby_workers").select("*", { count: "exact", head: true }).eq("is_active", true),
         ]);
         if (!cancelled) {
-          setStats({ businesses: biz || 0, managers: mgr || 0, staff: stf || 0, skills: skl || 0, krewbyWorkers: kw || 0 });
+          setStats({ businesses: bizCount || 0, outlets: outletCount || 0, managers: mgr || 0, staff: stf || 0, skills: skl || 0, krewbyWorkers: kw || 0 });
           setLoading(false);
           // small delay so CSS animations fire after paint
           setTimeout(() => setReady(true), 30);
@@ -243,7 +342,6 @@ export default function AdminDashboard() {
   }, []);
 
   const cards = [
-    { label: "Outlets",         value: stats.businesses,    icon: icons.outlets,  color: "#2563EB", bg: "#EFF6FF", link: "/system-admin/businesses" },
     { label: "Outlet Managers", value: stats.managers,      icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
     { label: "Active Staff",    value: stats.staff,         icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
     { label: "Skill Tags",      value: stats.skills,        icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
@@ -251,10 +349,11 @@ export default function AdminDashboard() {
   ];
 
   const actions = [
-    { label: "Register Business", desc: "Add a new outlet to the system",      icon: icons.outlets,  link: "/system-admin/businesses" },
-    { label: "Add Manager",       desc: "Assign a manager to an outlet",        icon: icons.managers, link: "/system-admin/managers" },
-    { label: "Manage Skill Tags", desc: "Create and edit skill categories",     icon: icons.skills,   link: "/system-admin/skills" },
-    { label: "Add Krewby Worker", desc: "Register a new casual worker profile", icon: icons.workers,  link: "/system-admin/krewby-workers" },
+    { label: "Businesses",     desc: "Manage businesses & outlets",        icon: icons.outlets,  color: "#2563EB", bg: "#EFF6FF", link: "/system-admin/businesses" },
+    { label: "Managers",       desc: "View and manage outlet managers",     icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
+    { label: "Staff",          desc: "Browse and manage all staff",         icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
+    { label: "Skill Tags",     desc: "Create and edit skill categories",    icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
+    { label: "Krewby Workers", desc: "Manage casual worker profiles",       icon: icons.workers,  color: "#DB2777", bg: "#FDF2F8", link: "/system-admin/krewby-workers" },
   ];
 
   return (
@@ -280,26 +379,15 @@ export default function AdminDashboard() {
       <div style={s.statsGrid}>
         {loading
           ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
-          : cards.map((card, i) => <StatCard key={card.label} card={card} index={i} ready={ready} goTo={goTo} />)
+          : [
+              <BizOutletCard key="biz" stats={stats} ready={ready} goTo={goTo} />,
+              ...cards.map((card, i) => <StatCard key={card.label} card={card} index={i + 1} ready={ready} goTo={goTo} />),
+            ]
         }
       </div>
 
-      {/* ── Activity graphic ── */}
-      {!loading && (
-        <div style={{ animation: "fadeSlideUp 0.45s ease 350ms both" }}>
-          <ActivityGraphic stats={stats} />
-        </div>
-      )}
-
-      {/* ── Quick Actions ── */}
-      <p style={{ ...s.sectionLabel, marginTop: "28px", animation: "fadeSlideUp 0.4s ease 200ms both" }}>
-        QUICK ACTIONS
-      </p>
-      <div style={s.actionsGrid}>
-        {actions.map((a, i) => (
-          <ActionCard key={a.label} action={a} index={i} ready={!loading} goTo={goTo} />
-        ))}
-      </div>
+      {/* ── Bottom section ── */}
+      {!loading && <BottomSection stats={stats} actions={actions} ready={ready} goTo={goTo} />}
       </div>
     </AdminLayout>
   );

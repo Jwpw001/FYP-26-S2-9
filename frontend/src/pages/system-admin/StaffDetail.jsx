@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { useGoTo } from "../../components/PageTransition";
@@ -14,6 +14,8 @@ function avatarColor(name="") {
 export default function AdminStaffDetail() {
   const { id } = useParams();
   const goTo = useGoTo();
+  const location = useLocation();
+  const backPath = location.state?.from || "/system-admin/staff";
 
   const [member,    setMember]    = useState(null);
   const [allSkills, setAllSkills] = useState([]);
@@ -49,7 +51,7 @@ export default function AdminStaffDetail() {
 
   return (
     <AdminLayout title="Staff Profile">
-      <button style={s.back} onClick={() => goTo("/system-admin/staff")}>← Back to Staff</button>
+      <button style={s.back} onClick={() => goTo(backPath)}>← Back</button>
 
       <div style={s.layout}>
         {/* Left card */}
