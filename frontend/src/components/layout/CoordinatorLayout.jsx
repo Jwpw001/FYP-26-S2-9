@@ -2,7 +2,6 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
-import AIAssistantWidget from "../AIAssistantWidget";
 import { supabase } from "../../lib/supabaseClient";
 import { LayoutDashboard, ClipboardList, Users } from "lucide-react";
 import "./sidebarStyles.js";
@@ -108,7 +107,6 @@ export default function CoordinatorLayout({ children, title }) {
         </header>
         <div style={s.content}>{children}</div>
       </div>
-      <AIAssistantWidget />
     </div>
   );
 }

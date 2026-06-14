@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Krewby",
+    "slug": "krewby-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.krewby.mobile"
+    },
+    "android": {
+      "package": "com.krewby.mobile"
+    }
+  }
+}

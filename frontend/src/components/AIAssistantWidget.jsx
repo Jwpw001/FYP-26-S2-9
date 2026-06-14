@@ -140,7 +140,7 @@ export default function AIAssistantWidget() {
         role: m.role,
         content: m.content,
       }));
-      const { answer } = await api.post("/ai-assistant/chat", {
+      const { answer } = await api.post("/api/ai-assistant/chat", {
         question,
         conversationHistory,
       });
@@ -249,7 +249,7 @@ export default function AIAssistantWidget() {
             }}>K</div>
             <div>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>AI Workforce Assistant</div>
-              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>Read-only · Powered by Claude</div>
+              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>Read-only · Powered by Llama 3</div>
             </div>
           </div>
 
