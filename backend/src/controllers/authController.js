@@ -320,6 +320,27 @@ const saveWorkerAvailability = async (req, res) => {
     }
 };
 
+// GET /api/auth/worker-availability-by-id?worker_id=N
+// Used by coordinator to view any worker's availability (uses admin client, bypasses RLS)
+const getWorkerAvailabilityById = async (req, res) => {
+    try {
+        const { worker_id } = req.query;
+        if (!worker_id) return res.status(400).json({ success: false, message: "worker_id required" });
+
+        const { data, error } = await supabaseAdmin
+            .from("krewby_worker_availability")
+            .select("week_start_date, day_of_week")
+            .eq("krewby_worker_id", worker_id)
+            .order("week_start_date", { ascending: false });
+
+        if (error) throw new Error(error.message);
+        return res.json({ success: true, availability: data || [] });
+    } catch (error) {
+        console.error("getWorkerAvailabilityById error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     register,
     login,
@@ -331,4 +352,5 @@ module.exports = {
     getKrewbyWorkers,
     getWorkerAvailability,
     saveWorkerAvailability,
+    getWorkerAvailabilityById,
 };

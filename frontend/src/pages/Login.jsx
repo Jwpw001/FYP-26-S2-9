@@ -173,6 +173,7 @@ export default function Login() {
         <form
           style={{ ...s.card, animation: visible ? "slideUp 0.45s cubic-bezier(.22,1,.36,1) both" : "none" }}
           onSubmit={handleLogin}
+          autoComplete="off"
           noValidate
         >
           {/* Mobile logo */}
@@ -194,14 +195,14 @@ export default function Login() {
           <Field
             id="email" label="Email address" name="email" type="email"
             value={form.email} onChange={handleChange}
-            placeholder="you@example.com" autoComplete="email" disabled={loading}
+            placeholder="you@example.com" autoComplete="off" disabled={loading}
           />
 
           <Field
             id="password" label="Password" name="password"
             type={showPassword ? "text" : "password"}
             value={form.password} onChange={handleChange}
-            placeholder="Enter your password" autoComplete="current-password" disabled={loading}
+            placeholder="Enter your password" autoComplete="new-password" disabled={loading}
             right={
               <button type="button" style={s.eyeBtn} onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "Hide password" : "Show password"}>
                 <EyeIcon open={showPassword} />

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import WorkerLayout from "../../components/layout/WorkerLayout";
+import { Briefcase, CheckCircle2, Star, Bell } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("worker-dash-styles")) {
   const style = document.createElement("style");
@@ -273,10 +274,10 @@ export default function WorkerDashboard() {
   const clockedOut = getClockOut(todayJob);
 
   const statCards = [
-    { label: "Upcoming Jobs",  value: upcomingJobs.length,                        icon: "💼", bg: "#EFF6FF", color: "#2563EB", link: "/krewby-worker/jobs", state: { filter: "upcoming" } },
-    { label: "Jobs Completed", value: profile?.total_jobs ?? 0,                   icon: "✅", bg: "#ECFDF5", color: "#059669", link: "/krewby-worker/jobs", state: { filter: "past" } },
-    { label: "My Rating",      value: profile ? `⭐ ${Number(profile.rating || 5).toFixed(1)}` : "—", icon: "⭐", bg: "#FFFBEB", color: "#D97706", link: "/krewby-worker/jobs", state: { filter: "past" } },
-    { label: "Notifications",  value: unread,                                      icon: "🔔", bg: "#F5F3FF", color: "#7C3AED", link: "/krewby-worker/notifications" },
+    { label: "Upcoming Jobs",  value: upcomingJobs.length,                        Icon: Briefcase,    iconColor: "#2563EB", bg: "#EFF6FF", link: "/krewby-worker/jobs", state: { filter: "upcoming" } },
+    { label: "Jobs Completed", value: profile?.total_jobs ?? 0,                   Icon: CheckCircle2, iconColor: "#059669", bg: "#ECFDF5", link: "/krewby-worker/jobs", state: { filter: "past" } },
+    { label: "My Rating",      value: profile ? `${Number(profile.rating || 0).toFixed(1)}` : "—", Icon: Star, iconColor: "#D97706", bg: "#FFFBEB", link: "/krewby-worker/jobs", state: { filter: "past" }, isRating: true },
+    { label: "Notifications",  value: unread,                                      Icon: Bell,         iconColor: "#7C3AED", bg: "#F5F3FF", link: "/krewby-worker/notifications" },
   ];
 
   return (
@@ -309,10 +310,13 @@ export default function WorkerDashboard() {
                 className="worker-stat-card"
                 onClick={() => card.link && navigate(card.link, { state: card.state })}
                 style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px", cursor: card.link ? "pointer" : "default", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", transition: "transform 0.18s, box-shadow 0.18s", animation: `fadeSlideUp 0.35s ease ${i * 0.07}s both` }}>
-                <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: card.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", marginBottom: "14px" }}>
-                  {card.icon}
+                <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: card.bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "14px" }}>
+                  <card.Icon size={20} color={card.iconColor} strokeWidth={1.8} />
                 </div>
-                <p style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", lineHeight: 1 }}>{card.value}</p>
+                <p style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", lineHeight: 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                  {card.isRating && <Star size={20} fill="#F59E0B" stroke="none" style={{ flexShrink: 0 }} />}
+                  {card.value}
+                </p>
                 <p style={{ fontSize: "13px", fontWeight: "500", color: "#64748B", marginTop: "6px" }}>{card.label}</p>
               </div>
             ))}

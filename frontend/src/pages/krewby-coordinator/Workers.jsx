@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, forwardRef } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import CoordinatorLayout from "../../components/layout/CoordinatorLayout";
@@ -49,6 +50,7 @@ function avatarColor(name = "") {
 const EMPTY_FORM = { full_name: "", email: "", username: "", password: "", preferred_location: "" };
 
 export default function CoordinatorWorkers() {
+  const navigate = useNavigate();
   const [workers, setWorkers]   = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState("");
@@ -213,7 +215,8 @@ export default function CoordinatorWorkers() {
               return (
                 <div key={w.krewby_worker_id}
                   className="worker-card"
-                  style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", transition: "all 0.18s", animation: `fadeSlideUp 0.3s ease ${Math.min(i, 12) * 0.04}s both` }}>
+                  onClick={() => navigate(`/krewby-coordinator/workers/${w.krewby_worker_id}`)}
+                  style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", transition: "all 0.18s", animation: `fadeSlideUp 0.3s ease ${Math.min(i, 12) * 0.04}s both`, cursor: "pointer" }}>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
                     <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "17px", fontWeight: "700", flexShrink: 0 }}>
@@ -253,7 +256,7 @@ export default function CoordinatorWorkers() {
                       {w.is_active ? "Active" : "Inactive"}
                     </span>
                     <button
-                      onClick={() => toggleActive(w.krewby_worker_id, w.is_active)}
+                      onClick={e => { e.stopPropagation(); toggleActive(w.krewby_worker_id, w.is_active); }}
                       disabled={toggling === w.krewby_worker_id}
                       style={{ padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "600", border: "1.5px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", cursor: "pointer", opacity: toggling === w.krewby_worker_id ? 0.5 : 1, transition: "all 0.15s" }}>
                       {toggling === w.krewby_worker_id ? "…" : w.is_active ? "Deactivate" : "Activate"}
