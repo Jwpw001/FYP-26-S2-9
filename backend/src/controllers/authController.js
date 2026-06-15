@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const generateToken = require("../utils/generateToken");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const bcrypt = require("bcryptjs");
 
 const login = async (req, res) => {
     try {
@@ -117,12 +118,23 @@ const registerBusiness = async (req, res) => {
         });
         if (authErr) return res.status(400).json({ success: false, message: authErr.message });
 
-        const newUser = await prisma.users.create({
-            data: { full_name: owner_name, username, email, role: "outlet_manager", is_active: true },
-        });
+        let newUser;
+        try {
+            newUser = await prisma.users.create({
+                data: { full_name: owner_name, username, email, role: "business_owner", is_active: true },
+            });
 
-        // Create the business record via Supabase (businesses table not in Prisma schema)
-        await supabaseAdmin.from("businesses").insert({ name: business_name, description: phone ? `Contact: ${phone}` : null });
+            const { error: bizErr } = await supabaseAdmin.from("businesses").insert({
+                name: business_name,
+                description: phone ? `Contact: ${phone}` : null,
+                owner_id: newUser.user_id,
+            });
+            if (bizErr) throw new Error(bizErr.message);
+        } catch (innerErr) {
+            // Roll back the Supabase auth user to avoid orphaned records
+            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+            throw innerErr;
+        }
 
         const token = generateToken({ user_id: newUser.user_id, email: newUser.email, role: newUser.role });
 
@@ -428,6 +440,126 @@ const getWorkerAvailabilityById = async (req, res) => {
     }
 };
 
+// POST /api/auth/apply-worker — public, stores application pending coordinator approval
+const applyWorker = async (req, res) => {
+    try {
+        const { full_name, username, email, password } = req.body;
+        if (!full_name || !username || !email || !password)
+            return res.status(400).json({ success: false, message: "All fields are required." });
+        if (username.trim().length < 2)
+            return res.status(400).json({ success: false, message: "Username must be at least 2 characters." });
+        if (password.length < 6)
+            return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
+
+        // Check duplicates in existing users
+        const existingUser = await prisma.users.findUnique({ where: { email } });
+        if (existingUser)
+            return res.status(409).json({ success: false, message: "An account with this email already exists." });
+
+        // Check duplicates in pending applications
+        const { data: existingApp } = await supabaseAdmin
+            .from("worker_applications")
+            .select("id")
+            .eq("email", email)
+            .maybeSingle();
+        if (existingApp)
+            return res.status(409).json({ success: false, message: "An application with this email is already pending review." });
+
+        const password_hash = await bcrypt.hash(password, 10);
+
+        const { error } = await supabaseAdmin.from("worker_applications").insert({
+            full_name: full_name.trim(),
+            username:  username.trim().toLowerCase(),
+            email:     email.trim().toLowerCase(),
+            password_hash,
+        });
+        if (error) throw new Error(error.message);
+
+        return res.status(201).json({ success: true, message: "Application submitted successfully." });
+    } catch (error) {
+        console.error("applyWorker error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// GET /api/coordinator/applications — coordinator only
+const getWorkerApplications = async (req, res) => {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from("worker_applications")
+            .select("id, full_name, username, email, status, applied_at, notes")
+            .order("applied_at", { ascending: false });
+        if (error) throw new Error(error.message);
+        return res.json({ success: true, applications: data || [] });
+    } catch (error) {
+        console.error("getWorkerApplications error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST /api/coordinator/applications/:id/approve — creates user + krewby_worker, deletes application
+const approveWorkerApplication = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data: app, error: fetchErr } = await supabaseAdmin
+            .from("worker_applications")
+            .select("*")
+            .eq("id", id)
+            .single();
+        if (fetchErr || !app) return res.status(404).json({ success: false, message: "Application not found." });
+
+        // Check if user already exists (edge case)
+        const existing = await prisma.users.findUnique({ where: { email: app.email } });
+        if (existing) {
+            // Clean up the application and return success
+            await supabaseAdmin.from("worker_applications").delete().eq("id", id);
+            return res.json({ success: true, message: "User already exists. Application removed." });
+        }
+
+        // Create Supabase auth user — generate a random temp password; user resets via Forgot Password
+        const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
+        const { error: authErr } = await supabaseAdmin.auth.admin.createUser({
+            email: app.email,
+            password: tempPassword,
+            email_confirm: true,
+            user_metadata: { full_name: app.full_name },
+        });
+        if (authErr) return res.status(400).json({ success: false, message: authErr.message });
+
+        // Create user record
+        const newUser = await prisma.users.create({
+            data: { full_name: app.full_name, username: app.username, email: app.email, role: "krewby_casual_worker", is_active: true },
+        });
+
+        // Create krewby_worker record
+        await prisma.krewby_workers.create({
+            data: { user_id: newUser.user_id, is_available: true, total_jobs: 0 },
+        });
+
+        // Delete the application
+        await supabaseAdmin.from("worker_applications").delete().eq("id", id);
+
+        return res.json({ success: true, message: `Account approved for ${app.email}. They can use Forgot Password to set their password and log in.` });
+    } catch (error) {
+        console.error("approveWorkerApplication error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST /api/coordinator/applications/:id/reject — deletes application
+const rejectWorkerApplication = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { error } = await supabaseAdmin.from("worker_applications").delete().eq("id", id);
+        if (error) throw new Error(error.message);
+        return res.json({ success: true, message: "Application rejected and removed." });
+    } catch (error) {
+        console.error("rejectWorkerApplication error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     register,
     registerBusiness,
@@ -441,4 +573,8 @@ module.exports = {
     getWorkerAvailability,
     saveWorkerAvailability,
     getWorkerAvailabilityById,
+    applyWorker,
+    getWorkerApplications,
+    approveWorkerApplication,
+    rejectWorkerApplication,
 };

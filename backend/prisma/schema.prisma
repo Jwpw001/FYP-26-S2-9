@@ -18,6 +18,7 @@ model users {
   full_name       String?           @db.VarChar(100)
   attendance      attendance[]
   availability    availability[]
+  invitations     invitations[]
   krewby_workers  krewby_workers[]
   notifications   notifications[]
   reports         reports[]
@@ -93,12 +94,14 @@ model notifications {
 }
 
 model outlets {
-  outlet_id Int       @id @default(autoincrement())
-  name      String    @db.VarChar(100)
-  address   String?
-  reports   reports[]
-  shifts    shifts[]
-  staff     staff[]
+  outlet_id   Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  address     String?
+  business_id Int?
+  reports     reports[]
+  shifts      shifts[]
+  skills      skills[]
+  staff       staff[]
 }
 
 model reports {
@@ -167,12 +170,16 @@ model shifts {
 
 model skills {
   skill_id        Int               @id @default(autoincrement())
-  name            String            @unique @db.VarChar(100)
+  name            String            @db.VarChar(100)
   description     String?
   created_by      Int?
+  outlet_id       Int?
   shift_roles     shift_roles[]
+  outlets         outlets?          @relation(fields: [outlet_id], references: [outlet_id], onUpdate: NoAction)
   users           users?            @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
   user_skill_tags user_skill_tags[]
+
+  @@unique([name, outlet_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -208,6 +215,21 @@ model swap_requests {
   shift_assignments_swap_requests_target_assign_idToshift_assignments shift_assignments? @relation("swap_requests_target_assign_idToshift_assignments", fields: [target_assign_id], references: [assignment_id], onUpdate: NoAction)
 
   @@index([requester_id], map: "idx_swap_requester")
+}
+
+model invitations {
+  id          Int       @id @default(autoincrement())
+  token       String    @unique @db.VarChar(64)
+  email       String    @db.VarChar(255)
+  role        String    @db.VarChar(30)
+  outlet_id   Int?
+  business_id Int?
+  invited_by  Int
+  status      String    @default("pending") @db.VarChar(20)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  expires_at  DateTime  @db.Timestamptz(6)
+  accepted_at DateTime? @db.Timestamptz(6)
+  users       users     @relation(fields: [invited_by], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model user_skill_tags {

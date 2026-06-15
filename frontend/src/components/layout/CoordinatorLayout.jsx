@@ -3,13 +3,14 @@ import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
-import { LayoutDashboard, ClipboardList, Users } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Users, FileCheck } from "lucide-react";
 import "./sidebarStyles.js";
 
 const NAV = [
-  { label: "Dashboard", path: "/krewby-coordinator/dashboard", Icon: LayoutDashboard },
-  { label: "Requests",  path: "/krewby-coordinator/requests",  Icon: ClipboardList },
-  { label: "Workers",   path: "/krewby-coordinator/workers",   Icon: Users },
+  { label: "Dashboard",    path: "/krewby-coordinator/dashboard",    Icon: LayoutDashboard },
+  { label: "Requests",     path: "/krewby-coordinator/requests",     Icon: ClipboardList },
+  { label: "Workers",      path: "/krewby-coordinator/workers",      Icon: Users },
+  { label: "Applications", path: "/krewby-coordinator/applications", Icon: FileCheck },
 ];
 
 export default function CoordinatorLayout({ children, title }) {

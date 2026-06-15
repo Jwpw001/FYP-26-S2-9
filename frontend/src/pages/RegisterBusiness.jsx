@@ -63,14 +63,14 @@ export default function RegisterBusiness() {
         phone: form.phone,
         password: form.password,
       });
-      if (res.data?.success) {
-        setUser({ ...res.data.user, token: res.data.token });
-        goTo("/outlet-manager/dashboard");
+      if (res.success) {
+        setUser({ ...res.user, token: res.token });
+        goTo("/business-owner/dashboard");
       } else {
-        setError(res.data?.message || "Registration failed.");
+        setError(res.message || "Registration failed.");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong. Please try again.");
+      setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -14,6 +14,8 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const aiAssistantRoutes = require("./routes/aiAssistantRoutes");
+const invitationRoutes = require("./routes/invitationRoutes");
+const businessOwnerRoutes = require("./routes/businessOwnerRoutes");
 
 const app = express();
 
@@ -39,6 +41,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/ai-assistant", aiAssistantRoutes);
+app.use("/api/invitations", invitationRoutes);
+app.use("/api/business", businessOwnerRoutes);
 
 app.use(errorHandler);
 

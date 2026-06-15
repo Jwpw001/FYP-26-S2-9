@@ -14,6 +14,10 @@ const {
     getWorkerAvailability,
     saveWorkerAvailability,
     getWorkerAvailabilityById,
+    applyWorker,
+    getWorkerApplications,
+    approveWorkerApplication,
+    rejectWorkerApplication,
 } = require("../controllers/authController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -35,6 +39,10 @@ router.get("/me", protect, (req, res) => {
 });
 
 router.post("/register", validate(registerSchema), register);
+router.post("/apply-worker", applyWorker);
+router.get("/coordinator/applications", protect, getWorkerApplications);
+router.post("/coordinator/applications/:id/approve", protect, approveWorkerApplication);
+router.post("/coordinator/applications/:id/reject", protect, rejectWorkerApplication);
 router.post("/register-business", registerBusiness);
 router.post("/create-staff", protect, createStaffAccount);
 router.post("/create-manager", protect, createManagerAccount);
