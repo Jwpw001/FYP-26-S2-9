@@ -1,122 +1,256 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { api } from "../../lib/api";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
-import { Plus, Trash2, Tag } from "lucide-react";
+import { Building2 } from "lucide-react";
+
+if (typeof document !== "undefined" && !document.getElementById("bo-skill-kf")) {
+  const s = document.createElement("style");
+  s.id = "bo-skill-kf";
+  s.textContent = `
+    @keyframes fadeSlideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes shimmer { from{background-position:-600px 0} to{background-position:600px 0} }
+    @keyframes pageIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes toastIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .skill-card{transition:box-shadow 0.18s,transform 0.18s}
+    .skill-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.08)!important}
+  `;
+  document.head.appendChild(s);
+}
+
+const TAG_BG   = ["#EFF6FF","#F5F3FF","#FFF7ED","#F0FDF4","#FFF1F2","#ECFEFF","#FEFCE8"];
+const TAG_TEXT = ["#1D4ED8","#6D28D9","#C2410C","#15803D","#BE123C","#0E7490","#A16207"];
+function chipStyle(name) {
+  let hash = 0;
+  for (let i = 0; i < (name?.length || 0); i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const idx = Math.abs(hash) % TAG_BG.length;
+  return { background: TAG_BG[idx], color: TAG_TEXT[idx] };
+}
+function Shimmer({ w="100%", h="16px", r="8px" }) {
+  return <div style={{ width:w, height:h, borderRadius:r, background:"linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize:"600px 100%", animation:"shimmer 1.4s infinite linear" }} />;
+}
 
 export default function BOSkills() {
   const [outlets, setOutlets] = useState([]);
+  const [outletsLoading, setOutletsLoading] = useState(true);
   const [selectedOutlet, setSelectedOutlet] = useState(null);
-  const [skills, setSkills] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [newSkill, setNewSkill] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [error, setError] = useState("");
 
-  const token = localStorage.getItem("token");
+  const [skills,       setSkills]       = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [newName,      setNewName]      = useState("");
+  const [newDesc,      setNewDesc]      = useState("");
+  const [adding,       setAdding]       = useState(false);
+  const [editId,       setEditId]       = useState(null);
+  const [editName,     setEditName]     = useState("");
+  const [editDesc,     setEditDesc]     = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [toast,        setToast]        = useState(null);
 
   useEffect(() => {
-    fetch("/api/business/outlets", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => {
+    api.get("/api/business/outlets")
+      .then(d => {
         const list = d.outlets || [];
         setOutlets(list);
         if (list.length > 0) setSelectedOutlet(list[0].outlet_id);
-      }).finally(() => setLoading(false));
+      }).finally(() => setOutletsLoading(false));
   }, []);
 
   useEffect(() => {
     if (!selectedOutlet) return;
-    fetch(`/api/business/outlets/${selectedOutlet}/skills`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => setSkills(d.skills || []));
+    setLoading(true);
+    api.get(`/api/business/outlets/${selectedOutlet}/skills`)
+      .then(d => setSkills(d.skills || []))
+      .finally(() => setLoading(false));
   }, [selectedOutlet]);
 
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    if (!newSkill.trim()) return;
-    setAdding(true); setError("");
+  function showToast(msg, type="success") { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }
+
+  async function handleAdd() {
+    if (!newName.trim()) { showToast("Skill name is required.", "error"); return; }
+    setAdding(true);
     try {
-      const res = await fetch(`/api/business/outlets/${selectedOutlet}/skills`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: newSkill.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed");
-      setNewSkill("");
-      setSkills(prev => [...prev, data.skill]);
+      const data = await api.post(`/api/business/outlets/${selectedOutlet}/skills`, { name: newName.trim(), description: newDesc.trim() || null });
+      setSkills(prev => [...prev, data.skill].sort((a,b) => a.name.localeCompare(b.name)));
+      setNewName(""); setNewDesc("");
+      showToast("Skill tag added.");
     } catch (err) {
-      setError(err.message);
+      showToast(err.message || "Failed to add skill.", "error");
     } finally {
       setAdding(false);
     }
-  };
+  }
 
-  const handleDelete = async (skill_id) => {
-    await fetch(`/api/business/outlets/${selectedOutlet}/skills/${skill_id}`, {
-      method: "DELETE", headers: { Authorization: `Bearer ${token}` },
-    });
-    setSkills(prev => prev.filter(s => s.skill_id !== skill_id));
-  };
+  async function handleUpdate(id) {
+    if (!editName.trim()) return;
+    try {
+      await api.patch(`/api/business/outlets/${selectedOutlet}/skills/${id}`, { name: editName.trim(), description: editDesc.trim() || null });
+      setSkills(prev => prev.map(s => s.skill_id===id ? { ...s, name:editName.trim(), description:editDesc.trim()||null } : s));
+      setEditId(null);
+      showToast("Skill tag updated.");
+    } catch (err) {
+      showToast(err.message || "Failed to update skill.", "error");
+    }
+  }
+
+  async function confirmDelete() {
+    const id = deleteTarget.skill_id;
+    setDeleteTarget(null);
+    try {
+      await api.delete(`/api/business/outlets/${selectedOutlet}/skills/${id}`);
+      setSkills(prev => prev.filter(s => s.skill_id !== id));
+      showToast("Skill tag deleted.");
+    } catch (err) {
+      showToast(err.message || "Cannot delete — skill may be in use.", "error");
+    }
+  }
 
   return (
     <BusinessOwnerLayout title="Skill Tags">
-      {loading ? <p style={{ color: "#64748B" }}>Loading…</p> : outlets.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px" }}>
-          <p style={{ color: "#94A3B8" }}>Create an outlet first before managing skill tags.</p>
-        </div>
-      ) : (
-        <div>
-          <div style={{ marginBottom: "24px" }}>
-            <label style={{ fontSize: "13px", fontWeight: "600", color: "#374151", display: "block", marginBottom: "8px" }}>Select Outlet</label>
-            <select value={selectedOutlet || ""} onChange={e => setSelectedOutlet(Number(e.target.value))}
-              style={{ padding: "9px 14px", border: "1px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", outline: "none", background: "#FFF", minWidth: "240px" }}>
-              {outlets.map(o => <option key={o.outlet_id} value={o.outlet_id}>{o.name}</option>)}
-            </select>
-          </div>
 
-          <div style={s.panel}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>
-                Skills · <span style={{ color: "#64748B", fontWeight: "500" }}>{outlets.find(o => o.outlet_id === selectedOutlet)?.name}</span>
-              </h3>
-              <span style={{ fontSize: "12px", color: "#94A3B8" }}>{skills.length} tag{skills.length !== 1 ? "s" : ""}</span>
+      {/* Delete confirm modal */}
+      {deleteTarget && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.45)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:"24px" }}
+          onClick={() => setDeleteTarget(null)}>
+          <div style={{ background:"#FFF", borderRadius:"16px", padding:"28px", width:"100%", maxWidth:"400px", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ width:"48px", height:"48px", borderRadius:"50%", margin:"0 auto 14px", background:"#FEF2F2", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <span style={{ fontSize:"22px" }}>⚠️</span>
+            </div>
+            <h3 style={{ fontSize:"17px", fontWeight:"800", color:"#1E293B", marginBottom:"8px" }}>Delete skill tag?</h3>
+            <p style={{ fontSize:"13px", color:"#64748B", lineHeight:1.6, marginBottom:"22px" }}>
+              <strong>{deleteTarget.name}</strong> will be removed from all assigned staff.
+            </p>
+            <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>
+              <button onClick={() => setDeleteTarget(null)}
+                style={{ background:"#F1F5F9", border:"none", borderRadius:"9px", padding:"8px 16px", fontSize:"13px", fontWeight:"600", color:"#64748B", cursor:"pointer" }}>Cancel</button>
+              <button onClick={confirmDelete}
+                style={{ background:"#EF4444", border:"none", borderRadius:"9px", padding:"8px 18px", fontSize:"13px", fontWeight:"700", color:"#FFF", cursor:"pointer" }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ animation:"pageIn 0.4s ease both" }}>
+
+        <div style={{ marginBottom:"24px" }}>
+          <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#0F172A" }}>Skill Tags</h2>
+          <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
+            {loading ? "Loading…" : `${skills.length} tag${skills.length!==1?"s":""} · used for staff and shift role matching`}
+          </p>
+        </div>
+
+        {outletsLoading ? (
+          <Shimmer w="240px" h="38px" r="9px" />
+        ) : outlets.length === 0 ? (
+          <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"60px", textAlign:"center" }}>
+            <Building2 size={40} color="#CBD5E1" />
+            <p style={{ fontSize:"16px", fontWeight:"600", color:"#64748B", marginTop:"12px" }}>No outlets yet</p>
+            <p style={{ fontSize:"13px", color:"#94A3B8", marginTop:"4px" }}>Create an outlet first before managing skill tags.</p>
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom:"20px" }}>
+              <label style={{ fontSize:"13px", fontWeight:"600", color:"#374151", display:"block", marginBottom:"8px" }}>Select Outlet</label>
+              <select value={selectedOutlet || ""} onChange={e => setSelectedOutlet(Number(e.target.value))}
+                style={{ padding:"9px 14px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px", outline:"none", background:"#FFF", minWidth:"240px" }}>
+                {outlets.map(o => <option key={o.outlet_id} value={o.outlet_id}>{o.name}</option>)}
+              </select>
             </div>
 
-            <form onSubmit={handleAdd} style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-              <input value={newSkill} onChange={e => setNewSkill(e.target.value)} placeholder="e.g. Bartending, Food Safety…"
-                style={{ flex: 1, padding: "9px 12px", border: "1px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", outline: "none" }} />
-              <button type="submit" disabled={adding || !newSkill.trim()} style={s.btnPrimary}>
-                <Plus size={15} /> Add
-              </button>
-            </form>
-            {error && <p style={{ color: "#EF4444", fontSize: "13px", marginBottom: "12px" }}>{error}</p>}
-
-            {skills.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "#94A3B8" }}>
-                <Tag size={32} color="#CBD5E1" />
-                <p style={{ marginTop: "10px" }}>No skill tags yet for this outlet.</p>
+            {/* Add form */}
+            <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"22px", marginBottom:"24px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)" }}>
+              <h3 style={{ fontSize:"14px", fontWeight:"700", color:"#0F172A", marginBottom:"14px" }}>Add New Skill Tag</h3>
+              <div style={{ display:"flex", gap:"12px", flexWrap:"wrap", alignItems:"flex-end" }}>
+                <div style={{ flex:"1 1 160px" }}>
+                  <label style={{ display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"5px" }}>Skill Name *</label>
+                  <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key==="Enter" && handleAdd()}
+                    placeholder="e.g. Barista"
+                    style={{ width:"100%", padding:"9px 13px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"13px", outline:"none", boxSizing:"border-box" }} />
+                </div>
+                <div style={{ flex:"2 1 220px" }}>
+                  <label style={{ display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"5px" }}>Description (optional)</label>
+                  <input value={newDesc} onChange={e => setNewDesc(e.target.value)} onKeyDown={e => e.key==="Enter" && handleAdd()}
+                    placeholder="Brief description of this skill…"
+                    style={{ width:"100%", padding:"9px 13px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"13px", outline:"none", boxSizing:"border-box" }} />
+                </div>
+                <button onClick={handleAdd} disabled={adding}
+                  style={{ padding:"9px 20px", borderRadius:"9px", fontSize:"13px", fontWeight:"600", border:"none", background: adding ? "#FDE9C2" : "#F59E0B", color: adding ? "#A87C2E" : "#1C1917", cursor: adding ? "not-allowed" : "pointer", flexShrink:0, height:"38px" }}>
+                  {adding ? "Adding…" : "+ Add Tag"}
+                </button>
               </div>
-            ) : (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                {skills.map(skill => (
-                  <div key={skill.skill_id} style={s.tag}>
-                    <Tag size={12} />
-                    <span>{skill.name}</span>
-                    <button onClick={() => handleDelete(skill.skill_id)} style={s.deleteBtn}>
-                      <Trash2 size={12} />
-                    </button>
+            </div>
+
+            {/* Cards grid */}
+            {loading ? (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:"14px" }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"20px" }}>
+                    <Shimmer w="100px" h="22px" r="100px" />
+                    <div style={{ marginTop:"10px" }}><Shimmer w="80%" h="13px" r="5px" /></div>
+                    <div style={{ marginTop:"14px", display:"flex", gap:"8px" }}>
+                      <Shimmer w="50px" h="28px" r="8px" />
+                      <Shimmer w="58px" h="28px" r="8px" />
+                    </div>
                   </div>
                 ))}
               </div>
+            ) : skills.length === 0 ? (
+              <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"60px", textAlign:"center" }}>
+                <p style={{ fontSize:"32px", marginBottom:"10px" }}>🏷️</p>
+                <p style={{ fontSize:"16px", fontWeight:"600", color:"#64748B" }}>No skill tags yet for this outlet</p>
+              </div>
+            ) : (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:"14px" }}>
+                {skills.map((sk, i) => {
+                  const cs = chipStyle(sk.name);
+                  const isEditing = editId === sk.skill_id;
+                  return (
+                    <div key={sk.skill_id} className="skill-card"
+                      style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"18px", boxShadow:"0 1px 3px rgba(0,0,0,0.04)", animation:`fadeSlideUp 0.3s ease ${i*0.04}s both` }}>
+
+                      {isEditing ? (
+                        <>
+                          <input autoFocus value={editName} onChange={e => setEditName(e.target.value)}
+                            onKeyDown={e => { if(e.key==="Enter") handleUpdate(sk.skill_id); if(e.key==="Escape") setEditId(null); }}
+                            style={{ width:"100%", padding:"7px 11px", border:"1.5px solid #FDE68A", borderRadius:"8px", fontSize:"13px", fontWeight:"600", outline:"none", boxSizing:"border-box", marginBottom:"8px" }} />
+                          <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description (optional)"
+                            style={{ width:"100%", padding:"7px 11px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"12px", outline:"none", boxSizing:"border-box", marginBottom:"12px" }} />
+                          <div style={{ display:"flex", gap:"8px" }}>
+                            <button onClick={() => handleUpdate(sk.skill_id)}
+                              style={{ padding:"5px 12px", borderRadius:"7px", border:"none", background:"#F59E0B", color:"#1C1917", fontSize:"12px", fontWeight:"700", cursor:"pointer" }}>Save</button>
+                            <button onClick={() => setEditId(null)}
+                              style={{ padding:"5px 12px", borderRadius:"7px", border:"1px solid #E2E8F0", background:"#F1F5F9", color:"#64748B", fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>Cancel</button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ display:"inline-block", padding:"4px 12px", borderRadius:"100px", fontSize:"13px", fontWeight:"700", marginBottom:"10px", ...cs }}>
+                            {sk.name}
+                          </span>
+                          <p style={{ fontSize:"12px", color: sk.description ? "#64748B" : "#CBD5E1", marginBottom:"14px", minHeight:"18px" }}>
+                            {sk.description || "No description"}
+                          </p>
+                          <div style={{ display:"flex", gap:"8px", paddingTop:"12px", borderTop:"1px solid #F1F5F9" }}>
+                            <button onClick={() => { setEditId(sk.skill_id); setEditName(sk.name); setEditDesc(sk.description||""); }}
+                              style={{ padding:"5px 12px", borderRadius:"7px", border:"1.5px solid #E2E8F0", background:"#FFF", color:"#475569", fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>Edit</button>
+                            <button onClick={() => setDeleteTarget(sk)}
+                              style={{ padding:"5px 12px", borderRadius:"7px", border:"1.5px solid #FECACA", background:"#FEF2F2", color:"#991B1B", fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>Delete</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </div>
+          </>
+        )}
+      </div>
+
+      {toast && (
+        <div style={{ position:"fixed", bottom:"28px", right:"28px", zIndex:9999, background: toast.type==="success" ? "#22C55E" : "#EF4444", color:"#FFF", padding:"12px 20px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)", animation:"toastIn 0.3s ease both" }}>
+          {toast.msg}
         </div>
       )}
     </BusinessOwnerLayout>
   );
 }
-
-const s = {
-  panel: { background: "#FFF", borderRadius: "14px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" },
-  btnPrimary: { display: "inline-flex", alignItems: "center", gap: "6px", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "13px", fontWeight: "700", cursor: "pointer" },
-  tag: { display: "inline-flex", alignItems: "center", gap: "6px", background: "#FEF3C7", color: "#92400E", padding: "6px 12px", borderRadius: "100px", fontSize: "13px", fontWeight: "600", border: "1px solid #FDE68A" },
-  deleteBtn: { background: "none", border: "none", cursor: "pointer", color: "#B45309", display: "flex", alignItems: "center", padding: "0 0 0 4px" },
-};

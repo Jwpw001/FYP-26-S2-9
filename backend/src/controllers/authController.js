@@ -97,7 +97,7 @@ const register = async (req, res) => {
 
 const registerBusiness = async (req, res) => {
     try {
-        const { business_name, owner_name, email, phone, password } = req.body;
+        const { business_name, description, owner_name, email, phone, address, password } = req.body;
 
         if (!business_name || !owner_name || !email || !password) {
             return res.status(400).json({ success: false, message: "Missing required fields." });
@@ -126,7 +126,10 @@ const registerBusiness = async (req, res) => {
 
             const { error: bizErr } = await supabaseAdmin.from("businesses").insert({
                 name: business_name,
-                description: phone ? `Contact: ${phone}` : null,
+                description: description || null,
+                contact_email: email,
+                contact_phone: phone || null,
+                address: address || null,
                 owner_id: newUser.user_id,
             });
             if (bizErr) throw new Error(bizErr.message);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { getUser } from "../utils/auth";
 import { useGoTo } from "../components/PageTransition";
+import NavHeader from "../components/NavHeader";
 
 /* ─────────────────────────────────────────────
    Hook: fade-in on scroll (IntersectionObserver)
@@ -174,22 +175,6 @@ function Btn({ baseStyle, onClick, children }) {
 }
 
 /* ─────────────────────────────────────────────
-   Reusable: nav link with underline
-───────────────────────────────────────────── */
-function NavLink({ label, onClick }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <a href="#" style={{ ...s.navLink, position:"relative" }}
-      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={onClick}>
-      {label}
-      <span style={{ position:"absolute", bottom:"-3px", left:0, height:"2px", borderRadius:"2px",
-        background:"#3B82F6", width:hov?"100%":"0%", display:"block",
-        transition:"width 0.22s cubic-bezier(.4,0,.2,1)" }}/>
-    </a>
-  );
-}
-
-/* ─────────────────────────────────────────────
    Reusable: FAQ accordion item
 ───────────────────────────────────────────── */
 function FaqItem({ q, a }) {
@@ -240,7 +225,7 @@ function ScrollToTop() {
   const [visible, setVisible] = useState(false);
   const [hov, setHov] = useState(false);
   useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > 300);
+    const onScroll = () => setVisible(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -292,12 +277,10 @@ export default function Home() {
           <div style={s.logoMark}>K</div>
           <span style={s.logoText}>Krewby</span>
         </div>
-        <div style={s.navLinks}>
-          <NavLink label="Features"     onClick={e=>{e.preventDefault();scroll("features");}}/>
-          <NavLink label="Who it's for" onClick={e=>{e.preventDefault();scroll("roles");}}/>
-          <NavLink label="How it works" onClick={e=>{e.preventDefault();scroll("how");}}/>
-          <NavLink label="FAQ"          onClick={e=>{e.preventDefault();scroll("faq");}}/>
-        </div>
+        <NavHeader
+          items={["Features", "Who it's for", "How it works", "FAQ"]}
+          onSelect={label => scroll({ "Features":"features", "Who it's for":"roles", "How it works":"how", "FAQ":"faq" }[label])}
+        />
         <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
           {!user && (
             <Btn baseStyle={s.navJoin} onClick={()=>goTo("/join")}>

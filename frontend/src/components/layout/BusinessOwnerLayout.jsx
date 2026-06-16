@@ -3,11 +3,12 @@ import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
-import { LayoutDashboard, Building2, UserPlus, BarChart2, Tag } from "lucide-react";
+import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag } from "lucide-react";
 
 const NAV = [
   { label: "Dashboard",  path: "/business-owner/dashboard",    Icon: LayoutDashboard },
   { label: "Outlets",    path: "/business-owner/outlets",      Icon: Building2 },
+  { label: "All Staff",  path: "/business-owner/staff",        Icon: Users },
   { label: "Invitations",path: "/business-owner/invitations",  Icon: UserPlus },
   { label: "Skill Tags", path: "/business-owner/skills",       Icon: Tag },
   { label: "Reports",    path: "/business-owner/reports",      Icon: BarChart2 },
