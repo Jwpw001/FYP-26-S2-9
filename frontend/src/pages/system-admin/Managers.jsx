@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { api } from "../../lib/api";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-mgr-kf")) {
   const s = document.createElement("style");
@@ -29,113 +28,27 @@ function Shimmer({ w="100%", h="16px", r="8px" }) {
 export default function Managers() {
   const goTo = useGoTo();
   const [managers, setManagers] = useState([]);
-  const [outlets,  setOutlets]  = useState([]);
   const [loading,  setLoading]  = useState(true);
-  const [showing,  setShowing]  = useState(false);
-  const [saving,   setSaving]   = useState(false);
-  const [toast,    setToast]    = useState(null);
-  const [form,     setForm]     = useState({ full_name:"", email:"", username:"", password:"", outlet_id:"" });
-  const [showPass, setShowPass] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      supabase.from("users").select("user_id,full_name,email,role").eq("role","outlet_manager").order("full_name"),
-      supabase.from("outlets").select("outlet_id,name").order("name"),
-    ]).then(([{ data: mgrs }, { data: outs }]) => {
-      if (!cancelled) { setManagers(mgrs || []); setOutlets(outs || []); setLoading(false); }
-    });
+    supabase.from("users").select("user_id,full_name,email,role").eq("role","outlet_manager").order("full_name")
+      .then(({ data: mgrs }) => {
+        if (!cancelled) { setManagers(mgrs || []); setLoading(false); }
+      });
     return () => { cancelled = true; };
   }, []);
-
-  function showToast(msg, type="success") { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }
-
-  async function handleAdd() {
-    if (!form.full_name.trim()) { showToast("Full name is required.", "error"); return; }
-    if (!form.email.trim())     { showToast("Email is required.", "error"); return; }
-    if (!form.username.trim())  { showToast("Username is required.", "error"); return; }
-    if (!form.password.trim())  { showToast("Password is required.", "error"); return; }
-    if (form.password.length < 6) { showToast("Password must be at least 6 characters.", "error"); return; }
-    setSaving(true);
-    try {
-      const res = await api.post("/api/auth/create-manager", {
-        full_name: form.full_name.trim(),
-        email: form.email.trim().toLowerCase(),
-        username: form.username.trim().toLowerCase(),
-        password: form.password,
-        outlet_id: form.outlet_id || null,
-      });
-      setManagers(prev => [...prev, res.user].sort((a,b) => a.full_name.localeCompare(b.full_name)));
-      setForm({ full_name:"", email:"", username:"", password:"", outlet_id:"" });
-      setShowing(false);
-      showToast("Manager account created successfully.");
-    } catch (err) {
-      showToast(err.message || "Failed to create account.", "error");
-    } finally { setSaving(false); }
-  }
 
   return (
     <AdminLayout title="Outlet Managers">
       <div style={{ animation:"pageIn 0.4s ease both" }}>
 
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"24px", flexWrap:"wrap", gap:"12px" }}>
-          <div>
-            <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#0F172A" }}>Outlet Managers</h2>
-            <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
-              {loading ? "Loading…" : `${managers.length} manager${managers.length !== 1 ? "s" : ""}`}
-            </p>
-          </div>
-          <button onClick={() => setShowing(s => !s)}
-            style={{ padding:"10px 18px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", border:"none", background: showing ? "#F1F5F9" : "#3B82F6", color: showing ? "#64748B" : "#FFF", cursor:"pointer" }}>
-            {showing ? "Cancel" : "+ Add Manager"}
-          </button>
+        <div style={{ marginBottom:"24px" }}>
+          <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#0F172A" }}>Outlet Managers</h2>
+          <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
+            {loading ? "Loading…" : `${managers.length} manager${managers.length !== 1 ? "s" : ""}`}
+          </p>
         </div>
-
-        {showing && (
-          <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"24px", marginBottom:"24px", boxShadow:"0 2px 12px rgba(0,0,0,0.06)", animation:"fadeSlideUp 0.3s ease both" }}>
-            <h3 style={{ fontSize:"15px", fontWeight:"700", color:"#0F172A", marginBottom:"18px" }}>Create Manager Account</h3>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", marginBottom:"18px" }}>
-              <div>
-                <label style={fl}>Full Name *</label>
-                <input autoFocus value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
-                  placeholder="e.g. Sarah Tan" style={fi} />
-              </div>
-              <div>
-                <label style={fl}>Email *</label>
-                <input type="email" autoComplete="off" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                  placeholder="e.g. sarah@krewby.com" style={fi} />
-              </div>
-              <div>
-                <label style={fl}>Username *</label>
-                <input autoComplete="off" value={form.username} onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
-                  placeholder="e.g. sarah.tan" style={fi} />
-              </div>
-              <div>
-                <label style={fl}>Password *</label>
-                <div style={{ position:"relative" }}>
-                  <input type={showPass ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                    placeholder="Min. 6 characters" style={{ ...fi, paddingRight:"44px" }} />
-                  <button type="button" onClick={() => setShowPass(s => !s)}
-                    style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#64748B", fontSize:"12px", fontWeight:"600" }}>
-                    {showPass ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-              <div style={{ gridColumn:"1 / -1" }}>
-                <label style={fl}>Assign to Outlet (optional)</label>
-                <select value={form.outlet_id} onChange={e => setForm(p => ({ ...p, outlet_id: e.target.value }))}
-                  style={{ ...fi, background:"#FFF" }}>
-                  <option value="">Select outlet</option>
-                  {outlets.map(o => <option key={o.outlet_id} value={o.outlet_id}>{o.name}</option>)}
-                </select>
-              </div>
-            </div>
-            <button onClick={handleAdd} disabled={saving}
-              style={{ padding:"10px 22px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", border:"none", background: saving ? "#93C5FD" : "#3B82F6", color:"#FFF", cursor: saving ? "not-allowed" : "pointer" }}>
-              {saving ? "Creating…" : "Create Account"}
-            </button>
-          </div>
-        )}
 
         {loading ? (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:"16px" }}>
@@ -185,14 +98,6 @@ export default function Managers() {
         )}
       </div>
 
-      {toast && (
-        <div style={{ position:"fixed", bottom:"28px", right:"28px", zIndex:9999, background: toast.type==="success" ? "#22C55E" : "#EF4444", color:"#FFF", padding:"12px 20px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)", animation:"toastIn 0.3s ease both" }}>
-          {toast.msg}
-        </div>
-      )}
     </AdminLayout>
   );
 }
-
-const fl = { display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"6px" };
-const fi = { width:"100%", padding:"10px 14px", border:"1.5px solid #E2E8F0", borderRadius:"10px", fontSize:"14px", outline:"none", boxSizing:"border-box" };

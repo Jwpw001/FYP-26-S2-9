@@ -44,10 +44,7 @@ export default function KrewbyWorkers() {
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
   const [filter,  setFilter]  = useState("all");
-  const [showing, setShowing] = useState(false);
-  const [saving,  setSaving]  = useState(false);
   const [toast,   setToast]   = useState(null);
-  const [form,    setForm]    = useState({ full_name:"", email:"", username:"", preferred_location:"" });
 
   useEffect(() => {
     let cancelled = false;
@@ -69,32 +66,11 @@ export default function KrewbyWorkers() {
   function showToast(msg, type="success") { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }
 
   async function toggleActive(id, current) {
+
     const { error } = await supabase.from("krewby_workers").update({ is_active: !current }).eq("krewby_worker_id", id);
     if (error) { showToast(error.message, "error"); return; }
     setWorkers(prev => prev.map(w => w.krewby_worker_id === id ? { ...w, is_active: !current } : w));
     showToast(!current ? "Worker activated." : "Worker deactivated.");
-  }
-
-  async function handleAdd() {
-    if (!form.full_name.trim()) { showToast("Full name is required.", "error"); return; }
-    if (!form.email.trim())     { showToast("Email is required.", "error"); return; }
-    if (!form.username.trim())  { showToast("Username is required.", "error"); return; }
-    setSaving(true);
-    try {
-      const { data: userData, error: uErr } = await supabase.from("users")
-        .insert({ full_name: form.full_name.trim(), email: form.email.trim().toLowerCase(), username: form.username.trim(), role: "krewby_casual_worker" })
-        .select("user_id,full_name,email").single();
-      if (uErr) { showToast(uErr.message.includes("unique") ? "Email or username already exists." : uErr.message, "error"); return; }
-      const { data: wData, error: wErr } = await supabase.from("krewby_workers")
-        .insert({ user_id: userData.user_id, preferred_location: form.preferred_location.trim()||null, rating:5.0, total_jobs:0, is_active:true })
-        .select().single();
-      if (wErr) { showToast(wErr.message, "error"); return; }
-      setWorkers(prev => [...prev, { ...wData, user: userData }]);
-      setForm({ full_name:"", email:"", username:"", preferred_location:"" });
-      setShowing(false);
-      showToast("Worker added successfully.");
-    } catch { showToast("Failed to add worker.", "error"); }
-    finally { setSaving(false); }
   }
 
   const activeCount   = workers.filter(w => w.is_active).length;
@@ -117,43 +93,12 @@ export default function KrewbyWorkers() {
     <AdminLayout title="Krewby Workers">
       <div style={{ animation:"pageIn 0.4s ease both" }}>
 
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"24px", flexWrap:"wrap", gap:"12px" }}>
-          <div>
-            <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#0F172A" }}>Krewby Workers</h2>
-            <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
-              {loading ? "Loading…" : `${activeCount} active · ${inactiveCount} inactive · ${workers.length} total`}
-            </p>
-          </div>
-          <button onClick={() => setShowing(s => !s)}
-            style={{ padding:"10px 18px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", border:"none", background: showing ? "#F1F5F9" : "#3B82F6", color: showing ? "#64748B" : "#FFF", cursor:"pointer" }}>
-            {showing ? "Cancel" : "+ Add Krewby Worker"}
-          </button>
+        <div style={{ marginBottom:"24px" }}>
+          <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#0F172A" }}>Krewby Workers</h2>
+          <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
+            {loading ? "Loading…" : `${activeCount} active · ${inactiveCount} inactive · ${workers.length} total`}
+          </p>
         </div>
-
-        {showing && (
-          <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"24px", marginBottom:"24px", boxShadow:"0 2px 12px rgba(0,0,0,0.06)", animation:"fadeSlideUp 0.3s ease both" }}>
-            <h3 style={{ fontSize:"15px", fontWeight:"700", color:"#0F172A", marginBottom:"18px" }}>Add New Krewby Worker</h3>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", marginBottom:"18px" }}>
-              {[
-                { label:"Full Name *",        key:"full_name",          placeholder:"e.g. John Tan",          autoFocus:true },
-                { label:"Username *",         key:"username",           placeholder:"e.g. john_worker" },
-                { label:"Email *",            key:"email",              placeholder:"e.g. john@gmail.com", type:"email" },
-                { label:"Preferred Location", key:"preferred_location", placeholder:"e.g. Central Singapore" },
-              ].map(f => (
-                <div key={f.key}>
-                  <label style={{ display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"6px" }}>{f.label}</label>
-                  <input type={f.type||"text"} autoFocus={f.autoFocus} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                    placeholder={f.placeholder}
-                    style={{ width:"100%", padding:"10px 14px", border:"1.5px solid #E2E8F0", borderRadius:"10px", fontSize:"14px", outline:"none", boxSizing:"border-box" }} />
-                </div>
-              ))}
-            </div>
-            <button onClick={handleAdd} disabled={saving}
-              style={{ padding:"10px 22px", borderRadius:"10px", fontSize:"14px", fontWeight:"600", border:"none", background: saving ? "#93C5FD" : "#3B82F6", color:"#FFF", cursor: saving ? "not-allowed" : "pointer" }}>
-              {saving ? "Adding…" : "Add Worker"}
-            </button>
-          </div>
-        )}
 
         {/* Filter tabs */}
         <div style={{ display:"flex", gap:"4px", background:"#F1F5F9", padding:"4px", borderRadius:"10px", marginBottom:"16px", width:"fit-content" }}>

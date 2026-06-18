@@ -348,12 +348,15 @@ export default function AdminDashboard() {
     { label: "Krewby Workers",  value: stats.krewbyWorkers, icon: icons.workers,  color: "#DB2777", bg: "#FDF2F8", link: "/system-admin/krewby-workers" },
   ];
 
+  const reportsIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+
   const actions = [
-    { label: "Businesses",     desc: "Manage businesses & outlets",        icon: icons.outlets,  color: "#2563EB", bg: "#EFF6FF", link: "/system-admin/businesses" },
-    { label: "Managers",       desc: "View and manage outlet managers",     icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
-    { label: "Staff",          desc: "Browse and manage all staff",         icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
-    { label: "Skill Tags",     desc: "Create and edit skill categories",    icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
-    { label: "Krewby Workers", desc: "Manage casual worker profiles",       icon: icons.workers,  color: "#DB2777", bg: "#FDF2F8", link: "/system-admin/krewby-workers" },
+    { label: "Businesses",     desc: "Browse businesses & outlets",         icon: icons.outlets,  color: "#2563EB", bg: "#EFF6FF", link: "/system-admin/businesses" },
+    { label: "Managers",       desc: "View outlet managers",                icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
+    { label: "Staff",          desc: "Browse all staff across platform",    icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
+    { label: "Skill Tags",     desc: "View skill categories",               icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
+    { label: "Krewby Workers", desc: "Monitor casual worker pool",          icon: icons.workers,  color: "#DB2777", bg: "#FDF2F8", link: "/system-admin/krewby-workers" },
+    { label: "Reports",        desc: "Platform analytics & reports",        icon: reportsIcon,    color: "#0891B2", bg: "#ECFEFF", link: "/system-admin/reports" },
   ];
 
   return (

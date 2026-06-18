@@ -2,7 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import { getUser } from "../../utils/auth";
 import { useState } from "react";
 import SignOutButton from "../SignOutButton";
-import { LayoutDashboard, Building2, UserCog, Users, Tag, Briefcase } from "lucide-react";
+import { LayoutDashboard, Building2, UserCog, Users, Tag, Briefcase, BarChart2 } from "lucide-react";
 import "./sidebarStyles.js";
 
 const NAV = [
@@ -12,6 +12,7 @@ const NAV = [
   { label: "Staff",          path: "/system-admin/staff",          Icon: Users },
   { label: "Skill Tags",     path: "/system-admin/skills",         Icon: Tag },
   { label: "Krewby Workers", path: "/system-admin/krewby-workers", Icon: Briefcase },
+  { label: "Reports",        path: "/system-admin/reports",        Icon: BarChart2 },
 ];
 
 export default function AdminLayout({ children, title }) {
