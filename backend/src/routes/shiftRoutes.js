@@ -9,7 +9,9 @@ const {
     getShiftById,
     createShift,
     updateShift,
-    deleteShift
+    deleteShift,
+    generateWeeklySchedule,
+    confirmWeeklySchedule,
 } = require("../controllers/shiftController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -78,5 +80,8 @@ router.delete(
     ),
     deleteShift
 );
+
+router.post("/generate-week", verifyToken, allowRoles(ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN), generateWeeklySchedule);
+router.post("/confirm-week",  verifyToken, allowRoles(ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN), confirmWeeklySchedule);
 
 module.exports = router;
