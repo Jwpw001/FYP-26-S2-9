@@ -349,7 +349,7 @@ const getStaffDetail = async (req, res) => {
     if (!staff) return res.status(404).json({ success: false, message: "Staff member not found." });
 
     const [allSkills, assignedTags] = await Promise.all([
-      prisma.skills.findMany({ where: { outlet_id: staff.outlet_id }, orderBy: { name: "asc" } }),
+      prisma.skills.findMany({ orderBy: { name: "asc" } }),
       prisma.user_skill_tags.findMany({ where: { user_id: staff.user_id } }),
     ]);
 
