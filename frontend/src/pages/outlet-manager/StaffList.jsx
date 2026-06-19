@@ -61,7 +61,7 @@ export default function StaffList() {
 
         if (cancelled) return;
 
-        const enriched = (staffData || []).map(s => ({
+        const enriched = (staffData || []).filter(s => s.users?.role !== "outlet_manager").map(s => ({
           ...s,
           skillTags: (tagData || [])
             .filter(t => t.user_id === s.users?.user_id)

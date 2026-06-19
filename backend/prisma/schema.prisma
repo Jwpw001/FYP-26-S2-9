@@ -94,14 +94,28 @@ model notifications {
 }
 
 model outlets {
-  outlet_id   Int       @id @default(autoincrement())
-  name        String    @db.VarChar(100)
-  address     String?
-  business_id Int?
-  reports     reports[]
-  shifts      shifts[]
-  skills      skills[]
-  staff       staff[]
+  outlet_id              Int                      @id @default(autoincrement())
+  name                   String                   @db.VarChar(100)
+  address                String?
+  business_id            Int?
+  open_time              DateTime?                @db.Time
+  close_time             DateTime?                @db.Time
+  reports                reports[]
+  shifts                 shifts[]
+  skills                 skills[]
+  staff                  staff[]
+  outlet_role_templates  outlet_role_templates[]
+}
+
+model outlet_role_templates {
+  template_id  Int      @id @default(autoincrement())
+  outlet_id    Int
+  role_name    String   @db.VarChar(100)
+  skill_id     Int?
+  headcount    Int      @default(1)
+  created_at   DateTime @default(now()) @db.Timestamptz
+  outlets      outlets  @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade)
+  skills       skills?  @relation(fields: [skill_id], references: [skill_id], onDelete: SetNull)
 }
 
 model reports {
@@ -174,10 +188,11 @@ model skills {
   description     String?
   created_by      Int?
   outlet_id       Int?
-  shift_roles     shift_roles[]
-  outlets         outlets?          @relation(fields: [outlet_id], references: [outlet_id], onUpdate: NoAction)
-  users           users?            @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
-  user_skill_tags user_skill_tags[]
+  shift_roles             shift_roles[]
+  outlets                 outlets?                @relation(fields: [outlet_id], references: [outlet_id], onUpdate: NoAction)
+  users                   users?                  @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
+  user_skill_tags         user_skill_tags[]
+  outlet_role_templates   outlet_role_templates[]
 
   @@unique([name, outlet_id])
 }

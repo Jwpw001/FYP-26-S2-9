@@ -9,10 +9,11 @@ export default function CreateShift() {
   const user = getUser();
   const userId = user?.user_id;
 
-  const [outletId, setOutletId] = useState(null);
-  const [skills, setSkills]     = useState([]);
-  const [saving, setSaving]     = useState(false);
-  const [error, setError]       = useState("");
+  const [outletId, setOutletId]   = useState(null);
+  const [outletHours, setOutletHours] = useState({ open: null, close: null });
+  const [skills, setSkills]       = useState([]);
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState("");
 
   const [form, setForm] = useState({
     title: "",
@@ -33,9 +34,20 @@ export default function CreateShift() {
           .eq("user_id", userId).eq("is_active", true).limit(1),
         supabase.from("skills").select("skill_id, name").order("name"),
       ]);
+      const oid = myStaff?.[0]?.outlet_id || null;
       if (!cancelled) {
-        setOutletId(myStaff?.[0]?.outlet_id || null);
+        setOutletId(oid);
         setSkills(skillRows || []);
+      }
+      if (oid) {
+        const { data: outletData } = await supabase
+          .from("outlets").select("open_time, close_time").eq("outlet_id", oid).single();
+        if (!cancelled && outletData) {
+          setOutletHours({
+            open:  outletData.open_time  ? String(outletData.open_time).slice(0, 5)  : null,
+            close: outletData.close_time ? String(outletData.close_time).slice(0, 5) : null,
+          });
+        }
       }
     }
     load();
@@ -60,6 +72,12 @@ export default function CreateShift() {
     if (!form.end_time)   { setError("End time is required."); return; }
     if (form.end_time <= form.start_time) {
       setError("End time must be after start time."); return;
+    }
+    if (outletHours.open && form.start_time < outletHours.open) {
+      setError(`Start time cannot be before outlet opening time (${fmtTime(outletHours.open)}).`); return;
+    }
+    if (outletHours.close && form.end_time > outletHours.close) {
+      setError(`End time cannot be after outlet closing time (${fmtTime(outletHours.close)}).`); return;
     }
     if (roles.some(r => !r.role_name.trim())) {
       setError("All roles must have a name."); return;
@@ -140,15 +158,24 @@ export default function CreateShift() {
                 <label style={s.label}>Start Time *</label>
                 <input style={s.input} type="time"
                   value={form.start_time}
+                  min={outletHours.open || undefined}
+                  max={outletHours.close || undefined}
                   onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))} />
               </div>
               <div style={s.field}>
                 <label style={s.label}>End Time *</label>
                 <input style={s.input} type="time"
                   value={form.end_time}
+                  min={form.start_time || outletHours.open || undefined}
+                  max={outletHours.close || undefined}
                   onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))} />
               </div>
             </div>
+            {(outletHours.open || outletHours.close) && (
+              <p style={s.hoursHint}>
+                Operating hours: {fmtTime(outletHours.open)} – {fmtTime(outletHours.close)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -217,6 +244,13 @@ export default function CreateShift() {
   );
 }
 
+function fmtTime(t) {
+  if (!t) return "—";
+  const [h, m] = t.split(":");
+  const hour = Number(h);
+  return `${hour % 12 || 12}:${m} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
 const s = {
   back: { background:"none", border:"none", fontSize:"13px", fontWeight:"600",
     color:"#7A7870", cursor:"pointer", marginBottom:"20px", padding:0 },
@@ -264,4 +298,7 @@ const s = {
   publishBtn: { background:"#1C1B18", border:"none",
     borderRadius:"10px", padding:"10px 20px", fontSize:"14px",
     fontWeight:"700", color:"#FFFFFF", cursor:"pointer" },
+  hoursHint: { fontSize:"12px", color:"#7A7870", marginTop:"6px",
+    background:"#F7F6F3", border:"1px solid #E5E2DC", borderRadius:"7px",
+    padding:"6px 10px" },
 };

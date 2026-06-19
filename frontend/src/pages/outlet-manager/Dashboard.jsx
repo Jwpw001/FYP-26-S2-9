@@ -127,6 +127,8 @@ export default function ManagerDashboard() {
   const [recentShifts, setRecentShifts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [unackedShifts, setUnackedShifts] = useState([]);
+  const [showUnackedPanel, setShowUnackedPanel] = useState(false);
   const userId = user?.user_id;
 
   // Bar chart data — shift counts by day of week
@@ -173,6 +175,36 @@ export default function ManagerDashboard() {
           counts[dow]++;
         });
         setWeekBarData(counts);
+
+        // Unacknowledged assignments on published shifts (today or future only)
+        const { data: pubShifts } = await supabase
+          .from("shifts")
+          .select("shift_id, title, shift_date")
+          .eq("outlet_id", outletId)
+          .eq("status", "published")
+          .gte("shift_date", today);
+
+        if (!cancelled && pubShifts?.length) {
+          const shiftIds = pubShifts.map(s => s.shift_id);
+          const { data: unackedRows } = await supabase
+            .from("shift_assignments")
+            .select("shift_id, staff:staff_id(user_id, users:user_id(full_name))")
+            .in("shift_id", shiftIds)
+            .eq("acknowledged", false);
+
+          if (!cancelled) {
+            const byShift = {};
+            (unackedRows || []).forEach(row => {
+              if (!byShift[row.shift_id]) {
+                const sh = pubShifts.find(s => s.shift_id === row.shift_id);
+                byShift[row.shift_id] = { ...sh, staffNames: [] };
+              }
+              const name = row.staff?.users?.full_name;
+              if (name) byShift[row.shift_id].staffNames.push(name);
+            });
+            setUnackedShifts(Object.values(byShift).sort((a, b) => a.shift_date.localeCompare(b.shift_date)));
+          }
+        }
       } catch (err) {
         console.error("Dashboard error:", err);
       } finally {
@@ -241,6 +273,70 @@ export default function ManagerDashboard() {
               ))
           }
         </div>
+
+        {/* Unacknowledged shifts alert */}
+        {!loading && unackedShifts.length > 0 && (
+          <div style={{ marginBottom: "20px" }}>
+            <button
+              onClick={() => setShowUnackedPanel(v => !v)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: "#FFFBEB", border: "1.5px solid #FCD34D", borderRadius: "14px",
+                padding: "16px 20px", cursor: "pointer", textAlign: "left",
+                transition: "box-shadow 0.15s",
+              }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="20" height="20" fill="none" stroke="#D97706" strokeWidth="1.8" viewBox="0 0 24 24">
+                    <path d="M12 9v4M12 17h.01"/>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p style={{ fontSize: "15px", fontWeight: "700", color: "#92400E" }}>
+                    {unackedShifts.length} Published Shift{unackedShifts.length !== 1 ? "s" : ""} with Unacknowledged Assignments
+                  </p>
+                  <p style={{ fontSize: "12px", color: "#B45309", marginTop: "2px" }}>
+                    Click to see which staff haven't confirmed their schedule
+                  </p>
+                </div>
+              </div>
+              <svg width="18" height="18" fill="none" stroke="#D97706" strokeWidth="2" viewBox="0 0 24 24"
+                style={{ transform: showUnackedPanel ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}>
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+
+            {showUnackedPanel && (
+              <div style={{ background: "#FFFFFF", border: "1.5px solid #FCD34D", borderTop: "none", borderRadius: "0 0 14px 14px", overflow: "hidden" }}>
+                <div style={{ padding: "0 20px 4px", background: "#FFFDF0" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", padding: "8px 0", borderBottom: "1px solid #FEF3C7", fontSize: "11px", fontWeight: "700", color: "#B45309", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    <span>Shift</span><span>Date</span><span>Pending Staff</span>
+                  </div>
+                </div>
+                {unackedShifts.map((sh, i) => (
+                  <div key={sh.shift_id} style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr 2fr",
+                    padding: "12px 20px", alignItems: "flex-start",
+                    borderBottom: i < unackedShifts.length - 1 ? "1px solid #FEF9C3" : "none",
+                    background: i % 2 === 0 ? "#FFFFFF" : "#FFFDF0",
+                    fontSize: "13px", gap: "8px",
+                  }}>
+                    <span style={{ fontWeight: "600", color: "#1E293B" }}>{sh.title || "Untitled"}</span>
+                    <span style={{ color: "#64748B" }}>{fmtDate(sh.shift_date)}</span>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                      {sh.staffNames.map(name => (
+                        <span key={name} style={{ background: "#FEF3C7", color: "#92400E", fontSize: "11px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px" }}>
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Bar chart + Quick actions row */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "20px", marginBottom: "20px" }}>

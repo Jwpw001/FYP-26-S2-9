@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { api } from "../../lib/api";
+import { getUser } from "../../utils/auth";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-shift-detail-styles")) {
@@ -23,6 +25,13 @@ if (typeof document !== "undefined" && !document.getElementById("mgr-shift-detai
     }
     @keyframes toastIn {
       from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes aiPulse {
+      0%,100% { opacity: 1; } 50% { opacity: 0.5; }
+    }
+    @keyframes aiPanelIn {
+      from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
     }
   `;
@@ -87,6 +96,7 @@ async function fetchEnrichedAssignments(shiftId) {
 export default function ShiftDetail() {
   const { id } = useParams();
   const goTo = useGoTo();
+  const user = getUser();
 
   const [shift, setShift]             = useState(null);
   const [roles, setRoles]             = useState([]);
@@ -114,9 +124,112 @@ export default function ShiftDetail() {
   const [confirmModal, setConfirmModal] = useState(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
+  // AI recommendation panel
+  const [aiPanel, setAiPanel] = useState(null); // null | { loading: true } | { recommendations: [] }
+  const [aiAssigning, setAiAssigning] = useState(null); // staff_id being assigned
+
+  // Krewby requests for this shift
+  const [krewbyRequests, setKrewbyRequests] = useState([]); // [{ request_id, role_id, status, worker_name }]
+  const [krewbyModal, setKrewbyModal] = useState(null); // { role }
+  const [krewbyNote, setKrewbyNote] = useState("");
+  const [krewbySubmitting, setKrewbySubmitting] = useState(false);
+
   function showToast(msg, type = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
+  }
+
+  async function reloadRoles() {
+    const [{ data: roleData }, { data: assignData }] = await Promise.all([
+      supabase.from("shift_roles")
+        .select("role_id, role_name, skill_id, headcount, skills(name)")
+        .eq("shift_id", id),
+      supabase.from("shift_assignments")
+        .select("assignment_id, role_id, staff_id, status, acknowledged")
+        .eq("shift_id", id),
+    ]);
+
+    const staffIds = (assignData || []).map(a => a.staff_id).filter(Boolean);
+    let staffUserMap = {};
+
+    if (staffIds.length > 0) {
+      const { data: staffRows } = await supabase
+        .from("staff").select("staff_id, user_id").in("staff_id", staffIds);
+      const userIds = (staffRows || []).map(s => s.user_id).filter(Boolean);
+      if (userIds.length > 0) {
+        const { data: userRows } = await supabase
+          .from("users").select("user_id, full_name, email").in("user_id", userIds);
+        const userMap = Object.fromEntries((userRows || []).map(u => [u.user_id, u]));
+        (staffRows || []).forEach(s => { staffUserMap[s.staff_id] = userMap[s.user_id] || {}; });
+      }
+    }
+
+    const enriched = (assignData || []).map(a => ({ ...a, userInfo: staffUserMap[a.staff_id] || {} }));
+    const merged = (roleData || []).map(role => ({
+      ...role,
+      shift_assignments: enriched.filter(a => a.role_id === role.role_id),
+    }));
+    setRoles(merged);
+    setAssignments(enriched);
+  }
+
+  async function runAiRecommend() {
+    setAiPanel({ loading: true });
+    try {
+      const result = await api.post(`/api/recommendations/shift/${id}`);
+      setAiPanel({ recommendations: result.recommendations || [] });
+    } catch (err) {
+      showToast("AI recommendation failed. Please try again.", "error");
+      setAiPanel(null);
+    }
+  }
+
+  async function aiAssignStaff(staffId, roleId, staffName) {
+    const numStaffId = Number(staffId);
+    const numRoleId  = Number(roleId);
+    setAiAssigning(numStaffId);
+    try {
+      const targetRole = roles.find(r => Number(r.role_id) === numRoleId);
+      const filled = targetRole?.shift_assignments?.length || 0;
+      if (targetRole && filled >= (targetRole.headcount || 1)) {
+        showToast(`"${targetRole.role_name}" is already fully staffed.`, "error");
+        return;
+      }
+
+      const { data: inserted, error: err } = await supabase
+        .from("shift_assignments")
+        .insert({
+          shift_id: Number(id),
+          role_id: numRoleId,
+          staff_id: numStaffId,
+          status: "assigned",
+          acknowledged: false,
+        })
+        .select("assignment_id, role_id, staff_id, status, acknowledged")
+        .single();
+
+      if (err) throw err;
+
+      // Optimistic update — add the new assignment to the role card immediately
+      const newAssignment = {
+        ...inserted,
+        userInfo: { full_name: staffName },
+      };
+      setRoles(prev => prev.map(r =>
+        Number(r.role_id) === numRoleId
+          ? { ...r, shift_assignments: [...(r.shift_assignments || []), newAssignment] }
+          : r
+      ));
+      setAssignments(prev => [...prev, newAssignment]);
+
+      setAiPanel(null);
+      showToast(`${staffName} assigned successfully.`);
+    } catch (err) {
+      console.error("AI assign error:", err);
+      showToast(err?.message || "Failed to assign staff.", "error");
+    } finally {
+      setAiAssigning(null);
+    }
   }
 
   useEffect(() => {
@@ -140,6 +253,20 @@ export default function ShiftDetail() {
 
         // Load skills for the Add Role dropdown
         const { data: skillsData } = await supabase.from("skills").select("skill_id, name").order("name");
+
+        // Load krewby requests for this shift
+        const { data: krewbyData } = await supabase
+          .from("krewby_requests")
+          .select(`request_id, role_id, status, assigned_worker_id, krewby_workers!assigned_worker_id(user_id, users(full_name, email))`)
+          .eq("shift_id", Number(id));
+        if (!cancelled && krewbyData) {
+          setKrewbyRequests(krewbyData.map(r => ({
+            request_id: r.request_id,
+            role_id: r.role_id,
+            status: r.status,
+            worker_name: r.krewby_workers?.users?.full_name || r.krewby_workers?.users?.email || null,
+          })));
+        }
 
         if (!cancelled) {
           setSkillOptions(skillsData || []);
@@ -307,19 +434,7 @@ export default function ShiftDetail() {
         acknowledged: false,
       });
       if (err) throw err;
-
-      const { data: roleData } = await supabase
-        .from("shift_roles")
-        .select(`role_id, role_name, skill_id, headcount, skills ( name )`)
-        .eq("shift_id", id);
-
-      const enriched = await fetchEnrichedAssignments(id);
-      const rolesWithAssignments = (roleData || []).map(role => ({
-        ...role,
-        shift_assignments: enriched.filter(a => a.role_id === role.role_id),
-      }));
-      setRoles(rolesWithAssignments);
-      setAssignments(enriched);
+      await reloadRoles();
       setAssignModal(null);
       setCandidates([]);
       showToast("Staff assigned successfully.");
@@ -366,9 +481,11 @@ export default function ShiftDetail() {
       const hardBlocks = [];
       const warnings = [];
 
-      // Understaffing check
+      // Understaffing check (include krewby-assigned workers in filled count)
       for (const role of roles) {
-        const filled = role.shift_assignments?.length || 0;
+        const kr = krewbyRequests.find(r => r.role_id === role.role_id);
+        const krewbyFilled = (kr?.status === "assigned" || kr?.status === "approved") ? 1 : 0;
+        const filled = (role.shift_assignments?.length || 0) + krewbyFilled;
         if (filled < (role.headcount || 1)) {
           warnings.push(`Role "${role.role_name}" is understaffed (${filled}/${role.headcount || 1})`);
         }
@@ -444,6 +561,50 @@ export default function ShiftDetail() {
     showToast("Shift moved back to draft.");
   }
 
+  async function submitKrewbyRequest() {
+    setKrewbySubmitting(true);
+    try {
+      const role = krewbyModal.role;
+      const { data, error } = await supabase.from("krewby_requests").insert({
+        shift_id: Number(id),
+        role_id: role.role_id,
+        outlet_id: shift.outlet_id,
+        role_name: role.role_name,
+        skill_id: role.skill_id || null,
+        shift_date: shift.shift_date,
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        headcount: role.headcount || 1,
+        status: "pending_review",
+        override_note: krewbyNote.trim() || null,
+        created_by: user?.user_id,
+      }).select("request_id, role_id, status").single();
+      if (error) throw error;
+      setKrewbyRequests(prev => [...prev, { request_id: data.request_id, role_id: data.role_id, status: "pending_review", worker_name: null }]);
+      setKrewbyModal(null);
+      setKrewbyNote("");
+      showToast("Krewby worker requested successfully.");
+    } catch (err) {
+      showToast(err?.message || "Failed to submit request.", "error");
+    } finally {
+      setKrewbySubmitting(false);
+    }
+  }
+
+  function handleCancelShift() {
+    setConfirmModal({
+      title: "Cancel this shift?",
+      body: <>This will mark <strong>{shift?.title || "this shift"}</strong> as cancelled. Assigned staff will no longer be scheduled for it.</>,
+      confirmLabel: "Cancel Shift",
+      danger: true,
+      onConfirm: async () => {
+        await supabase.from("shifts").update({ status: "cancelled" }).eq("shift_id", id);
+        setShift(prev => ({ ...prev, status: "cancelled" }));
+        showToast("Shift cancelled.");
+      },
+    });
+  }
+
   function handleDelete() {
     setConfirmModal({
       title: "Delete this shift?",
@@ -480,7 +641,11 @@ export default function ShiftDetail() {
   if (!shift) return <ManagerLayout title="Shift Detail"><div style={s.empty}>Shift not found.</div></ManagerLayout>;
 
   const totalRoles    = roles.reduce((sum, r) => sum + (r.headcount || 1), 0);
-  const totalAssigned = roles.reduce((sum, r) => sum + (r.shift_assignments?.length || 0), 0);
+  const totalAssigned = roles.reduce((sum, r) => {
+    const kr = krewbyRequests.find(k => k.role_id === r.role_id);
+    const krewbyFilled = (kr?.status === "assigned" || kr?.status === "approved") ? 1 : 0;
+    return sum + (r.shift_assignments?.length || 0) + krewbyFilled;
+  }, 0);
   const isFullyStaffed = totalAssigned >= totalRoles;
 
   return (
@@ -500,6 +665,17 @@ export default function ShiftDetail() {
             </p>
           </div>
           <div style={s.shiftActions}>
+            {shift.status !== "completed" && shift.status !== "cancelled" && (
+              <button
+                style={s.aiBtn}
+                onClick={aiPanel ? () => setAiPanel(null) : runAiRecommend}
+                disabled={aiPanel?.loading}
+              >
+                {aiPanel?.loading
+                  ? <span style={{ animation: "aiPulse 1.2s ease infinite" }}>✦ Thinking…</span>
+                  : aiPanel ? "✕ Close AI" : "✦ Smart Recommend"}
+              </button>
+            )}
             {shift.status === "draft" && (
               <>
                 <button style={s.deleteBtn} onClick={handleDelete}>Delete</button>
@@ -513,7 +689,13 @@ export default function ShiftDetail() {
               </>
             )}
             {shift.status === "published" && (
-              <button style={s.unpublishBtn} onClick={handleUnpublish}>Move to Draft</button>
+              <>
+                <button style={s.unpublishBtn} onClick={handleUnpublish}>Move to Draft</button>
+                <button style={s.cancelShiftBtn} onClick={handleCancelShift}>Cancel Shift</button>
+              </>
+            )}
+            {shift.status === "draft" && (
+              <button style={s.cancelShiftBtn} onClick={handleCancelShift}>Cancel Shift</button>
             )}
           </div>
         </div>
@@ -530,6 +712,70 @@ export default function ShiftDetail() {
           </span>
         </div>
       </div>
+
+      {/* ── AI Recommendation Panel ──────────────────────────────────────────── */}
+      {aiPanel && !aiPanel.loading && (
+        <div style={s.aiPanel}>
+          <div style={s.aiPanelHeader}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={s.aiIcon}>✦</span>
+              <span style={s.aiPanelTitle}>AI Staff Recommendations</span>
+            </div>
+            <span style={s.aiPanelSub}>Powered by Groq · Click Assign to apply a suggestion</span>
+          </div>
+
+          {aiPanel.recommendations.length === 0 ? (
+            <p style={{ fontSize: "13px", color: "#64748B", padding: "12px 0" }}>
+              All roles are fully staffed — nothing to recommend.
+            </p>
+          ) : (
+            aiPanel.recommendations.map(rec => (
+              <div key={rec.role_id} style={s.aiRoleBlock}>
+                <p style={s.aiRoleName}>{rec.role_name}</p>
+                {(rec.suggestions || []).length === 0 ? (
+                  <p style={{ fontSize: "12px", color: "#94A3B8" }}>No available staff to suggest for this role.</p>
+                ) : (
+                  rec.suggestions.map((sug, i) => (
+                    <div key={sug.staff_id} style={{
+                      ...s.aiSugRow,
+                      borderColor: i === 0 ? "#A5B4FC" : "#E2E8F0",
+                      background: i === 0 ? "#F5F3FF" : "#FAFAFA",
+                    }}>
+                      <div style={{ ...s.aiRank, background: i === 0 ? "#6366F1" : "#CBD5E1" }}>
+                        {i + 1}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                          <p style={s.aiSugName}>{sug.name}</p>
+                          <span style={{
+                            ...s.confBadge,
+                            background: sug.confidence === "high" ? "#DCFCE7" : sug.confidence === "medium" ? "#FFFBEB" : "#FEE2E2",
+                            color: sug.confidence === "high" ? "#166534" : sug.confidence === "medium" ? "#92400E" : "#991B1B",
+                          }}>
+                            {sug.confidence}
+                          </span>
+                        </div>
+                        <p style={s.aiSugReason}>{sug.reason}</p>
+                      </div>
+                      <button
+                        style={{
+                          ...s.aiAssignBtn,
+                          opacity: aiAssigning === sug.staff_id ? 0.6 : 1,
+                          background: i === 0 ? "#6366F1" : "#2563EB",
+                        }}
+                        disabled={!!aiAssigning}
+                        onClick={() => aiAssignStaff(Number(sug.staff_id), Number(rec.role_id), sug.name)}
+                      >
+                        {aiAssigning === sug.staff_id ? "…" : "Assign"}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <h3 style={{ ...s.sectionTitle, margin: 0 }}>Roles & Assignments</h3>
@@ -590,7 +836,9 @@ export default function ShiftDetail() {
         </div>
       ) : (
         roles.map(role => {
-          const filled = role.shift_assignments?.length || 0;
+          const kr = krewbyRequests.find(r => r.role_id === role.role_id);
+          const krewbyFilled = (kr?.status === "assigned" || kr?.status === "approved") ? 1 : 0;
+          const filled = (role.shift_assignments?.length || 0) + krewbyFilled;
           const needed = role.headcount || 1;
           const isFull = filled >= needed;
           return (
@@ -606,6 +854,23 @@ export default function ShiftDetail() {
                   <span style={{ ...s.fillBadge, background: isFull ? "#DCFCE7" : "#FFFBEB", color: isFull ? "#166534" : "#D97706" }}>
                     {isFull ? "✓ Full" : `${needed - filled} needed`}
                   </span>
+                  {(() => {
+                    const kr = krewbyRequests.find(r => r.role_id === role.role_id);
+                    if (kr) {
+                      if (kr.status === "assigned" || kr.status === "approved") {
+                        return <span style={s.krewbyAssignedBadge}>✓ Krewby: {kr.worker_name || "Worker assigned"}</span>;
+                      }
+                      return <span style={s.krewbyPendingBadge}>⏳ Krewby requested</span>;
+                    }
+                    if (shift.status !== "completed" && shift.status !== "cancelled" && !isFull) {
+                      return (
+                        <button style={s.krewbyBtn} onClick={() => { setKrewbyModal({ role }); setKrewbyNote(""); }}>
+                          + Request Krewby
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
                   {shift.status !== "completed" && shift.status !== "cancelled" && (
                     <button style={s.assignBtn} onClick={() => openAssignModal(role)}>
                       Assign Staff
@@ -640,6 +905,22 @@ export default function ShiftDetail() {
                   </div>
                 </div>
               ))}
+
+              {/* Krewby worker row */}
+              {krewbyFilled > 0 && (
+                <div style={{ ...s.assignedRow, background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
+                  <div style={{ ...s.assignedAvatar, background: "#16A34A", color: "#FFF" }}>
+                    {kr.worker_name?.[0]?.toUpperCase() || "K"}
+                  </div>
+                  <div style={s.assignedInfo}>
+                    <p style={s.assignedName}>{kr.worker_name || "Krewby Worker"}</p>
+                    <p style={{ ...s.assignedEmail, color: "#16A34A", fontWeight: "600" }}>Krewby Casual Worker</p>
+                  </div>
+                  <div style={s.assignedRight}>
+                    <span style={s.ackTagYes}>✓ Krewby Assigned</span>
+                  </div>
+                </div>
+              )}
 
               {filled === 0 && (
                 <div style={s.emptyRole}>No staff assigned yet.</div>
@@ -816,6 +1097,40 @@ export default function ShiftDetail() {
         </div>
       )}
 
+      {/* ── Krewby Request Modal ──────────────────────────────────────────── */}
+      {krewbyModal && (
+        <div style={s.modalOverlay} onClick={() => setKrewbyModal(null)}>
+          <div style={{ ...s.modal, maxWidth: "420px" }} onClick={e => e.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <h3 style={s.modalTitle}>Request Krewby Worker</h3>
+              <button style={s.closeBtn} onClick={() => setKrewbyModal(null)}>✕</button>
+            </div>
+            <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "16px" }}>
+              Requesting a Krewby casual worker for <strong>{krewbyModal.role.role_name}</strong>
+              {krewbyModal.role.skills?.name ? ` (${krewbyModal.role.skills.name})` : ""} on{" "}
+              <strong>{fmtDate(shift.shift_date)}</strong>, {shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}.
+            </p>
+            <label style={s.formLabel}>Note for Coordinator (optional)</label>
+            <textarea
+              style={{ ...s.formInput, height: "80px", resize: "vertical", fontFamily: "inherit" }}
+              placeholder="Any special requirements or instructions…"
+              value={krewbyNote}
+              onChange={e => setKrewbyNote(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: "10px", marginTop: "18px" }}>
+              <button style={s.cancelConflictBtn} onClick={() => setKrewbyModal(null)} disabled={krewbySubmitting}>Cancel</button>
+              <button
+                style={{ flex: 1, background: krewbySubmitting ? "#93C5FD" : "#2563EB", border: "none", borderRadius: "9px", padding: "10px", fontSize: "14px", fontWeight: "700", color: "#FFF", cursor: krewbySubmitting ? "default" : "pointer" }}
+                onClick={submitKrewbyRequest}
+                disabled={krewbySubmitting}
+              >
+                {krewbySubmitting ? "Submitting…" : "Submit Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Toast ─────────────────────────────────────────────────────────── */}
       {toast && (
         <div style={{
@@ -852,6 +1167,7 @@ const s = {
   publishBtn: { background: "#2563EB", border: "none", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "700", color: "#FFFFFF", cursor: "pointer" },
   publishBtnWarn: { background: "#D97706" },
   unpublishBtn: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "9px", padding: "8px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
+  cancelShiftBtn: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "9px", padding: "8px 14px", fontSize: "13px", fontWeight: "600", color: "#991B1B", cursor: "pointer" },
   staffingSummary: { display: "flex", alignItems: "center", gap: "12px" },
   staffingBar: { flex: 1, height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" },
   staffingFill: { height: "100%", borderRadius: "100px", transition: "width 0.3s ease" },
@@ -866,6 +1182,9 @@ const s = {
   roleActions: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
   fillBadge: { padding: "3px 8px", borderRadius: "100px", fontSize: "11px", fontWeight: "600" },
   assignBtn: { background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "7px", padding: "5px 12px", fontSize: "12px", fontWeight: "600", color: "#1D4ED8", cursor: "pointer" },
+  krewbyBtn: { background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: "7px", padding: "5px 12px", fontSize: "12px", fontWeight: "600", color: "#C2410C", cursor: "pointer" },
+  krewbyPendingBadge: { fontSize: "11px", fontWeight: "600", color: "#D97706", background: "#FFFBEB", border: "1px solid #FDE68A", padding: "3px 9px", borderRadius: "100px" },
+  krewbyAssignedBadge: { fontSize: "11px", fontWeight: "600", color: "#059669", background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "3px 9px", borderRadius: "100px" },
   assignedRow: { display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", background: "#F8FAFC", borderRadius: "8px", marginBottom: "6px" },
   assignedAvatar: { width: "28px", height: "28px", borderRadius: "50%", background: "#E2E8F0", color: "#64748B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "700", flexShrink: 0 },
   assignedInfo: { flex: 1 },
@@ -898,4 +1217,19 @@ const s = {
   conflictDot: { width: "6px", height: "6px", borderRadius: "50%", background: "#EF4444", flexShrink: 0, marginTop: "5px" },
   cancelConflictBtn: { background: "#F1F5F9", border: "none", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer" },
   overrideBtn: { background: "#D97706", border: "none", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "700", color: "#FFF", cursor: "pointer" },
+  // AI panel
+  aiBtn: { background: "linear-gradient(135deg,#6366F1,#8B5CF6)", border: "none", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "700", color: "#FFF", cursor: "pointer", letterSpacing: "0.01em" },
+  aiPanel: { background: "linear-gradient(135deg,#F5F3FF,#EEF2FF)", border: "1.5px solid #C4B5FD", borderRadius: "14px", padding: "20px", marginBottom: "24px", animation: "aiPanelIn 0.3s ease both" },
+  aiPanelHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "6px" },
+  aiIcon: { fontSize: "16px", color: "#6366F1" },
+  aiPanelTitle: { fontSize: "15px", fontWeight: "700", color: "#4338CA" },
+  aiPanelSub: { fontSize: "11px", color: "#7C3AED", opacity: 0.7 },
+  aiRoleBlock: { marginBottom: "16px" },
+  aiRoleName: { fontSize: "12px", fontWeight: "700", color: "#6D28D9", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" },
+  aiSugRow: { display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", border: "1px solid #E2E8F0", marginBottom: "6px" },
+  aiRank: { width: "22px", height: "22px", borderRadius: "50%", color: "#FFF", fontSize: "11px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  aiSugName: { fontSize: "13px", fontWeight: "600", color: "#1E293B" },
+  confBadge: { fontSize: "10px", fontWeight: "700", padding: "2px 6px", borderRadius: "100px" },
+  aiSugReason: { fontSize: "12px", color: "#64748B", marginTop: "2px", lineHeight: 1.4 },
+  aiAssignBtn: { border: "none", borderRadius: "7px", padding: "7px 14px", fontSize: "12px", fontWeight: "700", color: "#FFF", cursor: "pointer", flexShrink: 0 },
 };

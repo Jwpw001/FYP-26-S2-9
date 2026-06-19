@@ -85,7 +85,7 @@ export default function BODashboard() {
 
   const cards = [
     { label: "Outlets",     sub: "Across your business", value: stats?.outlets_count ?? 0, Icon: Building2, color: "#D97706", bg: "#FEF3C7", link: "/business-owner/outlets" },
-    { label: "Total Staff", sub: "Active members",       value: stats?.staff_count   ?? 0, Icon: Users,     color: "#3B82F6", bg: "#EFF6FF", link: "/business-owner/outlets" },
+    { label: "Total Staff", sub: "Active members",       value: stats?.staff_count   ?? 0, Icon: Users,     color: "#3B82F6", bg: "#EFF6FF", link: "/business-owner/staff" },
   ];
 
   return (

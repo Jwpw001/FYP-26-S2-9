@@ -57,6 +57,13 @@ function fmtWeekRange(weekStart) {
   return `${s.toLocaleDateString("en-SG", opts)} – ${e.toLocaleDateString("en-SG", opts)}`;
 }
 
+function fmtTime(t) {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hour = Number(h);
+  return `${hour % 12 || 12}:${m} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
 function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />;
 }
@@ -74,6 +81,7 @@ export default function WeeklyAvailability() {
   const [saving, setSaving]     = useState(false);
   const [toast, setToast]       = useState(null);
   const [staffId, setStaffId]   = useState(null);
+  const [outletHours, setOutletHours] = useState({ open: null, close: null });
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
@@ -85,11 +93,20 @@ export default function WeeklyAvailability() {
     async function load() {
       setLoading(true);
       const { data: myStaff } = await supabase
-        .from("staff").select("staff_id").eq("user_id", userId).limit(1);
+        .from("staff").select("staff_id, outlet_id").eq("user_id", userId).limit(1);
       const sid = myStaff?.[0]?.staff_id;
+      const outletId = myStaff?.[0]?.outlet_id;
       if (cancelled) return;
       setStaffId(sid || null);
       if (!sid) { setExisting([]); setSlots({}); setLoading(false); return; }
+
+      if (outletId) {
+        const { data: outlet } = await supabase
+          .from("outlets").select("open_time, close_time").eq("outlet_id", outletId).maybeSingle();
+        if (!cancelled && outlet) {
+          setOutletHours({ open: outlet.open_time?.slice(0, 5) || null, close: outlet.close_time?.slice(0, 5) || null });
+        }
+      }
 
       const { data } = await supabase
         .from("casual_availability")
@@ -115,7 +132,7 @@ export default function WeeklyAvailability() {
     if (isPast) return;
     setSlots(prev => {
       if (prev[idx]?.enabled) { const next = { ...prev }; delete next[idx]; return next; }
-      return { ...prev, [idx]: { enabled: true, from: "09:00", to: "18:00" } };
+      return { ...prev, [idx]: { enabled: true, from: outletHours.open || "09:00", to: outletHours.close || "18:00" } };
     });
   }
 
@@ -126,8 +143,17 @@ export default function WeeklyAvailability() {
   async function handleSave() {
     if (!staffId) { showToast("No staff record found.", "error"); return; }
     for (const [idx, slot] of Object.entries(slots)) {
-      if (slot.enabled && slot.from >= slot.to) {
+      if (!slot.enabled) continue;
+      if (slot.from >= slot.to) {
         showToast(`${DAYS[Number(idx)].full}: end time must be after start time.`, "error");
+        return;
+      }
+      if (outletHours.open && slot.from < outletHours.open) {
+        showToast(`${DAYS[Number(idx)].full}: start time cannot be before outlet opens (${fmtTime(outletHours.open)}).`, "error");
+        return;
+      }
+      if (outletHours.close && slot.to > outletHours.close) {
+        showToast(`${DAYS[Number(idx)].full}: end time cannot be after outlet closes (${fmtTime(outletHours.close)}).`, "error");
         return;
       }
     }
@@ -205,7 +231,7 @@ export default function WeeklyAvailability() {
                   <div style={{ display: "flex", gap: "6px" }}>
                     <button className="action-btn" onClick={() => {
                       const all = {};
-                      DAYS.forEach((_, i) => { all[i] = slots[i]?.enabled ? slots[i] : { enabled: true, from: "09:00", to: "18:00" }; });
+                      DAYS.forEach((_, i) => { all[i] = slots[i]?.enabled ? slots[i] : { enabled: true, from: outletHours.open || "09:00", to: outletHours.close || "18:00" }; });
                       setSlots(all);
                     }} style={{ padding: "7px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: "600", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#64748B", cursor: "pointer", transition: "background 0.15s" }}>
                       All
@@ -216,6 +242,14 @@ export default function WeeklyAvailability() {
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Operating hours hint */}
+            {!loading && outletHours.open && (
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: "#1D4ED8" }}>
+                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span>Outlet operating hours: <strong>{fmtTime(outletHours.open)} – {fmtTime(outletHours.close)}</strong>. Your availability must be within this range.</span>
               </div>
             )}
 
@@ -310,11 +344,15 @@ export default function WeeklyAvailability() {
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <input type="time" className="avail-time" value={slot.from}
                             onChange={e => updateSlot(i, "from", e.target.value)}
+                            min={outletHours.open || undefined}
+                            max={outletHours.close || undefined}
                             disabled={isPast}
                             style={{ flex: 1, padding: "8px 10px", border: `1.5px solid ${timeError ? "#FCA5A5" : "#E2E8F0"}`, borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#1E293B", background: "#F8FAFC", cursor: isPast ? "not-allowed" : "text", transition: "border-color 0.15s" }} />
                           <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: "600", flexShrink: 0 }}>to</span>
                           <input type="time" className="avail-time" value={slot.to}
                             onChange={e => updateSlot(i, "to", e.target.value)}
+                            min={outletHours.open || undefined}
+                            max={outletHours.close || undefined}
                             disabled={isPast}
                             style={{ flex: 1, padding: "8px 10px", border: `1.5px solid ${timeError ? "#FCA5A5" : "#E2E8F0"}`, borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: timeError ? "#DC2626" : "#1E293B", background: timeError ? "#FFF1F2" : "#F8FAFC", cursor: isPast ? "not-allowed" : "text", transition: "border-color 0.15s" }} />
                         </div>
