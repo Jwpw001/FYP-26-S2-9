@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { api } from "../../lib/api";
 import { Plus, Copy, Check, Clock, UserCheck, XCircle, RefreshCw, Mail } from "lucide-react";
+import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-invite-styles")) {
   const style = document.createElement("style");
@@ -48,6 +49,7 @@ export default function BOInvitations() {
   const [resending, setResending] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [upgradeModal, setUpgradeModal] = useState(null); // { limitType, plan, message }
 
   const load = () => {
     setLoading(true);
@@ -74,7 +76,12 @@ export default function BOInvitations() {
       setForm({ email: "", role: "outlet_manager", outlet_id: "" });
       load();
     } catch (err) {
-      setError(err.message || "Failed to send invite");
+      if (err.limitReached) {
+        setShowForm(false);
+        setUpgradeModal({ limitType: err.limitType, plan: err.plan, message: err.message });
+      } else {
+        setError(err.message || "Failed to send invite");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -340,6 +347,14 @@ export default function BOInvitations() {
       )}
 
       </div>
+
+      {upgradeModal && (
+        <UpgradePlanModal
+          currentPlan={upgradeModal.plan}
+          onClose={() => setUpgradeModal(null)}
+          onUpgraded={() => setUpgradeModal(null)}
+        />
+      )}
     </BusinessOwnerLayout>
   );
 }

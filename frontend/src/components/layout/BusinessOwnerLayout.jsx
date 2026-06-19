@@ -14,19 +14,30 @@ const NAV = [
   { label: "Reports",    path: "/business-owner/reports",      Icon: BarChart2 },
 ];
 
+const PLAN_BADGE = {
+  free:       { label: "Free",       color: "#94A3B8", bg: "rgba(148,163,184,0.15)", dot: "#94A3B8" },
+  premium:    { label: "Premium",    color: "#60A5FA", bg: "rgba(96,165,250,0.15)",  dot: "#3B82F6" },
+  enterprise: { label: "Enterprise", color: "#C084FC", bg: "rgba(192,132,252,0.15)", dot: "#A855F7" },
+};
+
 export default function BusinessOwnerLayout({ children, title }) {
   const navigate = useNavigate();
   const location = useLocation();
   const user = getUser();
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [plan, setPlan] = useState(null);
 
   useEffect(() => {
     if (!user?.user_id) return;
     supabase.from("notifications").select("*", { count: "exact", head: true })
       .eq("recipient_id", user.user_id).eq("is_read", false)
       .then(({ count }) => setUnread(count || 0));
+    supabase.from("businesses").select("plan").eq("owner_id", user.user_id).maybeSingle()
+      .then(({ data }) => data?.plan && setPlan(data.plan));
   }, [user?.user_id]);
+
+  const pb = plan ? (PLAN_BADGE[plan] || PLAN_BADGE.free) : null;
 
   return (
     <div style={s.shell}>
@@ -55,6 +66,20 @@ export default function BusinessOwnerLayout({ children, title }) {
           })}
         </nav>
         <div style={s.sidebarBottom}>
+          {/* Plan indicator */}
+          {pb && (
+            <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px", padding: "0 4px" }}>
+              {/* Dot — always visible */}
+              <div title={`${pb.label} plan`} style={{ width: "8px", height: "8px", borderRadius: "50%", background: pb.dot, flexShrink: 0, boxShadow: `0 0 6px ${pb.dot}` }} />
+              {/* Label — only when expanded */}
+              <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "160px" : "0px", transition: "opacity 0.25s, max-width 0.25s", overflow: "hidden", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: "11px", fontWeight: "700", color: pb.color, background: pb.bg, padding: "2px 9px", borderRadius: "100px", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                  {pb.label} Plan
+                </span>
+              </div>
+            </div>
+          )}
+
           <div style={{ ...s.userRow, marginBottom: "10px" }}>
             <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "B"}</div>
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s, max-width 0.25s", overflow: "hidden" }}>

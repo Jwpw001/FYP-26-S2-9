@@ -17,7 +17,15 @@ async function request(method, path, body = null) {
   if (body) options.body = JSON.stringify(body);
   const res = await fetch(`${BASE_URL}${path}`, options);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Request failed");
+  if (!res.ok) {
+    const err = new Error(data.message || "Request failed");
+    if (data.limitReached) {
+      err.limitReached = true;
+      err.limitType = data.limitType;
+      err.plan = data.plan;
+    }
+    throw err;
+  }
   return data;
 }
 

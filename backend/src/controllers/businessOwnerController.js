@@ -1,5 +1,6 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const { getLimits } = require("../utils/planLimits");
 
 // ── Outlets ──────────────────────────────────────────────
 
@@ -26,8 +27,23 @@ const createOutlet = async (req, res) => {
     const { name, address, open_time, close_time, role_templates } = req.body;
     if (!name) return res.status(400).json({ success: false, message: "Outlet name is required." });
 
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, plan").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.status(404).json({ success: false, message: "Business not found for this owner." });
+
+    // Enforce outlet limit
+    const limits = getLimits(biz.plan);
+    if (limits.outlets !== Infinity) {
+      const { count } = await supabaseAdmin.from("outlets").select("*", { count: "exact", head: true }).eq("business_id", biz.business_id);
+      if ((count || 0) >= limits.outlets) {
+        return res.status(403).json({
+          success: false,
+          limitReached: true,
+          limitType: "outlets",
+          plan: biz.plan,
+          message: `Your ${biz.plan} plan allows ${limits.outlets} outlet${limits.outlets === 1 ? "" : "s"}. Upgrade to add more.`,
+        });
+      }
+    }
 
     const { data: outlet, error: outletErr } = await supabaseAdmin
       .from("outlets")

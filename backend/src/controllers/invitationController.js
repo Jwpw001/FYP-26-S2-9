@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const crypto = require("crypto");
+const { getLimits } = require("../utils/planLimits");
 const dns = require("dns").promises;
 const { Resend } = require("resend");
 
@@ -88,6 +89,27 @@ const sendInvitation = async (req, res) => {
     const targetLevel = ROLE_HIERARCHY[role] || 0;
     if (targetLevel >= senderLevel) {
       return res.status(403).json({ success: false, message: "You cannot invite someone to a role equal or higher than your own." });
+    }
+
+    // Enforce staff limit based on business plan
+    const outletRow = await prisma.outlets.findUnique({ where: { outlet_id: Number(outlet_id) }, select: { business_id: true } });
+    if (outletRow?.business_id) {
+      const { data: biz } = await supabaseAdmin.from("businesses").select("plan").eq("business_id", outletRow.business_id).maybeSingle();
+      const limits = getLimits(biz?.plan || "free");
+      if (limits.staff !== Infinity) {
+        const { count: staffCount } = await supabaseAdmin
+          .from("staff").select("*", { count: "exact", head: true })
+          .eq("outlet_id", Number(outlet_id)).eq("is_active", true);
+        if ((staffCount || 0) >= limits.staff) {
+          return res.status(403).json({
+            success: false,
+            limitReached: true,
+            limitType: "staff",
+            plan: biz?.plan || "free",
+            message: `Your ${biz?.plan || "free"} plan allows ${limits.staff} staff per outlet. Upgrade to add more.`,
+          });
+        }
+      }
     }
 
     // Verify email domain has real MX records

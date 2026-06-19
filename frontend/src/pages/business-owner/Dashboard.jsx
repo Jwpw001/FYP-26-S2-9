@@ -94,7 +94,13 @@ export default function BODashboard() {
 
         <div style={s.welcomeBox}>
           <h2 style={s.welcomeTitle}>Welcome back 👋</h2>
-          <p style={s.welcomeSub}>{business?.name || "Your Business"} · Business Owner Portal</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <p style={s.welcomeSub}>{business?.name || "Your Business"} · Business Owner Portal</p>
+            {business?.plan && (() => {
+              const ps = { free: { label:"Free", bg:"#F1F5F9", color:"#64748B" }, premium: { label:"Premium", bg:"#EFF6FF", color:"#2563EB" }, enterprise: { label:"Enterprise", bg:"#FDF4FF", color:"#9333EA" } }[business.plan] || {};
+              return <span style={{ fontSize:"11px", fontWeight:"700", padding:"3px 9px", borderRadius:"100px", background: ps.bg, color: ps.color }}>{ps.label}</span>;
+            })()}
+          </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: "16px", marginBottom: "24px" }}>

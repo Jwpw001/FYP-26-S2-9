@@ -108,7 +108,9 @@ const register = async (req, res) => {
 
 const registerBusiness = async (req, res) => {
     try {
-        const { business_name, description, owner_name, email, phone, address, password } = req.body;
+        const { business_name, description, owner_name, email, phone, address, password, plan } = req.body;
+        const validPlans = ["free", "premium", "enterprise"];
+        const selectedPlan = validPlans.includes(plan) ? plan : "free";
 
         if (!business_name || !owner_name || !email || !password) {
             return res.status(400).json({ success: false, message: "Missing required fields." });
@@ -146,6 +148,7 @@ const registerBusiness = async (req, res) => {
                 contact_phone: phone || null,
                 address: address || null,
                 owner_id: newUser.user_id,
+                plan: selectedPlan,
             });
             if (bizErr) throw new Error(bizErr.message);
         } catch (innerErr) {

@@ -5,6 +5,7 @@ import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
 import { Plus, Building2, MapPin, ArrowRight, Clock } from "lucide-react";
+import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-outlet-styles")) {
   const style = document.createElement("style");
@@ -39,6 +40,7 @@ export default function BOOutlets() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [skills, setSkills] = useState([]);
+  const [upgradeModal, setUpgradeModal] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -105,7 +107,12 @@ export default function BOOutlets() {
       closeWizard();
       load();
     } catch (err) {
-      setError(err.message);
+      if (err.limitReached) {
+        closeWizard();
+        setUpgradeModal({ limitType: err.limitType, plan: err.plan, message: err.message });
+      } else {
+        setError(err.message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -306,6 +313,14 @@ export default function BOOutlets() {
           </div>
         )}
       </div>
+
+      {upgradeModal && (
+        <UpgradePlanModal
+          currentPlan={upgradeModal.plan}
+          onClose={() => setUpgradeModal(null)}
+          onUpgraded={() => { setUpgradeModal(null); load(); }}
+        />
+      )}
     </BusinessOwnerLayout>
   );
 }

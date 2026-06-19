@@ -45,7 +45,6 @@ export default function AdminStaff() {
           if (row.skills?.name) skillMap[row.user_id].push(row.skills.name);
         });
         const staffWithSkills = (staffData || [])
-          .filter(s => s.users?.role !== "outlet_manager")
           .map(s => ({ ...s, skillNames: skillMap[s.user_id] || [] }));
         setStaff(staffWithSkills);
         setOutlets(outletData || []);
@@ -60,6 +59,7 @@ export default function AdminStaff() {
     const email = s.users?.email?.toLowerCase() || "";
     const q     = search.toLowerCase();
     if (q && !name.includes(q) && !email.includes(q)) return false;
+    if (filter === "manager" && s.users?.role !== "outlet_manager") return false;
     if (filter === "regular" && s.staff_type !== "regular") return false;
     if (filter === "casual"  && s.staff_type !== "casual")  return false;
     if (outlet && String(s.outlet_id) !== outlet) return false;
@@ -68,13 +68,14 @@ export default function AdminStaff() {
 
   const counts = {
     all:     staff.length,
+    manager: staff.filter(s => s.users?.role === "outlet_manager").length,
     regular: staff.filter(s => s.staff_type === "regular").length,
     casual:  staff.filter(s => s.staff_type === "casual").length,
-    active:  staff.filter(s => s.is_active).length,
   };
 
   const TABS = [
     { key:"all",     label:"All" },
+    { key:"manager", label:"Managers" },
     { key:"regular", label:"Regular" },
     { key:"casual",  label:"Casual" },
   ];

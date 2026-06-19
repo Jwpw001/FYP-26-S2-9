@@ -2,7 +2,13 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
-import { ArrowLeft, Building2, MapPin, Users, ChevronRight } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, Users, ChevronRight, Star } from "lucide-react";
+
+const PLAN_STYLES = {
+  free:       { label: "Free",       bg: "#F1F5F9", color: "#64748B", border: "#E2E8F0" },
+  premium:    { label: "Premium",    bg: "#EFF6FF", color: "#2563EB", border: "#BFDBFE" },
+  enterprise: { label: "Enterprise", bg: "#FDF4FF", color: "#9333EA", border: "#E9D5FF" },
+};
 
 if (typeof document !== "undefined" && !document.getElementById("sa-biz-detail-kf")) {
   const st = document.createElement("style");
@@ -35,6 +41,7 @@ export default function BusinessDetail() {
   const [business, setBusiness] = useState(null);
   const [outlets, setOutlets]   = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [planSaving, setPlanSaving] = useState(false);
 
   useEffect(() => {
     load();
@@ -43,7 +50,7 @@ export default function BusinessDetail() {
   async function load() {
     setLoading(true);
     const [{ data: biz }, { data: outletRows }] = await Promise.all([
-      supabase.from("businesses").select("business_id, name, description, created_at").eq("business_id", id).single(),
+      supabase.from("businesses").select("business_id, name, description, created_at, plan").eq("business_id", id).single(),
       supabase.from("outlets").select("outlet_id, name, address, staff(staff_id)").eq("business_id", id).order("name"),
     ]);
     if (!biz) { navigate("/system-admin/businesses"); return; }
@@ -53,6 +60,13 @@ export default function BusinessDetail() {
   }
 
   const bizColor = business ? avatarColor(business.name) : "#3B82F6";
+
+  async function changePlan(newPlan) {
+    setPlanSaving(true);
+    await supabase.from("businesses").update({ plan: newPlan }).eq("business_id", id);
+    setBusiness(b => ({ ...b, plan: newPlan }));
+    setPlanSaving(false);
+  }
 
   return (
     <AdminLayout title="Business Detail">
@@ -105,6 +119,30 @@ export default function BusinessDetail() {
                     <span style={{ fontWeight: "600", color: "#1E293B" }}>{new Date(business.created_at).toLocaleDateString()}</span>
                   </div>
                 )}
+              </div>
+
+              {/* Plan management */}
+              <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: "16px", marginTop: "4px" }}>
+                <p style={{ fontSize: "12px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
+                  <Star size={11} /> Plan
+                </p>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {["free","premium","enterprise"].map(p => {
+                    const ps = PLAN_STYLES[p];
+                    const active = business.plan === p;
+                    return (
+                      <button key={p} onClick={() => !active && changePlan(p)} disabled={planSaving}
+                        style={{ padding: "5px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", cursor: active ? "default" : "pointer",
+                          border: `1.5px solid ${active ? ps.border : "#E2E8F0"}`,
+                          background: active ? ps.bg : "transparent",
+                          color: active ? ps.color : "#94A3B8",
+                          opacity: planSaving ? 0.6 : 1,
+                          transition: "all 0.15s" }}>
+                        {ps.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
