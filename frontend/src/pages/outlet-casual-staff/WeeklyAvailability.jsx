@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import CasualLayout from "../../components/layout/CasualLayout";
@@ -82,6 +83,9 @@ export default function WeeklyAvailability() {
   const [toast, setToast]       = useState(null);
   const [staffId, setStaffId]   = useState(null);
   const [outletHours, setOutletHours] = useState({ open: null, close: null });
+  const [showOverwrite, setShowOverwrite] = useState(false);
+  const [pendingSave, setPendingSave] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null); // { weekStart, entries: [{day, from, to}] }
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
@@ -140,27 +144,27 @@ export default function WeeklyAvailability() {
     setSlots(prev => ({ ...prev, [idx]: { ...prev[idx], [field]: val } }));
   }
 
-  async function handleSave() {
-    if (!staffId) { showToast("No staff record found.", "error"); return; }
+  function validateSlots() {
     for (const [idx, slot] of Object.entries(slots)) {
       if (!slot.enabled) continue;
       if (slot.from >= slot.to) {
-        showToast(`${DAYS[Number(idx)].full}: end time must be after start time.`, "error");
-        return;
+        showToast(`${DAYS[Number(idx)].full}: end time must be after start time.`, "error"); return false;
       }
       if (outletHours.open && slot.from < outletHours.open) {
-        showToast(`${DAYS[Number(idx)].full}: start time cannot be before outlet opens (${fmtTime(outletHours.open)}).`, "error");
-        return;
+        showToast(`${DAYS[Number(idx)].full}: start time cannot be before outlet opens (${fmtTime(outletHours.open)}).`, "error"); return false;
       }
       if (outletHours.close && slot.to > outletHours.close) {
-        showToast(`${DAYS[Number(idx)].full}: end time cannot be after outlet closes (${fmtTime(outletHours.close)}).`, "error");
-        return;
+        showToast(`${DAYS[Number(idx)].full}: end time cannot be after outlet closes (${fmtTime(outletHours.close)}).`, "error"); return false;
       }
     }
+    return true;
+  }
+
+  async function doSave() {
+    if (!staffId) { showToast("No staff record found.", "error"); return; }
     setSaving(true);
     try {
-      if (existing.length > 0)
-        await supabase.from("casual_availability").delete().eq("staff_id", staffId).eq("week_start_date", weekStart);
+      await supabase.from("casual_availability").delete().eq("staff_id", staffId).eq("week_start_date", weekStart);
       const toInsert = Object.entries(slots).filter(([, v]) => v.enabled).map(([idx, v]) => ({
         staff_id: staffId, week_start_date: weekStart,
         day_of_week: DAY_NUMS[Number(idx)],
@@ -170,10 +174,24 @@ export default function WeeklyAvailability() {
         const { error: err } = await supabase.from("casual_availability").insert(toInsert);
         if (err) throw err;
       }
-      setExisting(toInsert);
-      showToast(`Saved for ${fmtWeekRange(weekStart)}!`);
+      setExisting(toInsert.map(r => ({ ...r })));
+      setLastSaved({
+        weekStart,
+        entries: Object.entries(slots).filter(([, v]) => v.enabled).map(([idx, v]) => ({
+          day: DAYS[Number(idx)].full, from: v.from, to: v.to,
+        })),
+      });
+      showToast(`Availability saved for ${fmtWeekRange(weekStart)}!`);
     } catch { showToast("Failed to save. Please try again.", "error"); }
-    finally { setSaving(false); }
+    finally { setSaving(false); setPendingSave(false); }
+  }
+
+  async function handleSave() {
+    if (!staffId) { showToast("No staff record found.", "error"); return; }
+    if (!validateSlots()) return;
+    // If already submitted for this week, ask to overwrite
+    if (existing.length > 0) { setShowOverwrite(true); return; }
+    doSave();
   }
 
   const isPast = weekOffset <= 0;
@@ -254,7 +272,7 @@ export default function WeeklyAvailability() {
             )}
 
             {/* Day cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "10px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "10px", marginBottom: "0" }}>
               {loading
                 ? Array.from({ length: 7 }).map((_, i) => (
                     <div key={i} style={{ borderRadius: "16px", border: "1.5px solid #E2E8F0", background: "#FFF", padding: "20px 8px 18px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
@@ -298,6 +316,24 @@ export default function WeeklyAvailability() {
                     );
                   })}
             </div>
+
+            {/* Submission summary — below the calendar */}
+            {lastSaved && lastSaved.weekStart === weekStart && (
+              <div style={{ background: "#F0FDF4", border: "1.5px solid #86EFAC", borderRadius: "14px", padding: "16px 18px", animation: "fadeSlideUp 0.3s ease both" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                  <svg width="16" height="16" fill="none" stroke="#16A34A" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  <p style={{ fontSize: "13px", fontWeight: "700", color: "#15803D", margin: 0 }}>Submitted for {fmtWeekRange(lastSaved.weekStart)}</p>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {lastSaved.entries.map(e => (
+                    <div key={e.day} style={{ background: "#DCFCE7", border: "1px solid #86EFAC", borderRadius: "8px", padding: "6px 12px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: "700", color: "#15803D" }}>{e.day.slice(0,3)}</span>
+                      <span style={{ fontSize: "11px", color: "#166534", marginLeft: "6px" }}>{fmtTime(e.from)} – {fmtTime(e.to)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right column: Set Hours + Save */}
@@ -371,6 +407,7 @@ export default function WeeklyAvailability() {
                 {saving ? "Saving…" : enabledCount === 0 ? "Select days to save" : `Save Availability — ${enabledCount} day${enabledCount !== 1 ? "s" : ""}`}
               </button>
             )}
+
           </div>
         </div>
       </div>
@@ -379,6 +416,31 @@ export default function WeeklyAvailability() {
         <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#FFF", padding: "13px 22px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both", display: "flex", alignItems: "center", gap: "8px" }}>
           {toast.type === "success" ? "✓" : "✕"} {toast.msg}
         </div>
+      )}
+
+      {showOverwrite && createPortal(
+        <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(15,23,42,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#FFF", borderRadius: "20px", padding: "32px", maxWidth: "420px", width: "90%", boxShadow: "0 24px 60px rgba(0,0,0,0.2)", animation: "fadeSlideUp 0.25s ease both" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+              <svg width="22" height="22" fill="none" stroke="#D97706" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#0F172A", margin: "0 0 8px" }}>Overwrite availability?</h3>
+            <p style={{ fontSize: "14px", color: "#64748B", lineHeight: 1.6, margin: "0 0 24px" }}>
+              You've already submitted availability for <strong>{fmtWeekRange(weekStart)}</strong>. Saving again will replace your previous submission.
+            </p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button onClick={() => setShowOverwrite(false)}
+                style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "1.5px solid #E2E8F0", background: "#FFF", fontSize: "14px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={() => { setShowOverwrite(false); doSave(); }}
+                style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "none", background: "#2563EB", fontSize: "14px", fontWeight: "700", color: "#FFF", cursor: "pointer" }}>
+                Yes, overwrite
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </CasualLayout>
   );

@@ -79,7 +79,7 @@ export default function Reports() {
             shift_id, title, shift_date, start_time, end_time,
             shift_assignments (
               assignment_id, staff_id,
-              users:staff_id ( full_name ),
+              staff:staff_id ( users:user_id ( full_name ) ),
               attendance ( status )
             )
           `)
@@ -101,7 +101,7 @@ export default function Reports() {
       } else if (reportType === "workload") {
         const { data: assignments } = await supabase
           .from("shift_assignments")
-          .select(`staff_id, users:staff_id ( full_name ), shifts!inner ( shift_date, outlet_id )`)
+          .select(`staff_id, staff:staff_id ( users:user_id ( full_name ) ), shifts!inner ( shift_date, outlet_id )`)
           .eq("shifts.outlet_id", outletId)
           .gte("shifts.shift_date", dateFrom)
           .lte("shifts.shift_date", dateTo);
@@ -109,7 +109,8 @@ export default function Reports() {
         const countMap = {};
         (assignments || []).forEach(a => {
           const key = a.staff_id;
-          if (!countMap[key]) countMap[key] = { name: a.users?.full_name, count: 0 };
+          const name = a.staff?.users?.full_name || `Staff #${a.staff_id}`;
+          if (!countMap[key]) countMap[key] = { name, count: 0 };
           countMap[key].count++;
         });
         const rows = Object.values(countMap).sort((a, b) => b.count - a.count);

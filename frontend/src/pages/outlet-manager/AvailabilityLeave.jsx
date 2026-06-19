@@ -57,7 +57,7 @@ export default function AvailabilityLeave() {
   const user = getUser();
   const userId = user?.user_id;
 
-  // Main tab: "leave" | "swap"
+  // Main tab: "leave" | "swap" | "casual"
   const [mainTab, setMainTab] = useState("leave");
 
   // Leave state
@@ -71,6 +71,11 @@ export default function AvailabilityLeave() {
   const [swaps, setSwaps]               = useState([]);
   const [loadingSwap, setLoadingSwap]   = useState(true);
   const [swapFilter, setSwapFilter]     = useState("pending");
+
+  // Casual availability state
+  const [casualData, setCasualData]         = useState([]);
+  const [loadingCasual, setLoadingCasual]   = useState(false);
+  const [casualWeekFilter, setCasualWeekFilter] = useState("all");
 
   const [processing, setProcessing]     = useState(null);
   const [toast, setToast]               = useState(null);
@@ -210,6 +215,61 @@ export default function AvailabilityLeave() {
         console.error(err);
       } finally {
         if (!cancelled) setLoadingSwap(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [outletId, staffUserMap]);
+
+  // ── Load casual availability ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!outletId) return;
+    let cancelled = false;
+    async function load() {
+      setLoadingCasual(true);
+      try {
+        // Get all staff for this outlet (filter by who has casual_availability records)
+        const { data: casualStaff } = await supabase
+          .from("staff")
+          .select("staff_id, user_id, users:user_id(full_name, email)")
+          .eq("outlet_id", outletId)
+          .eq("is_active", true);
+
+        if (!casualStaff || casualStaff.length === 0) {
+          if (!cancelled) { setCasualData([]); setLoadingCasual(false); }
+          return;
+        }
+
+        const staffIds = casualStaff.map(s => s.staff_id);
+        const { data: avail } = await supabase
+          .from("casual_availability")
+          .select("availability_id, staff_id, week_start_date, day_of_week, available_from, available_to")
+          .in("staff_id", staffIds)
+          .order("week_start_date", { ascending: false });
+
+        const staffMap = {};
+        casualStaff.forEach(s => { staffMap[s.staff_id] = s; });
+
+        // Group by staff + week
+        const grouped = {};
+        (avail || []).forEach(row => {
+          const key = `${row.staff_id}_${row.week_start_date}`;
+          if (!grouped[key]) {
+            grouped[key] = {
+              staff_id: row.staff_id,
+              week_start_date: row.week_start_date,
+              staffInfo: staffMap[row.staff_id],
+              days: [],
+            };
+          }
+          grouped[key].days.push(row);
+        });
+
+        if (!cancelled) setCasualData(Object.values(grouped));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoadingCasual(false);
       }
     }
     load();
@@ -428,8 +488,9 @@ export default function AvailabilityLeave() {
         {/* ── Main tabs ─────────────────────────────────────── */}
         <div style={{ display: "flex", gap: "0", marginBottom: "24px", borderBottom: "2px solid #E2E8F0" }}>
           {[
-            { key: "leave", label: "Leave Requests", badge: pendingLeave },
-            { key: "swap",  label: "Swap & Replacement", badge: pendingSwap },
+            { key: "leave",   label: "Leave Requests", badge: pendingLeave },
+            { key: "swap",    label: "Swap & Replacement", badge: pendingSwap },
+            { key: "casual",  label: "Casual Availability", badge: null },
           ].map(tab => (
             <button
               key={tab.key}
@@ -546,6 +607,45 @@ export default function AvailabilityLeave() {
                 ))}
               </div>
             )}
+          </>
+        )}
+
+        {/* ── CASUAL AVAILABILITY TAB ────────────────────────── */}
+        {mainTab === "casual" && (
+          <>
+            <div style={{ marginBottom: "20px" }}>
+              <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Casual Staff Availability</h2>
+              <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>Weekly availability submissions from casual staff.</p>
+            </div>
+
+            {/* Week filter */}
+            {!loadingCasual && casualData.length > 0 && (() => {
+              const weeks = [...new Set(casualData.map(d => d.week_start_date))].sort((a, b) => b.localeCompare(a));
+              return (
+                <div style={{ display: "flex", gap: "6px", marginBottom: "20px", flexWrap: "wrap" }}>
+                  <FilterTab label="All weeks" active={casualWeekFilter === "all"} onClick={() => setCasualWeekFilter("all")} />
+                  {weeks.map(w => (
+                    <FilterTab key={w} label={fmtWeekRange(w)} active={casualWeekFilter === w} onClick={() => setCasualWeekFilter(w)} />
+                  ))}
+                </div>
+              );
+            })()}
+
+            {loadingCasual ? (
+              <ShimmerCards />
+            ) : casualData.length === 0 ? (
+              <EmptyState label="No casual availability submissions yet" />
+            ) : (() => {
+              const filtered = casualWeekFilter === "all" ? casualData : casualData.filter(d => d.week_start_date === casualWeekFilter);
+              if (filtered.length === 0) return <EmptyState label="No submissions for this week" />;
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {filtered.map(entry => (
+                    <CasualAvailCard key={`${entry.staff_id}_${entry.week_start_date}`} entry={entry} />
+                  ))}
+                </div>
+              );
+            })()}
           </>
         )}
 
@@ -859,6 +959,63 @@ function InfoItem({ label, value }) {
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function fmtWeekRange(weekStart) {
+  const s = new Date(weekStart);
+  const e = new Date(weekStart);
+  e.setDate(e.getDate() + 6);
+  const opts = { month: "short", day: "numeric" };
+  return `${s.toLocaleDateString("en-SG", opts)} – ${e.toLocaleDateString("en-SG", opts)}`;
+}
+
+function fmtTime(t) {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hour = Number(h);
+  return `${hour % 12 || 12}:${m} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function CasualAvailCard({ entry }) {
+  const name = entry.staffInfo?.users?.full_name || entry.staffInfo?.users?.email || "Casual Staff";
+  const initial = name[0]?.toUpperCase() || "?";
+  const sortedDays = [...entry.days].sort((a, b) => {
+    // Sort by day_of_week: Mon=1...Sun=0, treat 0 as 7
+    const da = a.day_of_week === 0 ? 7 : a.day_of_week;
+    const db = b.day_of_week === 0 ? 7 : b.day_of_week;
+    return da - db;
+  });
+
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px", animation: "fadeSlideUp 0.3s ease both" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: avatarColor(name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", fontWeight: "700", flexShrink: 0 }}>
+            {initial}
+          </div>
+          <div>
+            <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{name}</p>
+            <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{entry.staffInfo?.users?.email || ""}</p>
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B" }}>Week of</p>
+          <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>{fmtWeekRange(entry.week_start_date)}</p>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
+        {sortedDays.map(row => (
+          <div key={row.availability_id || row.day_of_week} style={{ background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: "8px", padding: "6px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
+            <span style={{ fontSize: "11px", fontWeight: "700", color: "#15803D" }}>{DAY_NAMES[row.day_of_week]}</span>
+            <span style={{ fontSize: "12px", color: "#166534" }}>{fmtTime(row.available_from?.slice(0,5))} – {fmtTime(row.available_to?.slice(0,5))}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function getDays(start, end) {

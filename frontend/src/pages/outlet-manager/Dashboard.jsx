@@ -151,6 +151,11 @@ export default function ManagerDashboard() {
         const outletId = myStaff?.[0]?.outlet_id;
         if (!outletId || cancelled) return;
 
+        // Get outlet staff IDs first so we can scope leave/swap counts correctly
+        const { data: outletStaffRows } = await supabase
+          .from("staff").select("staff_id").eq("outlet_id", outletId).eq("is_active", true);
+        const outletStaffIds = (outletStaffRows || []).map(s => s.staff_id);
+
         const [{ data: shifts }, { count: staffCount }, { count: leaveCount }, { count: swapCount }] =
           await Promise.all([
             supabase.from("shifts")
@@ -159,8 +164,14 @@ export default function ManagerDashboard() {
               .order("shift_date", { ascending: true }),
             supabase.from("staff").select("*", { count: "exact", head: true })
               .eq("outlet_id", outletId).eq("is_active", true),
-            supabase.from("availability").select("*", { count: "exact", head: true }).eq("status", "pending"),
-            supabase.from("swap_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
+            outletStaffIds.length > 0
+              ? supabase.from("availability").select("*", { count: "exact", head: true })
+                  .eq("status", "pending").in("staff_id", outletStaffIds)
+              : Promise.resolve({ count: 0 }),
+            outletStaffIds.length > 0
+              ? supabase.from("swap_requests").select("*", { count: "exact", head: true })
+                  .eq("status", "pending").in("requester_id", outletStaffIds)
+              : Promise.resolve({ count: 0 }),
           ]);
 
         if (cancelled) return;
@@ -231,7 +242,7 @@ export default function ManagerDashboard() {
     { label: "Upcoming Shifts", key: "upcomingShifts", sub: "Next 7 days",      icon: Icons.calendar,  color: "#2563EB", bg: "#EFF6FF", link: "/outlet-manager/shifts" },
     { label: "Total Staff",     key: "totalStaff",     sub: "Active members",   icon: Icons.users,     color: "#059669", bg: "#ECFDF5", link: "/outlet-manager/staff" },
     { label: "Pending Leave",   key: "pendingLeave",   sub: "Awaiting approval",icon: Icons.clipboard, color: "#D97706", bg: "#FFFBEB", link: "/outlet-manager/availability" },
-    { label: "Swap Requests",   key: "pendingSwaps",   sub: "Needs review",     icon: Icons.refresh,   color: "#7C3AED", bg: "#F5F3FF", link: "/outlet-manager/shifts" },
+    { label: "Swap Requests",   key: "pendingSwaps",   sub: "Needs review",     icon: Icons.refresh,   color: "#7C3AED", bg: "#F5F3FF", link: "/outlet-manager/availability" },
   ];
 
   const quickActions = [

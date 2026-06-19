@@ -80,6 +80,39 @@ async function fetchWorkforceContext(userId, role) {
           select: { name: true, address: true },
         });
         context.outlet = outlet;
+
+        // Casual staff availability submissions
+        const outletStaff = await prisma.staff.findMany({
+          where: { outlet_id: outletId, is_active: true },
+          select: { staff_id: true, users: { select: { full_name: true, email: true } } },
+        }).catch(() => []);
+
+        const staffIdList = outletStaff.map(s => s.staff_id);
+        const staffNameMap = {};
+        outletStaff.forEach(s => { staffNameMap[s.staff_id] = s.users?.full_name || s.users?.email || "Unknown"; });
+
+        const casualAvail = staffIdList.length > 0
+          ? await prisma.casual_availability.findMany({
+              where: { staff_id: { in: staffIdList } },
+              orderBy: { week_start_date: "desc" },
+            }).catch(() => [])
+          : [];
+
+        const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+        const grouped = {};
+        casualAvail.forEach(row => {
+          const week = row.week_start_date.toISOString().split("T")[0];
+          const key = `${row.staff_id}_${week}`;
+          if (!grouped[key]) {
+            grouped[key] = { staff_name: staffNameMap[row.staff_id] || "Unknown", week, days: [] };
+          }
+          grouped[key].days.push({
+            day: dayNames[row.day_of_week],
+            from: row.available_from ? String(row.available_from).slice(0,5) : null,
+            to: row.available_to ? String(row.available_to).slice(0,5) : null,
+          });
+        });
+        context.casualAvailabilitySubmissions = Object.values(grouped);
       }
     }
 
@@ -121,6 +154,12 @@ STRICT RULES:
 3. Only reference data from the context provided — do not make up numbers or names.
 4. Keep answers concise and clear. Use bullet points for lists.
 5. If data is unavailable, say "I don't have that data available right now."
+
+AVAILABLE DATA INCLUDES:
+- upcomingShifts: shifts for the next 7 days with assigned staff
+- pendingLeaveRequests: staff leave requests awaiting approval
+- pendingSwapRequests: count of pending shift swap requests
+- casualAvailabilitySubmissions: weekly availability submitted by casual staff (grouped by staff + week, showing which days and hours they are available)
 
 CURRENT WORKFORCE CONTEXT (as of ${new Date().toLocaleDateString("en-SG", { timeZone: "Asia/Singapore" })}):
 ${JSON.stringify(context, null, 2)}`;
