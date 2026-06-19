@@ -4,7 +4,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail } from "lucide-react";
 import "./sidebarStyles.js";
 
 const NAV = [
@@ -15,6 +15,7 @@ const NAV = [
   { label: "Attendance",   path: "/outlet-manager/attendance",   Icon: ClipboardCheck },
   { label: "Reports",      path: "/outlet-manager/reports",      Icon: BarChart2 },
   { label: "Manpower",     path: "/outlet-manager/manpower",     Icon: UserPlus },
+  { label: "Invitations",  path: "/outlet-manager/invitations",  Icon: Mail },
 ];
 
 export default function ManagerLayout({ children, title }) {

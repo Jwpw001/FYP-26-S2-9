@@ -94,6 +94,8 @@ export default function RegisterBusiness() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    const emailOk = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(form.email);
+    if (!emailOk) { setError("Please enter a valid email address (e.g. you@example.com)."); return; }
     if (form.password !== form.confirm) { setError("Passwords do not match."); return; }
     if (form.password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true);

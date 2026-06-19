@@ -64,6 +64,8 @@ import BOSkills      from "./pages/business-owner/Skills";
 import BOReports     from "./pages/business-owner/Reports";
 import BusinessOwnerLayout from "./components/layout/BusinessOwnerLayout";
 import AcceptInvite  from "./pages/AcceptInvite";
+import JoinByCode    from "./pages/JoinByCode";
+import OMInvitations from "./pages/outlet-manager/Invitations";
 
 // Krewby Coordinator
 import CoordinatorDashboard    from "./pages/krewby-coordinator/Dashboard";
@@ -102,8 +104,9 @@ function App() {
         <Route path="/join" element={<JoinWorker />} />
         <Route path="/join/apply" element={<ApplyWorker />} />
 
-        {/* Public: Accept Invite */}
+        {/* Public: Accept Invite / Join by code */}
         <Route path="/invite/:token" element={<AcceptInvite />} />
+        <Route path="/join-invite"   element={<JoinByCode />} />
 
         {/* ── Business Owner ───────────────────────────── */}
         <Route path="/business-owner/dashboard"   element={<PR roles={["business_owner"]}><BODashboard /></PR>} />
@@ -146,6 +149,7 @@ function App() {
         <Route path="/outlet-manager/reports"        element={<PR roles={["outlet_manager"]}><Reports /></PR>} />
         <Route path="/outlet-manager/notifications" element={<PR roles={["outlet_manager"]}><ManagerNotifications /></PR>} />
         <Route path="/outlet-manager/manpower"       element={<PR roles={["outlet_manager"]}><ManpowerRequests /></PR>} />
+        <Route path="/outlet-manager/invitations"   element={<PR roles={["outlet_manager"]}><OMInvitations /></PR>} />
 
         {/* ── Regular Staff ────────────────────────────── */}
         <Route path="/regular-staff/dashboard"     element={<PR roles={["regular_staff"]}><StaffDashboard /></PR>} />

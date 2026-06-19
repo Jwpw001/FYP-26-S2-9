@@ -44,12 +44,23 @@ const login = async (req, res) => {
     }
 };
 
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+function isValidEmail(email) {
+    if (!EMAIL_REGEX.test(email)) return false;
+    const tld = email.split(".").pop();
+    return tld.length >= 2;
+}
+
 const register = async (req, res) => {
     try {
         const { full_name, username: rawUsername, email, password, role } = req.body;
 
         if (!rawUsername || rawUsername.trim().length < 2) {
             return res.status(400).json({ success: false, message: "Username is required (min 2 characters)." });
+        }
+
+        if (!isValidEmail(email)) {
+            return res.status(400).json({ success: false, message: "Please enter a valid email address." });
         }
 
         const username = rawUsername.trim().toLowerCase();
@@ -101,6 +112,10 @@ const registerBusiness = async (req, res) => {
 
         if (!business_name || !owner_name || !email || !password) {
             return res.status(400).json({ success: false, message: "Missing required fields." });
+        }
+
+        if (!isValidEmail(email)) {
+            return res.status(400).json({ success: false, message: "Please enter a valid email address." });
         }
 
         const existing = await prisma.users.findUnique({ where: { email } });

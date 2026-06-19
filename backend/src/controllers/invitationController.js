@@ -1,6 +1,11 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const crypto = require("crypto");
+const dns = require("dns").promises;
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 const ROLE_HIERARCHY = {
   system_admin:        5,
@@ -11,6 +16,65 @@ const ROLE_HIERARCHY = {
   krewby_casual_worker:1,
 };
 
+const ROLE_LABELS = {
+  outlet_manager:      "Outlet Manager",
+  regular_staff:       "Regular Staff",
+  outlet_casual_staff: "Casual Staff",
+};
+
+async function isEmailDomainValid(email) {
+  const domain = email.split("@")[1];
+  if (!domain) return false;
+  try {
+    const records = await dns.resolveMx(domain);
+    return records && records.length > 0;
+  } catch (err) {
+    // Only reject if domain definitively doesn't exist (NXDOMAIN)
+    // Allow through on timeout, SERVFAIL, or any other network error
+    if (err.code === "ENOTFOUND" || err.code === "ENODATA") return false;
+    return true;
+  }
+}
+
+function generateCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const rand = (n) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `${rand(4)}-${rand(4)}`;
+}
+
+async function sendInviteEmail({ to, inviterName, roleName, outletName, inviteLink, code }) {
+  if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.startsWith("re_placeholder")) {
+    console.log(`[INVITE EMAIL - DEV] To: ${to} | Link: ${inviteLink} | Code: ${code}`);
+    return;
+  }
+  await resend.emails.send({
+    from: "Krewby <noreply@krewby.com>",
+    to,
+    subject: `You've been invited to join ${outletName || "a business"} on Krewby`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fff;border-radius:12px;">
+        <div style="text-align:center;margin-bottom:28px;">
+          <div style="display:inline-block;background:#F59E0B;color:#1C1917;font-weight:800;font-size:22px;width:44px;height:44px;line-height:44px;border-radius:10px;text-align:center;">K</div>
+          <span style="font-size:20px;font-weight:800;color:#0F172A;vertical-align:middle;margin-left:10px;">Krewby</span>
+        </div>
+        <h2 style="font-size:20px;font-weight:700;color:#0F172A;margin-bottom:8px;">You're invited!</h2>
+        <p style="color:#475569;font-size:14px;line-height:1.6;margin-bottom:20px;">
+          <strong>${inviterName}</strong> has invited you to join <strong>${outletName || "their outlet"}</strong> as <strong>${roleName}</strong>.
+        </p>
+        <a href="${inviteLink}" style="display:block;background:#F59E0B;color:#1C1917;text-align:center;padding:14px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:24px;">
+          Accept Invitation
+        </a>
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px;text-align:center;margin-bottom:24px;">
+          <p style="font-size:12px;color:#64748B;margin-bottom:6px;">Or join using this invitation code:</p>
+          <p style="font-size:28px;font-weight:800;color:#0F172A;letter-spacing:0.1em;">${code}</p>
+          <p style="font-size:12px;color:#94A3B8;">Go to <strong>${FRONTEND_URL}/join-invite</strong> and enter the code</p>
+        </div>
+        <p style="font-size:12px;color:#94A3B8;text-align:center;">This invitation expires in 7 days. If you didn't expect this, you can ignore this email.</p>
+      </div>
+    `,
+  });
+}
+
 // POST /api/invitations/send
 const sendInvitation = async (req, res) => {
   try {
@@ -18,33 +82,64 @@ const sendInvitation = async (req, res) => {
     const { email, role, outlet_id, business_id } = req.body;
 
     if (!email || !role) return res.status(400).json({ success: false, message: "Email and role are required." });
+    if (!outlet_id) return res.status(400).json({ success: false, message: "Outlet is required." });
 
-    // Enforce hierarchy — cannot invite to a role >= own role
     const senderLevel = ROLE_HIERARCHY[sender.role] || 0;
     const targetLevel = ROLE_HIERARCHY[role] || 0;
-    if (targetLevel >= senderLevel) return res.status(403).json({ success: false, message: "You cannot invite someone to a role equal or higher than your own." });
+    if (targetLevel >= senderLevel) {
+      return res.status(403).json({ success: false, message: "You cannot invite someone to a role equal or higher than your own." });
+    }
 
-    // Check if user already exists
+    // Verify email domain has real MX records
+    const domainValid = await isEmailDomainValid(email);
+    if (!domainValid) {
+      return res.status(400).json({ success: false, message: "The email domain doesn't appear to be valid. Please enter a real email address." });
+    }
+
+    // Check if user already exists — allowed, we'll link them
     const existing = await prisma.users.findUnique({ where: { email } });
-    if (existing) return res.status(409).json({ success: false, message: "A user with this email already exists." });
 
-    // Cancel any existing pending invite for this email + role
-    await supabaseAdmin.from("invitations").update({ status: "cancelled" }).eq("email", email).eq("status", "pending");
+    // Cancel any existing pending invite for this email + outlet
+    await supabaseAdmin.from("invitations").update({ status: "cancelled" })
+      .eq("email", email).eq("outlet_id", outlet_id).eq("status", "pending");
+
+    // Get outlet name for email
+    const outlet = await prisma.outlets.findUnique({ where: { outlet_id: Number(outlet_id) }, select: { name: true } });
+    const outletName = outlet?.name || "";
+
+    // Get sender name
+    const senderUser = await prisma.users.findUnique({ where: { user_id: sender.user_id }, select: { full_name: true } });
+    const inviterName = senderUser?.full_name || "Someone";
 
     const token = crypto.randomBytes(32).toString("hex");
+    let code = generateCode();
+    // Ensure code uniqueness (retry up to 5 times)
+    for (let i = 0; i < 5; i++) {
+      const { data: existing } = await supabaseAdmin.from("invitations").select("id").eq("invitation_code", code).maybeSingle();
+      if (!existing) break;
+      code = generateCode();
+    }
+
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const { error } = await supabaseAdmin.from("invitations").insert({
       token,
+      invitation_code: code,
       email,
       role,
-      outlet_id: outlet_id || null,
-      business_id: business_id || null,
+      outlet_id: Number(outlet_id),
+      business_id: business_id ? Number(business_id) : null,
       invited_by: sender.user_id,
       status: "pending",
+      expires_at: expiresAt,
     });
     if (error) throw new Error(error.message);
 
-    const inviteLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/invite/${token}`;
-    return res.status(201).json({ success: true, message: "Invitation created.", invite_link: inviteLink, token });
+    const inviteLink = `${FRONTEND_URL}/invite/${token}`;
+    const roleName = ROLE_LABELS[role] || role;
+
+    await sendInviteEmail({ to: email, inviterName, roleName, outletName, inviteLink, code });
+
+    return res.status(201).json({ success: true, message: "Invitation sent.", invite_link: inviteLink, code });
   } catch (error) {
     console.error("sendInvitation error:", error);
     return res.status(500).json({ success: false, message: error.message });
@@ -56,7 +151,7 @@ const listInvitations = async (req, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from("invitations")
-      .select("*")
+      .select("*, outlets(name)")
       .eq("invited_by", req.user.user_id)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -66,66 +161,137 @@ const listInvitations = async (req, res) => {
   }
 };
 
-// GET /api/invitations/:token — public, get invite details for the accept page
+// GET /api/invitations/:token — public, get invite details
 const getInvitation = async (req, res) => {
   try {
     const { token } = req.params;
-    const { data, error } = await supabaseAdmin.from("invitations").select("*").eq("token", token).maybeSingle();
+    const { data, error } = await supabaseAdmin
+      .from("invitations")
+      .select("*, outlets(name)")
+      .eq("token", token)
+      .maybeSingle();
     if (error || !data) return res.status(404).json({ success: false, message: "Invitation not found or expired." });
     if (data.status !== "pending") return res.status(410).json({ success: false, message: "This invitation has already been used or cancelled." });
-    if (new Date(data.expires_at) < new Date()) return res.status(410).json({ success: false, message: "This invitation has expired." });
-
-    return res.json({ success: true, invitation: { email: data.email, role: data.role, outlet_id: data.outlet_id, business_id: data.business_id } });
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      return res.status(410).json({ success: false, message: "This invitation has expired." });
+    }
+    return res.json({ success: true, invitation: {
+      email: data.email, role: data.role, outlet_id: data.outlet_id,
+      outlet_name: data.outlets?.name || null, business_id: data.business_id,
+      invitation_code: data.invitation_code,
+    }});
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// POST /api/invitations/:token/accept — public, create account from invite
+// GET /api/invitations/check-code/:code — public, look up invite by code
+const getInvitationByCode = async (req, res) => {
+  try {
+    const code = req.params.code?.toUpperCase().trim();
+    const { data, error } = await supabaseAdmin
+      .from("invitations")
+      .select("*, outlets(name)")
+      .eq("invitation_code", code)
+      .maybeSingle();
+    if (error || !data) return res.status(404).json({ success: false, message: "Invitation code not found." });
+    if (data.status !== "pending") return res.status(410).json({ success: false, message: "This invitation has already been used or cancelled." });
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      return res.status(410).json({ success: false, message: "This invitation code has expired." });
+    }
+    return res.json({ success: true, invitation: {
+      token: data.token, email: data.email, role: data.role,
+      outlet_id: data.outlet_id, outlet_name: data.outlets?.name || null,
+      business_id: data.business_id, invitation_code: data.invitation_code,
+    }});
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// POST /api/invitations/:token/accept — create account OR link existing user
 const acceptInvitation = async (req, res) => {
   try {
     const { token } = req.params;
-    const { full_name, username, password } = req.body;
+    const { full_name, username, password, existing_user_id } = req.body;
 
-    if (!full_name || !username || !password) return res.status(400).json({ success: false, message: "Full name, username, and password are required." });
-    if (password.length < 6) return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
-
-    const { data: invite, error: fetchErr } = await supabaseAdmin.from("invitations").select("*").eq("token", token).maybeSingle();
+    const { data: invite, error: fetchErr } = await supabaseAdmin
+      .from("invitations").select("*, outlets(name)").eq("token", token).maybeSingle();
     if (fetchErr || !invite) return res.status(404).json({ success: false, message: "Invitation not found." });
     if (invite.status !== "pending") return res.status(410).json({ success: false, message: "This invitation has already been used." });
-    if (new Date(invite.expires_at) < new Date()) return res.status(410).json({ success: false, message: "This invitation has expired." });
+    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+      return res.status(410).json({ success: false, message: "This invitation has expired." });
+    }
 
-    const existing = await prisma.users.findUnique({ where: { email: invite.email } });
-    if (existing) return res.status(409).json({ success: false, message: "An account with this email already exists." });
+    const generateToken = require("../utils/generateToken");
+
+    // Case 1: existing logged-in user linking to the invitation
+    if (existing_user_id) {
+      const user = await prisma.users.findUnique({ where: { user_id: Number(existing_user_id) } });
+      if (!user) return res.status(404).json({ success: false, message: "User not found." });
+
+      // Create staff record if needed
+      if (invite.outlet_id && ["regular_staff", "outlet_casual_staff"].includes(invite.role)) {
+        const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, outlet_id: invite.outlet_id } });
+        if (!alreadyStaff) {
+          await prisma.staff.create({
+            data: { user_id: user.user_id, outlet_id: invite.outlet_id, staff_type: invite.role === "outlet_casual_staff" ? "casual" : "regular", is_active: true },
+          });
+        }
+      } else if (invite.outlet_id && invite.role === "outlet_manager") {
+        // Update user role if needed
+        if (user.role !== "outlet_manager" && user.role !== "business_owner" && user.role !== "system_admin") {
+          await prisma.users.update({ where: { user_id: user.user_id }, data: { role: "outlet_manager" } });
+        }
+        const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, outlet_id: invite.outlet_id } });
+        if (!alreadyStaff) {
+          await prisma.staff.create({
+            data: { user_id: user.user_id, outlet_id: invite.outlet_id, staff_type: "regular", is_active: true },
+          });
+        }
+      }
+
+      await supabaseAdmin.from("invitations").update({ status: "accepted", accepted_at: new Date().toISOString(), accepted_by: user.user_id }).eq("token", token);
+      const updatedUser = await prisma.users.findUnique({ where: { user_id: user.user_id } });
+      const jwtToken = generateToken({ user_id: updatedUser.user_id, email: updatedUser.email, role: updatedUser.role });
+      return res.json({ success: true, message: "Joined successfully.", token: jwtToken, user: { user_id: updatedUser.user_id, full_name: updatedUser.full_name, email: updatedUser.email, role: updatedUser.role } });
+    }
+
+    // Case 2: new account creation
+    if (!full_name || !username || !password) {
+      return res.status(400).json({ success: false, message: "Full name, username, and password are required." });
+    }
+    if (password.length < 6) return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
+
+    const existingByEmail = await prisma.users.findUnique({ where: { email: invite.email } });
+    if (existingByEmail) return res.status(409).json({ success: false, message: "An account with this email already exists. Please log in instead." });
 
     const existingUsername = await prisma.users.findFirst({ where: { username: username.toLowerCase() } });
     if (existingUsername) return res.status(409).json({ success: false, message: "This username is already taken." });
 
-    // Create Supabase auth user
     const { error: authErr } = await supabaseAdmin.auth.admin.createUser({
       email: invite.email, password, email_confirm: true,
       user_metadata: { full_name },
     });
     if (authErr) return res.status(400).json({ success: false, message: authErr.message });
 
-    // Create user record
     const newUser = await prisma.users.create({
       data: { full_name, username: username.toLowerCase(), email: invite.email, role: invite.role, is_active: true },
     });
 
-    // Create staff record if outlet assigned
     if (invite.outlet_id && ["regular_staff", "outlet_casual_staff"].includes(invite.role)) {
       await prisma.staff.create({
         data: { user_id: newUser.user_id, outlet_id: invite.outlet_id, staff_type: invite.role === "outlet_casual_staff" ? "casual" : "regular", is_active: true },
       });
+    } else if (invite.outlet_id && invite.role === "outlet_manager") {
+      await prisma.staff.create({
+        data: { user_id: newUser.user_id, outlet_id: invite.outlet_id, staff_type: "regular", is_active: true },
+      });
     }
 
-    // Mark invite as accepted
-    await supabaseAdmin.from("invitations").update({ status: "accepted", accepted_at: new Date().toISOString() }).eq("token", token);
+    await supabaseAdmin.from("invitations").update({ status: "accepted", accepted_at: new Date().toISOString(), accepted_by: newUser.user_id }).eq("token", token);
 
-    const generateToken = require("../utils/generateToken");
     const jwtToken = generateToken({ user_id: newUser.user_id, email: newUser.email, role: newUser.role });
-
     return res.status(201).json({
       success: true, message: "Account created successfully.",
       token: jwtToken,
@@ -148,4 +314,26 @@ const cancelInvitation = async (req, res) => {
   }
 };
 
-module.exports = { sendInvitation, listInvitations, getInvitation, acceptInvitation, cancelInvitation };
+// POST /api/invitations/resend/:id — resend the email for a pending invitation
+const resendInvitation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data: invite } = await supabaseAdmin
+      .from("invitations").select("*, outlets(name)").eq("id", id).eq("invited_by", req.user.user_id).maybeSingle();
+    if (!invite) return res.status(404).json({ success: false, message: "Invitation not found." });
+    if (invite.status !== "pending") return res.status(400).json({ success: false, message: "Can only resend pending invitations." });
+
+    const senderUser = await prisma.users.findUnique({ where: { user_id: req.user.user_id }, select: { full_name: true } });
+    const inviteLink = `${FRONTEND_URL}/invite/${invite.token}`;
+    await sendInviteEmail({
+      to: invite.email, inviterName: senderUser?.full_name || "Someone",
+      roleName: ROLE_LABELS[invite.role] || invite.role,
+      outletName: invite.outlets?.name || "", inviteLink, code: invite.invitation_code,
+    });
+    return res.json({ success: true, message: "Invitation resent." });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { sendInvitation, listInvitations, getInvitation, getInvitationByCode, acceptInvitation, cancelInvitation, resendInvitation };

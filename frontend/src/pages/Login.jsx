@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useGoTo } from "../components/PageTransition";
 import { api } from "../lib/api";
 import { setUser, getUser } from "../utils/auth";
@@ -74,6 +74,8 @@ function Field({ id, label, type = "text", name, value, onChange, placeholder, a
 export default function Login() {
   const navigate = useNavigate();
   const goTo = useGoTo();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
   const [form, setForm]               = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError]             = useState("");
@@ -123,7 +125,8 @@ export default function Login() {
       const route = ROLE_ROUTES[profile.role];
       if (!route) { setError(`Unrecognised role: "${profile.role}". Contact support.`); return; }
       setUser(profile);
-      goTo(route);
+      localStorage.setItem("token", response.token);
+      goTo(redirectTo || route);
     } catch (err) {
       setError(err?.response?.data?.message || "Something went wrong. Please try again.");
     } finally {
