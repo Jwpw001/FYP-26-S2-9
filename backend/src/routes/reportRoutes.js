@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 
 const router = express.Router();
 
@@ -26,7 +26,7 @@ router.get(
     allowRoles(
         ROLES.SYSTEM_ADMIN,
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
+        ROLES.SYSTEM_ADMIN
     ),
     getReports
 );
@@ -37,7 +37,7 @@ router.get(
     allowRoles(
         ROLES.SYSTEM_ADMIN,
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
+        ROLES.SYSTEM_ADMIN
     ),
     getReportById
 );
@@ -48,7 +48,7 @@ router.post(
     allowRoles(
         ROLES.SYSTEM_ADMIN,
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
+        ROLES.SYSTEM_ADMIN
     ),
     validate(createReportSchema),
     createReport
@@ -60,7 +60,7 @@ router.patch(
     allowRoles(
         ROLES.SYSTEM_ADMIN,
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
+        ROLES.SYSTEM_ADMIN
     ),
     validate(updateReportSchema),
     updateReport

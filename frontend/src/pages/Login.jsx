@@ -11,7 +11,7 @@ const ROLE_ROUTES = {
   outlet_manager:       "/outlet-manager/dashboard",
   regular_staff:        "/regular-staff/dashboard",
   outlet_casual_staff:  "/outlet-casual-staff/dashboard",
-  krewby_coordinator:   "/krewby-coordinator/dashboard",
+  krewby_coordinator:   "/system-admin/dashboard",
   krewby_casual_worker: "/krewby-worker/dashboard",
 };
 

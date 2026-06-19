@@ -7,8 +7,6 @@ const ROLES = {
 
     OUTLET_CASUAL_STAFF: "outlet_casual_staff",
 
-    KREWBY_COORDINATOR: "krewby_coordinator",
-
     KREWBY_CASUAL_WORKER: "krewby_casual_worker"
 };
 

@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 
 const router = express.Router();
 
@@ -23,14 +23,14 @@ const {
 router.get(
     "/",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR),
+    allowRoles(ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN),
     getStaff
 );
 
 router.get(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.KREWBY_COORDINATOR),
+    allowRoles(ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN),
     getStaffById
 );
 

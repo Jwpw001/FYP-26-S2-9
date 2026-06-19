@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 
 const router = express.Router();
 
@@ -27,7 +27,7 @@ router.get(
         ROLES.OUTLET_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.KREWBY_COORDINATOR,
+        ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getAvailability
@@ -40,7 +40,7 @@ router.get(
         ROLES.OUTLET_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.KREWBY_COORDINATOR,
+        ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getAvailabilityById
@@ -53,7 +53,7 @@ router.post(
         ROLES.OUTLET_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.KREWBY_COORDINATOR,
+        ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     validate(createAvailabilitySchema),
@@ -67,7 +67,7 @@ router.patch(
         ROLES.OUTLET_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.KREWBY_COORDINATOR,
+        ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     validate(updateAvailabilitySchema),
@@ -79,7 +79,7 @@ router.delete(
     verifyToken,
     allowRoles(
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
+        ROLES.SYSTEM_ADMIN
     ),
     deleteAvailability
 );

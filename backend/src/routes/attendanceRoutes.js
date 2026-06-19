@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ router.get(
     verifyToken,
     allowRoles(
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR,
+        ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF
     ),
@@ -37,7 +37,7 @@ router.get(
     verifyToken,
     allowRoles(
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR,
+        ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF
     ),
@@ -49,7 +49,7 @@ router.post(
     verifyToken,
     allowRoles(
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR,
+        ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF
     ),
@@ -62,7 +62,7 @@ router.patch(
     verifyToken,
     allowRoles(
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR,
+        ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF
     ),
@@ -75,7 +75,7 @@ router.delete(
     verifyToken,
     allowRoles(
         ROLES.OUTLET_MANAGER,
-        ROLES.KREWBY_COORDINATOR
+        ROLES.SYSTEM_ADMIN
     ),
     deleteAttendance
 );

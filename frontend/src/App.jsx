@@ -67,13 +67,9 @@ import AcceptInvite  from "./pages/AcceptInvite";
 import JoinByCode    from "./pages/JoinByCode";
 import OMInvitations from "./pages/outlet-manager/Invitations";
 
-// Krewby Coordinator
-import CoordinatorDashboard    from "./pages/krewby-coordinator/Dashboard";
-import CoordinatorRequests     from "./pages/krewby-coordinator/Requests";
-import CoordinatorWorkers      from "./pages/krewby-coordinator/Workers";
-import CoordinatorWorkerDetail   from "./pages/krewby-coordinator/WorkerDetail";
-import CoordinatorApplications  from "./pages/krewby-coordinator/Applications";
-import CoordinatorLayout       from "./components/layout/CoordinatorLayout";
+// System Admin — Krewby operations
+import AdminApplications  from "./pages/system-admin/Applications";
+import AdminRequests      from "./pages/system-admin/Requests";
 
 // Krewby Worker
 import WorkerDashboard    from "./pages/krewby-worker/Dashboard";
@@ -135,6 +131,8 @@ function App() {
         <Route path="/system-admin/staff"                 element={<PR roles={["system_admin"]}><AdminStaff /></PR>} />
         <Route path="/system-admin/staff/:id"             element={<PR roles={["system_admin"]}><AdminStaffDetail /></PR>} />
         <Route path="/system-admin/reports"              element={<PR roles={["system_admin"]}><AdminReports /></PR>} />
+        <Route path="/system-admin/applications"          element={<PR roles={["system_admin"]}><AdminApplications /></PR>} />
+        <Route path="/system-admin/requests"              element={<PR roles={["system_admin"]}><AdminRequests /></PR>} />
 
         {/* ── Outlet Manager ───────────────────────────── */}
         <Route path="/outlet-manager/dashboard"    element={<PR roles={["outlet_manager"]}><ManagerDashboard /></PR>} />
@@ -168,15 +166,6 @@ function App() {
           <NotificationsPage Layout={CasualLayout} />
         </PR>} />
 
-        {/* ── Krewby Coordinator ───────────────────────── */}
-        <Route path="/krewby-coordinator/dashboard"     element={<PR roles={["krewby_coordinator"]}><CoordinatorDashboard /></PR>} />
-        <Route path="/krewby-coordinator/requests"      element={<PR roles={["krewby_coordinator"]}><CoordinatorRequests /></PR>} />
-        <Route path="/krewby-coordinator/workers"       element={<PR roles={["krewby_coordinator"]}><CoordinatorWorkers /></PR>} />
-        <Route path="/krewby-coordinator/workers/:id"        element={<PR roles={["krewby_coordinator"]}><CoordinatorWorkerDetail /></PR>} />
-        <Route path="/krewby-coordinator/applications"        element={<PR roles={["krewby_coordinator"]}><CoordinatorApplications /></PR>} />
-        <Route path="/krewby-coordinator/notifications" element={<PR roles={["krewby_coordinator"]}>
-          <NotificationsPage Layout={CoordinatorLayout} />
-        </PR>} />
 
         {/* ── Krewby Worker ────────────────────────────── */}
         <Route path="/krewby-worker/dashboard"     element={<PR roles={["krewby_casual_worker"]}><WorkerDashboard /></PR>} />

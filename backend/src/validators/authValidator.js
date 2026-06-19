@@ -11,7 +11,6 @@ const registerSchema = z.object({
         "outlet_manager",
         "regular_staff",
         "outlet_casual_staff",
-        "krewby_coordinator",
         "krewby_casual_worker"
     ]).optional().nullable(),
 });
