@@ -104,7 +104,7 @@ export default function ShiftsList() {
 
         const { data: shiftRows } = await supabase
           .from("shifts")
-          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id, shift_roles ( role_id, shift_assignments ( assignment_id ) )")
+          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id, shift_roles ( role_id, headcount ), shift_assignments ( assignment_id )")
           .eq("outlet_id", oid)
           .order("shift_date", { ascending: false });
 
@@ -246,10 +246,8 @@ export default function ShiftsList() {
     const roles = shift.shift_roles || [];
     const totalNeeded = roles.reduce((sum, r) => sum + (r.headcount || 1), 0);
     if (totalNeeded === 0) return null;
-    const totalAssigned = roles.reduce((sum, r) => {
-      const krewbyFilled = krewbyAssigned.filter(k => k.shift_id === shift.shift_id && k.role_id === r.role_id).length;
-      return sum + (r.shift_assignments?.length || 0) + krewbyFilled;
-    }, 0);
+    const krewbyCount = krewbyAssigned.filter(k => k.shift_id === shift.shift_id).length;
+    const totalAssigned = (shift.shift_assignments?.length || 0) + krewbyCount;
     if (totalAssigned >= totalNeeded) return "full";
     return "partial";
   }
@@ -561,10 +559,15 @@ function ShiftRow({ shift, fill, onNav }) {
       <span style={{ fontWeight: "600" }}>{fmtDate(shift.shift_date)}</span>
       <span style={{ fontWeight: "500" }}>{shift.title || "Untitled Shift"}</span>
       <span style={{ color: "#64748B" }}>{shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}</span>
-      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+      <span style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
         <span style={{ color: "#64748B" }}>{shift.shift_roles?.length || 0} role{shift.shift_roles?.length !== 1 ? "s" : ""}</span>
-        {fill && (
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: fill === "full" ? "#22C55E" : "#F59E0B", flexShrink: 0, display: "inline-block" }} />
+        {fill === "full" && (
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22C55E", flexShrink: 0, display: "inline-block" }} />
+        )}
+        {fill === "partial" && shift.status === "published" && (
+          <span style={{ fontSize: "10px", fontWeight: "700", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", padding: "1px 7px", borderRadius: "100px", whiteSpace: "nowrap" }}>
+            Understaffed
+          </span>
         )}
       </span>
       <span>

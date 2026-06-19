@@ -28,6 +28,7 @@ async function fetchWorkforceContext(userId, role) {
         const shifts = await prisma.shifts.findMany({
           where: { outlet_id: outletId, shift_date: { gte: today, lte: weekFromNow } },
           include: {
+            shift_roles: { select: { headcount: true } },
             shift_assignments: {
               include: {
                 staff: { include: { users: { select: { full_name: true } } } },
@@ -37,19 +38,24 @@ async function fetchWorkforceContext(userId, role) {
           },
           orderBy: { shift_date: "asc" },
         });
-        context.upcomingShifts = shifts.map((s) => ({
-          shift_id: s.shift_id,
-          date: s.shift_date,
-          start: s.start_time,
-          end: s.end_time,
-          required_headcount: s.required_headcount,
-          status: s.status,
-          assigned_count: s.shift_assignments.length,
-          is_understaffed: s.shift_assignments.length < (s.required_headcount || 1),
-          assigned_staff: s.shift_assignments.map(
-            (a) => a.staff?.users?.full_name || a.krewby_workers?.users?.full_name || "Unknown"
-          ),
-        }));
+        context.upcomingShifts = shifts.map((s) => {
+          const totalNeeded = (s.shift_roles || []).reduce((sum, r) => sum + (r.headcount || 1), 0);
+          const totalAssigned = s.shift_assignments.length;
+          return {
+            shift_id: s.shift_id,
+            title: s.title,
+            date: s.shift_date,
+            start: s.start_time,
+            end: s.end_time,
+            total_positions_needed: totalNeeded,
+            status: s.status,
+            assigned_count: totalAssigned,
+            is_understaffed: totalAssigned < totalNeeded,
+            assigned_staff: s.shift_assignments.map(
+              (a) => a.staff?.users?.full_name || a.krewby_workers?.users?.full_name || "Unknown"
+            ),
+          };
+        });
 
         const pendingLeave = await prisma.availability.findMany({
           where: { status: "pending", staff: { outlet_id: outletId } },
