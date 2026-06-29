@@ -120,9 +120,30 @@ export default function RegisterBusiness() {
     phone: "", address: "", password: "", confirm: "",
   });
   const [plan, setPlan] = useState("free");
+  const [industry, setIndustry] = useState("");
+  const [schedulingMode, setSchedulingMode] = useState("");
+  const [locationLabel, setLocationLabel] = useState("Outlet");
+  const [staffLabel, setStaffLabel] = useState("Staff");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPw, setShowPw] = useState(false);
+
+  const INDUSTRIES = [
+    { key:"f&b",         label:"Food & Beverage",     icon:"🍽️",  mode:"shift",       locLabel:"Outlet",     staffLabel:"Staff" },
+    { key:"retail",      label:"Retail",               icon:"🛍️",  mode:"shift",       locLabel:"Store",      staffLabel:"Staff" },
+    { key:"healthcare",  label:"Healthcare / Clinic",  icon:"🏥",  mode:"shift",       locLabel:"Clinic",     staffLabel:"Staff" },
+    { key:"tech",        label:"Technology / Agency",  icon:"💻",  mode:"flexible",    locLabel:"Team",       staffLabel:"Employees" },
+    { key:"logistics",   label:"Logistics / Warehouse",icon:"📦",  mode:"shift",       locLabel:"Warehouse",  staffLabel:"Staff" },
+    { key:"beauty",      label:"Beauty & Wellness",    icon:"💆",  mode:"appointment", locLabel:"Branch",     staffLabel:"Therapists" },
+    { key:"education",   label:"Education / Tuition",  icon:"📚",  mode:"appointment", locLabel:"Centre",     staffLabel:"Tutors" },
+    { key:"hospitality", label:"Hospitality / Hotels", icon:"🏨",  mode:"shift",       locLabel:"Property",   staffLabel:"Staff" },
+    { key:"other",       label:"Other",                icon:"🏢",  mode:"shift",       locLabel:"Location",   staffLabel:"Staff" },
+  ];
+  const MODE_INFO = {
+    shift:       { label:"Shift Mode",       color:"#4F46E5", desc:"Fixed time blocks with defined start/end times. Best for F&B, Retail, Healthcare." },
+    flexible:    { label:"Flexible Mode",    color:"#7C3AED", desc:"Staff log their own hours against a weekly target. Best for Tech and Agencies." },
+    appointment: { label:"Appointment Mode", color:"#059669", desc:"Schedule built around customer bookings. Best for Beauty, Clinics, Education." },
+  };
 
   function set(key) { return e => setForm(p => ({ ...p, [key]: e.target.value })); }
 
@@ -134,6 +155,13 @@ export default function RegisterBusiness() {
     if (form.password !== form.confirm) { setError("Passwords do not match."); return; }
     if (form.password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setStep(2);
+  }
+
+  function handleIndustrySelect(ind) {
+    setIndustry(ind.key);
+    setSchedulingMode(ind.mode);
+    setLocationLabel(ind.locLabel);
+    setStaffLabel(ind.staffLabel);
   }
 
   async function handleSubmit() {
@@ -149,6 +177,10 @@ export default function RegisterBusiness() {
         address: form.address,
         password: form.password,
         plan,
+        industry: industry || "f&b",
+        scheduling_mode: schedulingMode || "shift",
+        location_label: locationLabel || "Outlet",
+        staff_label: staffLabel || "Staff",
       });
       if (res.success) {
         setUser({ ...res.user, token: res.token });
@@ -187,7 +219,8 @@ export default function RegisterBusiness() {
           <div style={{ marginTop: "48px", display: "flex", flexDirection: "column", gap: "16px" }}>
             {[
               { n: 1, label: "Business details" },
-              { n: 2, label: "Choose your plan" },
+              { n: 2, label: "Industry & mode" },
+              { n: 3, label: "Choose your plan" },
             ].map(({ n, label }) => {
               const done = step > n;
               const active = step === n;
@@ -214,7 +247,7 @@ export default function RegisterBusiness() {
 
       {/* Right panel */}
       <div style={{ flex: 1, background: "#F8FAFC", overflowY: "auto", height: "100vh" }}>
-        <div style={{ maxWidth: step === 2 ? "860px" : "640px", margin: "0 auto", padding: "56px 40px 80px", transition: "max-width 0.3s" }}>
+        <div style={{ maxWidth: step === 3 ? "860px" : "640px", margin: "0 auto", padding: "56px 40px 80px", transition: "max-width 0.3s" }}>
 
           {step === 1 && (
             <>
@@ -273,7 +306,70 @@ export default function RegisterBusiness() {
 
           {step === 2 && (
             <>
-              <button onClick={() => setStep(1)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" }}>
+              <button onClick={() => setStep(1)} style={{ display:"flex",alignItems:"center",gap:"6px",background:"none",border:"none",color:"#64748B",fontSize:"13px",fontWeight:"600",cursor:"pointer",marginBottom:"28px" }}>
+                ← Back
+              </button>
+              <h2 style={{ fontSize:"24px",fontWeight:"800",color:"#0F172A",marginBottom:"6px" }}>What type of business are you?</h2>
+              <p style={{ fontSize:"13px",color:"#64748B",marginBottom:"28px" }}>This sets your scheduling mode and default labels. You can change it later.</p>
+
+              {/* Industry grid */}
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginBottom:"28px" }}>
+                {INDUSTRIES.map(ind => {
+                  const active = industry === ind.key;
+                  return (
+                    <button key={ind.key} onClick={() => handleIndustrySelect(ind)}
+                      style={{ padding:"14px 12px",borderRadius:"12px",border:`2px solid ${active?"#4F46E5":"#E2E8F0"}`,background:active?"#EEF2FF":"#fff",cursor:"pointer",textAlign:"left",transition:"all 0.15s",boxShadow:active?"0 0 0 3px rgba(99,102,241,0.15)":"none" }}>
+                      <div style={{ fontSize:"22px",marginBottom:"6px" }}>{ind.icon}</div>
+                      <div style={{ fontSize:"12px",fontWeight:"700",color:active?"#4F46E5":"#1E293B" }}>{ind.label}</div>
+                      <div style={{ fontSize:"10px",color:"#94A3B8",marginTop:"2px",textTransform:"capitalize" }}>{ind.mode} mode</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Mode info */}
+              {schedulingMode && (() => {
+                const m = MODE_INFO[schedulingMode];
+                return (
+                  <div style={{ padding:"14px 16px",borderRadius:"10px",background:"#F8FAFC",border:`1.5px solid ${m.color}30`,marginBottom:"24px",display:"flex",alignItems:"flex-start",gap:"12px" }}>
+                    <div style={{ width:"10px",height:"10px",borderRadius:"50%",background:m.color,flexShrink:0,marginTop:"4px" }}/>
+                    <div>
+                      <div style={{ fontSize:"13px",fontWeight:"700",color:m.color,marginBottom:"3px" }}>{m.label}</div>
+                      <div style={{ fontSize:"12px",color:"#64748B" }}>{m.desc}</div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Labels preview */}
+              {industry && (
+                <div style={{ padding:"14px 16px",borderRadius:"10px",background:"#F8FAFC",border:"1px solid #E2E8F0",marginBottom:"28px" }}>
+                  <p style={{ fontSize:"11px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"10px" }}>How we'll label things for you</p>
+                  <div style={{ display:"flex",gap:"20px" }}>
+                    <div>
+                      <div style={{ fontSize:"11px",color:"#64748B",marginBottom:"2px" }}>Locations called</div>
+                      <div style={{ fontSize:"13px",fontWeight:"700",color:"#1E293B" }}>{locationLabel}</div>
+                    </div>
+                    <div style={{ width:"1px",background:"#E2E8F0" }}/>
+                    <div>
+                      <div style={{ fontSize:"11px",color:"#64748B",marginBottom:"2px" }}>Staff called</div>
+                      <div style={{ fontSize:"13px",fontWeight:"700",color:"#1E293B" }}>{staffLabel}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button onClick={() => { if (!industry) { setError("Please select your industry."); return; } setError(""); setStep(3); }}
+                style={{ width:"100%",padding:"13px",borderRadius:"10px",border:"none",background:"linear-gradient(135deg,#1E40AF,#2563EB)",color:"#fff",fontSize:"14px",fontWeight:"700",cursor:"pointer" }}>
+                Continue →
+              </button>
+              {error && <p style={{ color:"#DC2626",fontSize:"13px",marginTop:"10px",textAlign:"center" }}>{error}</p>}
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <button onClick={() => setStep(2)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" }}>
                 ← Back to details
               </button>
 

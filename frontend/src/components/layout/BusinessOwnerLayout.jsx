@@ -4,15 +4,7 @@ import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
 import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag } from "lucide-react";
-
-const NAV = [
-  { label: "Dashboard",  path: "/business-owner/dashboard",    Icon: LayoutDashboard },
-  { label: "Outlets",    path: "/business-owner/outlets",      Icon: Building2 },
-  { label: "All Staff",  path: "/business-owner/staff",        Icon: Users },
-  { label: "Invitations",path: "/business-owner/invitations",  Icon: UserPlus },
-  { label: "Skill Tags", path: "/business-owner/skills",       Icon: Tag },
-  { label: "Reports",    path: "/business-owner/reports",      Icon: BarChart2 },
-];
+import { useBusinessContext } from "../../context/BusinessContext";
 
 const PLAN_BADGE = {
   free:       { label: "Free",       color: "#94A3B8", bg: "rgba(148,163,184,0.15)", dot: "#94A3B8" },
@@ -24,9 +16,20 @@ export default function BusinessOwnerLayout({ children, title }) {
   const navigate = useNavigate();
   const location = useLocation();
   const user = getUser();
+  const { locationLabel, staffLabel, plan: ctxPlan } = useBusinessContext();
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
   const [plan, setPlan] = useState(null);
+
+  // Build nav with dynamic location label
+  const NAV = [
+    { label: "Dashboard",           path: "/business-owner/dashboard",   Icon: LayoutDashboard },
+    { label: `${locationLabel}s`,   path: "/business-owner/outlets",     Icon: Building2 },
+    { label: `All ${staffLabel}`,   path: "/business-owner/staff",       Icon: Users },
+    { label: "Invitations",         path: "/business-owner/invitations", Icon: UserPlus },
+    { label: "Skill Tags",          path: "/business-owner/skills",      Icon: Tag },
+    { label: "Reports",             path: "/business-owner/reports",     Icon: BarChart2 },
+  ];
 
   useEffect(() => {
     if (!user?.user_id) return;

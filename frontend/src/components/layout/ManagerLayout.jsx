@@ -6,25 +6,34 @@ import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
 import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail } from "lucide-react";
 import "./sidebarStyles.js";
-
-const NAV = [
-  { label: "Dashboard",    path: "/outlet-manager/dashboard",    Icon: LayoutDashboard },
-  { label: "Staff",        path: "/outlet-manager/staff",        Icon: Users },
-  { label: "Shifts",       path: "/outlet-manager/shifts",       Icon: CalendarDays },
-  { label: "Availability", path: "/outlet-manager/availability", Icon: CalendarClock },
-  { label: "Attendance",   path: "/outlet-manager/attendance",   Icon: ClipboardCheck },
-  { label: "Reports",      path: "/outlet-manager/reports",      Icon: BarChart2 },
-  { label: "Manpower",     path: "/outlet-manager/manpower",     Icon: UserPlus },
-  { label: "Invitations",  path: "/outlet-manager/invitations",  Icon: Mail },
-];
+import { useBusinessContext } from "../../context/BusinessContext";
 
 export default function ManagerLayout({ children, title }) {
   const navigate   = useNavigate();
   const location   = useLocation();
   const user       = getUser();
+  const { locationLabel, staffLabel, schedulingMode } = useBusinessContext();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
+
+  // Build nav dynamically based on scheduling mode
+  const NAV = [
+    { label: "Dashboard",             path: "/outlet-manager/dashboard",    Icon: LayoutDashboard },
+    { label: staffLabel,              path: "/outlet-manager/staff",        Icon: Users },
+    ...(schedulingMode === "shift" ? [
+      { label: "Shifts",              path: "/outlet-manager/shifts",       Icon: CalendarDays },
+    ] : schedulingMode === "flexible" ? [
+      { label: "Timesheets",          path: "/outlet-manager/shifts",       Icon: CalendarDays },
+    ] : [
+      { label: "Appointments",        path: "/outlet-manager/shifts",       Icon: CalendarDays },
+    ]),
+    { label: "Availability",          path: "/outlet-manager/availability", Icon: CalendarClock },
+    { label: "Attendance",            path: "/outlet-manager/attendance",   Icon: ClipboardCheck },
+    { label: "Reports",               path: "/outlet-manager/reports",      Icon: BarChart2 },
+    { label: "Manpower",              path: "/outlet-manager/manpower",     Icon: UserPlus },
+    { label: "Invitations",           path: "/outlet-manager/invitations",  Icon: Mail },
+  ];
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -76,7 +85,7 @@ export default function ManagerLayout({ children, title }) {
             <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "M"}</div>
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Manager"}</p>
-              <p style={s.userRole}>Outlet Manager</p>
+              <p style={s.userRole}>{locationLabel} Manager</p>
             </div>
           </div>
           <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>

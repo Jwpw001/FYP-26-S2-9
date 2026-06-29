@@ -31,6 +31,7 @@ export default function StaffProfile() {
   const [form, setForm] = useState({
     full_name: "", staff_type: "regular",
     default_work_days: "1111100", is_active: true,
+    experience_level: "intermediate", years_of_experience: "",
   });
 
   useEffect(() => { fetchProfile(); }, [id]);
@@ -40,7 +41,7 @@ export default function StaffProfile() {
     try {
       const { data: staffRow } = await supabase
         .from("staff")
-        .select("staff_id, staff_type, default_work_days, hired_at, is_active, outlet_id, users(user_id, full_name, email, role)")
+        .select("staff_id, staff_type, default_work_days, hired_at, is_active, outlet_id, experience_level, years_of_experience, users(user_id, full_name, email, role)")
         .eq("staff_id", id)
         .single();
 
@@ -55,10 +56,12 @@ export default function StaffProfile() {
       setAllSkills(skillRows || []);
       setAssigned((tagRows || []).map(t => t.skill_id));
       setForm({
-        full_name: staffRow.users?.full_name || "",
-        staff_type: staffRow.staff_type || "regular",
-        default_work_days: staffRow.default_work_days || "1111100",
-        is_active: staffRow.is_active ?? true,
+        full_name:            staffRow.users?.full_name || "",
+        staff_type:           staffRow.staff_type || "regular",
+        default_work_days:    staffRow.default_work_days || "1111100",
+        is_active:            staffRow.is_active ?? true,
+        experience_level:     staffRow.experience_level || "intermediate",
+        years_of_experience:  staffRow.years_of_experience != null ? String(staffRow.years_of_experience) : "",
       });
     } catch (err) {
       console.error(err);
@@ -87,9 +90,11 @@ export default function StaffProfile() {
 
       await supabase.from("staff")
         .update({
-          staff_type: form.staff_type,
-          default_work_days: form.staff_type === "regular" ? form.default_work_days : null,
-          is_active: form.is_active,
+          staff_type:           form.staff_type,
+          default_work_days:    form.staff_type === "regular" ? form.default_work_days : null,
+          is_active:            form.is_active,
+          experience_level:     form.experience_level,
+          years_of_experience:  form.years_of_experience !== "" ? Number(form.years_of_experience) : null,
         })
         .eq("staff_id", id);
 
@@ -185,6 +190,25 @@ export default function StaffProfile() {
               </span>
             </div>
           )}
+
+          {/* Experience level badge */}
+          {(() => {
+            const lvl = member.experience_level || "intermediate";
+            const EXP = {
+              beginner:     { bg:"#FEF3C7", color:"#92400E", border:"#FCD34D", icon:"🌱", label:"Beginner" },
+              intermediate: { bg:"#DBEAFE", color:"#1E40AF", border:"#93C5FD", icon:"⭐", label:"Intermediate" },
+              expert:       { bg:"#DCFCE7", color:"#166534", border:"#86EFAC", icon:"🏆", label:"Expert" },
+            };
+            const e = EXP[lvl] || EXP.intermediate;
+            return (
+              <div style={s.metaRow}>
+                <span style={s.metaLabel}>Experience</span>
+                <span style={{ fontSize:"12px",fontWeight:"700",padding:"3px 10px",borderRadius:"100px",background:e.bg,color:e.color,border:`1px solid ${e.border}` }}>
+                  {e.icon} {e.label}{member.years_of_experience ? ` · ${member.years_of_experience}yr` : ""}
+                </span>
+              </div>
+            );
+          })()}
 
           <div style={s.cardActions}>
             {/* Active toggle — controls shift assignment eligibility */}
@@ -308,6 +332,53 @@ export default function StaffProfile() {
                 )}
               </div>
             )}
+            {/* Experience Level */}
+            <div style={s.field}>
+              <label style={s.label}>Experience Level</label>
+              {editing ? (
+                <div style={{ display:"flex",flexDirection:"column",gap:"8px" }}>
+                  <div style={{ display:"flex",gap:"8px" }}>
+                    {[
+                      { val:"beginner",     icon:"🌱", label:"Beginner",     bg:"#FEF3C7", color:"#92400E", border:"#FCD34D" },
+                      { val:"intermediate", icon:"⭐", label:"Intermediate", bg:"#DBEAFE", color:"#1E40AF", border:"#93C5FD" },
+                      { val:"expert",       icon:"🏆", label:"Expert",       bg:"#DCFCE7", color:"#166534", border:"#86EFAC" },
+                    ].map(opt => (
+                      <button key={opt.val} type="button"
+                        onClick={() => setForm(p => ({ ...p, experience_level: opt.val }))}
+                        style={{ flex:1,padding:"10px 8px",borderRadius:"10px",cursor:"pointer",fontWeight:"700",fontSize:"12px",transition:"all 0.15s",
+                          background: form.experience_level === opt.val ? opt.bg : "#F8FAFC",
+                          color:      form.experience_level === opt.val ? opt.color : "#94A3B8",
+                          border:     `2px solid ${form.experience_level === opt.val ? opt.border : "#E2E8F0"}`,
+                        }}>
+                        <div style={{ fontSize:"18px",marginBottom:"3px" }}>{opt.icon}</div>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
+                    <label style={{ ...s.label, marginBottom:0, whiteSpace:"nowrap" }}>Years of experience</label>
+                    <input type="number" min="0" step="0.5" style={{ ...s.input, width:"100px" }}
+                      value={form.years_of_experience}
+                      onChange={e => setForm(p => ({ ...p, years_of_experience: e.target.value }))}
+                      placeholder="e.g. 2.5" />
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display:"flex",alignItems:"center",gap:"8px" }}>
+                  {(() => {
+                    const lvl = member.experience_level || "intermediate";
+                    const EXP = { beginner:{bg:"#FEF3C7",color:"#92400E",border:"#FCD34D",icon:"🌱"}, intermediate:{bg:"#DBEAFE",color:"#1E40AF",border:"#93C5FD",icon:"⭐"}, expert:{bg:"#DCFCE7",color:"#166534",border:"#86EFAC",icon:"🏆"} };
+                    const e = EXP[lvl];
+                    return (
+                      <span style={{ fontSize:"12px",fontWeight:"700",padding:"4px 12px",borderRadius:"100px",background:e.bg,color:e.color,border:`1px solid ${e.border}` }}>
+                        {e.icon} {lvl.charAt(0).toUpperCase()+lvl.slice(1)}
+                        {member.years_of_experience ? ` · ${member.years_of_experience} yrs` : ""}
+                      </span>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Skill Tags */}

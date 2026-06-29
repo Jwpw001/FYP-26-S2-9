@@ -135,7 +135,7 @@ export default function OutletDetail() {
   }
 
   function startEditRoles() {
-    setRolesDraft(roleTemplates.map(t => ({ role_name: t.role_name, skill_id: t.skill_id || "", headcount: t.headcount })));
+    setRolesDraft(roleTemplates.map(t => ({ role_name: t.role_name, skill_id: t.skill_id || "", headcount: t.headcount, min_experience_level: t.min_experience_level || "beginner", requires_certification: t.requires_certification || false, certification_name: t.certification_name || "" })));
     setEditingRoles(true);
   }
 
@@ -148,9 +148,10 @@ export default function OutletDetail() {
     try {
       await api.put(`/api/business/outlets/${id}/role-templates`, {
         role_templates: rolesDraft.filter(r => r.role_name.trim()).map(r => ({
-          role_name: r.role_name.trim(),
-          skill_id: r.skill_id ? Number(r.skill_id) : null,
-          headcount: Number(r.headcount) || 1,
+          role_name:            r.role_name.trim(),
+          skill_id:             r.skill_id ? Number(r.skill_id) : null,
+          headcount:            Number(r.headcount) || 1,
+          min_experience_level: r.min_experience_level || "beginner",
         })),
       });
       await fetchRoleTemplates();
@@ -316,20 +317,28 @@ export default function OutletDetail() {
             </div>
           ) : (
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 80px", padding: "10px 16px", background: "#F8FAFC", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", gap: "8px" }}>
-                <span>Role</span><span>Required Skill</span><span>Headcount</span>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 110px 1fr 60px", padding: "10px 16px", background: "#F8FAFC", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", gap: "8px" }}>
+                <span>Role</span><span>Skill</span><span>Min Level</span><span>Certification</span><span>Count</span>
               </div>
-              {roleTemplates.map((t, i) => (
-                <div key={t.template_id} style={{ display: "grid", gridTemplateColumns: "2fr 2fr 80px", padding: "12px 16px", gap: "8px", alignItems: "center", borderTop: i > 0 ? "1px solid #F1F5F9" : "none" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>{t.role_name}</span>
-                  <span style={{ fontSize: "13px", color: t.skills ? "#1E293B" : "#94A3B8" }}>
-                    {t.skills ? (
-                      <span style={{ background: "#EFF6FF", color: "#1D4ED8", padding: "2px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: "600" }}>{t.skills.name}</span>
-                    ) : "Any / None"}
-                  </span>
-                  <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{t.headcount}</span>
-                </div>
-              ))}
+              {roleTemplates.map((t, i) => {
+                const EXP = { beginner:{bg:"#FEF3C7",color:"#92400E",icon:"🌱"}, intermediate:{bg:"#DBEAFE",color:"#1E40AF",icon:"⭐"}, expert:{bg:"#DCFCE7",color:"#166534",icon:"🏆"} };
+                const e = EXP[t.min_experience_level || "beginner"] || EXP.beginner;
+                return (
+                  <div key={t.template_id} style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 110px 1fr 60px", padding: "12px 16px", gap: "8px", alignItems: "center", borderTop: i > 0 ? "1px solid #F1F5F9" : "none" }}>
+                    <span style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>{t.role_name}</span>
+                    <span style={{ fontSize: "13px", color: t.skills ? "#1E293B" : "#94A3B8" }}>
+                      {t.skills ? <span style={{ background: "#EFF6FF", color: "#1D4ED8", padding: "2px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: "600" }}>{t.skills.name}</span> : "—"}
+                    </span>
+                    <span style={{ fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px", background: e.bg, color: e.color, display: "inline-block" }}>
+                      {e.icon} {(t.min_experience_level || "beginner").charAt(0).toUpperCase()+(t.min_experience_level || "beginner").slice(1)}+
+                    </span>
+                    <span style={{ fontSize: "12px", color: t.requires_certification ? "#DC2626" : "#94A3B8", fontWeight: t.requires_certification ? "600" : "400" }}>
+                      {t.requires_certification ? `🔖 ${t.certification_name || "Required"}` : "None"}
+                    </span>
+                    <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{t.headcount}</span>
+                  </div>
+                );
+              })}
             </div>
           )
         ) : (
@@ -341,25 +350,47 @@ export default function OutletDetail() {
                 <span />
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
               {rolesDraft.map((row, i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 80px 32px", gap: "8px", alignItems: "center" }}>
-                  <select style={s.input} value={row.skill_id || ""} onChange={e => {
-                    const sk = skills.find(s => String(s.skill_id) === e.target.value);
-                    updateRoleDraft(i, "skill_id", e.target.value);
-                    updateRoleDraft(i, "role_name", sk?.name || "");
-                  }}>
-                    <option value="">— Select skill —</option>
-                    {skills.map(sk => <option key={sk.skill_id} value={sk.skill_id}>{sk.name}</option>)}
-                  </select>
-                  <input type="number" min="1" max="99" style={{ ...s.input, textAlign: "center" }} value={row.headcount} onChange={e => updateRoleDraft(i, "headcount", e.target.value)} />
-                  <button onClick={() => setRolesDraft(p => p.filter((_, idx) => idx !== i))} style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "7px", color: "#EF4444", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                  </button>
+                <div key={i} style={{ background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0", padding: "12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 140px 32px", gap: "8px", alignItems: "center", marginBottom: row.requires_certification ? "8px" : "0" }}>
+                    <select style={s.input} value={row.skill_id || ""} onChange={e => {
+                      const sk = skills.find(s => String(s.skill_id) === e.target.value);
+                      updateRoleDraft(i, "skill_id", e.target.value);
+                      updateRoleDraft(i, "role_name", sk?.name || "");
+                    }}>
+                      <option value="">— Select role —</option>
+                      {skills.map(sk => <option key={sk.skill_id} value={sk.skill_id}>{sk.name}</option>)}
+                    </select>
+                    <input type="number" min="1" max="99" style={{ ...s.input, textAlign: "center" }} value={row.headcount} onChange={e => updateRoleDraft(i, "headcount", e.target.value)} />
+                    <select style={s.input} value={row.min_experience_level || "beginner"} onChange={e => updateRoleDraft(i, "min_experience_level", e.target.value)}>
+                      <option value="beginner">🌱 Beginner+</option>
+                      <option value="intermediate">⭐ Intermediate+</option>
+                      <option value="expert">🏆 Expert only</option>
+                    </select>
+                    <button onClick={() => setRolesDraft(p => p.filter((_, idx) => idx !== i))} style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "7px", color: "#EF4444", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                  {/* Certification toggle */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#64748B", cursor: "pointer" }}>
+                      <input type="checkbox" checked={row.requires_certification || false}
+                        onChange={e => updateRoleDraft(i, "requires_certification", e.target.checked)}
+                        style={{ width: "14px", height: "14px", accentColor: "#4F46E5" }} />
+                      Requires certification
+                    </label>
+                    {row.requires_certification && (
+                      <input style={{ ...s.input, flex: 1, padding: "5px 10px", fontSize: "12px" }}
+                        placeholder="e.g. Forklift License, Food Hygiene Cert"
+                        value={row.certification_name || ""}
+                        onChange={e => updateRoleDraft(i, "certification_name", e.target.value)} />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-            <button onClick={() => setRolesDraft(p => [...p, { role_name: "", skill_id: "", headcount: 1 }])} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#F8FAFC", border: "1.5px dashed #CBD5E1", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
+            <button onClick={() => setRolesDraft(p => [...p, { role_name: "", skill_id: "", headcount: 1, min_experience_level: "beginner", requires_certification: false, certification_name: "" }])} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#F8FAFC", border: "1.5px dashed #CBD5E1", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
               <Plus size={14} /> Add Role
             </button>
           </div>

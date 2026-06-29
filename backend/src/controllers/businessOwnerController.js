@@ -55,7 +55,7 @@ const createOutlet = async (req, res) => {
     if (Array.isArray(role_templates) && role_templates.length > 0) {
       const rows = role_templates
         .filter(r => r.role_name?.trim())
-        .map(r => ({ outlet_id: outlet.outlet_id, role_name: r.role_name.trim(), skill_id: r.skill_id || null, headcount: Number(r.headcount) || 1 }));
+        .map(r => ({ outlet_id: outlet.outlet_id, role_name: r.role_name.trim(), skill_id: r.skill_id || null, headcount: Number(r.headcount) || 1, min_experience_level: r.min_experience_level || "beginner" }));
       if (rows.length > 0) await supabaseAdmin.from("outlet_role_templates").insert(rows);
     }
 
@@ -313,7 +313,7 @@ const upsertRoleTemplates = async (req, res) => {
     if (Array.isArray(role_templates) && role_templates.length > 0) {
       const rows = role_templates
         .filter(r => r.role_name?.trim())
-        .map(r => ({ outlet_id, role_name: r.role_name.trim(), skill_id: r.skill_id || null, headcount: Number(r.headcount) || 1 }));
+        .map(r => ({ outlet_id, role_name: r.role_name.trim(), skill_id: r.skill_id || null, headcount: Number(r.headcount) || 1, min_experience_level: r.min_experience_level || "beginner" }));
       if (rows.length > 0) await supabaseAdmin.from("outlet_role_templates").insert(rows);
     }
 

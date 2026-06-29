@@ -108,9 +108,11 @@ const register = async (req, res) => {
 
 const registerBusiness = async (req, res) => {
     try {
-        const { business_name, description, owner_name, email, phone, address, password, plan } = req.body;
+        const { business_name, description, owner_name, email, phone, address, password, plan, industry, scheduling_mode, location_label, staff_label } = req.body;
         const validPlans = ["free", "premium", "enterprise"];
+        const validModes = ["shift", "flexible", "appointment"];
         const selectedPlan = validPlans.includes(plan) ? plan : "free";
+        const selectedMode = validModes.includes(scheduling_mode) ? scheduling_mode : "shift";
 
         if (!business_name || !owner_name || !email || !password) {
             return res.status(400).json({ success: false, message: "Missing required fields." });
@@ -149,6 +151,10 @@ const registerBusiness = async (req, res) => {
                 address: address || null,
                 owner_id: newUser.user_id,
                 plan: selectedPlan,
+                industry: industry || "f&b",
+                scheduling_mode: selectedMode,
+                location_label: location_label || "Outlet",
+                staff_label: staff_label || "Staff",
             });
             if (bizErr) throw new Error(bizErr.message);
         } catch (innerErr) {

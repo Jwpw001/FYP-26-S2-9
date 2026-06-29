@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PageTransitionProvider } from "./components/PageTransition";
+import { BusinessProvider } from "./context/BusinessContext";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -88,6 +89,7 @@ function App() {
   return (
     <BrowserRouter>
       <PageTransitionProvider>
+      <BusinessProvider>
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
@@ -175,6 +177,7 @@ function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </BusinessProvider>
       </PageTransitionProvider>
     </BrowserRouter>
   );

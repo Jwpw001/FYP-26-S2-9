@@ -135,16 +135,28 @@ const generateWeeklySchedule = async (req, res) => {
     const { weekStart, weekEnd } = req.body;
     if (!weekStart || !weekEnd) return res.status(400).json({ success: false, message: "weekStart and weekEnd required." });
 
-    // Fetch outlet info
+    // Fetch outlet info + business industry
     const outlet = await prisma.outlets.findUnique({
       where: { outlet_id: outletId },
-      select: { name: true, open_time: true, close_time: true },
+      select: { name: true, open_time: true, close_time: true, business_id: true },
     });
 
-    // Fetch all active staff
+    // Get business industry & scheduling mode
+    const { createClient } = require("@supabase/supabase-js");
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    let industry = "f&b";
+    if (outlet?.business_id) {
+      const { data: biz } = await sb.from("businesses").select("industry, scheduling_mode").eq("business_id", outlet.business_id).maybeSingle();
+      if (biz?.industry) industry = biz.industry;
+    }
+
+    // Fetch all active staff including experience level and certifications
     const staff = await prisma.staff.findMany({
       where: { outlet_id: outletId, is_active: true },
-      include: { users: { select: { full_name: true, role: true } } },
+      include: {
+        users: { select: { full_name: true, role: true } },
+        staff_certifications: { select: { cert_name: true, expiry_date: true } },
+      },
     });
 
     const regularStaff = staff.filter(s => s.users?.role === "outlet_regular_staff" || s.users?.role === "regular_staff");
@@ -175,19 +187,39 @@ const generateWeeklySchedule = async (req, res) => {
       }
     });
 
-    // Fetch existing role templates for this outlet
+    // Fetch existing role templates for this outlet (including min experience + certification)
     const roleTemplates = await prisma.outlet_role_templates.findMany({
       where: { outlet_id: outletId },
-      select: { role_name: true, headcount: true },
+      select: { role_name: true, headcount: true, min_experience_level: true, requires_certification: true, certification_name: true },
     }).catch(() => []);
 
     const context = {
       outlet: { name: outlet?.name, open_time: outlet?.open_time, close_time: outlet?.close_time },
       weekStart,
       weekEnd,
-      regularStaff: regularStaff.map(s => s.users?.full_name),
-      casualAvailability: Object.values(casualMap),
-      roleTemplates: roleTemplates.map(r => ({ role: r.role_name, headcount: r.headcount })),
+      industry,
+      regularStaff: regularStaff.map(s => ({
+        name:             s.users?.full_name,
+        experience_level: s.experience_level || "intermediate",
+        years:            s.years_of_experience ? Number(s.years_of_experience) : null,
+        certifications:   (s.staff_certifications || []).map(c => c.cert_name),
+      })),
+      casualAvailability: Object.values(casualMap).map(c => {
+        const staffRow = casualStaff.find(s => s.users?.full_name === c.name);
+        return {
+          ...c,
+          experience_level: staffRow?.experience_level || "intermediate",
+          years:            staffRow?.years_of_experience ? Number(staffRow.years_of_experience) : null,
+          certifications:   (staffRow?.staff_certifications || []).map(c => c.cert_name),
+        };
+      }),
+      roleTemplates: roleTemplates.map(r => ({
+        role:                 r.role_name,
+        headcount:            r.headcount,
+        min_experience:       r.min_experience_level || "beginner",
+        requires_cert:        r.requires_certification || false,
+        cert_name:            r.certification_name || null,
+      })),
     };
 
     // Prisma returns time as a Date object — convert to "HH:MM" string
@@ -210,18 +242,67 @@ const generateWeeklySchedule = async (req, res) => {
     const midTime     = `${midHour}:${midMinute}`;
 
     const roles = context.roleTemplates.length > 0
-      ? context.roleTemplates.map(r => `${r.role} x${r.headcount}`).join(", ")
-      : "Service Staff x2, Kitchen Staff x1";
+      ? context.roleTemplates.map(r => {
+          let desc = `${r.role} x${r.headcount} (min: ${r.min_experience}`;
+          if (r.requires_cert && r.cert_name) desc += `, requires: ${r.cert_name}`;
+          return desc + ")";
+        }).join(", ")
+      : "Service Staff x2 (min: beginner), Kitchen Staff x1 (min: intermediate)";
 
     const casualLines = context.casualAvailability.length > 0
-      ? context.casualAvailability.map(s => `${s.name}: ${s.days.map(d => `${d.day} ${d.from}-${d.to}`).join(", ")}`).join("\n")
+      ? context.casualAvailability.map(s => {
+          const certs = s.certifications?.length ? ` | certs: ${s.certifications.join(", ")}` : "";
+          return `${s.name} [${s.experience_level}${s.years ? `, ${s.years}yr` : ""}${certs}]: ${s.days.map(d => `${d.day} ${d.from}-${d.to}`).join(", ")}`;
+        }).join("\n")
       : "None";
 
     const regularLines = context.regularStaff.length > 0
-      ? context.regularStaff.join(", ")
+      ? context.regularStaff.map(s => {
+          const certs = s.certifications?.length ? ` | certs: ${s.certifications.join(", ")}` : "";
+          return `${s.name} [${s.experience_level}${s.years ? `, ${s.years}yr` : ""}${certs}]`;
+        }).join(", ")
       : "None";
 
-    const prompt = `You are an F&B workforce scheduler. Output ONLY a valid JSON array, no explanation, no markdown.
+    // Industry-specific additional rules
+    const industryRules = {
+      "retail": `
+RETAIL-SPECIFIC RULES:
+- Saturday and Sunday shifts must have 20-30% more staff than weekday shifts.
+- Ensure at least 2 floor staff during peak hours: 11:00-14:00 and 17:00-21:00.
+- If a stock-take shift is needed, it can be scheduled outside normal operating hours.`,
+
+      "logistics": `
+LOGISTICS-SPECIFIC RULES:
+- Enforce minimum 8 hours rest between any two shifts for the same staff member.
+- Only assign staff with the required certification to certified roles (e.g. forklift license, hazmat certified).
+- Night shift workers must NOT be assigned a morning/day shift the following day.
+- Flag any staff member scheduled for more than 48 hours — do not exceed this.
+- Rotate staff across different zones (Receiving, Dispatch, Packing) for balanced workload.`,
+
+      "healthcare": `
+HEALTHCARE-SPECIFIC RULES:
+- NEVER leave any time slot uncovered — every operating hour must have minimum staffing.
+- Only assign staff with the correct certification or license to clinical/nursing roles.
+- At least one expert-level staff member must be present in every shift.
+- No staff member may work more than 12 hours in a single shift.
+- Always schedule a backup (on-call) for each shift in case of no-show.`,
+
+      "hospitality": `
+HOSPITALITY-SPECIFIC RULES:
+- Every department (Front Desk, Housekeeping, F&B) needs coverage every hour of operation.
+- Night shift staff (after 23:00) must not be assigned a morning shift the next day.
+- Weekend and public holiday headcount must be automatically increased by 20%.
+- Cross-department assignments allowed only if staff is qualified for both roles.`,
+
+      "f&b": `
+F&B-SPECIFIC RULES:
+- Ensure coverage during meal rush periods: lunch (11:30-14:00) and dinner (18:00-21:00).
+- Morning shift covers prep and lunch service; evening shift covers dinner and closing.`,
+    };
+
+    const extraRules = industryRules[industry] || industryRules["f&b"];
+
+    const prompt = `You are a professional workforce scheduler for a ${industry} business. Output ONLY a valid JSON array, no explanation, no markdown.
 
 WEEK: ${weekStart} to ${weekEnd}
 OPERATING HOURS: ${openTime}–${closeTime}
@@ -238,20 +319,30 @@ COVERAGE:
 2. Every shift must have all role headcounts filled as fully as possible.
 3. Every shift must include at least 1 regular staff member — never fill a shift with casual workers only.
 
+EXPERIENCE & SKILL MATCHING:
+4. Each role has a minimum experience level (beginner / intermediate / expert). Experience ranks: beginner < intermediate < expert.
+5. NEVER assign a staff member to a role if their experience level is below the role's minimum requirement. For example, a beginner cannot fill a role that requires intermediate or expert.
+6. For complex or high-responsibility roles (min: intermediate or expert), always prefer to assign the most experienced available staff first.
+7. Beginner staff must always be scheduled alongside at least one intermediate or expert staff member in the same shift — never leave beginners working alone.
+8. If a shift has both senior and junior roles, assign expert/intermediate staff to senior roles and beginners only to junior roles.
+
 STAFF WELFARE:
-4. Each regular staff member must have at least 1 full day off per week (not assigned to any shift that day).
-5. No regular staff member may work more than 5 consecutive days in a row.
-6. No regular staff member should work an Evening shift and then a Morning shift the very next day (avoid back-to-back close→open). If they work Evening on Day N, assign them Evening or give them the day off on Day N+1.
-7. Cap each regular staff member at a maximum of 44 working hours this week.
+9. Each regular staff member must have at least 1 full day off per week (not assigned to any shift that day).
+10. No regular staff member may work more than 5 consecutive days in a row.
+11. No regular staff member should work an Evening shift and then a Morning shift the very next day (avoid back-to-back close→open). If they work Evening on Day N, assign them Evening or give them the day off on Day N+1.
+12. Cap each regular staff member at a maximum of 44 working hours this week.
 
 FAIRNESS:
-8. Distribute weekend shifts (Saturday and Sunday) fairly — do not always assign the same people to weekends.
-9. Balance morning and evening shifts per regular staff member — each person should work a roughly equal mix of both, not always one slot.
-10. Mix regular and casual staff together within the same shift where casual availability allows.
+13. Distribute weekend shifts (Saturday and Sunday) fairly — do not always assign the same people to weekends.
+14. Balance morning and evening shifts per regular staff member — each person should work a roughly equal mix of both.
+15. Mix regular and casual staff together within the same shift where casual availability allows.
 
 CASUAL STAFF:
-11. Assign casual staff only on days they are available and only within their available hours.
-12. Casual staff are not subject to the consecutive-day or back-to-back rules, but do not exceed their stated available hours.
+16. Assign casual staff only on days they are available and only within their available hours.
+17. Apply the same experience matching rules to casual staff — do not assign them to roles above their experience level.
+18. Casual staff are not subject to the consecutive-day or back-to-back rules, but do not exceed their stated available hours.
+
+${extraRules}
 
 OUTPUT: Return only the JSON array. No text before or after.
 [{"title":"Morning Shift","date":"YYYY-MM-DD","start_time":"${openTime}","end_time":"${midTime}","roles":[{"role_name":"Service Staff","headcount":2,"assigned_staff":["Name"]}]}]

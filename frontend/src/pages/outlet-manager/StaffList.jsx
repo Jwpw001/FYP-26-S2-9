@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { useBusinessContext } from "../../context/BusinessContext";
 
 if (typeof document !== "undefined" && !document.getElementById("mgr-staff-styles")) {
   const style = document.createElement("style");
@@ -31,6 +32,7 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
 export default function StaffList() {
   const goTo  = useGoTo();
   const user  = getUser();
+  const { staffLabel } = useBusinessContext();
   const userId = user?.user_id;
 
   const [staff,       setStaff]       = useState([]);
@@ -53,7 +55,7 @@ export default function StaffList() {
 
         const [{ data: staffData }, { data: skillData }, { data: tagData }] = await Promise.all([
           supabase.from("staff")
-            .select("staff_id, outlet_id, staff_type, is_active, users(user_id, full_name, email, role)")
+            .select("staff_id, outlet_id, staff_type, is_active, experience_level, years_of_experience, users(user_id, full_name, email, role)")
             .eq("outlet_id", oid),
           supabase.from("skills").select("skill_id, name"),
           supabase.from("user_skill_tags").select("user_id, skill_id, skills(name)"),
@@ -98,7 +100,7 @@ export default function StaffList() {
   ];
 
   return (
-    <ManagerLayout title="Staff">
+    <ManagerLayout title={staffLabel}>
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
@@ -211,11 +213,21 @@ function StaffCard({ member: m, index, onNav }) {
         </div>
       </div>
 
-      {/* Type + skill tags */}
+      {/* Type + experience + skill tags */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px" }}>
         <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: m.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: m.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
           {m.staff_type === "regular" ? "Regular" : "Casual"}
         </span>
+        {(() => {
+          const lvl = m.experience_level || "intermediate";
+          const EXP = { beginner:{bg:"#FEF3C7",color:"#92400E",icon:"🌱"}, intermediate:{bg:"#DBEAFE",color:"#1E40AF",icon:"⭐"}, expert:{bg:"#DCFCE7",color:"#166534",icon:"🏆"} };
+          const e = EXP[lvl] || EXP.intermediate;
+          return (
+            <span style={{ padding:"3px 10px",borderRadius:"100px",fontSize:"11px",fontWeight:"600",background:e.bg,color:e.color }}>
+              {e.icon} {lvl.charAt(0).toUpperCase()+lvl.slice(1)}
+            </span>
+          );
+        })()}
         {m.skillTags?.slice(0, 2).map(t => (
           <span key={t.id} style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "500", background: "#F1F5F9", color: "#475569" }}>{t.name}</span>
         ))}

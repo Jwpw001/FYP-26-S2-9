@@ -5,6 +5,7 @@ import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
+import { useBusinessContext } from "../../context/BusinessContext";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-shifts-styles")) {
@@ -72,6 +73,8 @@ export default function ShiftsList() {
   const goTo     = useGoTo();
   const navigate = useNavigate();
   const user = getUser();
+  const { schedulingMode } = useBusinessContext();
+  const scheduleTitle = schedulingMode === "flexible" ? "Timesheets" : schedulingMode === "appointment" ? "Appointments" : "Shifts";
   const userId = user?.user_id;
 
   const [shifts, setShifts]         = useState([]);
@@ -338,7 +341,7 @@ export default function ShiftsList() {
   ];
 
   return (
-    <ManagerLayout title="Shifts">
+    <ManagerLayout title={scheduleTitle}>
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}

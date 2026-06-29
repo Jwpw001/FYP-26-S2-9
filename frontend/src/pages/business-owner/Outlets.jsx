@@ -6,6 +6,7 @@ import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
 import { Plus, Building2, MapPin, ArrowRight, Clock } from "lucide-react";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
+import { useBusinessContext } from "../../context/BusinessContext";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-outlet-styles")) {
   const style = document.createElement("style");
@@ -31,6 +32,7 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
 const EMPTY_FORM = { name: "", address: "", open_time: "08:00", close_time: "22:00", role_templates: [] };
 
 export default function BOOutlets() {
+  const { locationLabel } = useBusinessContext();
   const goTo = useGoTo();
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,13 +123,13 @@ export default function BOOutlets() {
   const STEPS = ["Basic Info", "Operating Hours", "Role Requirements"];
 
   return (
-    <BusinessOwnerLayout title="Outlets">
+    <BusinessOwnerLayout title={`${locationLabel}s`}>
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Outlets</h2>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>{locationLabel}s</h2>
             <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
               {loading ? "Loading…" : `${outlets.length} outlet${outlets.length !== 1 ? "s" : ""} across your business`}
             </p>
