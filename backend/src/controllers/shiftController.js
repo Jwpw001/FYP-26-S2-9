@@ -209,66 +209,59 @@ const generateWeeklySchedule = async (req, res) => {
     const midMinute   = String(midMins % 60).padStart(2, "0");
     const midTime     = `${midHour}:${midMinute}`;
 
-    const prompt = `You are a professional F&B workforce scheduling assistant.
+    const roles = context.roleTemplates.length > 0
+      ? context.roleTemplates.map(r => `${r.role} x${r.headcount}`).join(", ")
+      : "Service Staff x2, Kitchen Staff x1";
 
-Generate a COMPLETE weekly shift schedule for the week ${weekStart} to ${weekEnd}.
+    const casualLines = context.casualAvailability.length > 0
+      ? context.casualAvailability.map(s => `${s.name}: ${s.days.map(d => `${d.day} ${d.from}-${d.to}`).join(", ")}`).join("\n")
+      : "None";
 
-OUTLET INFO:
-- Name: ${context.outlet.name}
-- Opening time: ${openTime}
-- Closing time: ${closeTime}
-- Suggested shift split: Morning ${openTime}–${midTime}, Evening ${midTime}–${closeTime}
+    const regularLines = context.regularStaff.length > 0
+      ? context.regularStaff.join(", ")
+      : "None";
 
-REGULAR STAFF (available every single day):
-${context.regularStaff.length > 0 ? context.regularStaff.map(n => `- ${n}`).join("\n") : "- None"}
+    const prompt = `You are an F&B workforce scheduler. Output ONLY a valid JSON array, no explanation, no markdown.
 
+WEEK: ${weekStart} to ${weekEnd}
+OPERATING HOURS: ${openTime}–${closeTime}
+SHIFT SPLIT: Morning ${openTime}–${midTime} | Evening ${midTime}–${closeTime}
+ROLES PER SHIFT: ${roles}
+REGULAR STAFF (available all 7 days): ${regularLines}
 CASUAL STAFF AVAILABILITY THIS WEEK:
-${context.casualAvailability.length > 0
-  ? context.casualAvailability.map(s => `- ${s.name}: ${s.days.map(d => `${d.day} ${d.from}-${d.to}`).join(", ")}`).join("\n")
-  : "- No casual staff submitted availability"}
+${casualLines}
 
-ROLE TEMPLATES (use these exact roles per shift):
-${context.roleTemplates.length > 0
-  ? context.roleTemplates.map(r => `- ${r.role} x${r.headcount}`).join("\n")
-  : "- Service Staff x2, Kitchen Staff x1"}
+SCHEDULING RULES (all mandatory):
 
-MANDATORY RULES — follow every one:
-1. EVERY day (${weekStart} through ${weekEnd}) MUST have BOTH a Morning shift AND an Evening shift. Do not skip any day. Do not generate only evening shifts.
-2. Morning shift: ${openTime} to ${midTime}. Evening shift: ${midTime} to ${closeTime}.
-3. Distribute regular staff evenly — no one person should work every single shift. Alternate staff between morning and evening.
-4. Assign casual staff ONLY on days/hours they listed as available.
-5. Every shift MUST include at least one role with at least one assigned staff member.
-6. Use the provided role templates for each shift.
-7. Return ONLY a valid JSON array — no prose, no markdown, no explanation.
+COVERAGE:
+1. Generate exactly 14 shifts — one Morning and one Evening for each of the 7 days.
+2. Every shift must have all role headcounts filled as fully as possible.
+3. Every shift must include at least 1 regular staff member — never fill a shift with casual workers only.
 
-EXAMPLE FORMAT (follow exactly):
-[
-  {
-    "title": "Morning Shift",
-    "date": "2026-06-22",
-    "start_time": "${openTime}",
-    "end_time": "${midTime}",
-    "roles": [
-      { "role_name": "Service Staff", "headcount": 2, "assigned_staff": ["Alice Tan", "Bob Lim"] }
-    ]
-  },
-  {
-    "title": "Evening Shift",
-    "date": "2026-06-22",
-    "start_time": "${midTime}",
-    "end_time": "${closeTime}",
-    "roles": [
-      { "role_name": "Service Staff", "headcount": 2, "assigned_staff": ["Carol Ng"] }
-    ]
-  }
-]
+STAFF WELFARE:
+4. Each regular staff member must have at least 1 full day off per week (not assigned to any shift that day).
+5. No regular staff member may work more than 5 consecutive days in a row.
+6. No regular staff member should work an Evening shift and then a Morning shift the very next day (avoid back-to-back close→open). If they work Evening on Day N, assign them Evening or give them the day off on Day N+1.
+7. Cap each regular staff member at a maximum of 44 working hours this week.
 
-Generate ALL 14 shifts now (2 per day × 7 days):`;
+FAIRNESS:
+8. Distribute weekend shifts (Saturday and Sunday) fairly — do not always assign the same people to weekends.
+9. Balance morning and evening shifts per regular staff member — each person should work a roughly equal mix of both, not always one slot.
+10. Mix regular and casual staff together within the same shift where casual availability allows.
+
+CASUAL STAFF:
+11. Assign casual staff only on days they are available and only within their available hours.
+12. Casual staff are not subject to the consecutive-day or back-to-back rules, but do not exceed their stated available hours.
+
+OUTPUT: Return only the JSON array. No text before or after.
+[{"title":"Morning Shift","date":"YYYY-MM-DD","start_time":"${openTime}","end_time":"${midTime}","roles":[{"role_name":"Service Staff","headcount":2,"assigned_staff":["Name"]}]}]
+
+Generate all 14 shifts now:`;
 
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 5000,
+      max_tokens: 4000,
       temperature: 0.3,
     });
 
@@ -278,7 +271,9 @@ Generate ALL 14 shifts now (2 per day × 7 days):`;
     if (!match) return res.status(500).json({ success: false, message: "AI returned invalid schedule format. Please try again." });
 
     const schedule = JSON.parse(match[0]);
-    return res.json({ success: true, schedule });
+    // Return casual staff names so frontend can highlight them
+    const casualNames = casualStaff.map(s => s.users?.full_name).filter(Boolean);
+    return res.json({ success: true, schedule, casualNames });
   } catch (err) {
     console.error("generateWeeklySchedule error:", err.message);
     return res.status(500).json({ success: false, message: err.message });
@@ -342,4 +337,52 @@ const confirmWeeklySchedule = async (req, res) => {
   }
 };
 
-module.exports = { getShifts, getShiftById, createShift, updateShift, deleteShift, generateWeeklySchedule, confirmWeeklySchedule };
+// ── GET casual availability for the outlet (used by manager UI) ──────────────
+const getCasualAvailability = async (req, res) => {
+  try {
+    const outletId = await getCallerOutletId(req.user.user_id);
+    if (!outletId) return res.status(403).json({ success: false, message: "No outlet found." });
+
+    const { weekStart, weekEnd } = req.query;
+    if (!weekStart || !weekEnd) return res.status(400).json({ success: false, message: "weekStart and weekEnd required." });
+
+    // Fetch all casual staff for this outlet
+    const casualStaff = await prisma.staff.findMany({
+      where: { outlet_id: outletId, is_active: true, users: { role: "outlet_casual_staff" } },
+      include: { users: { select: { full_name: true, email: true } } },
+    });
+
+    const casualIds = casualStaff.map(s => s.staff_id);
+    const nameMap   = {};
+    casualStaff.forEach(s => { nameMap[s.staff_id] = s.users?.full_name || s.users?.email || "Unknown"; });
+
+    const rows = casualIds.length > 0
+      ? await prisma.casual_availability.findMany({
+          where: {
+            staff_id: { in: casualIds },
+            week_start_date: { gte: new Date(weekStart), lte: new Date(weekEnd) },
+          },
+          orderBy: [{ staff_id: "asc" }, { day_of_week: "asc" }],
+        })
+      : [];
+
+    // Group by staff
+    const byStaff = {};
+    rows.forEach(r => {
+      const id = r.staff_id;
+      if (!byStaff[id]) byStaff[id] = { name: nameMap[id], days: [] };
+      byStaff[id].days.push({
+        day_of_week: r.day_of_week,
+        available_from: r.available_from ? String(r.available_from).slice(0, 5) : null,
+        available_to:   r.available_to   ? String(r.available_to).slice(0, 5)   : null,
+      });
+    });
+
+    return res.json({ success: true, availability: Object.values(byStaff), totalCasual: casualStaff.length });
+  } catch (err) {
+    console.error("getCasualAvailability error:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getShifts, getShiftById, createShift, updateShift, deleteShift, generateWeeklySchedule, confirmWeeklySchedule, getCasualAvailability };

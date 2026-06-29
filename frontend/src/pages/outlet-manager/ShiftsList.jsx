@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
@@ -68,7 +69,8 @@ function Shimmer({ w = "100%", h = "16px", r = "8px", style: extra = {} }) {
 }
 
 export default function ShiftsList() {
-  const goTo = useGoTo();
+  const goTo     = useGoTo();
+  const navigate = useNavigate();
   const user = getUser();
   const userId = user?.user_id;
 
@@ -421,7 +423,12 @@ export default function ShiftsList() {
                 {fmtDateShort(weekDates[0])} – {fmtDateShort(weekDates[6])}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <button onClick={() => generateWeeklySchedule(weekDates)}
+                <button onClick={() => {
+                    const toLocal = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+                    const weekStart = toLocal(weekDates[0]);
+                    const weekEnd   = toLocal(weekDates[6]);
+                    goTo(`/outlet-manager/shifts/generate?weekStart=${weekStart}&weekEnd=${weekEnd}`);
+                  }}
                   style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", borderRadius: "9px", border: "none", background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", fontSize: "12px", fontWeight: "700", cursor: "pointer", whiteSpace: "nowrap" }}>
                   ✦ Generate Week
                 </button>

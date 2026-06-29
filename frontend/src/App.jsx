@@ -18,7 +18,8 @@ import ManagerDashboard   from "./pages/outlet-manager/Dashboard";
 import StaffList          from "./pages/outlet-manager/StaffList";
 import StaffProfile       from "./pages/outlet-manager/StaffProfile";
 import AddStaff           from "./pages/outlet-manager/AddStaff";
-import ShiftsList         from "./pages/outlet-manager/ShiftsList";
+import ShiftsList               from "./pages/outlet-manager/ShiftsList";
+import GenerateWeeklySchedule   from "./pages/outlet-manager/GenerateWeeklySchedule";
 import CreateShift        from "./pages/outlet-manager/CreateShift";
 import ShiftDetail        from "./pages/outlet-manager/ShiftDetail";
 import AvailabilityLeave  from "./pages/outlet-manager/AvailabilityLeave";
@@ -136,6 +137,7 @@ function App() {
         <Route path="/outlet-manager/staff/new"    element={<PR roles={["outlet_manager"]}><AddStaff /></PR>} />
         <Route path="/outlet-manager/staff/:id"    element={<PR roles={["outlet_manager"]}><StaffProfile /></PR>} />
         <Route path="/outlet-manager/shifts"       element={<PR roles={["outlet_manager"]}><ShiftsList /></PR>} />
+        <Route path="/outlet-manager/shifts/generate" element={<PR roles={["outlet_manager"]}><GenerateWeeklySchedule /></PR>} />
         <Route path="/outlet-manager/shifts/new"   element={<PR roles={["outlet_manager"]}><CreateShift /></PR>} />
         <Route path="/outlet-manager/shifts/:id"   element={<PR roles={["outlet_manager"]}><ShiftDetail /></PR>} />
         <Route path="/outlet-manager/availability" element={<PR roles={["outlet_manager"]}><AvailabilityLeave /></PR>} />
