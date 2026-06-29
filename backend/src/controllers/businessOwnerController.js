@@ -500,6 +500,50 @@ const deleteOutletSkill = async (req, res) => {
   }
 };
 
+// ── Business-level skills (not tied to an outlet) ────────────────────────────
+
+// GET /api/business/skills  — returns business skills + catalog suggestions for their industry
+const getBusinessSkills = async (req, res) => {
+  try {
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("owner_id", req.user.user_id).maybeSingle();
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const [businessSkills, catalogSkills] = await Promise.all([
+      prisma.skills.findMany({ where: { business_id: biz.business_id }, orderBy: { name: "asc" } }),
+      prisma.skills.findMany({ where: { is_catalog: true, industry_type: biz.industry || "other" }, orderBy: { name: "asc" } }),
+    ]);
+
+    // Suggestions = catalog skills not yet added to business
+    const businessNames = new Set(businessSkills.map(s => s.name.toLowerCase()));
+    const suggestions = catalogSkills.filter(s => !businessNames.has(s.name.toLowerCase()));
+
+    return res.json({ success: true, skills: businessSkills, suggestions, industry: biz.industry });
+  } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
+};
+
+// POST /api/business/skills
+const createBusinessSkill = async (req, res) => {
+  try {
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+    const { name, description } = req.body;
+    if (!name?.trim()) return res.status(400).json({ success: false, message: "Skill name is required." });
+    const skill = await prisma.skills.create({ data: { name: name.trim(), description: description || null, business_id: biz.business_id, created_by: req.user.user_id } });
+    return res.status(201).json({ success: true, skill });
+  } catch (err) {
+    if (err.code === "P2002") return res.status(409).json({ success: false, message: "This skill already exists for your business." });
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// DELETE /api/business/skills/:skill_id
+const deleteBusinessSkill = async (req, res) => {
+  try {
+    await prisma.skills.delete({ where: { skill_id: Number(req.params.skill_id) } });
+    return res.json({ success: true });
+  } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
+};
+
 // ── Stats / consolidated report ───────────────────────────
 
 // GET /api/business/stats
@@ -529,4 +573,4 @@ const getBusinessStats = async (req, res) => {
   }
 };
 
-module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates };
+module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill };

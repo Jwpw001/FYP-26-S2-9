@@ -25,8 +25,10 @@ model users {
   shifts          shifts[]
   skills          skills[]
   staff           staff[]
-  swap_requests   swap_requests[]
-  user_skill_tags user_skill_tags[]
+  swap_requests         swap_requests[]
+  user_skill_tags       user_skill_tags[]
+  projects_created      projects[]
+  timesheets_reviewed   timesheets[]      @relation("timesheet_reviewer")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -106,6 +108,9 @@ model outlets {
   skills                 skills[]
   staff                  staff[]
   outlet_role_templates  outlet_role_templates[]
+  projects               projects[]
+  services               services[]
+  bookings               bookings[]
 }
 
 model outlet_role_templates {
@@ -198,18 +203,19 @@ model shifts {
 }
 
 model skills {
-  skill_id        Int               @id @default(autoincrement())
-  name            String            @db.VarChar(100)
-  description     String?
-  created_by      Int?
-  outlet_id       Int?
-  shift_roles             shift_roles[]
-  outlets                 outlets?                @relation(fields: [outlet_id], references: [outlet_id], onUpdate: NoAction)
-  users                   users?                  @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
-  user_skill_tags         user_skill_tags[]
-  outlet_role_templates   outlet_role_templates[]
-
-  @@unique([name, outlet_id])
+  skill_id              Int                     @id @default(autoincrement())
+  name                  String                  @db.VarChar(100)
+  description           String?
+  created_by            Int?
+  outlet_id             Int?
+  business_id           Int?
+  industry_type         String?                 @db.VarChar(30)
+  is_catalog            Boolean                 @default(false)
+  shift_roles           shift_roles[]
+  outlets               outlets?                @relation(fields: [outlet_id], references: [outlet_id], onUpdate: NoAction)
+  users                 users?                  @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
+  user_skill_tags       user_skill_tags[]
+  outlet_role_templates outlet_role_templates[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -226,6 +232,9 @@ model staff {
   availability          availability[]
   shift_assignments     shift_assignments[]
   staff_certifications  staff_certifications[]
+  project_assignments   project_assignments[]
+  timesheets            timesheets[]
+  bookings              bookings[]
   outlets             outlets             @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade, onUpdate: NoAction)
   users               users               @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 }
@@ -266,11 +275,94 @@ model invitations {
 }
 
 model user_skill_tags {
-  id       Int    @id @default(autoincrement())
-  user_id  Int
-  skill_id Int
-  skills   skills @relation(fields: [skill_id], references: [skill_id], onDelete: Cascade, onUpdate: NoAction)
-  users    users  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  id                Int    @id @default(autoincrement())
+  user_id           Int
+  skill_id          Int
+  proficiency_level String @default("intermediate") @db.VarChar(20)
+  skills            skills @relation(fields: [skill_id], references: [skill_id], onDelete: Cascade, onUpdate: NoAction)
+  users             users  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([user_id, skill_id])
+}
+
+model projects {
+  project_id          Int                  @id @default(autoincrement())
+  business_id         Int
+  location_id         Int?
+  name                String               @db.VarChar(150)
+  description         String?
+  status              String               @default("active") @db.VarChar(20)
+  start_date          DateTime?            @db.Date
+  end_date            DateTime?            @db.Date
+  color               String?              @default("#6366F1") @db.VarChar(7)
+  created_by          Int?
+  created_at          DateTime             @default(now()) @db.Timestamptz
+  users               users?               @relation(fields: [created_by], references: [user_id], onDelete: SetNull)
+  outlets             outlets?             @relation(fields: [location_id], references: [outlet_id], onDelete: SetNull)
+  project_assignments project_assignments[]
+  timesheets          timesheets[]
+}
+
+model project_assignments {
+  pa_id            Int      @id @default(autoincrement())
+  project_id       Int
+  staff_id         Int
+  role_on_project  String?  @db.VarChar(100)
+  estimated_hours  Decimal  @default(0) @db.Decimal(6,1)
+  created_at       DateTime @default(now()) @db.Timestamptz
+  projects         projects @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
+  staff            staff    @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade)
+
+  @@unique([project_id, staff_id])
+}
+
+model timesheets {
+  timesheet_id  Int       @id @default(autoincrement())
+  staff_id      Int
+  project_id    Int?
+  log_date      DateTime  @db.Date
+  hours_worked  Decimal   @db.Decimal(4,1)
+  description   String?
+  status        String    @default("pending") @db.VarChar(20)
+  reviewed_by   Int?
+  reviewed_at   DateTime? @db.Timestamptz
+  created_at    DateTime  @default(now()) @db.Timestamptz
+  staff         staff     @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade)
+  projects      projects? @relation(fields: [project_id], references: [project_id], onDelete: SetNull)
+  reviewer      users?    @relation("timesheet_reviewer", fields: [reviewed_by], references: [user_id], onDelete: SetNull)
+
+  @@unique([staff_id, project_id, log_date])
+}
+
+model services {
+  service_id      Int       @id @default(autoincrement())
+  outlet_id       Int
+  name            String    @db.VarChar(150)
+  duration_mins   Int       @default(60)
+  requires_skill  String?   @db.VarChar(100)
+  color           String?   @default("#6366F1") @db.VarChar(7)
+  is_active       Boolean   @default(true)
+  created_at      DateTime  @default(now()) @db.Timestamptz
+  outlets         outlets   @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade)
+  bookings        bookings[]
+}
+
+model bookings {
+  booking_id         Int       @id @default(autoincrement())
+  outlet_id          Int
+  service_id         Int?
+  customer_name      String    @db.VarChar(150)
+  customer_phone     String?   @db.VarChar(30)
+  booking_date       DateTime  @db.Date
+  start_time         DateTime  @db.Time(6)
+  end_time           DateTime  @db.Time(6)
+  assigned_staff_id  Int?
+  status             String    @default("confirmed") @db.VarChar(20)
+  notes              String?
+  created_at         DateTime  @default(now()) @db.Timestamptz
+  outlets            outlets   @relation(fields: [outlet_id], references: [outlet_id], onDelete: Cascade)
+  services           services? @relation(fields: [service_id], references: [service_id], onDelete: SetNull)
+  staff              staff?    @relation(fields: [assigned_staff_id], references: [staff_id], onDelete: SetNull)
+
+  @@index([outlet_id, booking_date])
 }

@@ -4,7 +4,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail, FolderKanban, Clock, Gauge, BookOpen } from "lucide-react";
 import "./sidebarStyles.js";
 import { useBusinessContext } from "../../context/BusinessContext";
 
@@ -24,9 +24,11 @@ export default function ManagerLayout({ children, title }) {
     ...(schedulingMode === "shift" ? [
       { label: "Shifts",              path: "/outlet-manager/shifts",       Icon: CalendarDays },
     ] : schedulingMode === "flexible" ? [
-      { label: "Timesheets",          path: "/outlet-manager/shifts",       Icon: CalendarDays },
+      { label: "Timesheets",          path: "/outlet-manager/timesheets",   Icon: Clock },
+      { label: "Projects",            path: "/outlet-manager/projects",     Icon: FolderKanban },
+      { label: "Capacity",            path: "/outlet-manager/capacity",     Icon: Gauge },
     ] : [
-      { label: "Appointments",        path: "/outlet-manager/shifts",       Icon: CalendarDays },
+      { label: "Bookings",            path: "/outlet-manager/bookings",     Icon: BookOpen },
     ]),
     { label: "Availability",          path: "/outlet-manager/availability", Icon: CalendarClock },
     { label: "Attendance",            path: "/outlet-manager/attendance",   Icon: ClipboardCheck },

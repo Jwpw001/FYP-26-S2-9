@@ -16,6 +16,9 @@ const reportRoutes = require("./routes/reportRoutes");
 const aiAssistantRoutes = require("./routes/aiAssistantRoutes");
 const invitationRoutes = require("./routes/invitationRoutes");
 const businessOwnerRoutes = require("./routes/businessOwnerRoutes");
+const projectRoutes       = require("./routes/projectRoutes");
+const timesheetRoutes     = require("./routes/timesheetRoutes");
+const bookingRoutes       = require("./routes/bookingRoutes");
 
 const app = express();
 
@@ -24,10 +27,23 @@ app.use(express.json());
 app.use(morgan("dev"));
 
 app.get("/api/health", (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: "Backend running"
-    });
+    res.status(200).json({ success: true, message: "Backend running" });
+});
+
+// Public: catalog skills by industry (used during registration)
+const prismaClient = require("./config/prisma");
+app.get("/api/catalog/skills", async (req, res) => {
+    try {
+        const { industry } = req.query;
+        const skills = await prismaClient.skills.findMany({
+            where: { is_catalog: true, industry_type: industry || "other" },
+            select: { skill_id: true, name: true, description: true },
+            orderBy: { name: "asc" },
+        });
+        res.json({ success: true, skills });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 app.use("/api/auth", authRoutes);
@@ -41,6 +57,9 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/ai-assistant", aiAssistantRoutes);
+app.use("/api/projects",    projectRoutes);
+app.use("/api/timesheets",  timesheetRoutes);
+app.use("/api/bookings",    bookingRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api/business", businessOwnerRoutes);
 

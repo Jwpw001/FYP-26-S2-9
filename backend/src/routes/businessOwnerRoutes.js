@@ -1,7 +1,7 @@
 ﻿const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/authMiddleware");
-const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates } = require("../controllers/businessOwnerController");
+const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill } = require("../controllers/businessOwnerController");
 
 router.use(protect);
 
@@ -27,6 +27,9 @@ router.patch("/outlets/:outlet_id/skills/:skill_id",  updateOutletSkill);
 router.delete("/outlets/:outlet_id/skills/:skill_id", deleteOutletSkill);
 router.get("/outlets/:outlet_id/role-templates",      getRoleTemplates);
 router.put("/outlets/:outlet_id/role-templates",      upsertRoleTemplates);
+router.get("/skills",                                 getBusinessSkills);
+router.post("/skills",                                createBusinessSkill);
+router.delete("/skills/:skill_id",                    deleteBusinessSkill);
 
 module.exports = router;
 

@@ -108,7 +108,7 @@ const register = async (req, res) => {
 
 const registerBusiness = async (req, res) => {
     try {
-        const { business_name, description, owner_name, email, phone, address, password, plan, industry, scheduling_mode, location_label, staff_label } = req.body;
+        const { business_name, description, owner_name, email, phone, address, password, plan, industry, scheduling_mode, location_label, staff_label, skills = [] } = req.body;
         const validPlans = ["free", "premium", "enterprise"];
         const validModes = ["shift", "flexible", "appointment"];
         const selectedPlan = validPlans.includes(plan) ? plan : "free";
@@ -157,6 +157,17 @@ const registerBusiness = async (req, res) => {
                 staff_label: staff_label || "Staff",
             });
             if (bizErr) throw new Error(bizErr.message);
+
+            // Save selected skills at business level
+            if (Array.isArray(skills) && skills.length > 0) {
+                const { data: bizRow } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", newUser.user_id).maybeSingle();
+                if (bizRow?.business_id) {
+                    const skillRows = skills.map(name => ({ name: String(name).trim(), business_id: bizRow.business_id, created_by: newUser.user_id })).filter(r => r.name);
+                    if (skillRows.length > 0) {
+                        await supabaseAdmin.from("skills").upsert(skillRows, { onConflict: "name,outlet_id" }).catch(() => {});
+                    }
+                }
+            }
         } catch (innerErr) {
             // Roll back the Supabase auth user to avoid orphaned records
             await supabaseAdmin.auth.admin.deleteUser(authData.user.id);

@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
-import { Building2, Users } from "lucide-react";
+import { Building2, Users, FolderKanban, Clock, Gauge } from "lucide-react";
+import { useBusinessContext } from "../../context/BusinessContext";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-dash-styles")) {
   const style = document.createElement("style");
@@ -67,8 +68,21 @@ function StatCard({ card, value, delay, onNav }) {
   );
 }
 
+const INDUSTRY_META = {
+  "f&b":         { emoji:"🍽️", label:"F&B",          welcome:"Ready to build this week's schedule?" },
+  "retail":      { emoji:"🛍️", label:"Retail",        welcome:"Manage your stores and floor staff." },
+  "healthcare":  { emoji:"🏥", label:"Healthcare",    welcome:"Keep your clinic fully covered." },
+  "tech":        { emoji:"💻", label:"Technology",    welcome:"Track projects, capacity, and team workload." },
+  "logistics":   { emoji:"📦", label:"Logistics",     welcome:"Manage your warehouse shifts and certifications." },
+  "beauty":      { emoji:"✨", label:"Beauty",        welcome:"Your appointments and therapist schedule." },
+  "education":   { emoji:"📚", label:"Education",     welcome:"Manage tutors, classes, and student groups." },
+  "hospitality": { emoji:"🏨", label:"Hospitality",   welcome:"Keep every department staffed around the clock." },
+  "other":       { emoji:"🏢", label:"Business",      welcome:"Manage your workforce from one place." },
+};
+
 export default function BODashboard() {
   const goTo = useGoTo();
+  const { locationLabel, staffLabel, schedulingMode, industry } = useBusinessContext();
   const [stats, setStats] = useState(null);
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -83,29 +97,66 @@ export default function BODashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const cards = [
-    { label: "Outlets",     sub: "Across your business", value: stats?.outlets_count ?? 0, Icon: Building2, color: "#D97706", bg: "#FEF3C7", link: "/business-owner/outlets" },
-    { label: "Total Staff", sub: "Active members",       value: stats?.staff_count   ?? 0, Icon: Users,     color: "#3B82F6", bg: "#EFF6FF", link: "/business-owner/staff" },
+  const meta = INDUSTRY_META[industry] || INDUSTRY_META["other"];
+
+  // Cards adapt based on scheduling mode
+  const cards = schedulingMode === "flexible" ? [
+    { label: `${locationLabel}s`,    sub: "Across your business",  value: stats?.outlets_count ?? 0, Icon: Building2,     color: "#D97706", bg: "#FEF3C7", link: "/business-owner/outlets" },
+    { label: `All ${staffLabel}`,    sub: "Active team members",   value: stats?.staff_count   ?? 0, Icon: Users,         color: "#3B82F6", bg: "#EFF6FF", link: "/business-owner/staff" },
+    { label: "Active Projects",      sub: "Across all teams",      value: stats?.projects_count ?? 0, Icon: FolderKanban, color: "#6366F1", bg: "#EEF2FF", link: "/business-owner/outlets" },
+  ] : schedulingMode === "appointment" ? [
+    { label: `${locationLabel}s`,    sub: "Across your business",  value: stats?.outlets_count ?? 0, Icon: Building2,     color: "#EC4899", bg: "#FDF2F8", link: "/business-owner/outlets" },
+    { label: `All ${staffLabel}`,    sub: "Active members",        value: stats?.staff_count   ?? 0, Icon: Users,         color: "#3B82F6", bg: "#EFF6FF", link: "/business-owner/staff" },
+  ] : [
+    { label: `${locationLabel}s`,    sub: "Across your business",  value: stats?.outlets_count ?? 0, Icon: Building2,     color: "#D97706", bg: "#FEF3C7", link: "/business-owner/outlets" },
+    { label: `All ${staffLabel}`,    sub: "Active members",        value: stats?.staff_count   ?? 0, Icon: Users,         color: "#3B82F6", bg: "#EFF6FF", link: "/business-owner/staff" },
+  ];
+
+  // Quick action links adapt per mode
+  const quickActions = schedulingMode === "flexible" ? [
+    { label: `Add ${locationLabel}`, sub: "Set up a new team", path: "/business-owner/outlets" },
+    { label: `Invite ${staffLabel}`, sub: "Send join links",   path: "/business-owner/invitations" },
+    { label: "View Reports",         sub: "Hours & capacity",  path: "/business-owner/reports" },
+  ] : schedulingMode === "appointment" ? [
+    { label: `Add ${locationLabel}`, sub: "New branch or clinic", path: "/business-owner/outlets" },
+    { label: `Invite ${staffLabel}`, sub: "Add therapists/staff",  path: "/business-owner/invitations" },
+    { label: "View Reports",         sub: "Booking summaries",    path: "/business-owner/reports" },
+  ] : [
+    { label: `Add ${locationLabel}`, sub: "Set up a new location", path: "/business-owner/outlets" },
+    { label: `Invite ${staffLabel}`, sub: "Send join links",        path: "/business-owner/invitations" },
+    { label: "View Reports",         sub: "Staff & shifts data",    path: "/business-owner/reports" },
   ];
 
   return (
     <BusinessOwnerLayout title="Dashboard">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
-        <div style={s.welcomeBox}>
-          <h2 style={s.welcomeTitle}>Welcome back 👋</h2>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <p style={s.welcomeSub}>{business?.name || "Your Business"} · Business Owner Portal</p>
-            {business?.plan && (() => {
-              const ps = { free: { label:"Free", bg:"#F1F5F9", color:"#64748B" }, premium: { label:"Premium", bg:"#EFF6FF", color:"#2563EB" }, enterprise: { label:"Enterprise", bg:"#FDF4FF", color:"#9333EA" } }[business.plan] || {};
-              return <span style={{ fontSize:"11px", fontWeight:"700", padding:"3px 9px", borderRadius:"100px", background: ps.bg, color: ps.color }}>{ps.label}</span>;
-            })()}
+        {/* Welcome banner */}
+        <div style={{ ...s.welcomeBox, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"12px" }}>
+          <div>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"4px", flexWrap:"wrap" }}>
+              <h2 style={s.welcomeTitle}>Welcome back 👋</h2>
+              {business?.plan && (() => {
+                const ps = { free:{label:"Free",bg:"#F1F5F9",color:"#64748B"}, premium:{label:"Premium",bg:"#EFF6FF",color:"#2563EB"}, enterprise:{label:"Enterprise",bg:"#FDF4FF",color:"#9333EA"} }[business.plan] || {};
+                return <span style={{ fontSize:"11px",fontWeight:"700",padding:"3px 9px",borderRadius:"100px",background:ps.bg,color:ps.color }}>{ps.label}</span>;
+              })()}
+            </div>
+            <p style={s.welcomeSub}>{business?.name || "Your Business"} · {meta.label} · {meta.welcome}</p>
+          </div>
+          {/* Industry badge */}
+          <div style={{ display:"flex",alignItems:"center",gap:"8px",padding:"8px 14px",borderRadius:"10px",background:"#F8FAFC",border:"1px solid #E2E8F0" }}>
+            <span style={{ fontSize:"20px" }}>{meta.emoji}</span>
+            <div>
+              <div style={{ fontSize:"11px",fontWeight:"700",color:"#1E293B" }}>{meta.label}</div>
+              <div style={{ fontSize:"10px",color:"#94A3B8",textTransform:"capitalize" }}>{schedulingMode} mode</div>
+            </div>
           </div>
         </div>
 
+        {/* Stat cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: "16px", marginBottom: "24px" }}>
           {loading
-            ? Array.from({ length: 2 }).map((_, i) => (
+            ? Array.from({ length: cards.length || 2 }).map((_, i) => (
                 <div key={i} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px", height: "92px" }} />
               ))
             : cards.map((card, idx) => (
@@ -114,14 +165,30 @@ export default function BODashboard() {
           }
         </div>
 
+        {/* Quick actions */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:"12px", marginBottom:"24px" }}>
+          {quickActions.map((a, i) => (
+            <button key={i} onClick={() => goTo(a.path)}
+              style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"12px", padding:"14px 16px", textAlign:"left", cursor:"pointer", transition:"all 0.15s", boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}
+              className="card-hover">
+              <div style={{ fontSize:"13px",fontWeight:"700",color:"#1E293B",marginBottom:"2px" }}>{a.label}</div>
+              <div style={{ fontSize:"11px",color:"#94A3B8" }}>{a.sub}</div>
+            </button>
+          ))}
+        </div>
+
         {business && (
           <div style={s.infoCard}>
             <h3 style={s.infoTitle}>Business Info</h3>
             <div style={s.infoGrid}>
-              <InfoRow label="Business Name" value={business.name} />
-              <InfoRow label="Contact Email" value={business.contact_email || "—"} />
-              <InfoRow label="Phone" value={business.contact_phone || "—"} />
-              <InfoRow label="Address" value={business.address || "—"} />
+              <InfoRow label="Business Name"    value={business.name} />
+              <InfoRow label="Contact Email"    value={business.contact_email || "—"} />
+              <InfoRow label="Phone"            value={business.contact_phone || "—"} />
+              <InfoRow label="Address"          value={business.address || "—"} />
+              <InfoRow label="Industry"         value={`${meta.emoji} ${meta.label}`} />
+              <InfoRow label="Scheduling Mode"  value={schedulingMode ? schedulingMode.charAt(0).toUpperCase()+schedulingMode.slice(1)+" Mode" : "—"} />
+              <InfoRow label={`${locationLabel} Label`} value={locationLabel} />
+              <InfoRow label={`Staff Label`}    value={staffLabel} />
             </div>
             {business.description && (
               <div style={{ marginTop: "12px" }}>

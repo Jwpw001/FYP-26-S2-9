@@ -21,6 +21,12 @@ import StaffProfile       from "./pages/outlet-manager/StaffProfile";
 import AddStaff           from "./pages/outlet-manager/AddStaff";
 import ShiftsList               from "./pages/outlet-manager/ShiftsList";
 import GenerateWeeklySchedule   from "./pages/outlet-manager/GenerateWeeklySchedule";
+import Projects                 from "./pages/outlet-manager/Projects";
+import Timesheets               from "./pages/outlet-manager/Timesheets";
+import Capacity                 from "./pages/outlet-manager/Capacity";
+import MyTimesheets             from "./pages/regular-staff/MyTimesheets";
+import MyAppointments           from "./pages/regular-staff/MyAppointments";
+import Bookings                 from "./pages/outlet-manager/Bookings";
 import CreateShift        from "./pages/outlet-manager/CreateShift";
 import ShiftDetail        from "./pages/outlet-manager/ShiftDetail";
 import AvailabilityLeave  from "./pages/outlet-manager/AvailabilityLeave";
@@ -147,6 +153,10 @@ function App() {
         <Route path="/outlet-manager/reports"        element={<PR roles={["outlet_manager"]}><Reports /></PR>} />
         <Route path="/outlet-manager/notifications" element={<PR roles={["outlet_manager"]}><ManagerNotifications /></PR>} />
         <Route path="/outlet-manager/manpower"       element={<PR roles={["outlet_manager"]}><ManpowerRequests /></PR>} />
+        <Route path="/outlet-manager/projects"      element={<PR roles={["outlet_manager"]}><Projects /></PR>} />
+        <Route path="/outlet-manager/timesheets"    element={<PR roles={["outlet_manager"]}><Timesheets /></PR>} />
+        <Route path="/outlet-manager/capacity"      element={<PR roles={["outlet_manager"]}><Capacity /></PR>} />
+        <Route path="/outlet-manager/bookings"     element={<PR roles={["outlet_manager"]}><Bookings /></PR>} />
         <Route path="/outlet-manager/invitations"   element={<PR roles={["outlet_manager"]}><OMInvitations /></PR>} />
 
         {/* ── Regular Staff ────────────────────────────── */}
@@ -154,6 +164,8 @@ function App() {
         <Route path="/regular-staff/shifts"        element={<PR roles={["regular_staff"]}><MyShifts /></PR>} />
         <Route path="/regular-staff/leave"         element={<PR roles={["regular_staff"]}><LeaveRequests /></PR>} />
         <Route path="/regular-staff/swaps"         element={<PR roles={["regular_staff"]}><SwapRequests /></PR>} />
+        <Route path="/regular-staff/timesheets"    element={<PR roles={["regular_staff"]}><MyTimesheets /></PR>} />
+        <Route path="/regular-staff/appointments" element={<PR roles={["regular_staff"]}><MyAppointments /></PR>} />
         <Route path="/regular-staff/notifications" element={<PR roles={["regular_staff"]}>
           <NotificationsPage Layout={StaffLayout} />
         </PR>} />

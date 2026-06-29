@@ -3,10 +3,11 @@ import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
-import { LayoutDashboard, CalendarDays, UmbrellaOff, ArrowLeftRight } from "lucide-react";
+import { LayoutDashboard, CalendarDays, UmbrellaOff, ArrowLeftRight, Clock, BookOpen } from "lucide-react";
 import "./sidebarStyles.js";
+import { useBusinessContext } from "../../context/BusinessContext";
 
-const NAV = [
+const BASE_NAV = [
   { label: "Dashboard",     path: "/regular-staff/dashboard", Icon: LayoutDashboard },
   { label: "My Shifts",     path: "/regular-staff/shifts",    Icon: CalendarDays },
   { label: "Leave",         path: "/regular-staff/leave",     Icon: UmbrellaOff },
@@ -17,7 +18,14 @@ export default function StaffLayout({ children, title }) {
   const navigate = useNavigate();
   const location = useLocation();
   const user = getUser();
+  const { schedulingMode } = useBusinessContext();
   const [expanded, setExpanded] = useState(false);
+
+  const NAV = schedulingMode === "flexible"
+    ? [...BASE_NAV, { label:"My Timesheets",   path:"/regular-staff/timesheets",   Icon:Clock }]
+    : schedulingMode === "appointment"
+    ? [...BASE_NAV, { label:"My Appointments", path:"/regular-staff/appointments", Icon:BookOpen }]
+    : BASE_NAV;
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
