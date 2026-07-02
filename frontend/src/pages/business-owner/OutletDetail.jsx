@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase } from "lucide-react";
+import { Building2, MapPin, Users, ShieldCheck, Clock } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-outletdetail-styles")) {
   const style = document.createElement("style");
@@ -52,15 +52,7 @@ export default function OutletDetail() {
 
   const [form, setForm] = useState({ name: "", address: "", open_time: "", close_time: "" });
 
-  const [roleTemplates, setRoleTemplates] = useState([]);
-  const [roleTemplatesLoading, setRoleTemplatesLoading] = useState(true);
-  const [editingRoles, setEditingRoles] = useState(false);
-  const [rolesDraft, setRolesDraft] = useState([]);
-  const [rolesSaving, setRolesSaving] = useState(false);
-  const [skills, setSkills] = useState([]);
-
-  useEffect(() => { fetchOutlet(); fetchStaff(); fetchManagers(); fetchRoleTemplates(); }, [id]);
-  useEffect(() => { api.get("/api/business/skills").then(r => setSkills(r.skills || [])); }, []);
+  useEffect(() => { fetchOutlet(); fetchStaff(); fetchManagers(); }, [id]);
 
   async function fetchOutlet() {
     setLoading(true);
@@ -101,18 +93,6 @@ export default function OutletDetail() {
     }
   }
 
-  async function fetchRoleTemplates() {
-    setRoleTemplatesLoading(true);
-    try {
-      const data = await api.get(`/api/business/outlets/${id}/role-templates`);
-      setRoleTemplates(data.templates || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setRoleTemplatesLoading(false);
-    }
-  }
-
   async function handleSave() {
     if (!form.name.trim()) { setError("Outlet name is required."); return; }
     setSaving(true); setError(""); setSuccess("");
@@ -130,35 +110,6 @@ export default function OutletDetail() {
       setError(err.message || "Failed to save. Please try again.");
     } finally {
       setSaving(false);
-    }
-  }
-
-  function startEditRoles() {
-    setRolesDraft(roleTemplates.map(t => ({ role_name: t.role_name, skill_id: t.skill_id || "", headcount: t.headcount, min_experience_level: t.min_experience_level || "beginner", requires_certification: t.requires_certification || false, certification_name: t.certification_name || "" })));
-    setEditingRoles(true);
-  }
-
-  function updateRoleDraft(i, field, val) {
-    setRolesDraft(prev => { const r = [...prev]; r[i] = { ...r[i], [field]: val }; return r; });
-  }
-
-  async function saveRoles() {
-    setRolesSaving(true);
-    try {
-      await api.put(`/api/business/outlets/${id}/role-templates`, {
-        role_templates: rolesDraft.filter(r => r.role_name.trim()).map(r => ({
-          role_name:            r.role_name.trim(),
-          skill_id:             r.skill_id ? Number(r.skill_id) : null,
-          headcount:            Number(r.headcount) || 1,
-          min_experience_level: r.min_experience_level || "beginner",
-        })),
-      });
-      await fetchRoleTemplates();
-      setEditingRoles(false);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setRolesSaving(false);
     }
   }
 
@@ -207,7 +158,7 @@ export default function OutletDetail() {
               <p style={s.managerEmpty}>No manager assigned yet.</p>
             ) : (
               managers.map(m => (
-                <div key={m.user_id} className="bo-manager-row" style={{ ...s.managerRow, cursor: "pointer" }} onClick={() => goTo(`/business-owner/managers/${m.user_id}`)}>
+                <div key={m.user_id} className="bo-manager-row" style={{ ...s.managerRow }}>
                   <div style={s.managerAvatar}>{m.full_name?.[0]?.toUpperCase() || "?"}</div>
                   <div style={{ minWidth: 0, textAlign: "left" }}>
                     <p style={s.managerName}>{m.full_name}</p>
@@ -283,172 +234,6 @@ export default function OutletDetail() {
         </div>
       </div>
 
-      {/* ── Role Templates ── */}
-      <div style={{ ...s.staffSection, marginTop: "20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-          <div>
-            <h3 style={s.formTitle}>Daily Role Requirements</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>Roles and headcount needed every operating day</p>
-          </div>
-          {!editingRoles ? (
-            <button style={{ background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" }} onClick={startEditRoles}>
-              Edit Roles
-            </button>
-          ) : (
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button style={{ background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" }} onClick={() => setEditingRoles(false)}>Cancel</button>
-              <button style={{ background: "#F59E0B", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "700", color: "#1C1917", cursor: "pointer" }} onClick={saveRoles} disabled={rolesSaving}>
-                {rolesSaving ? "Saving…" : "Save"}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {roleTemplatesLoading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="42px" r="10px" />)}
-          </div>
-        ) : !editingRoles ? (
-          roleTemplates.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "36px", background: "#FFF", border: "1.5px dashed #E2E8F0", borderRadius: "16px" }}>
-              <Briefcase size={28} color="#CBD5E1" />
-              <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "8px" }}>No role requirements set. Click "Edit Roles" to add some.</p>
-            </div>
-          ) : (
-            <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 110px 1fr 60px", padding: "10px 16px", background: "#F8FAFC", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", gap: "8px" }}>
-                <span>Role</span><span>Skill</span><span>Min Level</span><span>Certification</span><span>Count</span>
-              </div>
-              {roleTemplates.map((t, i) => {
-                const EXP = { beginner:{bg:"#FEF3C7",color:"#92400E",icon:"🌱"}, intermediate:{bg:"#DBEAFE",color:"#1E40AF",icon:"⭐"}, expert:{bg:"#DCFCE7",color:"#166534",icon:"🏆"} };
-                const e = EXP[t.min_experience_level || "beginner"] || EXP.beginner;
-                return (
-                  <div key={t.template_id} style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 110px 1fr 60px", padding: "12px 16px", gap: "8px", alignItems: "center", borderTop: i > 0 ? "1px solid #F1F5F9" : "none" }}>
-                    <span style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>{t.role_name}</span>
-                    <span style={{ fontSize: "13px", color: t.skills ? "#1E293B" : "#94A3B8" }}>
-                      {t.skills ? <span style={{ background: "#EFF6FF", color: "#1D4ED8", padding: "2px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: "600" }}>{t.skills.name}</span> : "—"}
-                    </span>
-                    <span style={{ fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px", background: e.bg, color: e.color, display: "inline-block" }}>
-                      {e.icon} {(t.min_experience_level || "beginner").charAt(0).toUpperCase()+(t.min_experience_level || "beginner").slice(1)}+
-                    </span>
-                    <span style={{ fontSize: "12px", color: t.requires_certification ? "#DC2626" : "#94A3B8", fontWeight: t.requires_certification ? "600" : "400" }}>
-                      {t.requires_certification ? `🔖 ${t.certification_name || "Required"}` : "None"}
-                    </span>
-                    <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{t.headcount}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )
-        ) : (
-          <div>
-            {/* Step 1 — Skill chip picker */}
-            <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px", marginBottom: "16px" }}>
-              <p style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "12px" }}>
-                Select roles needed at this outlet
-              </p>
-              {skills.length === 0 ? (
-                <p style={{ fontSize: "13px", color: "#94A3B8" }}>No skill tags set up yet. Go to the Skills page to add some.</p>
-              ) : (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  {skills.map(sk => {
-                    const already = rolesDraft.some(r => String(r.skill_id) === String(sk.skill_id));
-                    return (
-                      <button key={sk.skill_id}
-                        onClick={() => {
-                          if (already) {
-                            setRolesDraft(p => p.filter(r => String(r.skill_id) !== String(sk.skill_id)));
-                          } else {
-                            setRolesDraft(p => [...p, { role_name: sk.name, skill_id: sk.skill_id, headcount: 1, min_experience_level: "beginner", requires_certification: false, certification_name: "" }]);
-                          }
-                        }}
-                        style={{
-                          padding: "7px 14px", borderRadius: "100px", fontSize: "13px", fontWeight: "600", cursor: "pointer", border: "none",
-                          background: already ? "#4F46E5" : "#F1F5F9",
-                          color: already ? "#fff" : "#475569",
-                          boxShadow: already ? "0 2px 8px rgba(79,70,229,0.25)" : "none",
-                          transform: already ? "scale(1.04)" : "scale(1)",
-                          transition: "all 0.15s",
-                        }}>
-                        {already && <span style={{ marginRight: 5 }}>✓</span>}{sk.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Step 2 — Configure selected roles */}
-            {rolesDraft.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <p style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  Configure selected roles
-                </p>
-                {rolesDraft.map((row, i) => (
-                  <div key={i} style={{ background: "#fff", border: "1.5px solid #E0E7FF", borderRadius: "12px", padding: "14px 16px" }}>
-                    {/* Role header */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4F46E5" }} />
-                        <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{row.role_name}</span>
-                      </div>
-                      <button onClick={() => setRolesDraft(p => p.filter((_, idx) => idx !== i))}
-                        style={{ background: "#FEF2F2", border: "none", borderRadius: "6px", color: "#EF4444", cursor: "pointer", padding: "4px 8px", fontSize: "11px", fontWeight: "700" }}>
-                        Remove
-                      </button>
-                    </div>
-
-                    {/* Count + Level */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
-                      <div>
-                        <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" }}>Headcount needed</p>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <button onClick={() => updateRoleDraft(i, "headcount", Math.max(1, (row.headcount || 1) - 1))}
-                            style={{ width: 28, height: 28, borderRadius: "50%", background: "#F1F5F9", border: "1px solid #E2E8F0", fontSize: "16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569" }}>−</button>
-                          <span style={{ fontSize: "18px", fontWeight: "800", color: "#1E293B", minWidth: "24px", textAlign: "center" }}>{row.headcount || 1}</span>
-                          <button onClick={() => updateRoleDraft(i, "headcount", (row.headcount || 1) + 1)}
-                            style={{ width: 28, height: 28, borderRadius: "50%", background: "#F1F5F9", border: "1px solid #E2E8F0", fontSize: "16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569" }}>+</button>
-                        </div>
-                      </div>
-                      <div>
-                        <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" }}>Min experience</p>
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          {[["beginner","🌱","#92400E","#FEF3C7"],["intermediate","⭐","#1E40AF","#DBEAFE"],["expert","🏆","#166534","#DCFCE7"]].map(([val, icon, color, bg]) => (
-                            <button key={val} onClick={() => updateRoleDraft(i, "min_experience_level", val)}
-                              style={{
-                                padding: "4px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "700", cursor: "pointer", border: "none",
-                                background: (row.min_experience_level || "beginner") === val ? bg : "#F1F5F9",
-                                color: (row.min_experience_level || "beginner") === val ? color : "#94A3B8",
-                                transition: "all 0.12s",
-                              }}>{icon} {val.charAt(0).toUpperCase()+val.slice(1)}</button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Certification */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#64748B", cursor: "pointer" }}>
-                        <input type="checkbox" checked={row.requires_certification || false}
-                          onChange={e => updateRoleDraft(i, "requires_certification", e.target.checked)}
-                          style={{ width: "14px", height: "14px", accentColor: "#4F46E5" }} />
-                        Requires certification
-                      </label>
-                      {row.requires_certification && (
-                        <input style={{ ...s.input, flex: 1, padding: "5px 10px", fontSize: "12px" }}
-                          placeholder="e.g. Forklift License, Food Hygiene Cert"
-                          value={row.certification_name || ""}
-                          onChange={e => updateRoleDraft(i, "certification_name", e.target.value)} />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* ── Staff at this outlet ── */}
       <div style={s.staffSection}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
@@ -486,7 +271,7 @@ export default function OutletDetail() {
               const color = avatarColor(name);
               const isManager = managers.some(mgr => Number(mgr.user_id) === Number(m.users?.user_id));
               return (
-                <div key={m.staff_id} className="bo-staff-card" style={{ ...s.staffCard, animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both`, cursor: "pointer", border: isManager ? "1.5px solid #FCD34D" : "1px solid #E2E8F0" }} onClick={() => goTo(`/business-owner/staff/${m.staff_id}`)}>
+                <div key={m.staff_id} className="bo-staff-card" style={{ ...s.staffCard, animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both`, border: isManager ? "1.5px solid #FCD34D" : "1px solid #E2E8F0" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
                     <div style={{ position: "relative" }}>
                       <div style={{ ...s.staffAvatar, background: color }}>{initials}</div>

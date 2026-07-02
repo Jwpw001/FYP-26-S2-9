@@ -210,7 +210,9 @@ const getInvitation = async (req, res) => {
 // GET /api/invitations/check-code/:code — public, look up invite by code
 const getInvitationByCode = async (req, res) => {
   try {
-    const code = req.params.code?.toUpperCase().trim();
+    // Normalize: accept with or without dash (e.g. "XD6LA948" → "XD6L-A948")
+    const raw = req.params.code?.toUpperCase().trim().replace(/-/g, "");
+    const code = raw.length === 8 ? `${raw.slice(0, 4)}-${raw.slice(4)}` : raw;
     const { data, error } = await supabaseAdmin
       .from("invitations")
       .select("*, outlets(name)")

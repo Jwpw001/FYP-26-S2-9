@@ -3,9 +3,8 @@ import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
-import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag } from "lucide-react";
+import { LayoutDashboard, Building2, UserPlus, BarChart2, CalendarDays } from "lucide-react";
 import { useBusinessContext } from "../../context/BusinessContext";
-import { FolderKanban } from "lucide-react";
 
 const PLAN_BADGE = {
   free:       { label: "Free",       color: "#94A3B8", bg: "rgba(148,163,184,0.15)", dot: "#94A3B8" },
@@ -22,22 +21,14 @@ export default function BusinessOwnerLayout({ children, title }) {
   const [unread, setUnread] = useState(0);
   const [plan, setPlan] = useState(null);
 
-  // Skill / competency label adapts per industry
-  const skillLabel = schedulingMode === "flexible" ? "Skills & Competencies"
-    : industry === "healthcare" ? "Certifications"
-    : industry === "education"  ? "Subjects"
-    : industry === "beauty"     ? "Specialisations"
-    : "Skill Tags";
-
-  const skillIcon = schedulingMode === "flexible" ? FolderKanban : Tag;
+  const scheduleLabel = schedulingMode === "flexible" ? "Timesheets" : schedulingMode === "appointment" ? "Appointments" : "Schedule";
 
   const NAV = [
     { label: "Dashboard",           path: "/business-owner/dashboard",   Icon: LayoutDashboard },
     { label: `${locationLabel}s`,   path: "/business-owner/outlets",     Icon: Building2 },
-    { label: `All ${staffLabel}`,   path: "/business-owner/staff",       Icon: Users },
     { label: "Invitations",         path: "/business-owner/invitations", Icon: UserPlus },
-    { label: skillLabel,            path: "/business-owner/skills",      Icon: skillIcon },
     { label: "Reports",             path: "/business-owner/reports",     Icon: BarChart2 },
+    { label: scheduleLabel,         path: "/business-owner/schedule",    Icon: CalendarDays },
   ];
 
   useEffect(() => {

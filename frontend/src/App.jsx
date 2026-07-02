@@ -59,15 +59,12 @@ import CasualMyShifts     from "./pages/outlet-casual-staff/MyShifts";
 import WeeklyAvailability from "./pages/outlet-casual-staff/WeeklyAvailability";
 
 // Business Owner
-import BODashboard   from "./pages/business-owner/Dashboard";
-import BOOutlets     from "./pages/business-owner/Outlets";
-import BOStaff       from "./pages/business-owner/Staff";
+import BODashboard    from "./pages/business-owner/Dashboard";
+import BOOutlets      from "./pages/business-owner/Outlets";
 import BOOutletDetail from "./pages/business-owner/OutletDetail";
-import BOStaffDetail  from "./pages/business-owner/StaffDetail";
-import BOManagerDetail from "./pages/business-owner/ManagerDetail";
-import BOInvitations from "./pages/business-owner/Invitations";
-import BOSkills      from "./pages/business-owner/Skills";
-import BOReports     from "./pages/business-owner/Reports";
+import BOInvitations  from "./pages/business-owner/Invitations";
+import BOReports      from "./pages/business-owner/Reports";
+import BOSchedule     from "./pages/business-owner/ScheduleView";
 import BusinessOwnerLayout from "./components/layout/BusinessOwnerLayout";
 import AcceptInvite  from "./pages/AcceptInvite";
 import JoinByCode    from "./pages/JoinByCode";
@@ -114,13 +111,10 @@ function App() {
         {/* ── Business Owner ───────────────────────────── */}
         <Route path="/business-owner/dashboard"   element={<PR roles={["business_owner"]}><BODashboard /></PR>} />
         <Route path="/business-owner/outlets"     element={<PR roles={["business_owner"]}><BOOutlets /></PR>} />
-        <Route path="/business-owner/staff"       element={<PR roles={["business_owner"]}><BOStaff /></PR>} />
         <Route path="/business-owner/outlets/:id" element={<PR roles={["business_owner"]}><BOOutletDetail /></PR>} />
-        <Route path="/business-owner/staff/:id"   element={<PR roles={["business_owner"]}><BOStaffDetail /></PR>} />
-        <Route path="/business-owner/managers/:id" element={<PR roles={["business_owner"]}><BOManagerDetail /></PR>} />
         <Route path="/business-owner/invitations" element={<PR roles={["business_owner"]}><BOInvitations /></PR>} />
-        <Route path="/business-owner/skills"      element={<PR roles={["business_owner"]}><BOSkills /></PR>} />
         <Route path="/business-owner/reports"     element={<PR roles={["business_owner"]}><BOReports /></PR>} />
+        <Route path="/business-owner/schedule"    element={<PR roles={["business_owner"]}><BOSchedule /></PR>} />
         <Route path="/business-owner/notifications" element={<PR roles={["business_owner"]}>
           <NotificationsPage Layout={BusinessOwnerLayout} />
         </PR>} />

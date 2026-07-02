@@ -365,16 +365,28 @@ const getStaffDetail = async (req, res) => {
     if (!staff) return res.status(404).json({ success: false, message: "Staff member not found." });
 
     const { data: biz2 } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
-    const [allSkills, assignedTags] = await Promise.all([
+    const [allSkills, assignedTags, managerLinks] = await Promise.all([
       prisma.skills.findMany({ where: { business_id: biz2?.business_id ?? -1 }, orderBy: { name: "asc" } }),
       prisma.user_skill_tags.findMany({ where: { user_id: staff.user_id } }),
+      supabaseAdmin.from("outlet_managers").select("outlet_id, is_primary").eq("user_id", staff.user_id),
     ]);
+
+    const managedOutletIds = (managerLinks.data || []).map(l => l.outlet_id);
+    let managedOutlets = [];
+    if (managedOutletIds.length > 0) {
+      managedOutlets = await prisma.outlets.findMany({
+        where: { outlet_id: { in: managedOutletIds } },
+        select: { outlet_id: true, name: true },
+      });
+    }
 
     return res.json({
       success: true,
       staff,
       allSkills,
       assignedSkillIds: assignedTags.map(t => t.skill_id),
+      is_manager: managedOutletIds.length > 0,
+      managed_outlets: managedOutlets,
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

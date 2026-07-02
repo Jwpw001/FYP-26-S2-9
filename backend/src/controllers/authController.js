@@ -84,7 +84,7 @@ const register = async (req, res) => {
         if (authErr) return res.status(400).json({ success: false, message: authErr.message });
 
         const newUser = await prisma.users.create({
-            data: { full_name, username, email, role: role || null, is_active: true },
+            data: { full_name, username, email, role: role || "pending", is_active: true },
         });
 
         if (role === "krewby_casual_worker") {

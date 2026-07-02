@@ -6,7 +6,7 @@ import { useBusinessContext } from "../../context/BusinessContext";
 import {
   Building2, Users, CalendarDays, AlertTriangle,
   FolderKanban, Clock, BookOpen, CheckCircle2, XCircle,
-  TrendingUp, ChevronRight, Zap,
+  TrendingUp, ChevronRight, Zap, BarChart2,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────
@@ -270,34 +270,34 @@ export default function BODashboard() {
   // ── Stat cards per mode ──────────────────────────────────
   const statCards = mode === "flexible" ? [
     { icon:Building2,    label:`${locationLabel}s`,     sub:"Across your business",   value:stats?.outlets_count    ?? 0, color:"#D97706", bg:"#FEF3C7", link:"/business-owner/outlets" },
-    { icon:Users,        label:`All ${staffLabel}`,     sub:"Active members",          value:stats?.staff_count      ?? 0, color:"#3B82F6", bg:"#EFF6FF", link:"/business-owner/staff" },
-    { icon:FolderKanban, label:"Active Projects",       sub:"Currently in progress",   value:stats?.active_projects  ?? 0, color:"#6366F1", bg:"#EEF2FF", link:"/business-owner/projects" },
-    { icon:Clock,        label:"Pending Timesheets",    sub:"Awaiting your approval",  value:stats?.pending_timesheets ?? 0, color:"#EC4899", bg:"#FDF2F8", link:"/business-owner/timesheets" },
+    { icon:Users,        label:`Total ${staffLabel}`,   sub:"Active members",          value:stats?.staff_count      ?? 0, color:"#3B82F6", bg:"#EFF6FF", link:"/business-owner/outlets" },
+    { icon:FolderKanban, label:"Active Projects",       sub:"Currently in progress",   value:stats?.active_projects  ?? 0, color:"#6366F1", bg:"#EEF2FF", link:"/business-owner/reports" },
+    { icon:Clock,        label:"Pending Timesheets",    sub:"Awaiting approval",       value:stats?.pending_timesheets ?? 0, color:"#EC4899", bg:"#FDF2F8", link:"/business-owner/schedule" },
   ] : mode === "appointment" ? [
     { icon:Building2,    label:`${locationLabel}s`,     sub:"Across your business",   value:stats?.outlets_count      ?? 0, color:"#D97706", bg:"#FEF3C7", link:"/business-owner/outlets" },
-    { icon:Users,        label:`All ${staffLabel}`,     sub:"Active members",          value:stats?.staff_count        ?? 0, color:"#3B82F6", bg:"#EFF6FF", link:"/business-owner/staff" },
-    { icon:BookOpen,     label:"Today's Bookings",      sub:"Scheduled for today",     value:stats?.today_bookings     ?? 0, color:"#6366F1", bg:"#EEF2FF", link:"/business-owner/bookings" },
-    { icon:AlertTriangle,label:"Unassigned Bookings",  sub:"Need staff assigned",      value:stats?.unassigned_bookings ?? 0, color:"#EF4444", bg:"#FEF2F2", link:"/business-owner/bookings" },
+    { icon:Users,        label:`Total ${staffLabel}`,   sub:"Active members",          value:stats?.staff_count        ?? 0, color:"#3B82F6", bg:"#EFF6FF", link:"/business-owner/outlets" },
+    { icon:BookOpen,     label:"Today's Bookings",      sub:"Scheduled for today",     value:stats?.today_bookings     ?? 0, color:"#6366F1", bg:"#EEF2FF", link:"/business-owner/schedule" },
+    { icon:AlertTriangle,label:"Unassigned Bookings",  sub:"Need staff assigned",      value:stats?.unassigned_bookings ?? 0, color:"#EF4444", bg:"#FEF2F2", link:"/business-owner/schedule" },
   ] : [
     { icon:Building2,    label:`${locationLabel}s`,     sub:"Across your business",   value:stats?.outlets_count     ?? 0, color:"#D97706", bg:"#FEF3C7", link:"/business-owner/outlets" },
-    { icon:Users,        label:`All ${staffLabel}`,     sub:"Active members",          value:stats?.staff_count       ?? 0, color:"#3B82F6", bg:"#EFF6FF", link:"/business-owner/staff" },
-    { icon:CalendarDays, label:"Today's Shifts",        sub:"Across all locations",    value:stats?.today_shifts      ?? 0, color:"#6366F1", bg:"#EEF2FF", link:"/outlet-manager/schedule" },
-    { icon:AlertTriangle,label:"Understaffed",          sub:"Shifts below headcount",  value:stats?.understaffed_count ?? 0, color:"#EF4444", bg:"#FEF2F2", link:"/outlet-manager/schedule" },
+    { icon:Users,        label:`Total ${staffLabel}`,   sub:"Active members",          value:stats?.staff_count       ?? 0, color:"#3B82F6", bg:"#EFF6FF", link:"/business-owner/outlets" },
+    { icon:CalendarDays, label:"Today's Shifts",        sub:"Across all locations",    value:stats?.today_shifts      ?? 0, color:"#6366F1", bg:"#EEF2FF", link:"/business-owner/schedule" },
+    { icon:AlertTriangle,label:"Understaffed",          sub:"Shifts below headcount",  value:stats?.understaffed_count ?? 0, color:"#EF4444", bg:"#FEF2F2", link:"/business-owner/schedule" },
   ];
 
   // ── Quick actions per mode + industry ────────────────────
   const quickActions = mode === "flexible" ? [
-    { icon:FolderKanban, label:"Create Project",         sub:"Start a new project",          color:"#6366F1", bg:"#EEF2FF", path:"/business-owner/projects" },
-    { icon:Users,        label:`Invite ${staffLabel}`,   sub:"Send join links",              color:"#3B82F6", bg:"#EFF6FF", path:"/business-owner/invitations" },
-    { icon:Clock,        label:"Review Timesheets",      sub:"Approve pending hours",        color:"#EC4899", bg:"#FDF2F8", path:"/business-owner/timesheets" },
+    { icon:CalendarDays, label:"View Schedule",         sub:"See this week's timesheets",    color:"#6366F1", bg:"#EEF2FF", path:"/business-owner/schedule" },
+    { icon:Users,        label:`Invite ${staffLabel}`,  sub:"Send join links",               color:"#3B82F6", bg:"#EFF6FF", path:"/business-owner/invitations" },
+    { icon:BarChart2,    label:"Reports",               sub:"Outlet performance",            color:"#EC4899", bg:"#FDF2F8", path:"/business-owner/reports" },
   ] : mode === "appointment" ? [
-    { icon:BookOpen,     label:"View Bookings",          sub:"Today's appointments",         color:"#6366F1", bg:"#EEF2FF", path:"/business-owner/bookings" },
-    { icon:Users,        label:`Invite ${staffLabel}`,   sub:"Add providers/therapists",     color:"#3B82F6", bg:"#EFF6FF", path:"/business-owner/invitations" },
-    { icon:Building2,    label:`Add ${locationLabel}`,   sub:"New branch or location",       color:"#D97706", bg:"#FEF3C7", path:"/business-owner/outlets" },
+    { icon:CalendarDays, label:"View Schedule",         sub:"Today's appointments",          color:"#6366F1", bg:"#EEF2FF", path:"/business-owner/schedule" },
+    { icon:Users,        label:`Invite ${staffLabel}`,  sub:"Add providers/therapists",      color:"#3B82F6", bg:"#EFF6FF", path:"/business-owner/invitations" },
+    { icon:Building2,    label:`Add ${locationLabel}`,  sub:"New branch or location",        color:"#D97706", bg:"#FEF3C7", path:"/business-owner/outlets" },
   ] : [
-    { icon:CalendarDays, label:"View Schedule",          sub:"See this week's shifts",       color:"#6366F1", bg:"#EEF2FF", path:"/outlet-manager/schedule" },
-    { icon:Users,        label:`Invite ${staffLabel}`,   sub:"Send join links",              color:"#3B82F6", bg:"#EFF6FF", path:"/business-owner/invitations" },
-    { icon:Building2,    label:`Add ${locationLabel}`,   sub:"Set up a new location",        color:"#D97706", bg:"#FEF3C7", path:"/business-owner/outlets" },
+    { icon:CalendarDays, label:"View Schedule",         sub:"See this week's shifts",        color:"#6366F1", bg:"#EEF2FF", path:"/business-owner/schedule" },
+    { icon:Users,        label:`Invite ${staffLabel}`,  sub:"Send join links",               color:"#3B82F6", bg:"#EFF6FF", path:"/business-owner/invitations" },
+    { icon:Building2,    label:`Add ${locationLabel}`,  sub:"Set up a new location",         color:"#D97706", bg:"#FEF3C7", path:"/business-owner/outlets" },
   ];
 
   // ── Today's overview label ───────────────────────────────
@@ -308,10 +308,10 @@ export default function BODashboard() {
     : `Today's Coverage by ${locationLabel}`;
 
   const overviewAction = mode === "flexible"
-    ? { label:"All Projects", path:"/business-owner/projects" }
+    ? { label:"View Schedule", path:"/business-owner/schedule" }
     : mode === "appointment"
-    ? { label:"All Bookings", path:"/business-owner/bookings" }
-    : { label:"Full Schedule", path:"/outlet-manager/schedule" };
+    ? { label:"View Schedule", path:"/business-owner/schedule" }
+    : { label:"Full Schedule", path:"/business-owner/schedule" };
 
   return (
     <BusinessOwnerLayout title="Dashboard">

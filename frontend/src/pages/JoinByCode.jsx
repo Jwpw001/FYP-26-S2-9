@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { getUser, setUser } from "../utils/auth";
+import { api } from "../lib/api";
 
 const DASHBOARD = {
   outlet_manager:      "/outlet-manager/dashboard",
@@ -16,6 +17,8 @@ function roleLabel(role) {
 
 export default function JoinByCode() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isPending = searchParams.get("pending") === "1";
   const loggedInUser = getUser();
 
   const [code, setCode] = useState("");
@@ -37,9 +40,7 @@ export default function JoinByCode() {
     e.preventDefault();
     setLooking(true); setLookupError("");
     try {
-      const res = await fetch(`/api/invitations/check-code/${code.replace("-", "")}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Code not found");
+      const data = await api.get(`/api/invitations/check-code/${code.replace(/-/g, "")}`);
       setInvite(data.invitation);
       setStep("confirm");
     } catch (err) {
@@ -52,13 +53,7 @@ export default function JoinByCode() {
   async function acceptAsExisting() {
     setSubmitting(true); setFormError("");
     try {
-      const res = await fetch(`/api/invitations/${invite.token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ existing_user_id: loggedInUser.user_id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to accept");
+      const data = await api.post(`/api/invitations/${invite.token}/accept`, { existing_user_id: loggedInUser.user_id });
       setUser(data.user);
       localStorage.setItem("token", data.token);
       setStep("done");
@@ -75,13 +70,7 @@ export default function JoinByCode() {
     if (form.password.length < 6) { setFormError("Password must be at least 6 characters"); return; }
     setSubmitting(true); setFormError("");
     try {
-      const res = await fetch(`/api/invitations/${invite.token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: form.full_name, username: form.username, password: form.password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to create account");
+      const data = await api.post(`/api/invitations/${invite.token}/accept`, { full_name: form.full_name, username: form.username, password: form.password });
       setUser(data.user);
       localStorage.setItem("token", data.token);
       setStep("done");
@@ -100,6 +89,15 @@ export default function JoinByCode() {
           <div style={s.logo}>K</div>
           <span style={s.logoText}>Krewby</span>
         </div>
+
+        {isPending && step !== "done" && (
+          <div style={{ background: "#FFFBEB", border: "1px solid #FCD34D", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px" }}>
+            <p style={{ fontSize: "13px", fontWeight: "700", color: "#92400E", marginBottom: "3px" }}>Your account is pending</p>
+            <p style={{ fontSize: "12px", color: "#B45309", lineHeight: 1.5 }}>
+              Enter the invitation code sent to your email below to activate your account and get access.
+            </p>
+          </div>
+        )}
 
         {step === "done" ? (
           <div style={{ textAlign: "center" }}>

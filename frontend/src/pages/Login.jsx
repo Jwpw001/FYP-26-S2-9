@@ -123,7 +123,17 @@ export default function Login() {
       });
       const profile = { ...response.user, token: response.token };
       const route = ROLE_ROUTES[profile.role];
-      if (!route) { setError(`Unrecognised role: "${profile.role}". Contact support.`); return; }
+      if (!route) {
+        if (profile.role === "pending") {
+          // Allow pending users through so they can accept an invitation
+          setUser(profile);
+          localStorage.setItem("token", response.token);
+          goTo("/join-invite?pending=1");
+        } else {
+          setError("Your account isn't set up yet. Please contact your manager or administrator.");
+        }
+        return;
+      }
       setUser(profile);
       localStorage.setItem("token", response.token);
       goTo(redirectTo || route);

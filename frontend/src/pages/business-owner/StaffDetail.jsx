@@ -24,10 +24,12 @@ export default function BOStaffDetail() {
   const { id } = useParams();
   const goTo = useGoTo();
 
-  const [member, setMember]       = useState(null);
-  const [allSkills, setAllSkills] = useState([]);
-  const [assigned, setAssigned]   = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const [member, setMember]           = useState(null);
+  const [allSkills, setAllSkills]     = useState([]);
+  const [assigned, setAssigned]       = useState([]);
+  const [isManager, setIsManager]     = useState(false);
+  const [managedOutlets, setManagedOutlets] = useState([]);
+  const [loading, setLoading]         = useState(true);
   const [saving, setSaving]       = useState(false);
   const [deleting, setDeleting]   = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -50,6 +52,8 @@ export default function BOStaffDetail() {
       setMember(staffRow);
       setAllSkills(data.allSkills || []);
       setAssigned(data.assignedSkillIds || []);
+      setIsManager(data.is_manager || false);
+      setManagedOutlets(data.managed_outlets || []);
       setForm({
         full_name: staffRow.users?.full_name || "",
         staff_type: staffRow.staff_type || "regular",
@@ -143,13 +147,24 @@ export default function BOStaffDetail() {
           <div style={{ ...s.avatarLg, background: color }}>{initials}</div>
           <h2 style={s.profileName}>{member.users?.full_name}</h2>
           <p style={s.profileEmail}>{member.users?.email}</p>
-          <span style={{
-            ...s.typeBadge,
-            background: member.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF",
-            color: member.staff_type === "regular" ? "#1E40AF" : "#6B21A8",
-          }}>
-            {member.staff_type === "regular" ? "Regular Staff" : "Outlet Casual"}
-          </span>
+          {isManager ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <span style={{ ...s.typeBadge, background: "#FEF3C7", color: "#92400E" }}>
+                ★ Outlet Manager
+              </span>
+              {managedOutlets.map(o => (
+                <span key={o.outlet_id} style={{ fontSize: 11, color: "#94A3B8" }}>{o.name}</span>
+              ))}
+            </div>
+          ) : (
+            <span style={{
+              ...s.typeBadge,
+              background: member.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF",
+              color: member.staff_type === "regular" ? "#1E40AF" : "#6B21A8",
+            }}>
+              {member.staff_type === "regular" ? "Regular Staff" : "Outlet Casual"}
+            </span>
+          )}
 
           <div style={s.metaRow}>
             <span style={s.metaLabel}>Status</span>
@@ -236,7 +251,11 @@ export default function BOStaffDetail() {
                   <option value="casual">Outlet Casual Staff</option>
                 </select>
               ) : (
-                <p style={s.value}>{member.staff_type === "regular" ? "Regular Staff" : "Outlet Casual Staff"}</p>
+                <p style={s.value}>
+                  {isManager
+                    ? `Outlet Manager${managedOutlets.length > 0 ? ` · ${managedOutlets.map(o => o.name).join(", ")}` : ""}`
+                    : member.staff_type === "regular" ? "Regular Staff" : "Outlet Casual Staff"}
+                </p>
               )}
             </div>
 

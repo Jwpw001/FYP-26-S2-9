@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { getUser, setUser } from "../utils/auth";
+import { api } from "../lib/api";
 
 const DASHBOARD = {
   outlet_manager:      "/outlet-manager/dashboard",
@@ -30,13 +31,12 @@ export default function AcceptInvite() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/invitations/${token}`)
-      .then(r => r.json())
+    api.get(`/api/invitations/${token}`)
       .then(d => {
         if (d.invitation) setInvite(d.invitation);
         else setInviteError(d.message || "Invalid invitation");
       })
-      .catch(() => setInviteError("Failed to load invitation"))
+      .catch(err => setInviteError(err.message || "Failed to load invitation"))
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -48,14 +48,7 @@ export default function AcceptInvite() {
   async function acceptAsExisting() {
     setSubmitting(true); setFormError("");
     try {
-      const res = await fetch(`/api/invitations/${token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ existing_user_id: loggedInUser.user_id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to accept invitation");
-      // Update stored user with potentially new role/token
+      const data = await api.post(`/api/invitations/${token}/accept`, { existing_user_id: loggedInUser.user_id });
       setUser(data.user);
       localStorage.setItem("token", data.token);
       setDone(true);
@@ -72,13 +65,7 @@ export default function AcceptInvite() {
     if (form.password.length < 6) { setFormError("Password must be at least 6 characters"); return; }
     setSubmitting(true); setFormError("");
     try {
-      const res = await fetch(`/api/invitations/${token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: form.full_name, username: form.username, password: form.password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to create account");
+      const data = await api.post(`/api/invitations/${token}/accept`, { full_name: form.full_name, username: form.username, password: form.password });
       setUser(data.user);
       localStorage.setItem("token", data.token);
       setDone(true);
