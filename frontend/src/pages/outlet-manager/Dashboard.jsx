@@ -151,19 +151,19 @@ export default function ManagerDashboard() {
         const outletId = myStaff?.[0]?.outlet_id;
         if (!outletId || cancelled) return;
 
-        // Get outlet staff IDs first so we can scope leave/swap counts correctly
+        // Get outlet staff IDs (excluding managers) for leave/swap/count scoping
         const { data: outletStaffRows } = await supabase
-          .from("staff").select("staff_id").eq("outlet_id", outletId).eq("is_active", true);
-        const outletStaffIds = (outletStaffRows || []).map(s => s.staff_id);
+          .from("staff").select("staff_id, users(role)").eq("outlet_id", outletId).eq("is_active", true);
+        const outletStaffIds = (outletStaffRows || [])
+          .filter(s => s.users?.role !== "outlet_manager")
+          .map(s => s.staff_id);
 
-        const [{ data: shifts }, { count: staffCount }, { count: leaveCount }, { count: swapCount }] =
+        const [{ data: shifts }, { count: leaveCount }, { count: swapCount }] =
           await Promise.all([
             supabase.from("shifts")
               .select("shift_id,title,shift_date,start_time,end_time,status")
               .eq("outlet_id", outletId).gte("shift_date", today).lte("shift_date", future)
               .order("shift_date", { ascending: true }),
-            supabase.from("staff").select("*", { count: "exact", head: true })
-              .eq("outlet_id", outletId).eq("is_active", true),
             outletStaffIds.length > 0
               ? supabase.from("availability").select("*", { count: "exact", head: true })
                   .eq("status", "pending").in("staff_id", outletStaffIds)
@@ -175,7 +175,7 @@ export default function ManagerDashboard() {
           ]);
 
         if (cancelled) return;
-        setStats({ upcomingShifts: shifts?.length || 0, pendingLeave: leaveCount || 0, pendingSwaps: swapCount || 0, totalStaff: staffCount || 0 });
+        setStats({ upcomingShifts: shifts?.length || 0, pendingLeave: leaveCount || 0, pendingSwaps: swapCount || 0, totalStaff: outletStaffIds.length });
         setRecentShifts(shifts?.slice(0, 5) || []);
 
         // Compute bar chart: count shifts per weekday (0=Mon..6=Sun)

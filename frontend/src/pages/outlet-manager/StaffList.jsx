@@ -218,22 +218,6 @@ function StaffCard({ member: m, index, onNav }) {
         <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: m.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: m.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
           {m.staff_type === "regular" ? "Regular" : "Casual"}
         </span>
-        {(() => {
-          const lvl = m.experience_level || "intermediate";
-          const EXP = { beginner:{bg:"#FEF3C7",color:"#92400E",icon:"🌱"}, intermediate:{bg:"#DBEAFE",color:"#1E40AF",icon:"⭐"}, expert:{bg:"#DCFCE7",color:"#166534",icon:"🏆"} };
-          const e = EXP[lvl] || EXP.intermediate;
-          return (
-            <span style={{ padding:"3px 10px",borderRadius:"100px",fontSize:"11px",fontWeight:"600",background:e.bg,color:e.color }}>
-              {e.icon} {lvl.charAt(0).toUpperCase()+lvl.slice(1)}
-            </span>
-          );
-        })()}
-        {m.skillTags?.slice(0, 2).map(t => (
-          <span key={t.id} style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "500", background: "#F1F5F9", color: "#475569" }}>{t.name}</span>
-        ))}
-        {m.skillTags?.length > 2 && (
-          <span style={{ padding: "3px 8px", borderRadius: "100px", fontSize: "11px", background: "#E2E8F0", color: "#64748B" }}>+{m.skillTags.length - 2}</span>
-        )}
       </div>
 
       {/* Footer: status only */}

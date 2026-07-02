@@ -142,8 +142,7 @@ const generateWeeklySchedule = async (req, res) => {
     });
 
     // Get business industry & scheduling mode
-    const { createClient } = require("@supabase/supabase-js");
-    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const sb = require("../config/supabaseAdmin");
     let industry = "f&b";
     if (outlet?.business_id) {
       const { data: biz } = await sb.from("businesses").select("industry, scheduling_mode").eq("business_id", outlet.business_id).maybeSingle();

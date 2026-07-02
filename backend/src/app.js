@@ -61,7 +61,9 @@ app.use("/api/projects",    projectRoutes);
 app.use("/api/timesheets",  timesheetRoutes);
 app.use("/api/bookings",    bookingRoutes);
 app.use("/api/invitations", invitationRoutes);
-app.use("/api/business", businessOwnerRoutes);
+app.use("/api/business",    businessOwnerRoutes);
+app.use("/api/flex",        require("./routes/flexibleRoutes"));
+app.use("/api/skills",      require("./routes/skillsRoutes"));
 
 app.use(errorHandler);
 

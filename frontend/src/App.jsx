@@ -22,6 +22,9 @@ import AddStaff           from "./pages/outlet-manager/AddStaff";
 import ShiftsList               from "./pages/outlet-manager/ShiftsList";
 import GenerateWeeklySchedule   from "./pages/outlet-manager/GenerateWeeklySchedule";
 import Projects                 from "./pages/outlet-manager/Projects";
+import ProjectBoard             from "./pages/outlet-manager/ProjectBoard";
+import IssueTracker             from "./pages/outlet-manager/IssueTracker";
+import SkillSettings            from "./pages/outlet-manager/SkillSettings";
 import Timesheets               from "./pages/outlet-manager/Timesheets";
 import Capacity                 from "./pages/outlet-manager/Capacity";
 import MyTimesheets             from "./pages/regular-staff/MyTimesheets";
@@ -65,6 +68,9 @@ import BOOutletDetail from "./pages/business-owner/OutletDetail";
 import BOInvitations  from "./pages/business-owner/Invitations";
 import BOReports      from "./pages/business-owner/Reports";
 import BOSchedule     from "./pages/business-owner/ScheduleView";
+import BOStaffView    from "./pages/business-owner/StaffView";
+import BOSkillSettings from "./pages/business-owner/Skills";
+import BOStaffProfile  from "./pages/business-owner/StaffProfile";
 import BusinessOwnerLayout from "./components/layout/BusinessOwnerLayout";
 import AcceptInvite  from "./pages/AcceptInvite";
 import JoinByCode    from "./pages/JoinByCode";
@@ -115,6 +121,9 @@ function App() {
         <Route path="/business-owner/invitations" element={<PR roles={["business_owner"]}><BOInvitations /></PR>} />
         <Route path="/business-owner/reports"     element={<PR roles={["business_owner"]}><BOReports /></PR>} />
         <Route path="/business-owner/schedule"    element={<PR roles={["business_owner"]}><BOSchedule /></PR>} />
+        <Route path="/business-owner/staff"       element={<PR roles={["business_owner"]}><BOStaffView /></PR>} />
+        <Route path="/business-owner/skills"        element={<PR roles={["business_owner"]}><BOSkillSettings /></PR>} />
+        <Route path="/business-owner/staff/:id"    element={<PR roles={["business_owner"]}><BOStaffProfile /></PR>} />
         <Route path="/business-owner/notifications" element={<PR roles={["business_owner"]}>
           <NotificationsPage Layout={BusinessOwnerLayout} />
         </PR>} />
@@ -147,11 +156,14 @@ function App() {
         <Route path="/outlet-manager/reports"        element={<PR roles={["outlet_manager"]}><Reports /></PR>} />
         <Route path="/outlet-manager/notifications" element={<PR roles={["outlet_manager"]}><ManagerNotifications /></PR>} />
         <Route path="/outlet-manager/manpower"       element={<PR roles={["outlet_manager"]}><ManpowerRequests /></PR>} />
-        <Route path="/outlet-manager/projects"      element={<PR roles={["outlet_manager"]}><Projects /></PR>} />
-        <Route path="/outlet-manager/timesheets"    element={<PR roles={["outlet_manager"]}><Timesheets /></PR>} />
+        <Route path="/outlet-manager/projects"            element={<PR roles={["outlet_manager"]}><Projects /></PR>} />
+        <Route path="/outlet-manager/projects/:id/board" element={<PR roles={["outlet_manager"]}><ProjectBoard /></PR>} />
+        <Route path="/outlet-manager/issues"              element={<PR roles={["outlet_manager"]}><IssueTracker /></PR>} />
+        <Route path="/outlet-manager/timesheets"          element={<PR roles={["outlet_manager"]}><Timesheets /></PR>} />
         <Route path="/outlet-manager/capacity"      element={<PR roles={["outlet_manager"]}><Capacity /></PR>} />
         <Route path="/outlet-manager/bookings"     element={<PR roles={["outlet_manager"]}><Bookings /></PR>} />
         <Route path="/outlet-manager/invitations"   element={<PR roles={["outlet_manager"]}><OMInvitations /></PR>} />
+        <Route path="/outlet-manager/skills"        element={<PR roles={["outlet_manager"]}><SkillSettings /></PR>} />
 
         {/* ── Regular Staff ────────────────────────────── */}
         <Route path="/regular-staff/dashboard"     element={<PR roles={["regular_staff"]}><StaffDashboard /></PR>} />

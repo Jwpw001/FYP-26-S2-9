@@ -1,16 +1,21 @@
 const prisma = require("../config/prisma");
-const { createClient } = require("@supabase/supabase-js");
+const supabaseAdmin = require("../config/supabaseAdmin");
 
-function getSb() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
+function getSb() { return supabaseAdmin; }
 
-// Get caller's outlet_id and business_id
+// Get caller's outlet_id and business_id — checks staff table first, then outlet_managers
 async function getCallerContext(userId) {
+  let outlet_id;
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { outlet_id: true } });
-  if (!s?.outlet_id) return null;
-  const { data: outlet } = await getSb().from("outlets").select("business_id").eq("outlet_id", s.outlet_id).maybeSingle();
-  return { outlet_id: s.outlet_id, business_id: outlet?.business_id };
+  if (s?.outlet_id) {
+    outlet_id = s.outlet_id;
+  } else {
+    const { data: om } = await getSb().from("outlet_managers").select("outlet_id").eq("user_id", userId).maybeSingle();
+    if (!om?.outlet_id) return null;
+    outlet_id = om.outlet_id;
+  }
+  const { data: outlet } = await getSb().from("outlets").select("business_id").eq("outlet_id", outlet_id).maybeSingle();
+  return { outlet_id, business_id: outlet?.business_id };
 }
 
 // ── GET all projects for the business ────────────────────────────────────────
@@ -151,11 +156,11 @@ const getCapacity = async (req, res) => {
     const { weekStart, weekEnd } = req.query;
     if (!weekStart || !weekEnd) return res.status(400).json({ success: false, message: "weekStart and weekEnd required." });
 
-    // All active staff at this outlet
+    // All active staff at this outlet (exclude managers)
     const allStaff = await prisma.staff.findMany({
       where: { outlet_id: ctx.outlet_id, is_active: true },
       include: { users: { select: { full_name: true, role: true } } }
-    });
+    }).then(list => list.filter(s => s.users?.role !== "outlet_manager"));
 
     // Timesheets logged this week
     const timesheets = await prisma.timesheets.findMany({

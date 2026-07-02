@@ -1,12 +1,7 @@
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 function getToken() {
-  try {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    return user.token || null;
-  } catch {
-    return null;
-  }
+  return localStorage.getItem("token") || null;
 }
 
 async function request(method, path, body = null) {

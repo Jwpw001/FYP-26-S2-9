@@ -273,6 +273,11 @@ const acceptInvitation = async (req, res) => {
             data: { user_id: user.user_id, outlet_id: invite.outlet_id, staff_type: "regular", is_active: true },
           });
         }
+        // Register in outlet_managers table so they appear as manager
+        const { data: existingLink } = await supabaseAdmin.from("outlet_managers").select("id").eq("user_id", user.user_id).eq("outlet_id", invite.outlet_id).maybeSingle();
+        if (!existingLink) {
+          await supabaseAdmin.from("outlet_managers").insert({ user_id: user.user_id, outlet_id: invite.outlet_id, is_primary: true });
+        }
       }
 
       await supabaseAdmin.from("invitations").update({ status: "accepted", accepted_at: new Date().toISOString(), accepted_by: user.user_id }).eq("token", token);
@@ -311,6 +316,7 @@ const acceptInvitation = async (req, res) => {
       await prisma.staff.create({
         data: { user_id: newUser.user_id, outlet_id: invite.outlet_id, staff_type: "regular", is_active: true },
       });
+      await supabaseAdmin.from("outlet_managers").insert({ user_id: newUser.user_id, outlet_id: invite.outlet_id, is_primary: true });
     }
 
     await supabaseAdmin.from("invitations").update({ status: "accepted", accepted_at: new Date().toISOString(), accepted_by: newUser.user_id }).eq("token", token);

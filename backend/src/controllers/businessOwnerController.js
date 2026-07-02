@@ -2,6 +2,26 @@ const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { getLimits } = require("../utils/planLimits");
 
+// Resolve business_id + industry for both BO and manager roles
+async function resolveBusinessCtx(user) {
+  if (user.role === "business_owner") {
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("owner_id", user.user_id).maybeSingle();
+    return biz || null;
+  }
+  // manager: look up via staff table first, then outlet_managers
+  const staff = await prisma.staff.findFirst({ where: { user_id: user.user_id }, select: { outlet_id: true } });
+  let outlet_id = staff?.outlet_id;
+  if (!outlet_id) {
+    const { data: om } = await supabaseAdmin.from("outlet_managers").select("outlet_id").eq("user_id", user.user_id).maybeSingle();
+    outlet_id = om?.outlet_id;
+  }
+  if (!outlet_id) return null;
+  const { data: outlet } = await supabaseAdmin.from("outlets").select("business_id").eq("outlet_id", outlet_id).maybeSingle();
+  if (!outlet?.business_id) return null;
+  const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("business_id", outlet.business_id).maybeSingle();
+  return biz || null;
+}
+
 // ── Outlets ──────────────────────────────────────────────
 
 // GET /api/business/outlets
@@ -475,20 +495,18 @@ const getMyBusinessContext = async (req, res) => {
         .maybeSingle();
       biz = data;
     } else {
-      // staff / manager: user → staff row → outlet → business
-      const { data: staffRow } = await supabaseAdmin
-        .from("staff")
-        .select("outlet_id")
-        .eq("user_id", userId)
-        .maybeSingle();
-
+      // staff / manager: check staff table first, then outlet_managers
+      let outlet_id = null;
+      const { data: staffRow } = await supabaseAdmin.from("staff").select("outlet_id").eq("user_id", userId).maybeSingle();
       if (staffRow?.outlet_id) {
-        const { data: outlet } = await supabaseAdmin
-          .from("outlets")
-          .select("business_id")
-          .eq("outlet_id", staffRow.outlet_id)
-          .maybeSingle();
+        outlet_id = staffRow.outlet_id;
+      } else {
+        const { data: om } = await supabaseAdmin.from("outlet_managers").select("outlet_id").eq("user_id", userId).maybeSingle();
+        if (om?.outlet_id) outlet_id = om.outlet_id;
+      }
 
+      if (outlet_id) {
+        const { data: outlet } = await supabaseAdmin.from("outlets").select("business_id").eq("outlet_id", outlet_id).maybeSingle();
         if (outlet?.business_id) {
           const { data } = await supabaseAdmin
             .from("businesses")
@@ -565,7 +583,7 @@ const deleteOutletSkill = async (req, res) => {
 // GET /api/business/skills  — returns business skills + catalog suggestions for their industry
 const getBusinessSkills = async (req, res) => {
   try {
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("owner_id", req.user.user_id).maybeSingle();
+    const biz = await resolveBusinessCtx(req.user);
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const [businessSkills, catalogSkills] = await Promise.all([
@@ -573,7 +591,6 @@ const getBusinessSkills = async (req, res) => {
       prisma.skills.findMany({ where: { is_catalog: true, industry_type: biz.industry || "other" }, orderBy: { name: "asc" } }),
     ]);
 
-    // Suggestions = catalog skills not yet added to business
     const businessNames = new Set(businessSkills.map(s => s.name.toLowerCase()));
     const suggestions = catalogSkills.filter(s => !businessNames.has(s.name.toLowerCase()));
 
@@ -581,10 +598,9 @@ const getBusinessSkills = async (req, res) => {
   } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
 };
 
-// POST /api/business/skills
 const createBusinessSkill = async (req, res) => {
   try {
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    const biz = await resolveBusinessCtx(req.user);
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
     const { name, description } = req.body;
     if (!name?.trim()) return res.status(400).json({ success: false, message: "Skill name is required." });
@@ -596,7 +612,6 @@ const createBusinessSkill = async (req, res) => {
   }
 };
 
-// DELETE /api/business/skills/:skill_id
 const deleteBusinessSkill = async (req, res) => {
   try {
     await prisma.skills.delete({ where: { skill_id: Number(req.params.skill_id) } });

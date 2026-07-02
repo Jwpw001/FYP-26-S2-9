@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
-import { supabase } from "../../lib/supabaseClient";
-import { getUser } from "../../utils/auth";
+import { Kanban } from "lucide-react";
 
 const STATUS_STYLE = {
   active:    { bg:"#DCFCE7", color:"#166534", label:"Active" },
@@ -14,17 +14,16 @@ const STATUS_STYLE = {
 const COLORS = ["#6366F1","#8B5CF6","#EC4899","#F59E0B","#10B981","#3B82F6","#EF4444","#14B8A6"];
 
 export default function Projects() {
-  const user = getUser();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
-  const [staff,    setStaff]    = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [selected, setSelected] = useState(null); // project for detail panel
-  const [form, setForm] = useState({ name:"", description:"", start_date:"", end_date:"", color:COLORS[0], staff_ids:[] });
+  const [selected, setSelected] = useState(null);
+  const [form, setForm] = useState({ name:"", description:"", start_date:"", end_date:"" });
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
 
-  useEffect(() => { load(); loadStaff(); }, []);
+  useEffect(() => { load(); }, []);
 
   async function load() {
     setLoading(true);
@@ -34,21 +33,14 @@ export default function Projects() {
     } catch { } finally { setLoading(false); }
   }
 
-  async function loadStaff() {
-    const { data: s } = await supabase.from("staff")
-      .select("staff_id, experience_level, users(full_name, role)")
-      .eq("is_active", true);
-    setStaff(s || []);
-  }
-
   async function handleCreate(e) {
     e.preventDefault();
     if (!form.name.trim()) { setError("Project name is required."); return; }
     setSaving(true); setError("");
     try {
-      await api.post("/api/projects", form);
+      await api.post("/api/projects", { ...form, status: "active" });
       setShowForm(false);
-      setForm({ name:"", description:"", start_date:"", end_date:"", color:COLORS[0], staff_ids:[] });
+      setForm({ name:"", description:"", start_date:"", end_date:"" });
       await load();
     } catch (err) { setError(err.message); }
     finally { setSaving(false); }
@@ -105,7 +97,9 @@ export default function Projects() {
                           {p.description && <div style={{ fontSize:"11px", color:"#64748B", marginTop:"2px", maxWidth:"280px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.description}</div>}
                         </div>
                       </div>
-                      <span style={{ fontSize:"11px", fontWeight:"700", padding:"2px 8px", borderRadius:"100px", background:ss.bg, color:ss.color, flexShrink:0 }}>{ss.label}</span>
+                      <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+                        <span style={{ fontSize:"11px", fontWeight:"700", padding:"2px 8px", borderRadius:"100px", background:ss.bg, color:ss.color, flexShrink:0 }}>{ss.label}</span>
+                      </div>
                     </div>
                     {/* Progress bar */}
                     {p.total_estimated_hours > 0 && (
@@ -141,9 +135,9 @@ export default function Projects() {
         <div style={{ width:"360px", flexShrink:0, overflowY:"auto", padding:"24px", background:"#FAFBFE" }}>
           {!selected ? (
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", gap:"12px", color:"#94A3B8", textAlign:"center" }}>
-              <div style={{ fontSize:"36px" }}>👈</div>
+              <div style={{ fontSize:"36px" }}>📋</div>
               <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>Select a project</p>
-              <p style={{ fontSize:"12px" }}>Click any project to view details, manage staff, and track progress.</p>
+              <p style={{ fontSize:"12px" }}>Click a project on the left to open its board and manage tasks.</p>
             </div>
           ) : (() => {
             const ss = STATUS_STYLE[selected.status] || STATUS_STYLE.active;
@@ -161,6 +155,12 @@ export default function Projects() {
                   </div>
                   <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:"#94A3B8", fontSize:"16px", cursor:"pointer" }}>✕</button>
                 </div>
+
+                {/* Open Board CTA */}
+                <button onClick={() => navigate(`/outlet-manager/projects/${selected.project_id}/board`)}
+                  style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", padding:"12px", borderRadius:"10px", background:"linear-gradient(135deg,#4F46E5,#7C3AED)", color:"#fff", border:"none", cursor:"pointer", fontSize:"14px", fontWeight:"700", marginBottom:"16px" }}>
+                  <Kanban size={16} /> Open Board
+                </button>
 
                 {selected.description && <p style={{ fontSize:"13px", color:"#64748B", marginBottom:"16px", lineHeight:1.6 }}>{selected.description}</p>}
 
@@ -265,31 +265,6 @@ export default function Projects() {
                 <div>
                   <label style={{ fontSize:"12px", fontWeight:"700", color:"#374151", display:"block", marginBottom:"5px" }}>Deadline</label>
                   <input type="date" style={INP} value={form.end_date} onChange={e => setForm(p=>({...p,end_date:e.target.value}))}/>
-                </div>
-              </div>
-              {/* Colour picker */}
-              <div style={{ marginBottom:"14px" }}>
-                <label style={{ fontSize:"12px", fontWeight:"700", color:"#374151", display:"block", marginBottom:"6px" }}>Colour</label>
-                <div style={{ display:"flex", gap:"8px" }}>
-                  {COLORS.map(c => (
-                    <div key={c} onClick={() => setForm(p=>({...p,color:c}))}
-                      style={{ width:"24px", height:"24px", borderRadius:"50%", background:c, cursor:"pointer", border: form.color===c ? "3px solid #1E293B" : "2px solid transparent", boxSizing:"border-box" }}/>
-                  ))}
-                </div>
-              </div>
-              {/* Staff selection */}
-              <div style={{ marginBottom:"20px" }}>
-                <label style={{ fontSize:"12px", fontWeight:"700", color:"#374151", display:"block", marginBottom:"6px" }}>Assign Staff</label>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
-                  {staff.filter(s => ["regular_staff","outlet_manager"].includes(s.users?.role)).map(s => {
-                    const on = form.staff_ids.includes(s.staff_id);
-                    return (
-                      <button key={s.staff_id} type="button" onClick={() => setForm(p => ({ ...p, staff_ids: on ? p.staff_ids.filter(id=>id!==s.staff_id) : [...p.staff_ids, s.staff_id] }))}
-                        style={{ padding:"4px 10px", borderRadius:"100px", fontSize:"11px", fontWeight:"600", cursor:"pointer", border:`1.5px solid ${on?form.color:"#E2E8F0"}`, background:on?`${form.color}15`:"#fff", color:on?form.color:"#475569" }}>
-                        {s.users?.full_name}
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
               <div style={{ display:"flex", gap:"10px" }}>

@@ -3,7 +3,7 @@ import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
-import { LayoutDashboard, Building2, UserPlus, BarChart2, CalendarDays } from "lucide-react";
+import { LayoutDashboard, Building2, UserPlus, BarChart2, CalendarDays, Users, Tag } from "lucide-react";
 import { useBusinessContext } from "../../context/BusinessContext";
 
 const PLAN_BADGE = {
@@ -26,6 +26,8 @@ export default function BusinessOwnerLayout({ children, title }) {
   const NAV = [
     { label: "Dashboard",           path: "/business-owner/dashboard",   Icon: LayoutDashboard },
     { label: `${locationLabel}s`,   path: "/business-owner/outlets",     Icon: Building2 },
+    { label: "Staff",               path: "/business-owner/staff",       Icon: Users },
+    { label: "Skills",              path: "/business-owner/skills",      Icon: Tag },
     { label: "Invitations",         path: "/business-owner/invitations", Icon: UserPlus },
     { label: "Reports",             path: "/business-owner/reports",     Icon: BarChart2 },
     { label: scheduleLabel,         path: "/business-owner/schedule",    Icon: CalendarDays },

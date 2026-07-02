@@ -4,7 +4,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail, FolderKanban, Clock, Gauge, BookOpen } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail, FolderKanban, Clock, Gauge, BookOpen, Tag } from "lucide-react";
 import "./sidebarStyles.js";
 import { useBusinessContext } from "../../context/BusinessContext";
 
@@ -34,6 +34,7 @@ export default function ManagerLayout({ children, title }) {
     { label: "Attendance",            path: "/outlet-manager/attendance",   Icon: ClipboardCheck },
     { label: "Reports",               path: "/outlet-manager/reports",      Icon: BarChart2 },
     { label: "Manpower",              path: "/outlet-manager/manpower",     Icon: UserPlus },
+    { label: "Skills",                path: "/outlet-manager/skills",       Icon: Tag },
     { label: "Invitations",           path: "/outlet-manager/invitations",  Icon: Mail },
   ];
 

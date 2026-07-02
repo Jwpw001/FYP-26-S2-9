@@ -1,0 +1,376 @@
+const prisma = require("../config/prisma");
+const supabaseAdmin = require("../config/supabaseAdmin");
+
+function sb() { return supabaseAdmin; }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+async function getManagerCtx(userId) {
+  let outlet_id, staff_id;
+  const staff = await prisma.staff.findFirst({ where: { user_id: userId }, select: { outlet_id: true, staff_id: true } });
+  if (staff?.outlet_id) {
+    outlet_id = staff.outlet_id;
+    staff_id = staff.staff_id;
+  } else {
+    const { data: om } = await sb().from("outlet_managers").select("outlet_id").eq("user_id", userId).maybeSingle();
+    if (!om?.outlet_id) return null;
+    outlet_id = om.outlet_id;
+  }
+  const { data: outlet } = await sb().from("outlets").select("business_id, name").eq("outlet_id", outlet_id).maybeSingle();
+  return { outlet_id, staff_id, business_id: outlet?.business_id };
+}
+
+async function getBOCtx(userId) {
+  const { data: biz } = await sb().from("businesses").select("business_id").eq("owner_id", userId).maybeSingle();
+  return biz ? { business_id: biz.business_id } : null;
+}
+
+// ── TASKS ─────────────────────────────────────────────────────────────────────
+const getTasks = async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const { sprint_id, epic_id, status } = req.query;
+    let q = sb().from("tasks")
+      .select(`*, epics(epic_id,title,color), sprints(sprint_id,name), users!tasks_assigned_to_fkey(user_id,full_name,email)`)
+      .eq("project_id", project_id)
+      .order("order_index", { ascending: true });
+    if (sprint_id) q = q.eq("sprint_id", sprint_id);
+    if (epic_id)   q = q.eq("epic_id", epic_id);
+    if (status)    q = q.eq("status", status);
+    const { data, error } = await q;
+    if (error) throw error;
+    res.json({ success: true, tasks: data || [] });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const createTask = async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const { title, description, priority = "medium", assigned_to, due_date, required_skills } = req.body;
+    if (!title?.trim()) return res.status(400).json({ success: false, message: "Title required" });
+    const { data, error } = await sb().from("tasks").insert({
+      project_id: Number(project_id), title: title.trim(), description: description || null,
+      priority, assigned_to: assigned_to || null, due_date: due_date || null,
+      required_skills: Array.isArray(required_skills) ? required_skills : [],
+      created_by: req.user.user_id, status: "todo",
+    }).select("*, users!tasks_assigned_to_fkey(user_id,full_name,email)").single();
+    if (error) throw error;
+    res.json({ success: true, task: data });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const updateTask = async (req, res) => {
+  try {
+    const { task_id } = req.params;
+    const allowed = ["title","description","status","priority","assigned_to","due_date","order_index"];
+    const updates = {};
+    for (const k of allowed) if (req.body[k] !== undefined) updates[k] = req.body[k] || null;
+    if (req.body.required_skills !== undefined) updates.required_skills = Array.isArray(req.body.required_skills) ? req.body.required_skills : [];
+    updates.updated_at = new Date().toISOString();
+    const { data, error } = await sb().from("tasks").update(updates).eq("task_id", task_id)
+      .select("*, users!tasks_assigned_to_fkey(user_id,full_name,email)").single();
+    if (error) throw error;
+    res.json({ success: true, task: data });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const deleteTask = async (req, res) => {
+  try {
+    const { task_id } = req.params;
+    const { error } = await sb().from("tasks").delete().eq("task_id", task_id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+// ── EPICS ─────────────────────────────────────────────────────────────────────
+const getEpics = async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const { data: epics, error } = await sb().from("epics").select("*").eq("project_id", project_id).order("order_index");
+    if (error) throw error;
+    // attach task counts
+    const epicIds = (epics || []).map(e => e.epic_id);
+    let counts = {};
+    if (epicIds.length) {
+      const { data: tasks } = await sb().from("tasks").select("epic_id, status").in("epic_id", epicIds);
+      for (const t of tasks || []) {
+        if (!counts[t.epic_id]) counts[t.epic_id] = { total: 0, done: 0 };
+        counts[t.epic_id].total++;
+        if (t.status === "done") counts[t.epic_id].done++;
+      }
+    }
+    res.json({ success: true, epics: (epics || []).map(e => ({ ...e, ...(counts[e.epic_id] || { total: 0, done: 0 }) })) });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const createEpic = async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const { title, description, color = "#6366F1" } = req.body;
+    if (!title?.trim()) return res.status(400).json({ success: false, message: "Title required" });
+    const { data, error } = await sb().from("epics").insert({ project_id: Number(project_id), title: title.trim(), description, color }).select().single();
+    if (error) throw error;
+    res.json({ success: true, epic: data });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const updateEpic = async (req, res) => {
+  try {
+    const { epic_id } = req.params;
+    const { title, description, color, status, order_index } = req.body;
+    const updates = {};
+    if (title !== undefined) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (color !== undefined) updates.color = color;
+    if (status !== undefined) updates.status = status;
+    if (order_index !== undefined) updates.order_index = order_index;
+    const { data, error } = await sb().from("epics").update(updates).eq("epic_id", epic_id).select().single();
+    if (error) throw error;
+    res.json({ success: true, epic: data });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const deleteEpic = async (req, res) => {
+  try {
+    const { error } = await sb().from("epics").delete().eq("epic_id", req.params.epic_id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+// ── SPRINTS ───────────────────────────────────────────────────────────────────
+const getSprints = async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const { data: sprints, error } = await sb().from("sprints").select("*").eq("project_id", project_id).order("start_date");
+    if (error) throw error;
+    const sprintIds = (sprints || []).map(s => s.sprint_id);
+    let sprintStats = {};
+    if (sprintIds.length) {
+      const { data: tasks } = await sb().from("tasks").select("sprint_id, status, story_points").in("sprint_id", sprintIds);
+      for (const t of tasks || []) {
+        if (!sprintStats[t.sprint_id]) sprintStats[t.sprint_id] = { total: 0, done: 0, points: 0, done_points: 0 };
+        sprintStats[t.sprint_id].total++;
+        sprintStats[t.sprint_id].points += t.story_points || 0;
+        if (t.status === "done") { sprintStats[t.sprint_id].done++; sprintStats[t.sprint_id].done_points += t.story_points || 0; }
+      }
+    }
+    res.json({ success: true, sprints: (sprints || []).map(s => ({ ...s, ...(sprintStats[s.sprint_id] || { total: 0, done: 0, points: 0, done_points: 0 }) })) });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const createSprint = async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const { name, goal, start_date, end_date } = req.body;
+    if (!name?.trim()) return res.status(400).json({ success: false, message: "Sprint name required" });
+    const { data, error } = await sb().from("sprints").insert({ project_id: Number(project_id), name: name.trim(), goal, start_date, end_date }).select().single();
+    if (error) throw error;
+    res.json({ success: true, sprint: data });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const updateSprint = async (req, res) => {
+  try {
+    const { sprint_id } = req.params;
+    const { name, goal, start_date, end_date, status } = req.body;
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (goal !== undefined) updates.goal = goal;
+    if (start_date !== undefined) updates.start_date = start_date;
+    if (end_date !== undefined) updates.end_date = end_date;
+    if (status !== undefined) updates.status = status;
+    const { data, error } = await sb().from("sprints").update(updates).eq("sprint_id", sprint_id).select().single();
+    if (error) throw error;
+    res.json({ success: true, sprint: data });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const deleteSprint = async (req, res) => {
+  try {
+    const { error } = await sb().from("sprints").delete().eq("sprint_id", req.params.sprint_id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+// ── ISSUES ────────────────────────────────────────────────────────────────────
+const getIssues = async (req, res) => {
+  try {
+    const { project_id, status, type, priority } = req.query;
+    let q = sb().from("issues")
+      .select(`*, assignee:users!issues_assigned_to_fkey(user_id,full_name,email), reporter:users!issues_reporter_id_fkey(user_id,full_name,email), projects(name)`)
+      .order("created_at", { ascending: false });
+    if (project_id) q = q.eq("project_id", project_id);
+    if (status)     q = q.eq("status", status);
+    if (type)       q = q.eq("type", type);
+    if (priority)   q = q.eq("priority", priority);
+    const { data, error } = await q;
+    if (error) throw error;
+    res.json({ success: true, issues: data || [] });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const createIssue = async (req, res) => {
+  try {
+    const { project_id, title, description, type = "bug", priority = "medium", assigned_to } = req.body;
+    if (!title?.trim()) return res.status(400).json({ success: false, message: "Title required" });
+    const { data, error } = await sb().from("issues").insert({
+      project_id: project_id || null, title: title.trim(), description, type, priority,
+      assigned_to: assigned_to || null, reporter_id: req.user.user_id,
+    }).select("*, assignee:users!issues_assigned_to_fkey(user_id,full_name,email), reporter:users!issues_reporter_id_fkey(user_id,full_name,email)").single();
+    if (error) throw error;
+    res.json({ success: true, issue: data });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const updateIssue = async (req, res) => {
+  try {
+    const { issue_id } = req.params;
+    const allowed = ["title","description","type","priority","status","assigned_to"];
+    const updates = { updated_at: new Date().toISOString() };
+    for (const k of allowed) if (req.body[k] !== undefined) updates[k] = req.body[k] || null;
+    const { data, error } = await sb().from("issues").update(updates).eq("issue_id", issue_id)
+      .select("*, assignee:users!issues_assigned_to_fkey(user_id,full_name,email), reporter:users!issues_reporter_id_fkey(user_id,full_name,email)").single();
+    if (error) throw error;
+    res.json({ success: true, issue: data });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+const deleteIssue = async (req, res) => {
+  try {
+    const { error } = await sb().from("issues").delete().eq("issue_id", req.params.issue_id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+// ── BO PORTFOLIO ──────────────────────────────────────────────────────────────
+const getPortfolio = async (req, res) => {
+  try {
+    let business_id;
+    if (req.user.role === "business_owner") {
+      const ctx = await getBOCtx(req.user.user_id);
+      if (!ctx) return res.status(403).json({ success: false, message: "No business found" });
+      business_id = ctx.business_id;
+    } else {
+      const ctx = await getManagerCtx(req.user.user_id);
+      if (!ctx) return res.status(403).json({ success: false, message: "No business found" });
+      business_id = ctx.business_id;
+    }
+
+    const projects = await prisma.projects.findMany({
+      where: { business_id },
+      include: {
+        project_assignments: { include: { staff: { include: { users: { select: { user_id: true, full_name: true, email: true } } } } } },
+        timesheets: { select: { hours_worked: true, status: true } },
+      },
+      orderBy: { created_at: "desc" },
+    });
+
+    const projectIds = projects.map(p => p.project_id);
+    let taskStats = {};
+    let sprintMap = {};
+    let epicMap = {};
+
+    if (projectIds.length) {
+      const { data: tasks } = await sb().from("tasks").select("project_id, status, story_points").in("project_id", projectIds);
+      for (const t of tasks || []) {
+        if (!taskStats[t.project_id]) taskStats[t.project_id] = { total: 0, done: 0, points: 0, done_points: 0 };
+        taskStats[t.project_id].total++;
+        taskStats[t.project_id].points += t.story_points || 0;
+        if (t.status === "done") { taskStats[t.project_id].done++; taskStats[t.project_id].done_points += t.story_points || 0; }
+      }
+      const { data: activeSprints } = await sb().from("sprints").select("*").in("project_id", projectIds).eq("status", "active");
+      for (const s of activeSprints || []) sprintMap[s.project_id] = s;
+      const { data: epicCounts } = await sb().from("epics").select("project_id, status").in("project_id", projectIds);
+      for (const e of epicCounts || []) {
+        if (!epicMap[e.project_id]) epicMap[e.project_id] = { total: 0, closed: 0 };
+        epicMap[e.project_id].total++;
+        if (e.status === "closed") epicMap[e.project_id].closed++;
+      }
+    }
+
+    const enriched = projects.map(p => {
+      const ts = taskStats[p.project_id] || { total: 0, done: 0, points: 0, done_points: 0 };
+      const logged = p.timesheets.filter(t => t.status === "approved").reduce((s, t) => s + Number(t.hours_worked), 0);
+      const overdue = p.end_date && new Date(p.end_date) < new Date() && p.status === "active";
+      return {
+        project_id: p.project_id, name: p.name, description: p.description,
+        status: p.status, color: p.color, start_date: p.start_date, end_date: p.end_date,
+        overdue, logged_hours: logged,
+        members: p.project_assignments.map(a => a.staff?.users).filter(Boolean),
+        tasks: ts,
+        epics: epicMap[p.project_id] || { total: 0, closed: 0 },
+        active_sprint: sprintMap[p.project_id] || null,
+      };
+    });
+
+    // Business-level summary
+    const summary = {
+      total: enriched.length,
+      active: enriched.filter(p => p.status === "active").length,
+      overdue: enriched.filter(p => p.overdue).length,
+      total_tasks: Object.values(taskStats).reduce((s, t) => s + t.total, 0),
+      done_tasks: Object.values(taskStats).reduce((s, t) => s + t.done, 0),
+    };
+
+    res.json({ success: true, projects: enriched, summary });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+// ── Project members — all active outlet staff with their skills ───────────────
+const getProjectMembers = async (req, res) => {
+  try {
+    const ctx = await getManagerCtx(req.user.user_id);
+    if (!ctx) return res.status(403).json({ success: false, message: "No outlet found" });
+
+    const allStaff = await prisma.staff.findMany({
+      where: { outlet_id: ctx.outlet_id, is_active: true },
+      include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
+    });
+    const members = allStaff
+      .filter(s => s.users?.role !== "outlet_manager")
+      .map(s => ({ staff_id: s.staff_id, ...s.users }));
+
+    // Enrich with skill IDs so frontend can filter by task required_skills
+    const staffIds = members.map(m => m.staff_id);
+    const { data: skillRows } = await sb().from("staff_skills").select("staff_id, skill_id").in("staff_id", staffIds);
+    const skillMap = {};
+    for (const r of skillRows || []) {
+      if (!skillMap[r.staff_id]) skillMap[r.staff_id] = [];
+      skillMap[r.staff_id].push(r.skill_id);
+    }
+    const enriched = members.map(m => ({ ...m, skill_ids: skillMap[m.staff_id] || [] }));
+    res.json({ success: true, members: enriched });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+// ── Krewby worker requests ────────────────────────────────────────────────────
+const createKrewbyRequest = async (req, res) => {
+  try {
+    const { task_id, project_id, skills_needed, workers_count, start_date, end_date, notes } = req.body;
+    const ctx = await getManagerCtx(req.user.user_id);
+    const { data, error } = await sb().from("krewby_requests").insert({
+      task_id: task_id || null,
+      project_id: project_id || null,
+      outlet_id: ctx?.outlet_id || null,
+      requested_by: req.user.user_id,
+      skills_needed: Array.isArray(skills_needed) ? skills_needed : [],
+      workers_count: Number(workers_count) || 1,
+      start_date: start_date || null,
+      end_date: end_date || null,
+      notes: notes || null,
+    }).select().single();
+    if (error) throw error;
+    res.json({ success: true, request: data });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+module.exports = {
+  getTasks, createTask, updateTask, deleteTask,
+  getEpics, createEpic, updateEpic, deleteEpic,
+  getSprints, createSprint, updateSprint, deleteSprint,
+  getIssues, createIssue, updateIssue, deleteIssue,
+  getPortfolio, getProjectMembers, createKrewbyRequest,
+};
