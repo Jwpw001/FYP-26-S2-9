@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
 import { getUser } from "../utils/auth";
+import { api } from "../lib/api";
 
 const BusinessContext = createContext({
   industry:       "f&b",
@@ -28,54 +28,20 @@ export function BusinessProvider({ children }) {
 
   useEffect(() => {
     if (!user?.user_id) return;
-    fetchBusinessContext(user);
+    fetchBusinessContext();
   }, [user?.user_id]);
 
-  async function fetchBusinessContext(user) {
+  async function fetchBusinessContext() {
     try {
-      let bizData = null;
-
-      if (user.role === "business_owner") {
-        const { data } = await supabase
-          .from("businesses")
-          .select("industry, scheduling_mode, location_label, staff_label, plan")
-          .eq("owner_id", user.user_id)
-          .maybeSingle();
-        bizData = data;
-
-      } else if (["outlet_manager","regular_staff","outlet_casual_staff"].includes(user.role)) {
-        // staff → outlet → business
-        const { data: staffRow } = await supabase
-          .from("staff")
-          .select("outlet_id")
-          .eq("user_id", user.user_id)
-          .maybeSingle();
-
-        if (staffRow?.outlet_id) {
-          const { data: outlet } = await supabase
-            .from("outlets")
-            .select("business_id")
-            .eq("outlet_id", staffRow.outlet_id)
-            .maybeSingle();
-
-          if (outlet?.business_id) {
-            const { data } = await supabase
-              .from("businesses")
-              .select("industry, scheduling_mode, location_label, staff_label, plan")
-              .eq("business_id", outlet.business_id)
-              .maybeSingle();
-            bizData = data;
-          }
-        }
-      }
-
-      if (bizData) {
+      const data = await api.get("/api/business/context");
+      if (data?.success && data.context) {
+        const biz = data.context;
         setCtx({
-          industry:       bizData.industry       || "f&b",
-          schedulingMode: bizData.scheduling_mode || "shift",
-          locationLabel:  bizData.location_label  || "Outlet",
-          staffLabel:     bizData.staff_label      || "Staff",
-          plan:           bizData.plan             || "free",
+          industry:       biz.industry        || "f&b",
+          schedulingMode: biz.scheduling_mode || "shift",
+          locationLabel:  biz.location_label  || "Outlet",
+          staffLabel:     biz.staff_label     || "Staff",
+          plan:           biz.plan            || "free",
           loaded:         true,
         });
       } else {

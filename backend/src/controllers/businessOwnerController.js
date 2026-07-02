@@ -364,8 +364,9 @@ const getStaffDetail = async (req, res) => {
     const staff = await getOwnedStaffOrNull(req, staff_id);
     if (!staff) return res.status(404).json({ success: false, message: "Staff member not found." });
 
+    const { data: biz2 } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     const [allSkills, assignedTags] = await Promise.all([
-      prisma.skills.findMany({ orderBy: { name: "asc" } }),
+      prisma.skills.findMany({ where: { business_id: biz2?.business_id ?? -1 }, orderBy: { name: "asc" } }),
       prisma.user_skill_tags.findMany({ where: { user_id: staff.user_id } }),
     ]);
 
@@ -441,6 +442,53 @@ const getMyBusiness = async (req, res) => {
     const { data: biz, error } = await supabaseAdmin.from("businesses").select("*").eq("owner_id", req.user.user_id).maybeSingle();
     if (error) throw new Error(error.message);
     return res.json({ success: true, business: biz || null });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET /api/business/context — returns industry/mode/labels for the current user's business
+// Works for business owners (direct lookup) and staff/managers (via outlet → business chain)
+const getMyBusinessContext = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const role   = req.user.role;
+    let biz = null;
+
+    if (role === "business_owner") {
+      const { data } = await supabaseAdmin
+        .from("businesses")
+        .select("industry, scheduling_mode, location_label, staff_label, plan")
+        .eq("owner_id", userId)
+        .maybeSingle();
+      biz = data;
+    } else {
+      // staff / manager: user → staff row → outlet → business
+      const { data: staffRow } = await supabaseAdmin
+        .from("staff")
+        .select("outlet_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (staffRow?.outlet_id) {
+        const { data: outlet } = await supabaseAdmin
+          .from("outlets")
+          .select("business_id")
+          .eq("outlet_id", staffRow.outlet_id)
+          .maybeSingle();
+
+        if (outlet?.business_id) {
+          const { data } = await supabaseAdmin
+            .from("businesses")
+            .select("industry, scheduling_mode, location_label, staff_label, plan")
+            .eq("business_id", outlet.business_id)
+            .maybeSingle();
+          biz = data;
+        }
+      }
+    }
+
+    return res.json({ success: true, context: biz || null });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -546,31 +594,181 @@ const deleteBusinessSkill = async (req, res) => {
 
 // ── Stats / consolidated report ───────────────────────────
 
-// GET /api/business/stats
+// GET /api/business/stats — mode-aware: returns stats + today's overview + alerts
 const getBusinessStats = async (req, res) => {
   try {
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, name").eq("owner_id", req.user.user_id).maybeSingle();
-    if (!biz) return res.json({ success: true, outlets_count: 0, staff_count: 0, shifts_count: 0, active_invites: 0 });
+    const { data: biz } = await supabaseAdmin
+      .from("businesses")
+      .select("business_id, scheduling_mode, industry")
+      .eq("owner_id", req.user.user_id)
+      .maybeSingle();
 
-    const outlets = await prisma.outlets.findMany({ where: { business_id: biz.business_id }, select: { outlet_id: true } });
+    if (!biz) return res.json({ success: true, mode: "shift", outlets_count: 0, staff_count: 0, alerts: [], today_overview: [] });
+
+    const outlets = await prisma.outlets.findMany({ where: { business_id: biz.business_id }, select: { outlet_id: true, name: true } });
     const outletIds = outlets.map(o => o.outlet_id);
+    const mode = biz.scheduling_mode || "shift";
 
-    const [staffCount, shiftCount, inviteCount] = await Promise.all([
-      outletIds.length ? prisma.staff.count({ where: { outlet_id: { in: outletIds }, is_active: true } }) : 0,
-      outletIds.length ? prisma.shifts.count({ where: { outlet_id: { in: outletIds } } }) : 0,
-      prisma.invitations.count({ where: { invited_by: req.user.user_id, status: "pending" } }),
-    ]);
+    const staffCount = outletIds.length
+      ? await prisma.staff.count({ where: { outlet_id: { in: outletIds }, is_active: true } })
+      : 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    let extra = {};
+    let alerts = [];
+
+    // ── SHIFT MODE ────────────────────────────────────────
+    if (mode === "shift") {
+      const todayShifts = outletIds.length
+        ? await prisma.shifts.count({ where: { outlet_id: { in: outletIds }, shift_date: { gte: today, lt: tomorrow } } })
+        : 0;
+
+      let understaffedCount = 0;
+      let todayOverview = [];
+
+      if (outletIds.length) {
+        const overviewRows = await prisma.$queryRaw`
+          SELECT o.outlet_id, o.name,
+                 COUNT(DISTINCT s.shift_id)::int AS total_shifts,
+                 COALESCE(SUM(sr.headcount), 0)::int AS required_staff,
+                 COUNT(sa.assignment_id) FILTER (WHERE sa.status != 'removed')::int AS assigned_staff
+          FROM outlets o
+          LEFT JOIN shifts s
+            ON s.outlet_id = o.outlet_id
+           AND s.shift_date >= ${today} AND s.shift_date < ${tomorrow}
+          LEFT JOIN shift_roles sr ON sr.shift_id = s.shift_id
+          LEFT JOIN shift_assignments sa ON sa.role_id = sr.role_id
+          WHERE o.outlet_id = ANY(${outletIds}::int[])
+          GROUP BY o.outlet_id, o.name
+          ORDER BY o.name
+        `;
+
+        todayOverview = overviewRows.map(r => ({
+          name: r.name,
+          total_shifts: Number(r.total_shifts),
+          required: Number(r.required_staff),
+          assigned: Number(r.assigned_staff),
+        }));
+
+        const understaffedRows = await prisma.$queryRaw`
+          SELECT s.shift_id, COALESCE(s.title,'Shift') AS title, o.name AS outlet_name
+          FROM shifts s
+          JOIN outlets o ON o.outlet_id = s.outlet_id
+          JOIN shift_roles sr ON sr.shift_id = s.shift_id
+          LEFT JOIN shift_assignments sa
+            ON sa.role_id = sr.role_id AND sa.status != 'removed'
+          WHERE s.outlet_id = ANY(${outletIds}::int[])
+            AND s.shift_date >= ${today} AND s.shift_date < ${tomorrow}
+            AND s.status = 'published'
+          GROUP BY s.shift_id, s.title, o.name
+          HAVING COUNT(sa.assignment_id) < SUM(sr.headcount)
+        `;
+
+        understaffedCount = understaffedRows.length;
+        if (understaffedCount > 0) {
+          alerts.push({
+            type: "warning",
+            message: `${understaffedCount} shift${understaffedCount > 1 ? "s" : ""} understaffed today`,
+            link: "/outlet-manager/schedule",
+            items: understaffedRows.map(r => ({ label: r.title, sub: r.outlet_name })),
+          });
+        }
+      }
+
+      extra = { today_shifts: todayShifts, understaffed_count: understaffedCount, today_overview: todayOverview };
+
+    // ── FLEXIBLE MODE ─────────────────────────────────────
+    } else if (mode === "flexible") {
+      const [activeProjects, pendingTimesheets] = await Promise.all([
+        prisma.projects.count({ where: { business_id: biz.business_id, status: "active" } }),
+        outletIds.length
+          ? prisma.timesheets.count({ where: { staff: { outlet_id: { in: outletIds } }, status: "pending" } })
+          : 0,
+      ]);
+
+      const stalledProjects = await prisma.projects.findMany({
+        where: { business_id: biz.business_id, status: "active", end_date: { lt: today } },
+        select: { project_id: true, name: true, end_date: true },
+        take: 5,
+        orderBy: { end_date: "asc" },
+      });
+
+      if (stalledProjects.length > 0) {
+        alerts.push({
+          type: "warning",
+          message: `${stalledProjects.length} project${stalledProjects.length > 1 ? "s" : ""} past deadline`,
+          link: "/business-owner/projects",
+          items: stalledProjects.map(p => ({ label: p.name, sub: `Due ${new Date(p.end_date).toLocaleDateString("en-SG")}` })),
+        });
+      }
+      if (pendingTimesheets > 0) {
+        alerts.push({
+          type: "info",
+          message: `${pendingTimesheets} timesheet${pendingTimesheets > 1 ? "s" : ""} awaiting approval`,
+          link: "/business-owner/timesheets",
+        });
+      }
+
+      const projectOverview = await prisma.projects.findMany({
+        where: { business_id: biz.business_id },
+        select: { project_id: true, name: true, status: true, end_date: true },
+        orderBy: { start_date: "desc" },
+        take: 6,
+      });
+
+      extra = { active_projects: activeProjects, pending_timesheets: pendingTimesheets, project_overview: projectOverview };
+
+    // ── APPOINTMENT MODE ──────────────────────────────────
+    } else if (mode === "appointment") {
+      const [todayBookings, unassignedCount] = await Promise.all([
+        outletIds.length
+          ? prisma.bookings.count({ where: { outlet_id: { in: outletIds }, booking_date: { gte: today, lt: tomorrow } } })
+          : 0,
+        outletIds.length
+          ? prisma.bookings.count({ where: { outlet_id: { in: outletIds }, assigned_staff_id: null, booking_date: { gte: today } } })
+          : 0,
+      ]);
+
+      if (unassignedCount > 0) {
+        alerts.push({
+          type: "warning",
+          message: `${unassignedCount} upcoming booking${unassignedCount > 1 ? "s" : ""} unassigned`,
+          link: "/business-owner/bookings",
+        });
+      }
+
+      const bookingOverview = outletIds.length
+        ? await prisma.bookings.findMany({
+            where: { outlet_id: { in: outletIds }, booking_date: { gte: today, lt: tomorrow } },
+            select: {
+              booking_id: true, customer_name: true, start_time: true, end_time: true,
+              assigned_staff_id: true, status: true,
+              services: { select: { name: true } },
+            },
+            orderBy: { start_time: "asc" },
+            take: 8,
+          })
+        : [];
+
+      extra = { today_bookings: todayBookings, unassigned_bookings: unassignedCount, booking_overview: bookingOverview };
+    }
 
     return res.json({
       success: true,
+      mode,
+      industry: biz.industry,
       outlets_count: outletIds.length,
       staff_count: staffCount,
-      shifts_count: shiftCount,
-      active_invites: inviteCount,
+      alerts,
+      ...extra,
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill };
+module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getMyBusinessContext, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill };

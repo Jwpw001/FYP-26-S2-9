@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
-import { supabase } from "../../lib/supabaseClient";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase } from "lucide-react";
@@ -61,7 +60,7 @@ export default function OutletDetail() {
   const [skills, setSkills] = useState([]);
 
   useEffect(() => { fetchOutlet(); fetchStaff(); fetchManagers(); fetchRoleTemplates(); }, [id]);
-  useEffect(() => { supabase.from("skills").select("skill_id, name").order("name").then(({ data }) => setSkills(data || [])); }, []);
+  useEffect(() => { api.get("/api/business/skills").then(r => setSkills(r.skills || [])); }, []);
 
   async function fetchOutlet() {
     setLoading(true);
@@ -342,57 +341,110 @@ export default function OutletDetail() {
             </div>
           )
         ) : (
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "16px" }}>
+          <div>
+            {/* Step 1 — Skill chip picker */}
+            <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px", marginBottom: "16px" }}>
+              <p style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "12px" }}>
+                Select roles needed at this outlet
+              </p>
+              {skills.length === 0 ? (
+                <p style={{ fontSize: "13px", color: "#94A3B8" }}>No skill tags set up yet. Go to the Skills page to add some.</p>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {skills.map(sk => {
+                    const already = rolesDraft.some(r => String(r.skill_id) === String(sk.skill_id));
+                    return (
+                      <button key={sk.skill_id}
+                        onClick={() => {
+                          if (already) {
+                            setRolesDraft(p => p.filter(r => String(r.skill_id) !== String(sk.skill_id)));
+                          } else {
+                            setRolesDraft(p => [...p, { role_name: sk.name, skill_id: sk.skill_id, headcount: 1, min_experience_level: "beginner", requires_certification: false, certification_name: "" }]);
+                          }
+                        }}
+                        style={{
+                          padding: "7px 14px", borderRadius: "100px", fontSize: "13px", fontWeight: "600", cursor: "pointer", border: "none",
+                          background: already ? "#4F46E5" : "#F1F5F9",
+                          color: already ? "#fff" : "#475569",
+                          boxShadow: already ? "0 2px 8px rgba(79,70,229,0.25)" : "none",
+                          transform: already ? "scale(1.04)" : "scale(1)",
+                          transition: "all 0.15s",
+                        }}>
+                        {already && <span style={{ marginRight: 5 }}>✓</span>}{sk.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Step 2 — Configure selected roles */}
             {rolesDraft.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 32px", gap: "8px", padding: "0 4px", marginBottom: "10px" }}>
-                <span style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em" }}>Skill / Role</span>
-                <span style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em" }}>Count</span>
-                <span />
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <p style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Configure selected roles
+                </p>
+                {rolesDraft.map((row, i) => (
+                  <div key={i} style={{ background: "#fff", border: "1.5px solid #E0E7FF", borderRadius: "12px", padding: "14px 16px" }}>
+                    {/* Role header */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4F46E5" }} />
+                        <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{row.role_name}</span>
+                      </div>
+                      <button onClick={() => setRolesDraft(p => p.filter((_, idx) => idx !== i))}
+                        style={{ background: "#FEF2F2", border: "none", borderRadius: "6px", color: "#EF4444", cursor: "pointer", padding: "4px 8px", fontSize: "11px", fontWeight: "700" }}>
+                        Remove
+                      </button>
+                    </div>
+
+                    {/* Count + Level */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                      <div>
+                        <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" }}>Headcount needed</p>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <button onClick={() => updateRoleDraft(i, "headcount", Math.max(1, (row.headcount || 1) - 1))}
+                            style={{ width: 28, height: 28, borderRadius: "50%", background: "#F1F5F9", border: "1px solid #E2E8F0", fontSize: "16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569" }}>−</button>
+                          <span style={{ fontSize: "18px", fontWeight: "800", color: "#1E293B", minWidth: "24px", textAlign: "center" }}>{row.headcount || 1}</span>
+                          <button onClick={() => updateRoleDraft(i, "headcount", (row.headcount || 1) + 1)}
+                            style={{ width: 28, height: 28, borderRadius: "50%", background: "#F1F5F9", border: "1px solid #E2E8F0", fontSize: "16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569" }}>+</button>
+                        </div>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" }}>Min experience</p>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          {[["beginner","🌱","#92400E","#FEF3C7"],["intermediate","⭐","#1E40AF","#DBEAFE"],["expert","🏆","#166534","#DCFCE7"]].map(([val, icon, color, bg]) => (
+                            <button key={val} onClick={() => updateRoleDraft(i, "min_experience_level", val)}
+                              style={{
+                                padding: "4px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "700", cursor: "pointer", border: "none",
+                                background: (row.min_experience_level || "beginner") === val ? bg : "#F1F5F9",
+                                color: (row.min_experience_level || "beginner") === val ? color : "#94A3B8",
+                                transition: "all 0.12s",
+                              }}>{icon} {val.charAt(0).toUpperCase()+val.slice(1)}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Certification */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#64748B", cursor: "pointer" }}>
+                        <input type="checkbox" checked={row.requires_certification || false}
+                          onChange={e => updateRoleDraft(i, "requires_certification", e.target.checked)}
+                          style={{ width: "14px", height: "14px", accentColor: "#4F46E5" }} />
+                        Requires certification
+                      </label>
+                      {row.requires_certification && (
+                        <input style={{ ...s.input, flex: 1, padding: "5px 10px", fontSize: "12px" }}
+                          placeholder="e.g. Forklift License, Food Hygiene Cert"
+                          value={row.certification_name || ""}
+                          onChange={e => updateRoleDraft(i, "certification_name", e.target.value)} />
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
-              {rolesDraft.map((row, i) => (
-                <div key={i} style={{ background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0", padding: "12px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 140px 32px", gap: "8px", alignItems: "center", marginBottom: row.requires_certification ? "8px" : "0" }}>
-                    <select style={s.input} value={row.skill_id || ""} onChange={e => {
-                      const sk = skills.find(s => String(s.skill_id) === e.target.value);
-                      updateRoleDraft(i, "skill_id", e.target.value);
-                      updateRoleDraft(i, "role_name", sk?.name || "");
-                    }}>
-                      <option value="">— Select role —</option>
-                      {skills.map(sk => <option key={sk.skill_id} value={sk.skill_id}>{sk.name}</option>)}
-                    </select>
-                    <input type="number" min="1" max="99" style={{ ...s.input, textAlign: "center" }} value={row.headcount} onChange={e => updateRoleDraft(i, "headcount", e.target.value)} />
-                    <select style={s.input} value={row.min_experience_level || "beginner"} onChange={e => updateRoleDraft(i, "min_experience_level", e.target.value)}>
-                      <option value="beginner">🌱 Beginner+</option>
-                      <option value="intermediate">⭐ Intermediate+</option>
-                      <option value="expert">🏆 Expert only</option>
-                    </select>
-                    <button onClick={() => setRolesDraft(p => p.filter((_, idx) => idx !== i))} style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "7px", color: "#EF4444", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                    </button>
-                  </div>
-                  {/* Certification toggle */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#64748B", cursor: "pointer" }}>
-                      <input type="checkbox" checked={row.requires_certification || false}
-                        onChange={e => updateRoleDraft(i, "requires_certification", e.target.checked)}
-                        style={{ width: "14px", height: "14px", accentColor: "#4F46E5" }} />
-                      Requires certification
-                    </label>
-                    {row.requires_certification && (
-                      <input style={{ ...s.input, flex: 1, padding: "5px 10px", fontSize: "12px" }}
-                        placeholder="e.g. Forklift License, Food Hygiene Cert"
-                        value={row.certification_name || ""}
-                        onChange={e => updateRoleDraft(i, "certification_name", e.target.value)} />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => setRolesDraft(p => [...p, { role_name: "", skill_id: "", headcount: 1, min_experience_level: "beginner", requires_certification: false, certification_name: "" }])} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#F8FAFC", border: "1.5px dashed #CBD5E1", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
-              <Plus size={14} /> Add Role
-            </button>
           </div>
         )}
       </div>
@@ -432,12 +484,23 @@ export default function OutletDetail() {
               const name = m.users?.full_name || "—";
               const initials = name[0]?.toUpperCase() || "?";
               const color = avatarColor(name);
+              const isManager = managers.some(mgr => Number(mgr.user_id) === Number(m.users?.user_id));
               return (
-                <div key={m.staff_id} className="bo-staff-card" style={{ ...s.staffCard, animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both`, cursor: "pointer" }} onClick={() => goTo(`/business-owner/staff/${m.staff_id}`)}>
+                <div key={m.staff_id} className="bo-staff-card" style={{ ...s.staffCard, animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both`, cursor: "pointer", border: isManager ? "1.5px solid #FCD34D" : "1px solid #E2E8F0" }} onClick={() => goTo(`/business-owner/staff/${m.staff_id}`)}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-                    <div style={{ ...s.staffAvatar, background: color }}>{initials}</div>
+                    <div style={{ position: "relative" }}>
+                      <div style={{ ...s.staffAvatar, background: color }}>{initials}</div>
+                      {isManager && (
+                        <div style={{ position: "absolute", bottom: -2, right: -2, width: 16, height: 16, borderRadius: "50%", background: "#F59E0B", border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ fontSize: 8, color: "#fff" }}>★</span>
+                        </div>
+                      )}
+                    </div>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+                        {isManager && <span style={{ fontSize: 10, fontWeight: 700, color: "#92400E", background: "#FEF3C7", padding: "1px 7px", borderRadius: 99, flexShrink: 0 }}>Manager</span>}
+                      </div>
                       <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.users?.email || "—"}</p>
                     </div>
                   </div>

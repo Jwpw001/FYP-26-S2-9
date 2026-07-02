@@ -1,11 +1,12 @@
 ﻿const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/authMiddleware");
-const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill } = require("../controllers/businessOwnerController");
+const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getMyBusinessContext, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill } = require("../controllers/businessOwnerController");
 
 router.use(protect);
 
 router.get("/info",                              getMyBusiness);
+router.get("/context",                           getMyBusinessContext);
 router.get("/stats",                             getBusinessStats);
 router.get("/outlets",                           getMyOutlets);
 router.post("/outlets",                          createOutlet);

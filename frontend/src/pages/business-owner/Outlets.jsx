@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
-import { supabase } from "../../lib/supabaseClient";
 import { Plus, Building2, MapPin, ArrowRight, Clock } from "lucide-react";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 import { useBusinessContext } from "../../context/BusinessContext";
@@ -54,7 +53,7 @@ export default function BOOutlets() {
   useEffect(load, []);
 
   useEffect(() => {
-    supabase.from("skills").select("skill_id, name").order("name").then(({ data }) => setSkills(data || []));
+    api.get("/api/business/skills").then(r => setSkills(r.skills || []));
   }, []);
 
   function openWizard() {
