@@ -5,7 +5,6 @@ const {
   getTasks, createTask, updateTask, deleteTask,
   getEpics, createEpic, updateEpic, deleteEpic,
   getSprints, createSprint, updateSprint, deleteSprint,
-  getIssues, createIssue, updateIssue, deleteIssue,
   getPortfolio, getProjectMembers, createKrewbyRequest,
 } = require("../controllers/flexibleController");
 
@@ -34,11 +33,5 @@ router.get("/projects/:project_id/members", getProjectMembers);
 
 // Krewby worker requests
 router.post("/krewby-requests", createKrewbyRequest);
-
-// Issues
-router.get("/issues",            getIssues);
-router.post("/issues",           createIssue);
-router.patch("/issues/:issue_id",updateIssue);
-router.delete("/issues/:issue_id",deleteIssue);
 
 module.exports = router;

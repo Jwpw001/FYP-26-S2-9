@@ -104,14 +104,14 @@ export default function ShiftsList() {
     async function load() {
       setLoading(true);
       try {
-        const [{ data: myStaff }, { data: skillRows }] = await Promise.all([
+        const [{ data: myStaff }, libRes] = await Promise.all([
           supabase.from("staff").select("outlet_id").eq("user_id", userId).eq("is_active", true).limit(1),
-          supabase.from("skills").select("skill_id, name").order("name"),
+          api.get("/api/business/skills").catch(() => ({ skills: [] })),
         ]);
         const oid = myStaff?.[0]?.outlet_id;
         if (!oid || cancelled) return;
 
-        if (!cancelled) setSkillOptions(skillRows || []);
+        if (!cancelled) setSkillOptions(libRes.skills || []);
 
         const { data: outletData } = await supabase
           .from("outlets").select("open_time, close_time").eq("outlet_id", oid).single();
@@ -236,8 +236,8 @@ export default function ShiftsList() {
     });
     setAiCreate({ step: "form", date: dateStr });
     // Refresh skills in case page-load fetch missed them
-    const { data: freshSkills } = await supabase.from("skills").select("skill_id, name").order("name");
-    if (freshSkills?.length) setSkillOptions(freshSkills);
+    const freshRes = await api.get("/api/business/skills").catch(() => ({ skills: [] }));
+    if (freshRes.skills?.length) setSkillOptions(freshRes.skills);
   }
 
   async function handleAiCreateSubmit() {

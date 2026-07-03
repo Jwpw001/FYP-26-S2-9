@@ -251,8 +251,9 @@ export default function ShiftDetail() {
 
         const enriched = await fetchEnrichedAssignments(id);
 
-        // Load skills for the Add Role dropdown
-        const { data: skillsData } = await supabase.from("skills").select("skill_id, name").order("name");
+        // Load skills for the Add Role dropdown (scoped to this business)
+        const skillsLibRes = await api.get("/api/business/skills").catch(() => ({ skills: [] }));
+        const skillsData = skillsLibRes.skills;
 
         // Load krewby requests for this shift
         const { data: krewbyData } = await supabase

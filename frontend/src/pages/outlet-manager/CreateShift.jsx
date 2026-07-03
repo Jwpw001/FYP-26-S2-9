@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 
@@ -29,15 +30,15 @@ export default function CreateShift() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [{ data: myStaff }, { data: skillRows }] = await Promise.all([
+      const [{ data: myStaff }, libRes] = await Promise.all([
         supabase.from("staff").select("outlet_id")
           .eq("user_id", userId).eq("is_active", true).limit(1),
-        supabase.from("skills").select("skill_id, name").order("name"),
+        api.get("/api/business/skills").catch(() => ({ skills: [] })),
       ]);
       const oid = myStaff?.[0]?.outlet_id || null;
       if (!cancelled) {
         setOutletId(oid);
-        setSkills(skillRows || []);
+        setSkills(libRes.skills || []);
       }
       if (oid) {
         const { data: outletData } = await supabase

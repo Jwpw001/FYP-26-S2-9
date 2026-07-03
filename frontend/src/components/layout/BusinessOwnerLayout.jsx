@@ -5,6 +5,7 @@ import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
 import { LayoutDashboard, Building2, UserPlus, BarChart2, CalendarDays, Users, Tag } from "lucide-react";
 import { useBusinessContext } from "../../context/BusinessContext";
+import ProfileModal from "../ProfileModal";
 
 const PLAN_BADGE = {
   free:       { label: "Free",       color: "#94A3B8", bg: "rgba(148,163,184,0.15)", dot: "#94A3B8" },
@@ -20,6 +21,7 @@ export default function BusinessOwnerLayout({ children, title }) {
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
   const [plan, setPlan] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   const scheduleLabel = schedulingMode === "flexible" ? "Timesheets" : schedulingMode === "appointment" ? "Appointments" : "Schedule";
 
@@ -85,18 +87,21 @@ export default function BusinessOwnerLayout({ children, title }) {
             </div>
           )}
 
-          <div style={{ ...s.userRow, marginBottom: "10px" }}>
+          <button onClick={() => setShowProfile(true)} title="View profile"
+            style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
             <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "B"}</div>
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s, max-width 0.25s", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Business Owner"}</p>
               <p style={s.userRole}>Business Owner</p>
             </div>
-          </div>
+          </button>
           <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s, max-height 0.25s", overflow: "hidden" }}>
             <SignOutButton />
           </div>
         </div>
       </aside>
+
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
 
       <div style={s.main}>
         <header style={s.topbar}>

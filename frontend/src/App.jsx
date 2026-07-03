@@ -23,7 +23,6 @@ import ShiftsList               from "./pages/outlet-manager/ShiftsList";
 import GenerateWeeklySchedule   from "./pages/outlet-manager/GenerateWeeklySchedule";
 import Projects                 from "./pages/outlet-manager/Projects";
 import ProjectBoard             from "./pages/outlet-manager/ProjectBoard";
-import IssueTracker             from "./pages/outlet-manager/IssueTracker";
 import SkillSettings            from "./pages/outlet-manager/SkillSettings";
 import Timesheets               from "./pages/outlet-manager/Timesheets";
 import Capacity                 from "./pages/outlet-manager/Capacity";
@@ -158,7 +157,6 @@ function App() {
         <Route path="/outlet-manager/manpower"       element={<PR roles={["outlet_manager"]}><ManpowerRequests /></PR>} />
         <Route path="/outlet-manager/projects"            element={<PR roles={["outlet_manager"]}><Projects /></PR>} />
         <Route path="/outlet-manager/projects/:id/board" element={<PR roles={["outlet_manager"]}><ProjectBoard /></PR>} />
-        <Route path="/outlet-manager/issues"              element={<PR roles={["outlet_manager"]}><IssueTracker /></PR>} />
         <Route path="/outlet-manager/timesheets"          element={<PR roles={["outlet_manager"]}><Timesheets /></PR>} />
         <Route path="/outlet-manager/capacity"      element={<PR roles={["outlet_manager"]}><Capacity /></PR>} />
         <Route path="/outlet-manager/bookings"     element={<PR roles={["outlet_manager"]}><Bookings /></PR>} />

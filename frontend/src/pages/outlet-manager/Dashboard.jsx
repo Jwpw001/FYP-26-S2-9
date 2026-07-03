@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { useBusinessContext } from "../../context/BusinessContext";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-dash-styles")) {
@@ -120,6 +122,12 @@ const Icons = {
 };
 
 export default function ManagerDashboard() {
+  const { schedulingMode } = useBusinessContext();
+  if (schedulingMode === "flexible") return <FlexibleManagerDashboard />;
+  return <ShiftManagerDashboard />;
+}
+
+function ShiftManagerDashboard() {
   const goTo = useGoTo();
   const user = getUser();
 
@@ -450,6 +458,314 @@ export default function ManagerDashboard() {
       )}
     </ManagerLayout>
   );
+}
+
+// ── Flexible (project/task) mode dashboard ──────────────────────────────────────
+function FlexibleManagerDashboard() {
+  const goTo = useGoTo();
+  const user = getUser();
+  const userId = user?.user_id;
+
+  const [portfolio, setPortfolio] = useState(null);
+  const [staffCount, setStaffCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const { data: myStaff } = await supabase
+          .from("staff").select("outlet_id")
+          .eq("user_id", userId).eq("is_active", true).limit(1);
+        const outletId = myStaff?.[0]?.outlet_id;
+
+        const [portRes, staffRowsRes] = await Promise.all([
+          api.get("/api/flex/portfolio"),
+          outletId
+            ? supabase.from("staff").select("staff_id, users(role)").eq("outlet_id", outletId).eq("is_active", true)
+            : Promise.resolve({ data: [] }),
+        ]);
+
+        if (cancelled) return;
+        setPortfolio(portRes);
+        setStaffCount((staffRowsRes.data || []).filter(s => s.users?.role !== "outlet_manager").length);
+      } catch (err) {
+        console.error("Dashboard error:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  function getGreeting() {
+    const h = new Date().getHours();
+    if (h < 12) return "morning";
+    if (h < 17) return "afternoon";
+    return "evening";
+  }
+
+  const summary = portfolio?.summary || { total: 0, active: 0, overdue: 0, total_tasks: 0, done_tasks: 0 };
+  const openTasks = Math.max(summary.total_tasks - summary.done_tasks, 0);
+  const activeProjects = (portfolio?.projects || []).filter(p => p.status === "active").slice(0, 5);
+  const upcomingDeadlines = (portfolio?.projects || [])
+    .filter(p => p.status === "active" && p.end_date)
+    .sort((a, b) => new Date(a.end_date) - new Date(b.end_date))
+    .slice(0, 5);
+
+  const cardDefs = [
+    { label: "Active Projects", key: "active",  sub: `${summary.total} total`,     icon: Icons.clipboard, color: "#6366F1", bg: "#EEF2FF", link: "/outlet-manager/projects" },
+    { label: "Total Staff",     key: "staff",   sub: "Active members",             icon: Icons.users,     color: "#059669", bg: "#ECFDF5", link: "/outlet-manager/staff" },
+    { label: "Open Tasks",      key: "tasks",   sub: `${summary.done_tasks} done`, icon: Icons.check,     color: "#2563EB", bg: "#EFF6FF", link: "/outlet-manager/projects" },
+    { label: "Overdue",         key: "overdue", sub: "Past deadline",              icon: Icons.calendar,  color: "#DC2626", bg: "#FEF2F2", link: "/outlet-manager/projects" },
+  ];
+  const cardValues = { active: summary.active, staff: staffCount, tasks: openTasks, overdue: summary.overdue };
+
+  const quickActions = [
+    { label: "New Project",  icon: Icons.plus,      link: "/outlet-manager/projects" },
+    { label: "View Staff",   icon: Icons.users,     link: "/outlet-manager/staff" },
+    { label: "View Reports", icon: Icons.chart,     link: "/outlet-manager/reports" },
+  ];
+
+  return (
+    <ManagerLayout title="Dashboard">
+      <div style={{ animation: "pageIn 0.4s ease both" }}>
+
+        {/* Welcome header */}
+        <div style={{ marginBottom: "28px" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
+            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "Manager"}
+          </h2>
+          <p style={{ fontSize: "14px", color: "#64748B" }}>Here's what needs your attention today.</p>
+        </div>
+
+        {/* Stat cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: "16px", marginBottom: "24px" }}>
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px", display: "flex", gap: "14px" }}>
+                  <Shimmer w="44px" h="44px" r="10px" />
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <Shimmer w="50%" h="28px" r="6px" />
+                    <Shimmer w="70%" h="14px" r="6px" />
+                    <Shimmer w="50%" h="12px" r="6px" />
+                  </div>
+                </div>
+              ))
+            : cardDefs.map((card, idx) => (
+                <StatCard key={card.label} card={card} value={cardValues[card.key]} delay={idx * 80} onNav={() => goTo(card.link)} />
+              ))
+          }
+        </div>
+
+        {/* Overdue projects alert */}
+        {!loading && summary.overdue > 0 && (
+          <div style={{ marginBottom: "20px", background: "#FFFBEB", border: "1.5px solid #FCD34D", borderRadius: "14px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="20" height="20" fill="none" stroke="#D97706" strokeWidth="1.8" viewBox="0 0 24 24">
+                <path d="M12 9v4M12 17h.01"/>
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              </svg>
+            </div>
+            <div>
+              <p style={{ fontSize: "15px", fontWeight: "700", color: "#92400E" }}>
+                {summary.overdue} project{summary.overdue !== 1 ? "s" : ""} past deadline
+              </p>
+              <p style={{ fontSize: "12px", color: "#B45309", marginTop: "2px" }}>Review timelines and reassign work if needed</p>
+            </div>
+          </div>
+        )}
+
+        {/* Project progress + Quick actions row */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "20px", marginBottom: "20px" }}>
+          {/* Project progress */}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+              <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Active Projects</h3>
+              <button style={{ background: "none", border: "none", fontSize: "13px", color: "#2563EB", fontWeight: "600", cursor: "pointer" }}
+                onClick={() => goTo("/outlet-manager/projects")}>
+                View all →
+              </button>
+            </div>
+            {loading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="52px" r="10px" />)}
+              </div>
+            ) : activeProjects.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#64748B", fontSize: "14px" }}>
+                No active projects yet.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {activeProjects.map(p => (
+                  <ProjectProgressRow key={p.project_id} project={p} onNav={() => goTo(`/outlet-manager/projects/${p.project_id}/board`)} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Quick actions */}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px" }}>
+            <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "16px" }}>Quick Actions</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {quickActions.map((a) => (
+                <QuickActionBtn key={a.label} label={a.label} icon={a.icon} onClick={() => goTo(a.link)} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Upcoming deadlines */}
+        <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+            <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Upcoming Deadlines</h3>
+            <button style={{ background: "none", border: "none", fontSize: "13px", color: "#2563EB", fontWeight: "600", cursor: "pointer" }}
+              onClick={() => goTo("/outlet-manager/projects")}>
+              View all →
+            </button>
+          </div>
+
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: "12px", padding: "10px 0" }}>
+                  <Shimmer h="16px" r="6px" />
+                  <Shimmer h="16px" r="6px" />
+                  <Shimmer h="16px" r="6px" />
+                  <Shimmer w="80px" h="22px" r="100px" />
+                </div>
+              ))}
+            </div>
+          ) : upcomingDeadlines.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#64748B", fontSize: "14px" }}>
+              No upcoming deadlines.
+            </div>
+          ) : (
+            <div style={{ width: "100%" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "8px 14px", background: "#F8FAFC", borderRadius: "8px", fontSize: "12px", fontWeight: "600", color: "#64748B", gap: "8px", marginBottom: "4px" }}>
+                <span>Project</span><span>Team</span><span>Progress</span><span>Deadline</span>
+              </div>
+              {upcomingDeadlines.map(p => (
+                <DeadlineRow key={p.project_id} project={p} onNav={() => goTo(`/outlet-manager/projects/${p.project_id}/board`)} />
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>
+    </ManagerLayout>
+  );
+}
+
+function ProjectProgressRow({ project, onNav }) {
+  const [hovered, setHovered] = useState(false);
+  const total = project.tasks?.total || 0;
+  const done = project.tasks?.done || 0;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return (
+    <div
+      onClick={onNav}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ padding: "12px 14px", borderRadius: "10px", cursor: "pointer", border: "1px solid #F1F5F9", background: hovered ? "#F8FAFC" : "transparent", transition: "background 0.15s" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: project.color || "#6366F1", flexShrink: 0 }} />
+          <span style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{project.name}</span>
+          {project.overdue && (
+            <span style={{ fontSize: "10px", fontWeight: "700", color: "#DC2626", background: "#FEF2F2", padding: "1px 7px", borderRadius: "99px", flexShrink: 0 }}>Overdue</span>
+          )}
+        </div>
+        <span style={{ fontSize: "12px", color: "#64748B", fontWeight: "600", flexShrink: 0 }}>{done}/{total} tasks</span>
+      </div>
+      <div style={{ height: "6px", borderRadius: "99px", background: "#F1F5F9", overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, borderRadius: "99px", background: project.color || "#6366F1", transition: "width 0.6s ease" }} />
+      </div>
+    </div>
+  );
+}
+
+function DeadlineRow({ project, onNav }) {
+  const [hovered, setHovered] = useState(false);
+  const total = project.tasks?.total || 0;
+  const done = project.tasks?.done || 0;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const dl = deadlineLabel(daysUntil(project.end_date));
+  return (
+    <div
+      onClick={onNav}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr",
+        padding: "11px 14px", borderRadius: "8px", cursor: "pointer",
+        fontSize: "13px", gap: "8px", alignItems: "center",
+        borderBottom: "1px solid #F1F5F9", color: "#1E293B",
+        background: hovered ? "#F8FAFC" : "transparent",
+        transition: "background 0.15s",
+      }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+        <div style={{ width: 7, height: 7, borderRadius: "50%", background: project.color || "#6366F1", flexShrink: 0 }} />
+        <span style={{ fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{project.name}</span>
+      </div>
+      <MemberAvatars members={project.members} />
+      <span style={{ color: "#64748B" }}>{done}/{total} tasks ({pct}%)</span>
+      <span>
+        <span style={{ display: "inline-block", padding: "3px 9px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: `${dl.color}18`, color: dl.color }}>
+          {dl.text}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function MemberAvatars({ members = [] }) {
+  if (!members.length) return <span style={{ fontSize: "12px", color: "#CBD1D9" }}>—</span>;
+  return (
+    <div style={{ display: "flex" }}>
+      {members.slice(0, 3).map((m, i) => (
+        <div key={m.user_id} title={m.full_name} style={{ marginLeft: i === 0 ? 0 : -7, border: "2px solid #FFF", borderRadius: "50%" }}>
+          <MiniAvatar name={m.full_name} />
+        </div>
+      ))}
+      {members.length > 3 && (
+        <div style={{ marginLeft: -7, width: 22, height: 22, borderRadius: "50%", border: "2px solid #FFF", background: "#EEF1F5", color: "#64748B", fontSize: "9px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          +{members.length - 3}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MiniAvatar({ name = "", size = 22 }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: avatarColor(name), color: "#fff", fontSize: size * 0.4, fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      {name?.[0]?.toUpperCase() || "?"}
+    </div>
+  );
+}
+
+function avatarColor(name = "") {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
+function daysUntil(dateStr) {
+  const end = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((end - today) / 86400000);
+}
+
+function deadlineLabel(days) {
+  if (days < 0) return { text: `${Math.abs(days)}d overdue`, color: "#DC2626" };
+  if (days === 0) return { text: "Due today", color: "#D97706" };
+  if (days === 1) return { text: "Due tomorrow", color: "#D97706" };
+  if (days <= 7) return { text: `Due in ${days}d`, color: "#D97706" };
+  return { text: `Due in ${days}d`, color: "#64748B" };
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────

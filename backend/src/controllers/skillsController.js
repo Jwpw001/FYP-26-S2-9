@@ -1,93 +1,6 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 
-// Resolve business_id + outlet_id from the calling user
-async function getCtx(user) {
-  if (user.role === "business_owner") {
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", user.user_id).maybeSingle();
-    return biz ? { business_id: biz.business_id, outlet_id: null } : null;
-  }
-  // outlet_manager or other staff — check staff table first, then outlet_managers
-  const staff = await prisma.staff.findFirst({ where: { user_id: user.user_id }, select: { outlet_id: true } });
-  const outlet_id = staff?.outlet_id || (() => null)();
-  if (!outlet_id) {
-    const { data: om } = await supabaseAdmin.from("outlet_managers").select("outlet_id").eq("user_id", user.user_id).maybeSingle();
-    if (!om?.outlet_id) return null;
-    const { data: o } = await supabaseAdmin.from("outlets").select("business_id").eq("outlet_id", om.outlet_id).maybeSingle();
-    return o ? { business_id: o.business_id, outlet_id: om.outlet_id } : null;
-  }
-  const { data: o } = await supabaseAdmin.from("outlets").select("business_id").eq("outlet_id", outlet_id).maybeSingle();
-  return o ? { business_id: o.business_id, outlet_id } : null;
-}
-
-// ── Business skill library ────────────────────────────────────────────────────
-
-const getBusinessSkills = async (req, res) => {
-  try {
-    const ctx = await getCtx(req.user);
-    if (!ctx) return res.status(403).json({ success: false, message: "No business found" });
-    const { data, error } = await supabaseAdmin
-      .from("business_skills")
-      .select("*")
-      .eq("business_id", ctx.business_id)
-      .order("name");
-    if (error) throw error;
-    res.json({ success: true, skills: data || [] });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-};
-
-const createBusinessSkill = async (req, res) => {
-  try {
-    const ctx = await getCtx(req.user);
-    if (!ctx) return res.status(403).json({ success: false, message: "No business found" });
-    const { name, color = "#6366F1" } = req.body;
-    if (!name?.trim()) return res.status(400).json({ success: false, message: "Skill name required" });
-    const { data, error } = await supabaseAdmin
-      .from("business_skills")
-      .insert({ business_id: ctx.business_id, name: name.trim(), color })
-      .select()
-      .single();
-    if (error) throw error;
-    res.json({ success: true, skill: data });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-};
-
-const updateBusinessSkill = async (req, res) => {
-  try {
-    const ctx = await getCtx(req.user);
-    if (!ctx) return res.status(403).json({ success: false, message: "No business found" });
-    const { skill_id } = req.params;
-    const { name, color } = req.body;
-    const updates = {};
-    if (name !== undefined) updates.name = name.trim();
-    if (color !== undefined) updates.color = color;
-    const { data, error } = await supabaseAdmin
-      .from("business_skills")
-      .update(updates)
-      .eq("skill_id", skill_id)
-      .eq("business_id", ctx.business_id)
-      .select()
-      .single();
-    if (error) throw error;
-    res.json({ success: true, skill: data });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-};
-
-const deleteBusinessSkill = async (req, res) => {
-  try {
-    const ctx = await getCtx(req.user);
-    if (!ctx) return res.status(403).json({ success: false, message: "No business found" });
-    const { skill_id } = req.params;
-    const { error } = await supabaseAdmin
-      .from("business_skills")
-      .delete()
-      .eq("skill_id", skill_id)
-      .eq("business_id", ctx.business_id);
-    if (error) throw error;
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-};
-
 // ── Staff skill assignment ─────────────────────────────────────────────────────
 
 const getStaffSkills = async (req, res) => {
@@ -164,7 +77,29 @@ const removeStaffSkill = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
+// GET /api/skills/outlet/:outlet_id — bulk staff→skill assignments for a whole outlet
+const getOutletStaffSkills = async (req, res) => {
+  try {
+    const outlet_id = Number(req.params.outlet_id);
+    const staffRows = await prisma.staff.findMany({ where: { outlet_id }, select: { staff_id: true } });
+    const staffIds = staffRows.map(s => s.staff_id);
+    if (staffIds.length === 0) return res.json({ success: true, skills: [] });
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("staff_skills")
+      .select("staff_id, skill_id")
+      .in("staff_id", staffIds);
+    if (error) throw error;
+
+    const skillIds = [...new Set((rows || []).map(r => r.skill_id))];
+    const skillRecords = await prisma.skills.findMany({ where: { skill_id: { in: skillIds } }, select: { skill_id: true, name: true } });
+    const nameMap = Object.fromEntries(skillRecords.map(s => [s.skill_id, s.name]));
+
+    const skills = (rows || []).map(r => ({ staff_id: r.staff_id, skill_id: r.skill_id, name: nameMap[r.skill_id] || null })).filter(r => r.name);
+    res.json({ success: true, skills });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
 module.exports = {
-  getBusinessSkills, createBusinessSkill, updateBusinessSkill, deleteBusinessSkill,
-  getStaffSkills, addStaffSkill, removeStaffSkill,
+  getStaffSkills, addStaffSkill, removeStaffSkill, getOutletStaffSkills,
 };

@@ -25,6 +25,34 @@ async function getBOCtx(userId) {
 }
 
 // ── TASKS ─────────────────────────────────────────────────────────────────────
+
+// Attach `assignees: [{user_id,full_name,email}]` to each task from task_assignees
+async function attachAssignees(tasks) {
+  const taskIds = tasks.map(t => t.task_id);
+  if (taskIds.length === 0) return tasks;
+  const { data: rows } = await sb()
+    .from("task_assignees")
+    .select("task_id, users(user_id, full_name, email)")
+    .in("task_id", taskIds);
+  const byTask = {};
+  for (const r of rows || []) {
+    if (!byTask[r.task_id]) byTask[r.task_id] = [];
+    if (r.users) byTask[r.task_id].push(r.users);
+  }
+  return tasks.map(t => ({ ...t, assignees: byTask[t.task_id] || [] }));
+}
+
+// Replace a task's assignee set and keep assigned_to in sync as the primary (first) assignee
+async function syncAssignees(task_id, assignee_ids) {
+  const ids = Array.isArray(assignee_ids) ? [...new Set(assignee_ids.map(Number))] : [];
+  await sb().from("task_assignees").delete().eq("task_id", task_id);
+  if (ids.length > 0) {
+    const { error } = await sb().from("task_assignees").insert(ids.map(user_id => ({ task_id, user_id })));
+    if (error) throw error;
+  }
+  await sb().from("tasks").update({ assigned_to: ids[0] || null }).eq("task_id", task_id);
+}
+
 const getTasks = async (req, res) => {
   try {
     const { project_id } = req.params;
@@ -38,38 +66,49 @@ const getTasks = async (req, res) => {
     if (status)    q = q.eq("status", status);
     const { data, error } = await q;
     if (error) throw error;
-    res.json({ success: true, tasks: data || [] });
+    res.json({ success: true, tasks: await attachAssignees(data || []) });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
 const createTask = async (req, res) => {
   try {
     const { project_id } = req.params;
-    const { title, description, priority = "medium", assigned_to, due_date, required_skills } = req.body;
+    const { title, description, priority = "medium", assignee_ids, due_date, required_skills } = req.body;
     if (!title?.trim()) return res.status(400).json({ success: false, message: "Title required" });
+    const ids = Array.isArray(assignee_ids) ? [...new Set(assignee_ids.map(Number))] : [];
     const { data, error } = await sb().from("tasks").insert({
       project_id: Number(project_id), title: title.trim(), description: description || null,
-      priority, assigned_to: assigned_to || null, due_date: due_date || null,
+      priority, assigned_to: ids[0] || null, due_date: due_date || null,
       required_skills: Array.isArray(required_skills) ? required_skills : [],
       created_by: req.user.user_id, status: "todo",
     }).select("*, users!tasks_assigned_to_fkey(user_id,full_name,email)").single();
     if (error) throw error;
-    res.json({ success: true, task: data });
+    if (ids.length > 0) {
+      const { error: assignErr } = await sb().from("task_assignees").insert(ids.map(user_id => ({ task_id: data.task_id, user_id })));
+      if (assignErr) throw assignErr;
+    }
+    const [task] = await attachAssignees([data]);
+    res.json({ success: true, task });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
 const updateTask = async (req, res) => {
   try {
     const { task_id } = req.params;
-    const allowed = ["title","description","status","priority","assigned_to","due_date","order_index"];
+    const allowed = ["title","description","status","priority","due_date","order_index"];
     const updates = {};
     for (const k of allowed) if (req.body[k] !== undefined) updates[k] = req.body[k] || null;
     if (req.body.required_skills !== undefined) updates.required_skills = Array.isArray(req.body.required_skills) ? req.body.required_skills : [];
     updates.updated_at = new Date().toISOString();
-    const { data, error } = await sb().from("tasks").update(updates).eq("task_id", task_id)
-      .select("*, users!tasks_assigned_to_fkey(user_id,full_name,email)").single();
-    if (error) throw error;
-    res.json({ success: true, task: data });
+    if (Object.keys(updates).length > 0) {
+      const { error } = await sb().from("tasks").update(updates).eq("task_id", task_id);
+      if (error) throw error;
+    }
+    if (req.body.assignee_ids !== undefined) await syncAssignees(task_id, req.body.assignee_ids);
+    const { data, error: fetchErr } = await sb().from("tasks").select("*, users!tasks_assigned_to_fkey(user_id,full_name,email)").eq("task_id", task_id).single();
+    if (fetchErr) throw fetchErr;
+    const [task] = await attachAssignees([data]);
+    res.json({ success: true, task });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -194,57 +233,6 @@ const deleteSprint = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-// ── ISSUES ────────────────────────────────────────────────────────────────────
-const getIssues = async (req, res) => {
-  try {
-    const { project_id, status, type, priority } = req.query;
-    let q = sb().from("issues")
-      .select(`*, assignee:users!issues_assigned_to_fkey(user_id,full_name,email), reporter:users!issues_reporter_id_fkey(user_id,full_name,email), projects(name)`)
-      .order("created_at", { ascending: false });
-    if (project_id) q = q.eq("project_id", project_id);
-    if (status)     q = q.eq("status", status);
-    if (type)       q = q.eq("type", type);
-    if (priority)   q = q.eq("priority", priority);
-    const { data, error } = await q;
-    if (error) throw error;
-    res.json({ success: true, issues: data || [] });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-};
-
-const createIssue = async (req, res) => {
-  try {
-    const { project_id, title, description, type = "bug", priority = "medium", assigned_to } = req.body;
-    if (!title?.trim()) return res.status(400).json({ success: false, message: "Title required" });
-    const { data, error } = await sb().from("issues").insert({
-      project_id: project_id || null, title: title.trim(), description, type, priority,
-      assigned_to: assigned_to || null, reporter_id: req.user.user_id,
-    }).select("*, assignee:users!issues_assigned_to_fkey(user_id,full_name,email), reporter:users!issues_reporter_id_fkey(user_id,full_name,email)").single();
-    if (error) throw error;
-    res.json({ success: true, issue: data });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-};
-
-const updateIssue = async (req, res) => {
-  try {
-    const { issue_id } = req.params;
-    const allowed = ["title","description","type","priority","status","assigned_to"];
-    const updates = { updated_at: new Date().toISOString() };
-    for (const k of allowed) if (req.body[k] !== undefined) updates[k] = req.body[k] || null;
-    const { data, error } = await sb().from("issues").update(updates).eq("issue_id", issue_id)
-      .select("*, assignee:users!issues_assigned_to_fkey(user_id,full_name,email), reporter:users!issues_reporter_id_fkey(user_id,full_name,email)").single();
-    if (error) throw error;
-    res.json({ success: true, issue: data });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-};
-
-const deleteIssue = async (req, res) => {
-  try {
-    const { error } = await sb().from("issues").delete().eq("issue_id", req.params.issue_id);
-    if (error) throw error;
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-};
-
 // ── BO PORTFOLIO ──────────────────────────────────────────────────────────────
 const getPortfolio = async (req, res) => {
   try {
@@ -346,21 +334,29 @@ const getProjectMembers = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-// ── Krewby worker requests ────────────────────────────────────────────────────
+// ── Krewby worker requests (writes into the same krewby_requests table the
+//    outlet-manager Manpower page reads from — shift-shaped, one day per request) ──
 const createKrewbyRequest = async (req, res) => {
   try {
-    const { task_id, project_id, skills_needed, workers_count, start_date, end_date, notes } = req.body;
+    const { task_id, role_name, shift_date, start_time, end_time, workers_count, skill_id, notes } = req.body;
+    if (!role_name?.trim()) return res.status(400).json({ success: false, message: "Task/role name required" });
+    if (!shift_date || !start_time || !end_time) return res.status(400).json({ success: false, message: "Date and time required" });
+
     const ctx = await getManagerCtx(req.user.user_id);
+    if (!ctx) return res.status(403).json({ success: false, message: "No outlet found" });
+
     const { data, error } = await sb().from("krewby_requests").insert({
-      task_id: task_id || null,
-      project_id: project_id || null,
-      outlet_id: ctx?.outlet_id || null,
-      requested_by: req.user.user_id,
-      skills_needed: Array.isArray(skills_needed) ? skills_needed : [],
-      workers_count: Number(workers_count) || 1,
-      start_date: start_date || null,
-      end_date: end_date || null,
-      notes: notes || null,
+      outlet_id:     ctx.outlet_id,
+      task_id:       task_id || null,
+      role_name:     role_name.trim(),
+      shift_date,
+      start_time:    start_time.length === 5 ? `${start_time}:00` : start_time,
+      end_time:      end_time.length === 5 ? `${end_time}:00` : end_time,
+      headcount:     Number(workers_count) || 1,
+      skill_id:      skill_id || null,
+      status:        "pending_review",
+      override_note: notes || null,
+      created_by:    req.user.user_id,
     }).select().single();
     if (error) throw error;
     res.json({ success: true, request: data });
@@ -371,6 +367,5 @@ module.exports = {
   getTasks, createTask, updateTask, deleteTask,
   getEpics, createEpic, updateEpic, deleteEpic,
   getSprints, createSprint, updateSprint, deleteSprint,
-  getIssues, createIssue, updateIssue, deleteIssue,
   getPortfolio, getProjectMembers, createKrewbyRequest,
 };

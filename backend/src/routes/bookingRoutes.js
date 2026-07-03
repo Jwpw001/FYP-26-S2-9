@@ -6,7 +6,7 @@ const ROLES = require("../constants/roles");
 const {
   getServices, createService, updateService, deleteService,
   getBookings, createBooking, updateBooking, deleteBooking,
-  autoAssign, detectGaps, getMyAppointments,
+  autoAssign, detectGaps, getMyAppointments, getBookingCapacity,
 } = require("../controllers/bookingController");
 
 const MGR   = [ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN];
@@ -27,6 +27,7 @@ router.delete("/:id",            verifyToken, allowRoles(...MGR),   deleteBookin
 // AI assign + gap detection
 router.post("/auto-assign",      verifyToken, allowRoles(...MGR),   autoAssign);
 router.get("/gaps",              verifyToken, allowRoles(...MGR),   detectGaps);
+router.get("/capacity",          verifyToken, allowRoles(...MGR),   getBookingCapacity);
 
 // Staff view
 router.get("/my",                verifyToken, allowRoles(...STAFF), getMyAppointments);

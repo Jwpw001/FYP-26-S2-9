@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
+import { useBusinessContext } from "../../context/BusinessContext";
 
 const toLocalISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
@@ -14,19 +15,27 @@ function getWeekRange(offset = 0) {
 
 const EXP_ICON = { beginner:"🌱", intermediate:"⭐", expert:"🏆" };
 
+const CAPACITY_ENDPOINT = {
+  flexible:    { url: "/api/projects/capacity", source: "hours logged via timesheets" },
+  shift:       { url: "/api/shifts/capacity",   source: "hours scheduled via shifts" },
+  appointment: { url: "/api/bookings/capacity", source: "hours scheduled via appointments" },
+};
+
 export default function Capacity() {
+  const { schedulingMode } = useBusinessContext();
   const [weekOffset, setWeekOffset] = useState(0);
   const [capacity,   setCapacity]   = useState([]);
   const [loading,    setLoading]    = useState(true);
 
   const { weekStart, weekEnd } = getWeekRange(weekOffset);
+  const { url: endpoint, source } = CAPACITY_ENDPOINT[schedulingMode] || CAPACITY_ENDPOINT.shift;
 
-  useEffect(() => { load(); }, [weekOffset]);
+  useEffect(() => { load(); }, [weekOffset, endpoint]);
 
   async function load() {
     setLoading(true);
     try {
-      const r = await api.get(`/api/projects/capacity?weekStart=${weekStart}&weekEnd=${weekEnd}`);
+      const r = await api.get(`${endpoint}?weekStart=${weekStart}&weekEnd=${weekEnd}`);
       setCapacity(r.capacity || []);
     } catch { } finally { setLoading(false); }
   }
@@ -44,7 +53,7 @@ export default function Capacity() {
             <h2 style={{ fontSize:"20px", fontWeight:"800", color:"#0F172A", marginBottom:"2px" }}>Capacity Planner</h2>
             <p style={{ fontSize:"12px", color:"#94A3B8" }}>
               {new Date(weekStart).toLocaleDateString("en-SG",{day:"numeric",month:"short"})} – {new Date(weekEnd).toLocaleDateString("en-SG",{day:"numeric",month:"short",year:"numeric"})}
-              {" · "}{capacity.length} staff · {totalLogged}h total logged
+              {" · "}{capacity.length} staff · {totalLogged}h total logged ({source})
             </p>
           </div>
           <div style={{ display:"flex", gap:"8px" }}>

@@ -270,4 +270,58 @@ const getMyAppointments = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-module.exports = { getServices, createService, updateService, deleteService, getBookings, createBooking, updateBooking, deleteBooking, autoAssign, detectGaps, getMyAppointments };
+// ── Capacity — weekly scheduled hours per staff (appointment mode) ────────────
+const getBookingCapacity = async (req, res) => {
+  try {
+    const outletId = await getOutletId(req.user.user_id);
+    if (!outletId) return res.status(403).json({ success: false, message: "No outlet." });
+
+    const { weekStart, weekEnd } = req.query;
+    if (!weekStart || !weekEnd) return res.status(400).json({ success: false, message: "weekStart and weekEnd required." });
+
+    const allStaff = await prisma.staff.findMany({
+      where: { outlet_id: outletId, is_active: true },
+      include: { users: { select: { full_name: true, role: true } } },
+    }).then(list => list.filter(s => s.users?.role !== "outlet_manager"));
+
+    const bookings = await prisma.bookings.findMany({
+      where: {
+        assigned_staff_id: { in: allStaff.map(s => s.staff_id) },
+        status: { not: "cancelled" },
+        booking_date: { gte: new Date(weekStart), lte: new Date(weekEnd) },
+      },
+      include: { services: { select: { name: true } } },
+    });
+
+    const leave = await prisma.availability.findMany({
+      where: {
+        staff: { outlet_id: outletId },
+        status: "approved",
+        start_date: { lte: new Date(weekEnd) },
+        end_date:   { gte: new Date(weekStart) },
+      },
+      select: { staff_id: true },
+    });
+
+    const hoursOf = b => Math.max(0, (b.end_time.getTime() - b.start_time.getTime()) / 3600000);
+
+    const capacity = allStaff.map(s => {
+      const bookingsFor = bookings.filter(b => b.assigned_staff_id === s.staff_id);
+      const hoursLogged = bookingsFor.reduce((sum, b) => sum + hoursOf(b), 0);
+      const onLeave = leave.some(l => l.staff_id === s.staff_id);
+      return {
+        staff_id:     s.staff_id,
+        name:         s.users?.full_name,
+        experience:   s.experience_level,
+        hours_logged: Math.round(hoursLogged * 10) / 10,
+        hours_target: 40,
+        on_leave:     onLeave,
+        logs: bookingsFor.map(b => ({ date: b.booking_date, hours: hoursOf(b), project: b.services?.name || "Appointment" })),
+      };
+    });
+
+    res.json({ success: true, capacity });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+module.exports = { getServices, createService, updateService, deleteService, getBookings, createBooking, updateBooking, deleteBooking, autoAssign, detectGaps, getMyAppointments, getBookingCapacity };

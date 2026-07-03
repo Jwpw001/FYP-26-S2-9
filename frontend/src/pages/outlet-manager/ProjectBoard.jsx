@@ -2,17 +2,22 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import ManagerLayout from "../../components/layout/ManagerLayout";
-import { Plus, X, Calendar, ArrowLeft, Trash2, Save, Send } from "lucide-react";
+import { Plus, X, Calendar, ArrowLeft, Trash2, Save, Send, Pencil } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("kb-styles")) {
   const s = document.createElement("style");
   s.id = "kb-styles";
   s.textContent = `
     @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes cardDrop { from{opacity:0;transform:scale(0.95) translateY(4px)} to{opacity:1;transform:scale(1) translateY(0)} }
+    @keyframes slotIn { from{opacity:0;transform:scaleY(0.6)} to{opacity:1;transform:scaleY(1)} }
     @keyframes shimmer { from{background-position:-600px 0} to{background-position:600px 0} }
-    .kb-card { transition:box-shadow 0.15s,transform 0.15s; cursor:grab; }
-    .kb-card:hover { box-shadow:0 6px 20px rgba(0,0,0,0.12); transform:translateY(-2px); }
-    .kb-col.drag-over { background:#EEF2FF !important; }
+    .kb-card { transition:box-shadow 0.15s ease,transform 0.15s ease,border-color 0.15s ease,opacity 0.15s ease; cursor:grab; animation:cardDrop 0.18s ease both; }
+    .kb-card:hover { box-shadow:0 4px 12px rgba(15,23,42,0.08); transform:translateY(-1px); border-color:#D8DCE3 !important; }
+    .kb-card:active { cursor:grabbing; }
+    .kb-card.kb-dragging { opacity:0.35; transform:scale(0.97); box-shadow:none !important; border-style:dashed !important; }
+    .kb-col { transition:background-color 0.18s ease,border-color 0.18s ease; }
+    .kb-slot { border-radius:10px; border:2px dashed #A5B4FC; background:rgba(99,102,241,0.06); animation:slotIn 0.15s ease both; transform-origin:top; flex-shrink:0; }
   `;
   document.head.appendChild(s);
 }
@@ -26,15 +31,21 @@ const COLUMNS = [
 
 const PRIORITY_META = {
   low:    { label: "Low",    color: "#64748B", bg: "#F1F5F9" },
-  medium: { label: "Medium", color: "#D97706", bg: "#FEF3C7" },
-  high:   { label: "High",   color: "#DC2626", bg: "#FEE2E2" },
-  urgent: { label: "Urgent", color: "#7C3AED", bg: "#F5F3FF" },
+  medium: { label: "Medium", color: "#B45309", bg: "#FEF3C7" },
+  high:   { label: "High",   color: "#B91C1C", bg: "#FEE2E2" },
+  urgent: { label: "Urgent", color: "#6D28D9", bg: "#F5F3FF" },
 };
 
 const AVATAR_COLORS = ["#6366F1","#F59E0B","#10B981","#EF4444","#8B5CF6","#EC4899"];
 function avatarColor(name = "") {
   let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
+// Skills have no stored color, so derive a stable one per skill_id
+const SKILL_COLORS = ["#6366F1","#0EA5E9","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#14B8A6","#F97316","#84CC16"];
+function skillColor(skill) {
+  return skill?.color || SKILL_COLORS[Math.abs(Number(skill?.skill_id) || 0) % SKILL_COLORS.length];
 }
 function Avatar({ name, size = 26 }) {
   return (
@@ -63,9 +74,10 @@ function SkillPicker({ skills, selected, onChange }) {
     <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
       {skills.map(s => {
         const on = selected.includes(s.skill_id);
+        const c = skillColor(s);
         return (
           <button key={s.skill_id} type="button" onClick={() => onChange(on ? selected.filter(id => id !== s.skill_id) : [...selected, s.skill_id])}
-            style={{ padding: "4px 10px", borderRadius: "99px", fontSize: "11px", fontWeight: "600", cursor: "pointer", border: `1.5px solid ${on ? s.color || "#6366F1" : "#E2E8F0"}`, background: on ? `${s.color || "#6366F1"}18` : "#fff", color: on ? s.color || "#6366F1" : "#64748B" }}>
+            style={{ padding: "4px 10px", borderRadius: "99px", fontSize: "11px", fontWeight: "600", cursor: "pointer", border: `1.5px solid ${on ? c : "#E2E8F0"}`, background: on ? `${c}18` : "#fff", color: on ? c : "#64748B" }}>
             {s.name}
           </button>
         );
@@ -75,35 +87,74 @@ function SkillPicker({ skills, selected, onChange }) {
   );
 }
 
+// ── Assignee multi-select ─────────────────────────────────────────────────────
+function MemberPicker({ members, selected, onChange, requiredSkillIds = [], skillNameMap = {} }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+      {members.map(m => {
+        const on = selected.includes(String(m.user_id));
+        const matchedIds = requiredSkillIds.filter(id => (m.skill_ids || []).includes(id));
+        const matchedNames = matchedIds.map(id => skillNameMap[id]).filter(Boolean);
+        return (
+          <button key={m.user_id} type="button"
+            title={matchedNames.length ? `Covers: ${matchedNames.join(", ")}` : undefined}
+            onClick={() => onChange(on ? selected.filter(id => id !== String(m.user_id)) : [...selected, String(m.user_id)])}
+            style={{ display: "flex", alignItems: "center", gap: "5px", padding: "4px 10px 4px 4px", borderRadius: "99px", fontSize: "12px", fontWeight: "600", cursor: "pointer", border: `1.5px solid ${on ? "#6366F1" : "#E2E8F0"}`, background: on ? "#EEF2FF" : "#fff", color: on ? "#4338CA" : "#64748B" }}>
+            <Avatar name={m.full_name} size={18} />{m.full_name}
+            {requiredSkillIds.length > 0 && (
+              <span style={{ fontSize: "10px", fontWeight: "800", color: on ? "#6366F1" : "#94A3B8" }}>{matchedIds.length}/{requiredSkillIds.length}</span>
+            )}
+          </button>
+        );
+      })}
+      {members.length === 0 && <p style={{ fontSize: "12px", color: "#94A3B8", fontStyle: "italic" }}>No eligible staff</p>}
+    </div>
+  );
+}
+
 // ── Request Krewby Worker modal ───────────────────────────────────────────────
-function KrewbyRequestModal({ task, skills, projectId, onClose }) {
+// The underlying krewby_requests table is shift-shaped (requires a date + start/end
+// time), but the manager shouldn't have to think in shift terms for a task request —
+// so time is a fixed default and everything else is carried straight from the task.
+const DEFAULT_REQUEST_START = "09:00";
+const DEFAULT_REQUEST_END   = "18:00";
+
+function KrewbyRequestModal({ task, skills, onClose }) {
+  const todayISO = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({
     workers_count: 1,
-    start_date: task?.due_date || "",
-    end_date: "",
+    date_needed: task?.due_date?.split("T")[0] || todayISO,
     notes: "",
   });
   const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   const taskSkillNames = (task?.required_skills || [])
     .map(id => skills.find(s => s.skill_id === id)?.name)
     .filter(Boolean);
+  const priorityMeta = PRIORITY_META[task?.priority] || PRIORITY_META.medium;
 
   async function handleSubmit() {
-    setSaving(true);
+    setSaving(true); setError("");
     try {
+      const noteParts = [];
+      if (task?.description) noteParts.push(`Description: ${task.description}`);
+      if (task?.priority) noteParts.push(`Priority: ${priorityMeta.label}`);
+      if (form.notes.trim()) noteParts.push(form.notes.trim());
+
       await api.post("/api/flex/krewby-requests", {
-        task_id: task?.task_id || null,
-        project_id: Number(projectId),
-        skills_needed: task?.required_skills || [],
+        task_id:       task?.task_id || null,
+        role_name:     task?.title || "Untitled task",
+        shift_date:    form.date_needed,
+        start_time:    DEFAULT_REQUEST_START,
+        end_time:      DEFAULT_REQUEST_END,
         workers_count: Number(form.workers_count),
-        start_date: form.start_date || null,
-        end_date: form.end_date || null,
-        notes: form.notes || null,
+        skill_id:      task?.required_skills?.[0] || null,
+        notes:         noteParts.join("\n") || null,
       });
       setSent(true);
-    } catch (e) { console.error(e); }
+    } catch (e) { setError(e.message || "Failed to submit request."); }
     finally { setSaving(false); }
   }
 
@@ -128,18 +179,27 @@ function KrewbyRequestModal({ task, skills, projectId, onClose }) {
           </div>
         ) : (
           <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "14px" }}>
-            {/* Auto-filled info */}
+            {/* Auto-filled info — carried straight from the task */}
             {task && (
-              <div style={{ background: "#F8FAFC", borderRadius: "10px", padding: "12px 14px", border: "1px solid #E2E8F0" }}>
-                <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>Task</p>
-                <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>{task.title}</p>
-                {taskSkillNames.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
-                    {taskSkillNames.map(name => (
-                      <span key={name} style={{ fontSize: "10px", fontWeight: "600", padding: "2px 8px", borderRadius: "99px", background: "#EEF2FF", color: "#4338CA" }}>{name}</span>
-                    ))}
-                  </div>
+              <div style={{ background: "#F8FAFC", borderRadius: "10px", padding: "12px 14px", border: "1px solid #E2E8F0", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div>
+                  <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "4px" }}>Task</p>
+                  <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>{task.title}</p>
+                </div>
+                {task.description && (
+                  <p style={{ fontSize: "12px", color: "#475569", lineHeight: 1.5 }}>{task.description}</p>
                 )}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "99px", background: priorityMeta.bg, color: priorityMeta.color }}>{priorityMeta.label} priority</span>
+                  {task.due_date && (
+                    <span style={{ fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "99px", background: "#F1F5F9", color: "#475569" }}>
+                      Due {new Date(task.due_date.split("T")[0] + "T00:00:00").toLocaleDateString("en-SG", { month: "short", day: "numeric" })}
+                    </span>
+                  )}
+                  {taskSkillNames.map(name => (
+                    <span key={name} style={{ fontSize: "10px", fontWeight: "600", padding: "2px 8px", borderRadius: "99px", background: "#EEF2FF", color: "#4338CA" }}>{name}</span>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -147,18 +207,15 @@ function KrewbyRequestModal({ task, skills, projectId, onClose }) {
               <input type="number" min={1} max={20} value={form.workers_count} onChange={e => setForm(f => ({ ...f, workers_count: e.target.value }))} style={inp} />
             </Field>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <Field label="Start Date">
-                <input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} style={inp} />
-              </Field>
-              <Field label="End Date">
-                <input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} style={inp} />
-              </Field>
-            </div>
+            <Field label="Due Date">
+              <input type="date" value={form.date_needed} min={todayISO} onChange={e => setForm(f => ({ ...f, date_needed: e.target.value }))} style={inp} />
+            </Field>
 
             <Field label="Additional Notes">
               <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any specific requirements or notes for Krewby admin..." rows={3} style={{ ...inp, resize: "vertical" }} />
             </Field>
+
+            {error && <p style={{ fontSize: "12px", fontWeight: "600", color: "#DC2626", margin: 0 }}>{error}</p>}
 
             <div style={{ display: "flex", gap: "8px", paddingTop: "4px" }}>
               <button onClick={onClose} style={{ ...btnBase, background: "#F1F5F9", color: "#64748B", flex: 1, justifyContent: "center" }}>Cancel</button>
@@ -173,30 +230,117 @@ function KrewbyRequestModal({ task, skills, projectId, onClose }) {
   );
 }
 
+// ── Task detail (read-only) view ────────────────────────────────────────────────
+function TaskDetailBody({ task, skills, onEdit, onDelete }) {
+  const pm = PRIORITY_META[task.priority] || PRIORITY_META.medium;
+  const col = COLUMNS.find(c => c.key === task.status) || COLUMNS[0];
+  const taskSkills = (task.required_skills || []).map(id => skills.find(s => s.skill_id === id)).filter(Boolean);
+  const assignees = task.assignees || [];
+  const overdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "done";
+
+  function DetailLabel({ children }) {
+    return <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "8px" }}>{children}</p>;
+  }
+
+  return (
+    <>
+      <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "18px" }}>
+        {/* Status / priority / due date */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "700", color: col.color, background: col.bg, padding: "4px 10px", borderRadius: "6px" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: col.color }} />{col.label}
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "700", color: pm.color, background: pm.bg, padding: "4px 10px", borderRadius: "6px" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: pm.color }} />{pm.label} priority
+          </span>
+          {task.due_date && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "700", color: overdue ? "#DC2626" : "#64748B", background: overdue ? "#FEF2F2" : "#F8FAFC", padding: "4px 10px", borderRadius: "6px" }}>
+              <Calendar size={11} />{new Date(task.due_date + "T00:00:00").toLocaleDateString("en-SG", { month: "short", day: "numeric", year: "numeric" })}{overdue ? " · Overdue" : ""}
+            </span>
+          )}
+        </div>
+
+        <div>
+          <DetailLabel>Description</DetailLabel>
+          <p style={{ fontSize: "13px", color: task.description ? "#334155" : "#B4BAC6", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{task.description || "No description added."}</p>
+        </div>
+
+        {taskSkills.length > 0 && (
+          <div>
+            <DetailLabel>Skills Required</DetailLabel>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              {taskSkills.map(s => {
+                const c = skillColor(s);
+                return (
+                  <span key={s.skill_id} style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "600", padding: "4px 10px", borderRadius: "6px", background: "#F8FAFC", color: "#475569", border: "1px solid #EEF1F5" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: c }} />{s.name}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <DetailLabel>Assigned To</DetailLabel>
+          {assignees.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {assignees.map(a => (
+                <div key={a.user_id} style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+                  <Avatar name={a.full_name} size={26} />
+                  <span style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>{a.full_name}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ fontSize: "13px", color: "#B4BAC6" }}>No one assigned yet.</p>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding: "14px 24px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between" }}>
+        <button onClick={onDelete} style={{ ...btnBase, background: "#FEE2E2", color: "#DC2626" }}>
+          <Trash2 size={14} /> Delete
+        </button>
+        <button onClick={onEdit} style={{ ...btnBase, background: "linear-gradient(135deg,#4F46E5,#7C3AED)", color: "#FFF" }}>
+          <Pencil size={14} /> Edit
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ── Task modal ────────────────────────────────────────────────────────────────
 function TaskModal({ task, skills, members, onClose, onSave, onDelete, projectId, onRequestKrewby }) {
   const isNew = !task?.task_id;
+  const [mode, setMode] = useState(isNew ? "edit" : "view");
   const [form, setForm] = useState({
     title: task?.title || "",
     description: task?.description || "",
     priority: task?.priority || "medium",
-    assigned_to: task?.assigned_to || "",
+    assignee_ids: (task?.assignees || []).map(a => String(a.user_id)),
     due_date: task?.due_date?.split("T")[0] || "",
     status: task?.status || "todo",
     required_skills: task?.required_skills || [],
   });
   const [saving, setSaving] = useState(false);
 
-  // Filter members: if skills selected, only show staff with at least one matching skill
+  // Filter members: if skills selected, show anyone who covers at least one — the team
+  // as a whole (not necessarily one person) needs to cover every required skill.
   const eligibleMembers = form.required_skills.length === 0
     ? members
-    : members.filter(m => (m.skill_ids || []).some(id => form.required_skills.includes(id)));
+    : members.filter(m => form.required_skills.some(id => (m.skill_ids || []).includes(id)));
+
+  const skillNameMap = Object.fromEntries(skills.map(s => [s.skill_id, s.name]));
+  const selectedMembers = members.filter(m => form.assignee_ids.includes(String(m.user_id)));
+  const coveredSkillIds = new Set(selectedMembers.flatMap(m => m.skill_ids || []));
+  const missingSkills = form.required_skills.filter(id => !coveredSkillIds.has(id)).map(id => skillNameMap[id]).filter(Boolean);
 
   async function handleSave() {
     if (!form.title.trim()) return;
     setSaving(true);
     try {
-      const body = { ...form, assigned_to: form.assigned_to || null, due_date: form.due_date || null };
+      const body = { ...form, assignee_ids: form.assignee_ids.map(Number), due_date: form.due_date || null };
       let result;
       if (isNew) result = await api.post(`/api/flex/projects/${projectId}/tasks`, body);
       else result = await api.patch(`/api/flex/tasks/${task.task_id}`, body);
@@ -211,18 +355,23 @@ function TaskModal({ task, skills, members, onClose, onSave, onDelete, projectId
     onDelete(task.task_id);
   }
 
-  const assignedMember = members.find(m => String(m.user_id) === String(form.assigned_to));
   const noEligibleStaff = form.required_skills.length > 0 && eligibleMembers.length === 0;
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", backdropFilter: "blur(4px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#FFF", borderRadius: "20px", width: "540px", maxHeight: "88vh", overflow: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.2)", animation: "fadeUp 0.2s ease" }}>
         {/* Header */}
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1E293B" }}>{isNew ? "New Task" : "Edit Task"}</h3>
-          <button onClick={onClose} style={{ background: "#F1F5F9", border: "none", borderRadius: "8px", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={14} /></button>
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#1E293B", lineHeight: 1.4 }}>
+            {mode === "view" ? task.title : (isNew ? "New Task" : "Edit Task")}
+          </h3>
+          <button onClick={onClose} style={{ background: "#F1F5F9", border: "none", borderRadius: "8px", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><X size={14} /></button>
         </div>
 
+        {mode === "view" ? (
+          <TaskDetailBody task={task} skills={skills} onEdit={() => setMode("edit")} onDelete={handleDelete} />
+        ) : (
+        <>
         <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
           <Field label="Task Name *">
             <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="What needs to be done?" style={inp} />
@@ -234,7 +383,7 @@ function TaskModal({ task, skills, members, onClose, onSave, onDelete, projectId
 
           <Field label="Skills Required for This Task">
             <SkillPicker skills={skills} selected={form.required_skills} onChange={v => {
-              setForm(f => ({ ...f, required_skills: v, assigned_to: "" }));
+              setForm(f => ({ ...f, required_skills: v, assignee_ids: [] }));
             }} />
           </Field>
 
@@ -263,14 +412,19 @@ function TaskModal({ task, skills, members, onClose, onSave, onDelete, projectId
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} style={sel}>
-                  <option value="">— Unassigned —</option>
-                  {eligibleMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.full_name}</option>)}
-                </select>
+                <MemberPicker members={eligibleMembers} selected={form.assignee_ids} onChange={v => setForm(f => ({ ...f, assignee_ids: v }))}
+                  requiredSkillIds={form.required_skills} skillNameMap={skillNameMap} />
                 {form.required_skills.length > 0 && (
-                  <p style={{ fontSize: "11px", color: "#64748B" }}>Showing {eligibleMembers.length} staff with matching skills</p>
+                  <p style={{ fontSize: "11px", color: "#64748B" }}>Showing {eligibleMembers.length} staff with at least one matching skill — pick as many as needed to cover them all</p>
                 )}
-                {!form.assigned_to && (
+                {form.required_skills.length > 0 && form.assignee_ids.length > 0 && (
+                  missingSkills.length === 0 ? (
+                    <p style={{ fontSize: "11px", color: "#16A34A", fontWeight: "700" }}>✓ Selected team covers every required skill</p>
+                  ) : (
+                    <p style={{ fontSize: "11px", color: "#D97706", fontWeight: "700" }}>Still missing: {missingSkills.join(", ")}</p>
+                  )
+                )}
+                {(form.required_skills.length === 0 ? form.assignee_ids.length === 0 : missingSkills.length > 0) && (
                   <button type="button" onClick={() => onRequestKrewby({ ...task, ...form, task_id: task?.task_id })}
                     style={{ ...btnBase, background: "#F8FAFC", color: "#6366F1", border: "1.5px dashed #C7D2FE", fontSize: "12px", padding: "6px 14px", justifyContent: "center" }}>
                     Or request a Krewby casual worker
@@ -289,59 +443,91 @@ function TaskModal({ task, skills, members, onClose, onSave, onDelete, projectId
           )}
         </div>
 
-        <div style={{ padding: "14px 24px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between" }}>
-          {!isNew ? (
-            <button onClick={handleDelete} style={{ ...btnBase, background: "#FEE2E2", color: "#DC2626" }}>
-              <Trash2 size={14} /> Delete
-            </button>
-          ) : <div />}
+        <div style={{ padding: "14px 24px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "flex-end" }}>
           <div style={{ display: "flex", gap: "8px" }}>
-            <button onClick={onClose} style={{ ...btnBase, background: "#F1F5F9", color: "#64748B" }}>Cancel</button>
+            <button onClick={() => isNew ? onClose() : setMode("view")} style={{ ...btnBase, background: "#F1F5F9", color: "#64748B" }}>Cancel</button>
             <button onClick={handleSave} disabled={saving || !form.title.trim()} style={{ ...btnBase, background: saving || !form.title.trim() ? "#E2E8F0" : "linear-gradient(135deg,#4F46E5,#7C3AED)", color: saving || !form.title.trim() ? "#94A3B8" : "#FFF" }}>
               <Save size={14} />{saving ? "Saving…" : isNew ? "Create Task" : "Save"}
             </button>
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
 }
 
 // ── Kanban Card ───────────────────────────────────────────────────────────────
-function KanbanCard({ task, skills, onDragStart, onDragEnd, onClick }) {
+function KanbanCard({ task, skills, isDragging, onDragStart, onDragEnd, onClick, style }) {
   const pm = PRIORITY_META[task.priority] || PRIORITY_META.medium;
   const overdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "done";
   const taskSkills = (task.required_skills || []).map(id => skills.find(s => s.skill_id === id)).filter(Boolean);
+  const assignees = task.assignees || [];
 
   return (
-    <div className="kb-card" draggable
-      onDragStart={e => { e.dataTransfer.setData("task_id", task.task_id); onDragStart(task.task_id); }}
+    <div className={`kb-card${isDragging ? " kb-dragging" : ""}`} draggable
+      onDragStart={e => {
+        e.dataTransfer.setData("task_id", task.task_id);
+        e.dataTransfer.effectAllowed = "move";
+        // Custom drag ghost: a tilted clone of the card (the browser default is a washed-out screenshot)
+        const node = e.currentTarget;
+        const rect = node.getBoundingClientRect();
+        const ghost = node.cloneNode(true);
+        ghost.className = ""; // drop kb-card so its mount animation/transition can't affect the captured drag image
+        ghost.style.cssText += `position:fixed;top:-${rect.height + 40}px;left:0;width:${rect.width}px;margin:0;transform:rotate(3deg);box-shadow:0 16px 36px rgba(15,23,42,0.22);opacity:1;border:1px solid #C7D2FE;pointer-events:none;animation:none;`;
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, e.clientX - rect.left, e.clientY - rect.top);
+        requestAnimationFrame(() => ghost.remove());
+        onDragStart(task.task_id, rect.height);
+      }}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", userSelect: "none" }}>
+      style={{ background: "#FFF", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "13px 14px", boxShadow: "0 1px 2px rgba(15,23,42,0.04)", userSelect: "none", ...style }}>
 
-      <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B", marginBottom: "8px", lineHeight: 1.4 }}>{task.title}</p>
+      <p style={{ fontSize: "13.5px", fontWeight: "600", color: "#0F172A", marginBottom: taskSkills.length > 0 ? "9px" : "11px", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{task.title}</p>
 
       {/* Skill tags */}
       {taskSkills.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" }}>
-          {taskSkills.map(s => (
-            <span key={s.skill_id} style={{ fontSize: "10px", fontWeight: "600", padding: "1px 7px", borderRadius: "99px", background: `${s.color || "#6366F1"}18`, color: s.color || "#6366F1", border: `1px solid ${s.color || "#6366F1"}33` }}>{s.name}</span>
-          ))}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginBottom: "11px" }}>
+          {taskSkills.map(s => {
+            const c = skillColor(s);
+            return (
+              <span key={s.skill_id} style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10.5px", fontWeight: "600", padding: "2px 8px 2px 6px", borderRadius: "5px", background: "#F8FAFC", color: "#475569", border: "1px solid #EEF1F5" }}>
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: c, flexShrink: 0 }} />{s.name}
+              </span>
+            );
+          })}
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ fontSize: "10px", fontWeight: "700", color: pm.color, background: pm.bg, padding: "1px 7px", borderRadius: "99px" }}>{pm.label}</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "9px", borderTop: "1px solid #F1F3F6" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: "600", color: pm.color }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: pm.color, flexShrink: 0 }} />{pm.label}
+          </span>
           {task.due_date && (
-            <span style={{ display: "flex", alignItems: "center", gap: "3px", fontSize: "10px", color: overdue ? "#DC2626" : "#64748B", fontWeight: "600" }}>
-              <Calendar size={10} />{new Date(task.due_date + "T00:00:00").toLocaleDateString("en-SG", { month: "short", day: "numeric" })}
-              {overdue && " ⚠"}
+            <span style={{ display: "flex", alignItems: "center", gap: "3px", fontSize: "11px", fontWeight: "500", color: overdue ? "#DC2626" : "#94A3B8" }}>
+              <Calendar size={11} />{new Date(task.due_date + "T00:00:00").toLocaleDateString("en-SG", { month: "short", day: "numeric" })}
             </span>
           )}
         </div>
-        {task.users && <Avatar name={task.users.full_name} size={24} />}
+        {assignees.length > 0 ? (
+          <div style={{ display: "flex" }}>
+            {assignees.slice(0, 3).map((a, i) => (
+              <div key={a.user_id} style={{ marginLeft: i === 0 ? 0 : -7, border: "2px solid #FFF", borderRadius: "50%" }}>
+                <Avatar name={a.full_name} size={22} />
+              </div>
+            ))}
+            {assignees.length > 3 && (
+              <div style={{ marginLeft: -7, width: 22, height: 22, borderRadius: "50%", border: "2px solid #FFF", background: "#EEF1F5", color: "#64748B", fontSize: "9px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                +{assignees.length - 3}
+              </div>
+            )}
+          </div>
+        ) : (
+          <span style={{ fontSize: "10.5px", fontWeight: "500", color: "#CBD1D9" }}>Unassigned</span>
+        )}
       </div>
     </div>
   );
@@ -359,6 +545,8 @@ export default function ProjectBoard() {
   const [taskModal, setTaskModal] = useState(null);
   const [krewbyModal, setKrewbyModal] = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
+  const [draggingTaskId, setDraggingTaskId] = useState(null);
+  const [draggingHeight, setDraggingHeight] = useState(90);
 
   useEffect(() => { load(); }, [id]);
 
@@ -386,9 +574,11 @@ export default function ProjectBoard() {
   function handleDrop(e, colKey) {
     e.preventDefault();
     const task_id = Number(e.dataTransfer.getData("task_id"));
+    setDragOverCol(null);
+    const task = tasks.find(t => t.task_id === task_id);
+    if (!task || task.status === colKey) return;
     setTasks(prev => prev.map(t => t.task_id === task_id ? { ...t, status: colKey } : t));
     api.patch(`/api/flex/tasks/${task_id}`, { status: colKey }).catch(console.error);
-    setDragOverCol(null);
   }
 
   function handleTaskSave(task) {
@@ -422,13 +612,23 @@ export default function ProjectBoard() {
       <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
         {COLUMNS.map(col => {
           const colTasks = tasksByCol[col.key] || [];
-          const isDragOver = dragOverCol === col.key;
+          const draggingTask = tasks.find(t => t.task_id === draggingTaskId);
+          const isValidDropTarget = draggingTask && draggingTask.status !== col.key;
+          const isDragOver = dragOverCol === col.key && isValidDropTarget;
           return (
-            <div key={col.key} className={`kb-col${isDragOver ? " drag-over" : ""}`}
-              onDragOver={e => { e.preventDefault(); setDragOverCol(col.key); }}
-              onDragLeave={() => setDragOverCol(null)}
+            <div key={col.key} className="kb-col"
+              onDragOver={e => {
+                e.preventDefault();
+                if (isValidDropTarget) e.dataTransfer.dropEffect = "move";
+                if (dragOverCol !== col.key) setDragOverCol(col.key);
+              }}
+              onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverCol(null); }}
               onDrop={e => handleDrop(e, col.key)}
-              style={{ flex: 1, minWidth: "220px", background: isDragOver ? "#EEF2FF" : col.bg, border: `1.5px solid ${isDragOver ? "#6366F1" : col.color}33`, borderRadius: "14px", padding: "14px", display: "flex", flexDirection: "column", gap: "10px", minHeight: "420px" }}>
+              style={{
+                flex: 1, minWidth: "220px", borderRadius: "14px", padding: "14px", display: "flex", flexDirection: "column", gap: "10px", minHeight: "420px",
+                background: isDragOver ? "#EEF4FF" : col.bg,
+                border: isDragOver ? "1.5px dashed #818CF8" : `1.5px solid ${col.color}33`,
+              }}>
 
               {/* Column header */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -443,15 +643,18 @@ export default function ProjectBoard() {
               {/* Cards */}
               {loading
                 ? Array.from({ length: 2 }).map((_, i) => <div key={i} style={{ height: "90px", borderRadius: "12px", background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />)
-                : colTasks.map(task => (
+                : colTasks.map((task, i) => (
                     <KanbanCard key={task.task_id} task={task} skills={skills}
-                      onDragStart={() => {}}
-                      onDragEnd={() => setDragOverCol(null)}
+                      isDragging={draggingTaskId === task.task_id}
+                      style={{ animationDelay: `${Math.min(i, 6) * 0.03}s` }}
+                      onDragStart={(taskId, height) => { setDraggingTaskId(taskId); setDraggingHeight(height); }}
+                      onDragEnd={() => { setDragOverCol(null); setDraggingTaskId(null); }}
                       onClick={() => setTaskModal(task)}
                     />
                   ))
               }
-              {!loading && colTasks.length === 0 && (
+              {isDragOver && <div className="kb-slot" style={{ height: `${draggingHeight}px` }} />}
+              {!loading && colTasks.length === 0 && !isDragOver && (
                 <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4 }}>
                   <p style={{ fontSize: "12px", color: "#94A3B8" }}>No tasks here</p>
                 </div>
@@ -480,7 +683,6 @@ export default function ProjectBoard() {
         <KrewbyRequestModal
           task={krewbyModal}
           skills={skills}
-          projectId={id}
           onClose={() => setKrewbyModal(null)}
         />
       )}

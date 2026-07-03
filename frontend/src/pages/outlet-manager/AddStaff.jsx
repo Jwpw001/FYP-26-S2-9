@@ -26,14 +26,14 @@ export default function AddStaff() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [{ data: myStaff }, { data: skillRows }] = await Promise.all([
+      const [{ data: myStaff }, libRes] = await Promise.all([
         supabase.from("staff").select("outlet_id")
           .eq("user_id", userId).eq("is_active", true).limit(1),
-        supabase.from("skills").select("skill_id, name").order("name"),
+        api.get("/api/business/skills").catch(() => ({ skills: [] })),
       ]);
       if (!cancelled) {
         setOutletId(myStaff?.[0]?.outlet_id || null);
-        setSkills(skillRows || []);
+        setSkills(libRes.skills || []);
       }
     }
     load();

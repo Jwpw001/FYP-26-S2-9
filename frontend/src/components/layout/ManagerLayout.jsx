@@ -7,6 +7,7 @@ import AIAssistantWidget from "../AIAssistantWidget";
 import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail, FolderKanban, Clock, Gauge, BookOpen, Tag } from "lucide-react";
 import "./sidebarStyles.js";
 import { useBusinessContext } from "../../context/BusinessContext";
+import ProfileModal from "../ProfileModal";
 
 export default function ManagerLayout({ children, title }) {
   const navigate   = useNavigate();
@@ -16,6 +17,7 @@ export default function ManagerLayout({ children, title }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [showProfile, setShowProfile] = useState(false);
 
   // Build nav dynamically based on scheduling mode
   const NAV = [
@@ -26,10 +28,10 @@ export default function ManagerLayout({ children, title }) {
     ] : schedulingMode === "flexible" ? [
       { label: "Timesheets",          path: "/outlet-manager/timesheets",   Icon: Clock },
       { label: "Projects",            path: "/outlet-manager/projects",     Icon: FolderKanban },
-      { label: "Capacity",            path: "/outlet-manager/capacity",     Icon: Gauge },
     ] : [
       { label: "Bookings",            path: "/outlet-manager/bookings",     Icon: BookOpen },
     ]),
+    { label: "Capacity",              path: "/outlet-manager/capacity",     Icon: Gauge },
     { label: "Availability",          path: "/outlet-manager/availability", Icon: CalendarClock },
     { label: "Attendance",            path: "/outlet-manager/attendance",   Icon: ClipboardCheck },
     { label: "Reports",               path: "/outlet-manager/reports",      Icon: BarChart2 },
@@ -84,18 +86,21 @@ export default function ManagerLayout({ children, title }) {
         </nav>
 
         <div style={{ ...s.sidebarBottom, padding: "12px" }}>
-          <div style={{ ...s.userRow, marginBottom: "10px" }}>
+          <button onClick={() => setShowProfile(true)} title="View profile"
+            style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
             <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "M"}</div>
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Manager"}</p>
               <p style={s.userRole}>{locationLabel} Manager</p>
             </div>
-          </div>
+          </button>
           <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
             <SignOutButton />
           </div>
         </div>
       </aside>
+
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
 
       {/* ── Mobile overlay ────────────────────────────── */}
       {open && (

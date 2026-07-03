@@ -475,4 +475,60 @@ const getCasualAvailability = async (req, res) => {
   }
 };
 
-module.exports = { getShifts, getShiftById, createShift, updateShift, deleteShift, generateWeeklySchedule, confirmWeeklySchedule, getCasualAvailability };
+// ── Capacity — weekly scheduled hours per staff (shift mode) ──────────────────
+const getShiftCapacity = async (req, res) => {
+  try {
+    const outletId = await getCallerOutletId(req.user.user_id);
+    if (!outletId) return res.status(403).json({ success: false, message: "No outlet found for your account." });
+
+    const { weekStart, weekEnd } = req.query;
+    if (!weekStart || !weekEnd) return res.status(400).json({ success: false, message: "weekStart and weekEnd required." });
+
+    const allStaff = await prisma.staff.findMany({
+      where: { outlet_id: outletId, is_active: true },
+      include: { users: { select: { full_name: true, role: true } } },
+    }).then(list => list.filter(s => s.users?.role !== "outlet_manager"));
+
+    const assignments = await prisma.shift_assignments.findMany({
+      where: {
+        staff_id: { in: allStaff.map(s => s.staff_id) },
+        status: { not: "removed" },
+        shifts: { shift_date: { gte: new Date(weekStart), lte: new Date(weekEnd) } },
+      },
+      include: { shifts: { select: { shift_date: true, start_time: true, end_time: true, title: true } } },
+    });
+
+    const leave = await prisma.availability.findMany({
+      where: {
+        staff: { outlet_id: outletId },
+        status: "approved",
+        start_date: { lte: new Date(weekEnd) },
+        end_date:   { gte: new Date(weekStart) },
+      },
+      select: { staff_id: true },
+    });
+
+    const hoursOf = shift => Math.max(0, (shift.end_time.getTime() - shift.start_time.getTime()) / 3600000);
+
+    const capacity = allStaff.map(s => {
+      const shiftsFor  = assignments.filter(a => a.staff_id === s.staff_id);
+      const hoursLogged = shiftsFor.reduce((sum, a) => sum + hoursOf(a.shifts), 0);
+      const onLeave = leave.some(l => l.staff_id === s.staff_id);
+      return {
+        staff_id:     s.staff_id,
+        name:         s.users?.full_name,
+        experience:   s.experience_level,
+        hours_logged: Math.round(hoursLogged * 10) / 10,
+        hours_target: 40,
+        on_leave:     onLeave,
+        logs: shiftsFor.map(a => ({ date: a.shifts.shift_date, hours: hoursOf(a.shifts), project: a.shifts.title || "Shift" })),
+      };
+    });
+
+    res.json({ success: true, capacity });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getShifts, getShiftById, createShift, updateShift, deleteShift, generateWeeklySchedule, confirmWeeklySchedule, getCasualAvailability, getShiftCapacity };

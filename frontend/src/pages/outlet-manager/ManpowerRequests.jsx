@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { createPortal } from "react-dom";
@@ -65,12 +66,6 @@ function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 }
-function fmtTime(t) {
-  if (!t) return "—";
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${((h % 12) || 12).toString().padStart(2, "0")}:${m.toString().padStart(2, "0")} ${ampm}`;
-}
 
 function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />;
@@ -117,17 +112,17 @@ export default function ManpowerRequests() {
         if (!cancelled) { setOutletId(oid); setOutletName(oName); }
         if (!oid) { setLoading(false); return; }
 
-        const [reqRes, skillRes] = await Promise.all([
+        const [reqRes, libRes] = await Promise.all([
           supabase.from("krewby_requests")
             .select(`request_id, role_name, shift_date, start_time, end_time, headcount, status, override_note, outlet_address, created_at, manager_rating, assigned_worker_id, skills ( skill_id, name ), assigned_worker:assigned_worker_id ( krewby_worker_id, users ( full_name ) )`)
             .eq("outlet_id", oid)
             .order("created_at", { ascending: false }),
-          supabase.from("skills").select("skill_id, name").order("name"),
+          api.get("/api/business/skills").catch(() => ({ skills: [] })),
         ]);
 
         if (!cancelled) {
           setRequests(reqRes.data || []);
-          setSkills(skillRes.data || []);
+          setSkills(libRes.skills || []);
         }
       } catch (err) {
         console.error(err);
@@ -141,8 +136,7 @@ export default function ManpowerRequests() {
 
   async function handleSubmit() {
     if (!form.role_name.trim()) { showToast("Role name is required.", "error"); return; }
-    if (!form.shift_date)       { showToast("Shift date is required.", "error"); return; }
-    if (form.start_time >= form.end_time) { showToast("End time must be after start time.", "error"); return; }
+    if (!form.shift_date)       { showToast("Date is required.", "error"); return; }
     if (form.headcount < 1)     { showToast("Headcount must be at least 1.", "error"); return; }
 
     setSubmitting(true);
@@ -337,7 +331,6 @@ export default function ManpowerRequests() {
                   {/* Details grid */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px", padding: "14px 0", borderTop: "1px solid #F1F5F9", borderBottom: req.override_note ? "1px solid #F1F5F9" : "none", marginBottom: req.override_note || req.status === "pending_review" ? "14px" : 0 }}>
                     <InfoItem icon="📅" label="Date"    value={fmtDate(req.shift_date)} />
-                    <InfoItem icon="🕐" label="Time"    value={`${fmtTime(req.start_time)} – ${fmtTime(req.end_time)}`} />
                     <InfoItem icon="👥" label="Workers" value={`${req.headcount} worker${req.headcount > 1 ? "s" : ""}`} />
                     <InfoItem icon="📊" label="Status"  value={st.label} />
                   </div>
@@ -431,26 +424,11 @@ export default function ManpowerRequests() {
 
               {/* Date */}
               <div>
-                <label style={labelStyle}>Shift Date <span style={{ color: "#EF4444" }}>*</span></label>
+                <label style={labelStyle}>Date <span style={{ color: "#EF4444" }}>*</span></label>
                 <input className="mgr-input" type="date" value={form.shift_date}
                   min={new Date().toISOString().split("T")[0]}
                   onChange={e => f("shift_date", e.target.value)}
                   style={inputStyle} />
-              </div>
-
-              {/* Time row */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div>
-                  <label style={labelStyle}>Start Time <span style={{ color: "#EF4444" }}>*</span></label>
-                  <input className="mgr-input" type="time" value={form.start_time}
-                    onChange={e => f("start_time", e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>End Time <span style={{ color: "#EF4444" }}>*</span></label>
-                  <input className="mgr-input" type="time" value={form.end_time}
-                    onChange={e => f("end_time", e.target.value)}
-                    style={{ ...inputStyle, borderColor: form.start_time >= form.end_time && form.end_time ? "#FCA5A5" : "#E2E8F0" }} />
-                </div>
               </div>
 
               {/* Headcount */}
@@ -488,7 +466,7 @@ export default function ManpowerRequests() {
                 <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "10px", padding: "12px 16px" }}>
                   <p style={{ fontSize: "12px", fontWeight: "700", color: "#1D4ED8", marginBottom: "4px" }}>Request Summary</p>
                   <p style={{ fontSize: "13px", color: "#1E40AF" }}>
-                    {form.headcount} × <strong>{form.role_name}</strong> at <strong>{outletName}</strong> on {fmtDate(form.shift_date)}, {fmtTime(form.start_time + ":00")} – {fmtTime(form.end_time + ":00")}
+                    {form.headcount} × <strong>{form.role_name}</strong> at <strong>{outletName}</strong> on {fmtDate(form.shift_date)}
                   </p>
                 </div>
               )}

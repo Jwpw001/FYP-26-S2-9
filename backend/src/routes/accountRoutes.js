@@ -22,10 +22,10 @@ router.get(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
+        ROLES.BUSINESS_OWNER,
         ROLES.OUTLET_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getAccount
@@ -36,10 +36,10 @@ router.patch(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
+        ROLES.BUSINESS_OWNER,
         ROLES.OUTLET_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     validate(updateAccountSchema),

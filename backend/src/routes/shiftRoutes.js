@@ -13,6 +13,7 @@ const {
     generateWeeklySchedule,
     confirmWeeklySchedule,
     getCasualAvailability,
+    getShiftCapacity,
 } = require("../controllers/shiftController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -35,6 +36,13 @@ router.get(
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getShifts
+);
+
+router.get(
+    "/capacity",
+    verifyToken,
+    allowRoles(ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN),
+    getShiftCapacity
 );
 
 router.get(
