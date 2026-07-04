@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
-import { Users, CalendarDays, CalendarClock, Handshake, Download } from "lucide-react";
+import { Users, CalendarDays, CalendarClock, Handshake, Download, TrendingUp, TrendingDown } from "lucide-react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -39,10 +39,81 @@ function delta(curr, prev) {
 function TrendBadge({ pct }) {
   if (pct === null) return null;
   const up = pct >= 0;
+  const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "11px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
-      {up ? "▲" : "▼"} {Math.abs(pct)}%
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "11px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
+      <Icon size={11} /> {Math.abs(pct)}%
     </span>
+  );
+}
+
+const PALETTE = ["#2563EB", "#059669", "#DB2777", "#D97706", "#7C3AED", "#0891B2", "#DC2626", "#65A30D"];
+
+/* ── Donut chart: stacked stroke-dasharray arcs, count in the center ── */
+function DonutChart({ data, size = 108, thickness = 15 }) {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  const r = (size - thickness) / 2;
+  const c = 2 * Math.PI * r;
+  let offset = 0;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
+      <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+        {total === 0 ? (
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F1F5F9" strokeWidth={thickness} />
+        ) : data.filter(d => d.count > 0).map(d => {
+          const frac = d.count / total;
+          const dash = Math.max(frac * c - (data.length > 1 ? 1.5 : 0), 0);
+          const el = (
+            <circle key={d.label} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={d.color}
+              strokeWidth={thickness} strokeDasharray={`${dash} ${c - dash}`} strokeDashoffset={-offset}
+              strokeLinecap="round" />
+          );
+          offset += frac * c;
+          return el;
+        })}
+      </g>
+      <text x="50%" y="48%" textAnchor="middle" dominantBaseline="central" fontSize={size * 0.24} fontWeight="800" fill="#0F172A">{total}</text>
+      <text x="50%" y="68%" textAnchor="middle" dominantBaseline="central" fontSize={size * 0.1} fontWeight="600" fill="#94A3B8" style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>total</text>
+    </svg>
+  );
+}
+
+function DonutLegend({ data }) {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  if (data.length === 0) return <p style={{ color: "#94A3B8", fontSize: "13px", padding: "8px 0" }}>No data</p>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "9px", flex: 1, minWidth: 0 }}>
+      {data.map(d => (
+        <div key={d.label} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px" }}>
+          <span style={{ width: "9px", height: "9px", borderRadius: "3px", background: d.color, flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0, color: "#374151", fontWeight: "600", textTransform: "capitalize", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label?.replace("_", " ")}</span>
+          <span style={{ fontWeight: "700", color: "#0F172A" }}>{d.count}</span>
+          <span style={{ color: "#94A3B8", fontSize: "11px", width: "34px", textAlign: "right" }}>{total ? Math.round((d.count / total) * 100) : 0}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DonutPanel({ title, sub, data, loading }) {
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>{title}</h3>
+      <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>{sub}</p>
+      {loading ? (
+        <div style={{ display: "flex", gap: "18px", alignItems: "center" }}>
+          <Shimmer w="108px" h="108px" r="50%" />
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", flex: 1 }}>
+            {Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="14px" />)}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+          <DonutChart data={data} />
+          <DonutLegend data={data} />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -61,20 +132,20 @@ function LineChart({ series, labels, height = 180 }) {
     if (data.length === 0) return "";
     return data.map((v, i) => `${i === 0 ? "M" : "L"}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
   }
-  function area(data, color) {
+  function area(data, color, key) {
     if (data.length === 0) return null;
     const line = path(data);
     const close = ` L${px(data.length - 1).toFixed(1)},${(PAD.top + chartH).toFixed(1)} L${PAD.left.toFixed(1)},${(PAD.top + chartH).toFixed(1)} Z`;
-    return <path d={line + close} fill={color} fillOpacity="0.08" stroke="none" />;
+    return <path key={key} d={line + close} fill={color} fillOpacity="0.08" stroke="none" />;
   }
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map(t => ({ v: Math.round(t * maxV), y: PAD.top + (1 - t) * chartH }));
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t, i) => ({ k: i, v: Math.round(t * maxV), y: PAD.top + (1 - t) * chartH }));
   const xShow = n <= 14 ? labels.map((l, i) => ({ l, i })) : Array.from({ length: 7 }, (_, k) => { const i = Math.round(k * (n - 1) / 6); return { l: labels[i], i }; });
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ overflow: "visible", display: "block" }}>
-      {ticks.map(t => <line key={t.v} x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y} stroke="#F1F5F9" strokeWidth="1" />)}
-      {ticks.map(t => <text key={t.v} x={PAD.left - 4} y={t.y + 4} textAnchor="end" fontSize="14" fill="#94A3B8">{t.v}</text>)}
+      {ticks.map(t => <line key={t.k} x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y} stroke="#F1F5F9" strokeWidth="1" />)}
+      {ticks.map(t => <text key={t.k} x={PAD.left - 4} y={t.y + 4} textAnchor="end" fontSize="14" fill="#94A3B8">{t.v}</text>)}
       {xShow.map(({ l, i }) => <text key={i} x={px(i)} y={H - 4} textAnchor="middle" fontSize="14" fill="#94A3B8">{l}</text>)}
-      {series.map(s => area(s.data, s.color))}
+      {series.map(s => area(s.data, s.color, s.label + "-area"))}
       {series.map(s => <path key={s.label} d={path(s.data)} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />)}
       {series.map(s => s.data.length > 0 && <circle key={s.label + "-dot"} cx={px(s.data.length - 1)} cy={py(s.data[s.data.length - 1])} r="4" fill={s.color} />)}
     </svg>
@@ -104,49 +175,16 @@ function KpiCard({ label, value, sub, pct, color = "#2563EB", bg = "#EFF6FF", Ic
 }
 
 const STATUS_STYLE = {
-  completed: { bg: "#F0FDF4", color: "#16A34A" },
-  published: { bg: "#EFF6FF", color: "#2563EB" },
-  draft:     { bg: "#F8FAFC", color: "#64748B" },
-  cancelled: { bg: "#FEF2F2", color: "#DC2626" },
-  approved:  { bg: "#F0FDF4", color: "#16A34A" },
-  pending:   { bg: "#FFFBEB", color: "#D97706" },
-  rejected:  { bg: "#FEF2F2", color: "#DC2626" },
-  assigned:  { bg: "#EFF6FF", color: "#2563EB" },
-  pending_review: { bg: "#FFFBEB", color: "#D97706" },
+  completed: { color: "#16A34A" },
+  published: { color: "#2563EB" },
+  draft:     { color: "#64748B" },
+  cancelled: { color: "#DC2626" },
+  approved:  { color: "#16A34A" },
+  pending:   { color: "#D97706" },
+  rejected:  { color: "#DC2626" },
+  assigned:  { color: "#2563EB" },
+  pending_review: { color: "#D97706" },
 };
-function StatusBadge({ status }) {
-  const st = STATUS_STYLE[status] || { bg: "#F8FAFC", color: "#64748B" };
-  return (
-    <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "700", background: st.bg, color: st.color, textTransform: "capitalize" }}>
-      {status?.replace("_", " ")}
-    </span>
-  );
-}
-
-function StatusTable({ rows, loading }) {
-  if (loading) return <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>{Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="36px" />)}</div>;
-  const total = rows.reduce((s, r) => s + r.count, 0);
-  return (
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-      <thead><tr style={{ borderBottom: "2px solid #F1F5F9" }}>
-        <th style={{ padding: "8px 0", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-        <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Count</th>
-        <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Share</th>
-      </tr></thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr><td colSpan={3} style={{ padding: "24px 0", textAlign: "center", color: "#94A3B8" }}>No data</td></tr>
-        ) : rows.map(r => (
-          <tr key={r.status} className="bo-rpt-row" style={{ borderBottom: "1px solid #F8FAFC" }}>
-            <td style={{ padding: "10px 0" }}><StatusBadge status={r.status} /></td>
-            <td style={{ padding: "10px 0", textAlign: "right", fontWeight: "700", color: "#0F172A" }}>{r.count}</td>
-            <td style={{ padding: "10px 0", textAlign: "right", color: "#64748B", fontSize: "12px" }}>{total ? Math.round((r.count / total) * 100) : 0}%</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
 
 export default function BOReports() {
   const user = getUser();
@@ -480,22 +518,19 @@ export default function BOReports() {
         </div>
 
         {/* Breakdowns */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Shifts</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By status (all time)</p>
-            <StatusTable rows={shiftsByStatus} loading={loading} />
-          </div>
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Leave Requests</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By approval status (all time)</p>
-            <StatusTable rows={leaveByStatus} loading={loading} />
-          </div>
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Krewby Requests</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By status (all time)</p>
-            <StatusTable rows={krewbyByStatus} loading={loading} />
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: "20px", marginBottom: "20px" }}>
+          <DonutPanel title="Shifts" sub="By status (all time)" loading={loading}
+            data={shiftsByStatus.map((r, i) => ({ label: r.status, count: r.count, color: STATUS_STYLE[r.status]?.color || PALETTE[i % PALETTE.length] }))} />
+          <DonutPanel title="Leave Requests" sub="By approval status (all time)" loading={loading}
+            data={leaveByStatus.map((r, i) => ({ label: r.status, count: r.count, color: STATUS_STYLE[r.status]?.color || PALETTE[i % PALETTE.length] }))} />
+          <DonutPanel title="Krewby Requests" sub="By status (all time)" loading={loading}
+            data={krewbyByStatus.map((r, i) => ({ label: r.status, count: r.count, color: STATUS_STYLE[r.status]?.color || PALETTE[i % PALETTE.length] }))} />
+        </div>
+
+        {/* Staff by Type */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: "20px" }}>
+          <DonutPanel title="Staff by Type" sub="Across all outlets" loading={loading}
+            data={staffByType.map((r, i) => ({ label: (r.type || "unknown").replace("_", " "), count: r.count, color: PALETTE[i % PALETTE.length] }))} />
         </div>
 
       </div>

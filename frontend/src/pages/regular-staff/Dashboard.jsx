@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
+import { useBusinessContext } from "../../context/BusinessContext";
 import StaffLayout from "../../components/layout/StaffLayout";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-dash-styles")) {
@@ -37,6 +39,13 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
   );
 }
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "morning";
+  if (h < 17) return "afternoon";
+  return "evening";
+}
+
 function fmtTime(iso) {
   if (!iso) return null;
   const u = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
@@ -51,7 +60,38 @@ function canClockIn(startTime) {
   return new Date() >= new Date(shiftStart.getTime() - 5 * 60 * 1000);
 }
 
+function fmtDay(d) {
+  if (!d) return "";
+  return new Date(d).toLocaleDateString("en-SG", { weekday: "short" });
+}
+function fmtDayNum(d) {
+  if (!d) return "";
+  return new Date(d).toLocaleDateString("en-SG", { day: "numeric" });
+}
+function statusStyle(status) {
+  const map = {
+    draft:     { background: "#F3F4F6", color: "#6B7280" },
+    published: { background: "#DCFCE7", color: "#166534" },
+    completed: { background: "#DBEAFE", color: "#1E40AF" },
+    cancelled: { background: "#FEE2E2", color: "#991B1B" },
+  };
+  return map[status] || map.draft;
+}
+
+function toLocalISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// ── Mode switch ────────────────────────────────────────────────────────────────
 export default function StaffDashboard() {
+  const { schedulingMode } = useBusinessContext();
+  if (schedulingMode === "flexible") return <FlexibleStaffDashboard />;
+  if (schedulingMode === "appointment") return <AppointmentStaffDashboard />;
+  return <ShiftStaffDashboard />;
+}
+
+// ── Shift mode (unchanged) ───────────────────────────────────────────────────
+function ShiftStaffDashboard() {
   const navigate = useNavigate();
   const user = getUser();
   const userId = user?.user_id;
@@ -190,13 +230,6 @@ export default function StaffDashboard() {
     } finally {
       setClockSaving(false);
     }
-  }
-
-  function getGreeting() {
-    const h = new Date().getHours();
-    if (h < 12) return "morning";
-    if (h < 17) return "afternoon";
-    return "evening";
   }
 
   const statCards = [
@@ -458,22 +491,329 @@ export default function StaffDashboard() {
   );
 }
 
-function fmtDay(d) {
-  if (!d) return "";
-  return new Date(d).toLocaleDateString("en-SG", { weekday: "short" });
+// ── Flexible (project/task) mode ─────────────────────────────────────────────
+function FlexibleStaffDashboard() {
+  const navigate = useNavigate();
+  const user = getUser();
+  const userId = user?.user_id;
+
+  const [tasks, setTasks] = useState([]);
+  const [weekHours, setWeekHours] = useState(0);
+  const [pendingLeave, setPendingLeave] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const { data: myStaff } = await supabase
+          .from("staff").select("staff_id")
+          .eq("user_id", userId).limit(1);
+        const staffId = myStaff?.[0]?.staff_id;
+
+        const now = new Date();
+        const day = now.getDay();
+        const mon = new Date(now); mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+        const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+
+        const [tasksRes, tsRes, { data: leave }, { count: unread }] = await Promise.all([
+          api.get("/api/flex/my-tasks").catch(() => ({ tasks: [] })),
+          api.get(`/api/timesheets/my?weekStart=${toLocalISO(mon)}&weekEnd=${toLocalISO(sun)}`).catch(() => ({ timesheets: [] })),
+          staffId
+            ? supabase.from("availability").select("request_id").eq("staff_id", staffId).eq("status", "pending")
+            : Promise.resolve({ data: [] }),
+          supabase.from("notifications").select("*", { count: "exact", head: true }).eq("recipient_id", userId).eq("is_read", false),
+        ]);
+
+        if (cancelled) return;
+        setTasks(tasksRes.tasks || []);
+        setWeekHours((tsRes.timesheets || []).reduce((sum, t) => sum + Number(t.hours_worked), 0));
+        setPendingLeave((leave || []).length);
+        setUnreadCount(unread || 0);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  const openTasks = tasks.filter(t => t.status !== "done");
+  const topTasks = openTasks.slice(0, 5);
+
+  const statCards = [
+    { label: "Open Tasks",           value: openTasks.length,     icon: "✅", color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/tasks" },
+    { label: "Hours This Week",      value: `${weekHours}h`,      icon: "⏱",  color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/timesheets" },
+    { label: "Pending Leave",        value: pendingLeave,         icon: "🏖",  color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
+    { label: "Unread Notifications", value: unreadCount,          icon: "🔔",  color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
+  ];
+
+  const quickActions = [
+    { label: "Log Hours",     icon: "⏱",  link: "/regular-staff/timesheets" },
+    { label: "My Tasks",      icon: "✅", link: "/regular-staff/tasks" },
+    { label: "Request Leave", icon: "🏖",  link: "/regular-staff/leave" },
+    { label: "Notifications", icon: "🔔",  link: "/regular-staff/notifications" },
+  ];
+
+  return (
+    <StaffLayout title="Dashboard">
+      <div style={{ animation: "pageIn 0.4s ease both" }}>
+
+        <div style={{ marginBottom: "28px" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
+            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} 👋
+          </h2>
+          <p style={{ fontSize: "14px", color: "#64748B" }}>Here's what's on your plate.</p>
+        </div>
+
+        {loading ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: "16px", marginBottom: "28px" }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px" }}>
+                <Shimmer w="44px" h="44px" r="10px" />
+                <div style={{ marginTop: "14px" }}><Shimmer w="50px" h="28px" r="6px" /></div>
+                <div style={{ marginTop: "8px" }}><Shimmer w="100px" h="13px" r="5px" /></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: "16px", marginBottom: "28px" }}>
+            {statCards.map((card, i) => (
+              <div key={card.label} className="staff-stat-card" onClick={() => navigate(card.link)}
+                style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", transition: "transform 0.18s, box-shadow 0.18s", animation: `fadeSlideUp 0.35s ease ${i * 0.07}s both` }}>
+                <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: card.bg, color: card.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", marginBottom: "14px" }}>
+                  {card.icon}
+                </div>
+                <p style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", lineHeight: 1 }}>{card.value}</p>
+                <p style={{ fontSize: "13px", fontWeight: "500", color: "#64748B", marginTop: "6px" }}>{card.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* My Tasks */}
+        <div style={s.section}>
+          <div style={s.sectionHeader}>
+            <h3 style={s.sectionTitle}>My Tasks</h3>
+            <button style={s.viewAll} onClick={() => navigate("/regular-staff/tasks")}>View all →</button>
+          </div>
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} style={{ display: "flex", gap: "14px", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #F1F5F9" }}>
+                  <Shimmer w="44px" h="44px" r="10px" />
+                  <div style={{ flex: 1 }}>
+                    <Shimmer w="60%" h="14px" r="5px" />
+                    <div style={{ marginTop: "7px" }}><Shimmer w="40%" h="12px" r="5px" /></div>
+                  </div>
+                  <Shimmer w="70px" h="24px" r="100px" />
+                </div>
+              ))}
+            </div>
+          ) : topTasks.length === 0 ? (
+            <div style={s.emptyInner}>
+              <span style={{ fontSize: "28px" }}>✅</span>
+              <p style={{ fontSize: "14px", color: "#64748B", marginTop: "8px" }}>Nothing assigned to you right now.</p>
+            </div>
+          ) : (
+            topTasks.map((t, i) => {
+              const overdue = t.due_date && new Date(t.due_date) < new Date() && t.status !== "done";
+              return (
+                <div key={t.task_id}
+                  style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 0", borderBottom: "1px solid #F1F5F9", animation: `fadeSlideUp 0.3s ease ${i * 0.06}s both` }}>
+                  <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: t.projects?.color || "#6366F1", flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B", marginBottom: "2px" }}>{t.title}</p>
+                    <p style={{ fontSize: "12px", color: "#64748B" }}>{t.projects?.name || "No project"}</p>
+                  </div>
+                  {t.due_date && (
+                    <span style={{ fontSize: "11px", fontWeight: "700", padding: "3px 9px", borderRadius: "100px", background: overdue ? "#FEE2E2" : "#F1F5F9", color: overdue ? "#991B1B" : "#475569" }}>
+                      {overdue ? "Overdue" : new Date(t.due_date.split("T")[0] + "T00:00:00").toLocaleDateString("en-SG", { month: "short", day: "numeric" })}
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Quick actions */}
+        <div style={s.section}>
+          <h3 style={{ ...s.sectionTitle, marginBottom: "14px" }}>Quick Actions</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+            {quickActions.map(a => (
+              <button key={a.label} className="staff-action-btn" onClick={() => navigate(a.link)}
+                style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 18px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer", transition: "all 0.15s" }}>
+                <span>{a.icon}</span>{a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </StaffLayout>
+  );
 }
-function fmtDayNum(d) {
-  if (!d) return "";
-  return new Date(d).toLocaleDateString("en-SG", { day: "numeric" });
-}
-function statusStyle(status) {
-  const map = {
-    draft:     { background: "#F3F4F6", color: "#6B7280" },
-    published: { background: "#DCFCE7", color: "#166534" },
-    completed: { background: "#DBEAFE", color: "#1E40AF" },
-    cancelled: { background: "#FEE2E2", color: "#991B1B" },
-  };
-  return map[status] || map.draft;
+
+// ── Appointment mode ──────────────────────────────────────────────────────────
+function AppointmentStaffDashboard() {
+  const navigate = useNavigate();
+  const user = getUser();
+  const userId = user?.user_id;
+
+  const [todayAppts, setTodayAppts] = useState([]);
+  const [weekCount, setWeekCount] = useState(0);
+  const [pendingLeave, setPendingLeave] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const today = toLocalISO(new Date());
+        const in7 = toLocalISO(new Date(Date.now() + 7 * 86400000));
+
+        const { data: myStaff } = await supabase
+          .from("staff").select("staff_id")
+          .eq("user_id", userId).limit(1);
+        const staffId = myStaff?.[0]?.staff_id;
+
+        const [todayRes, weekRes, { data: leave }, { count: unread }] = await Promise.all([
+          api.get(`/api/bookings/my?date=${today}`).catch(() => ({ appointments: [] })),
+          api.get("/api/bookings/my?date=").catch(() => ({ appointments: [] })),
+          staffId
+            ? supabase.from("availability").select("request_id").eq("staff_id", staffId).eq("status", "pending")
+            : Promise.resolve({ data: [] }),
+          supabase.from("notifications").select("*", { count: "exact", head: true }).eq("recipient_id", userId).eq("is_read", false),
+        ]);
+
+        if (cancelled) return;
+        setTodayAppts((todayRes.appointments || []).filter(a => a.status !== "cancelled"));
+        setWeekCount((weekRes.appointments || []).filter(a => a.booking_date >= today && a.booking_date <= in7 && a.status !== "cancelled").length);
+        setPendingLeave((leave || []).length);
+        setUnreadCount(unread || 0);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  const statCards = [
+    { label: "Today's Appointments", value: todayAppts.length, icon: "📋", color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/appointments" },
+    { label: "Next 7 Days",          value: weekCount,          icon: "📆", color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/appointments" },
+    { label: "Pending Leave",        value: pendingLeave,       icon: "🏖",  color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
+    { label: "Unread Notifications", value: unreadCount,        icon: "🔔",  color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
+  ];
+
+  const quickActions = [
+    { label: "My Appointments", icon: "📋", link: "/regular-staff/appointments" },
+    { label: "Request Leave",   icon: "🏖",  link: "/regular-staff/leave" },
+    { label: "Notifications",   icon: "🔔",  link: "/regular-staff/notifications" },
+  ];
+
+  return (
+    <StaffLayout title="Dashboard">
+      <div style={{ animation: "pageIn 0.4s ease both" }}>
+
+        <div style={{ marginBottom: "28px" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
+            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} 👋
+          </h2>
+          <p style={{ fontSize: "14px", color: "#64748B" }}>Here's your appointment schedule.</p>
+        </div>
+
+        {loading ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: "16px", marginBottom: "28px" }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px" }}>
+                <Shimmer w="44px" h="44px" r="10px" />
+                <div style={{ marginTop: "14px" }}><Shimmer w="50px" h="28px" r="6px" /></div>
+                <div style={{ marginTop: "8px" }}><Shimmer w="100px" h="13px" r="5px" /></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: "16px", marginBottom: "28px" }}>
+            {statCards.map((card, i) => (
+              <div key={card.label} className="staff-stat-card" onClick={() => navigate(card.link)}
+                style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", transition: "transform 0.18s, box-shadow 0.18s", animation: `fadeSlideUp 0.35s ease ${i * 0.07}s both` }}>
+                <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: card.bg, color: card.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", marginBottom: "14px" }}>
+                  {card.icon}
+                </div>
+                <p style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", lineHeight: 1 }}>{card.value}</p>
+                <p style={{ fontSize: "13px", fontWeight: "500", color: "#64748B", marginTop: "6px" }}>{card.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Today's appointments */}
+        <div style={s.section}>
+          <div style={s.sectionHeader}>
+            <h3 style={s.sectionTitle}>Today's Appointments</h3>
+            <button style={s.viewAll} onClick={() => navigate("/regular-staff/appointments")}>View all →</button>
+          </div>
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} style={{ display: "flex", gap: "14px", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #F1F5F9" }}>
+                  <Shimmer w="44px" h="44px" r="10px" />
+                  <div style={{ flex: 1 }}>
+                    <Shimmer w="60%" h="14px" r="5px" />
+                    <div style={{ marginTop: "7px" }}><Shimmer w="40%" h="12px" r="5px" /></div>
+                  </div>
+                  <Shimmer w="70px" h="24px" r="100px" />
+                </div>
+              ))}
+            </div>
+          ) : todayAppts.length === 0 ? (
+            <div style={s.emptyInner}>
+              <span style={{ fontSize: "28px" }}>✨</span>
+              <p style={{ fontSize: "14px", color: "#64748B", marginTop: "8px" }}>No appointments today.</p>
+            </div>
+          ) : (
+            todayAppts.map((a, i) => (
+              <div key={a.booking_id}
+                style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 0", borderBottom: "1px solid #F1F5F9", animation: `fadeSlideUp 0.3s ease ${i * 0.06}s both` }}>
+                <div style={{ minWidth: "56px", textAlign: "center", background: "#EFF6FF", borderRadius: "10px", padding: "8px 4px" }}>
+                  <p style={{ fontSize: "12px", fontWeight: "800", color: "#2563EB" }}>{String(a.start_time).slice(11, 16)}</p>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B", marginBottom: "2px" }}>{a.customer_name}</p>
+                  <p style={{ fontSize: "12px", color: "#64748B" }}>{a.services?.name || "—"}</p>
+                </div>
+                <span style={{ ...s.badge, background: "#DCFCE7", color: "#166534" }}>{a.status}</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Quick actions */}
+        <div style={s.section}>
+          <h3 style={{ ...s.sectionTitle, marginBottom: "14px" }}>Quick Actions</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+            {quickActions.map(a => (
+              <button key={a.label} className="staff-action-btn" onClick={() => navigate(a.link)}
+                style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 18px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer", transition: "all 0.15s" }}>
+                <span>{a.icon}</span>{a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </StaffLayout>
+  );
 }
 
 const s = {

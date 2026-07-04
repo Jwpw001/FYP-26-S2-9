@@ -5,13 +5,16 @@ const {
   getTasks, createTask, updateTask, deleteTask,
   getEpics, createEpic, updateEpic, deleteEpic,
   getSprints, createSprint, updateSprint, deleteSprint,
-  getPortfolio, getProjectMembers, createKrewbyRequest,
+  getPortfolio, getProjectMembers, createKrewbyRequest, getMyTasks,
 } = require("../controllers/flexibleController");
 
 router.use(protect);
 
 // Portfolio (BO + manager)
 router.get("/portfolio", getPortfolio);
+
+// Staff: my assigned tasks across every project
+router.get("/my-tasks", getMyTasks);
 
 // Project-scoped
 router.get("/projects/:project_id/tasks",   getTasks);

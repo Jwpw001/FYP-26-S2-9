@@ -3,17 +3,10 @@ import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
-import { LayoutDashboard, CalendarDays, UmbrellaOff, ArrowLeftRight, Clock, BookOpen } from "lucide-react";
+import { LayoutDashboard, CalendarDays, UmbrellaOff, ArrowLeftRight, Clock, BookOpen, ListChecks, Kanban } from "lucide-react";
 import "./sidebarStyles.js";
 import { useBusinessContext } from "../../context/BusinessContext";
 import ProfileModal from "../ProfileModal";
-
-const BASE_NAV = [
-  { label: "Dashboard",     path: "/regular-staff/dashboard", Icon: LayoutDashboard },
-  { label: "My Shifts",     path: "/regular-staff/shifts",    Icon: CalendarDays },
-  { label: "Leave",         path: "/regular-staff/leave",     Icon: UmbrellaOff },
-  { label: "Swap Requests", path: "/regular-staff/swaps",     Icon: ArrowLeftRight },
-];
 
 export default function StaffLayout({ children, title }) {
   const navigate = useNavigate();
@@ -22,11 +15,22 @@ export default function StaffLayout({ children, title }) {
   const { schedulingMode } = useBusinessContext();
   const [expanded, setExpanded] = useState(false);
 
-  const NAV = schedulingMode === "flexible"
-    ? [...BASE_NAV, { label:"My Timesheets",   path:"/regular-staff/timesheets",   Icon:Clock }]
-    : schedulingMode === "appointment"
-    ? [...BASE_NAV, { label:"My Appointments", path:"/regular-staff/appointments", Icon:BookOpen }]
-    : BASE_NAV;
+  // Build nav dynamically based on scheduling mode — shift-only and flexible-only
+  // concepts (shifts/swaps vs tasks/timesheets) shouldn't both show up at once.
+  const NAV = [
+    { label: "Dashboard", path: "/regular-staff/dashboard", Icon: LayoutDashboard },
+    ...(schedulingMode === "flexible" ? [
+      { label: "My Tasks",      path: "/regular-staff/tasks",      Icon: ListChecks },
+      { label: "Projects",      path: "/regular-staff/projects",   Icon: Kanban },
+      { label: "My Timesheets", path: "/regular-staff/timesheets", Icon: Clock },
+    ] : schedulingMode === "appointment" ? [
+      { label: "My Appointments", path: "/regular-staff/appointments", Icon: BookOpen },
+    ] : [
+      { label: "My Shifts",     path: "/regular-staff/shifts", Icon: CalendarDays },
+      { label: "Swap Requests", path: "/regular-staff/swaps",  Icon: ArrowLeftRight },
+    ]),
+    { label: "Leave", path: "/regular-staff/leave", Icon: UmbrellaOff },
+  ];
   const [unread, setUnread] = useState(0);
   const [showProfile, setShowProfile] = useState(false);
 

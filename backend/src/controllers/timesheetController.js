@@ -1,8 +1,18 @@
 const prisma = require("../config/prisma");
+const supabaseAdmin = require("../config/supabaseAdmin");
 
 async function getStaffId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { staff_id: true, outlet_id: true } });
   return s || null;
+}
+
+// tasks isn't a Prisma model, so attach {task_id, title} onto each entry via a lookup
+async function attachTasks(entries) {
+  const taskIds = [...new Set(entries.map(e => e.task_id).filter(Boolean))];
+  if (taskIds.length === 0) return entries.map(e => ({ ...e, tasks: null }));
+  const { data: rows } = await supabaseAdmin.from("tasks").select("task_id, title").in("task_id", taskIds);
+  const byId = Object.fromEntries((rows || []).map(t => [t.task_id, t]));
+  return entries.map(e => ({ ...e, tasks: e.task_id ? byId[e.task_id] || null : null }));
 }
 
 // ── Staff: submit a timesheet entry ──────────────────────────────────────────
@@ -11,16 +21,17 @@ const submitTimesheet = async (req, res) => {
     const staffRow = await getStaffId(req.user.user_id);
     if (!staffRow) return res.status(403).json({ success: false, message: "Staff record not found." });
 
-    const { project_id, log_date, hours_worked, description } = req.body;
+    const { project_id, task_id, log_date, hours_worked, description } = req.body;
     if (!log_date || hours_worked == null) return res.status(400).json({ success: false, message: "log_date and hours_worked are required." });
 
     const entry = await prisma.timesheets.upsert({
       where: { staff_id_project_id_log_date: { staff_id: staffRow.staff_id, project_id: project_id ? Number(project_id) : null, log_date: new Date(log_date) } },
-      create: { staff_id: staffRow.staff_id, project_id: project_id ? Number(project_id) : null, log_date: new Date(log_date), hours_worked: Number(hours_worked), description: description || null, status: "pending" },
-      update: { hours_worked: Number(hours_worked), description: description || null, status: "pending" },
+      create: { staff_id: staffRow.staff_id, project_id: project_id ? Number(project_id) : null, task_id: task_id ? Number(task_id) : null, log_date: new Date(log_date), hours_worked: Number(hours_worked), description: description || null, status: "pending" },
+      update: { task_id: task_id ? Number(task_id) : null, hours_worked: Number(hours_worked), description: description || null, status: "pending" },
     });
 
-    res.json({ success: true, entry });
+    const [enriched] = await attachTasks([entry]);
+    res.json({ success: true, entry: enriched });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -44,7 +55,7 @@ const getMyTimesheets = async (req, res) => {
       orderBy: { log_date: "desc" }
     });
 
-    res.json({ success: true, timesheets });
+    res.json({ success: true, timesheets: await attachTasks(timesheets) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -78,7 +89,7 @@ const getAllTimesheets = async (req, res) => {
       orderBy: [{ log_date: "desc" }, { staff_id: "asc" }]
     });
 
-    res.json({ success: true, timesheets });
+    res.json({ success: true, timesheets: await attachTasks(timesheets) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -1,7 +1,10 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const ROLES = require("../constants/roles");
 
 function sb() { return supabaseAdmin; }
+
+const TASK_MANAGER_ROLES = [ROLES.BUSINESS_OWNER, ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 async function getManagerCtx(userId) {
@@ -95,6 +98,19 @@ const createTask = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const { task_id } = req.params;
+
+    // Non-managers may only change a task's status, and only if they're assigned to it
+    if (!TASK_MANAGER_ROLES.includes(req.user.role)) {
+      const bodyKeys = Object.keys(req.body);
+      if (bodyKeys.some(k => k !== "status")) {
+        return res.status(403).json({ success: false, message: "You can only update this task's status." });
+      }
+      const { data: assignment } = await sb().from("task_assignees").select("task_id").eq("task_id", task_id).eq("user_id", req.user.user_id).maybeSingle();
+      if (!assignment) {
+        return res.status(403).json({ success: false, message: "You're not assigned to this task." });
+      }
+    }
+
     const allowed = ["title","description","status","priority","due_date","order_index"];
     const updates = {};
     for (const k of allowed) if (req.body[k] !== undefined) updates[k] = req.body[k] || null;
@@ -363,9 +379,30 @@ const createKrewbyRequest = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
+// ── My Tasks (staff) — tasks assigned to the caller across every project ──────
+const getMyTasks = async (req, res) => {
+  try {
+    const { data: rows, error } = await sb()
+      .from("task_assignees")
+      .select("tasks(task_id, title, description, status, priority, due_date, required_skills, project_id, projects(name, color))")
+      .eq("user_id", req.user.user_id);
+    if (error) throw error;
+
+    const tasks = (rows || []).map(r => r.tasks).filter(Boolean).sort((a, b) => {
+      if ((a.status === "done") !== (b.status === "done")) return a.status === "done" ? 1 : -1;
+      if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return 0;
+    });
+
+    res.json({ success: true, tasks });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
 module.exports = {
   getTasks, createTask, updateTask, deleteTask,
   getEpics, createEpic, updateEpic, deleteEpic,
   getSprints, createSprint, updateSprint, deleteSprint,
-  getPortfolio, getProjectMembers, createKrewbyRequest,
+  getPortfolio, getProjectMembers, createKrewbyRequest, getMyTasks,
 };

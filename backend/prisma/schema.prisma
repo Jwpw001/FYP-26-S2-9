@@ -320,6 +320,7 @@ model timesheets {
   timesheet_id  Int       @id @default(autoincrement())
   staff_id      Int
   project_id    Int?
+  task_id       Int?
   log_date      DateTime  @db.Date
   hours_worked  Decimal   @db.Decimal(4,1)
   description   String?

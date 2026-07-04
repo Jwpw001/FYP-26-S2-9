@@ -1,6 +1,7 @@
-import { useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { getUser } from "../../utils/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabaseClient";
 import SignOutButton from "../SignOutButton";
 import { LayoutDashboard, Building2, Users, Tag, Briefcase, BarChart2, ClipboardList, FileCheck } from "lucide-react";
 import "./sidebarStyles.js";
@@ -18,10 +19,22 @@ const NAV = [
 ];
 
 export default function AdminLayout({ children, title }) {
+  const navigate = useNavigate();
   const location = useLocation();
   const user = getUser();
   const [expanded, setExpanded] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!user?.user_id) return;
+    supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("recipient_id", user.user_id)
+      .eq("is_read", false)
+      .then(({ count }) => setUnread(count || 0));
+  }, [user?.user_id]);
 
   return (
     <div style={s.shell}>
@@ -77,6 +90,34 @@ export default function AdminLayout({ children, title }) {
       <div style={s.main}>
         <header style={s.topbar}>
           <h1 style={s.pageTitle}>{title}</h1>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={() => navigate("/system-admin/notifications")}
+            style={{
+              position: "relative",
+              background: location.pathname === "/system-admin/notifications" ? "#EFF6FF" : "none",
+              border: location.pathname === "/system-admin/notifications" ? "1.5px solid #BFDBFE" : "1px solid transparent",
+              borderRadius: "10px", padding: "7px 9px", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 0.15s",
+            }}>
+            <svg width="20" height="20" fill="none" stroke={location.pathname === "/system-admin/notifications" ? "#2563EB" : "#64748B"} strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            {unread > 0 && (
+              <span style={{
+                position: "absolute", top: "4px", right: "4px",
+                background: "#EF4444", color: "#FFF",
+                fontSize: "10px", fontWeight: "700",
+                width: "16px", height: "16px", borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                lineHeight: 1,
+              }}>
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </button>
         </header>
         <div style={s.content}>{children}</div>
       </div>

@@ -28,6 +28,8 @@ if (typeof document !== "undefined" && !document.getElementById("mgr-reports-sty
   document.head.appendChild(style);
 }
 
+const PALETTE = ["#2563EB", "#059669", "#DB2777", "#D97706", "#7C3AED", "#0891B2", "#DC2626", "#65A30D"];
+
 function Shimmer({ w = "100%", h = "16px", r = "8px", style: extra = {} }) {
   return (
     <div style={{
@@ -37,6 +39,55 @@ function Shimmer({ w = "100%", h = "16px", r = "8px", style: extra = {} }) {
       animation: "shimmer 1.4s infinite linear",
       ...extra,
     }} />
+  );
+}
+
+/* ── Donut chart: stacked stroke-dasharray arcs, count in the center ── */
+function DonutChart({ data, size = 116, thickness = 16 }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const r = (size - thickness) / 2;
+  const c = 2 * Math.PI * r;
+  let offset = 0;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
+      <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+        {total === 0 ? (
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F1F5F9" strokeWidth={thickness} />
+        ) : data.filter(d => d.value > 0).map(d => {
+          const frac = d.value / total;
+          const dash = Math.max(frac * c - (data.length > 1 ? 1.5 : 0), 0);
+          const el = (
+            <circle key={d.label} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={d.color}
+              strokeWidth={thickness} strokeDasharray={`${dash} ${c - dash}`} strokeDashoffset={-offset}
+              strokeLinecap="round" />
+          );
+          offset += frac * c;
+          return el;
+        })}
+      </g>
+      <text x="50%" y="48%" textAnchor="middle" dominantBaseline="central" fontSize={size * 0.22} fontWeight="800" fill="#0F172A">{total}</text>
+      <text x="50%" y="68%" textAnchor="middle" dominantBaseline="central" fontSize={size * 0.095} fontWeight="600" fill="#94A3B8" style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>total</text>
+    </svg>
+  );
+}
+
+/* ── Horizontal bar chart: one labeled bar per row, scaled to the max value ── */
+function BarChart({ data }) {
+  const max = Math.max(...data.map(d => d.value), 1);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {data.map((d, i) => (
+        <div key={d.label} style={{ animation: `barGrow 0.6s ease ${i * 0.04}s both`, transformOrigin: "left" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+            <span style={{ fontSize: "12.5px", fontWeight: "600", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</span>
+            <span style={{ fontSize: "12.5px", fontWeight: "700", color: d.color }}>{d.value}</span>
+          </div>
+          <div style={{ height: "8px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
+            <div style={{ width: `${(d.value / max) * 100}%`, height: "100%", background: d.color, borderRadius: "100px", transition: "width 0.6s ease" }} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -207,6 +258,21 @@ export default function Reports() {
   const summaryStats = getSummaryStats();
   const maxWorkload  = reportData?.type === "workload" ? (reportData.rows[0]?.count || 1) : 1;
 
+  // Diagram data derived from the current report
+  const attendanceDonut = reportData?.type === "attendance" ? [
+    { label: "Present", value: reportData.rows.reduce((s, r) => s + r.present, 0), color: "#16A34A" },
+    { label: "Absent",  value: reportData.rows.reduce((s, r) => s + r.absent, 0),  color: "#DC2626" },
+    { label: "Late",    value: reportData.rows.reduce((s, r) => s + r.late, 0),    color: "#D97706" },
+    { label: "Pending", value: reportData.rows.reduce((s, r) => s + r.pending, 0), color: "#94A3B8" },
+  ] : [];
+  const workloadBars = reportData?.type === "workload"
+    ? reportData.rows.slice(0, 8).map((r, i) => ({ label: r.name, value: r.count, color: PALETTE[i % PALETTE.length] }))
+    : [];
+  const understaffedDonut = reportData?.type === "understaffed" ? [
+    { label: "Filled", value: reportData.rows.reduce((s, r) => s + r.filled, 0), color: "#16A34A" },
+    { label: "Gap",    value: reportData.rows.reduce((s, r) => s + r.gap, 0),    color: "#DC2626" },
+  ] : [];
+
   return (
     <ManagerLayout title="Reports">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
@@ -308,11 +374,46 @@ export default function Reports() {
                 No data for this period.
               </div>
             ) : reportData.type === "attendance" ? (
-              <AttendanceTable rows={reportData.rows} />
+              <>
+                <div style={{ display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap", padding: "4px 4px 24px" }}>
+                  <DonutChart data={attendanceDonut} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "9px", flex: 1, minWidth: "200px" }}>
+                    {attendanceDonut.map(d => {
+                      const total = attendanceDonut.reduce((s, x) => s + x.value, 0);
+                      return (
+                        <div key={d.label} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px" }}>
+                          <span style={{ width: "9px", height: "9px", borderRadius: "3px", background: d.color, flexShrink: 0 }} />
+                          <span style={{ flex: 1, color: "#374151", fontWeight: "600" }}>{d.label}</span>
+                          <span style={{ fontWeight: "700", color: "#0F172A" }}>{d.value}</span>
+                          <span style={{ color: "#94A3B8", fontSize: "11px", width: "34px", textAlign: "right" }}>{total ? Math.round((d.value / total) * 100) : 0}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <AttendanceTable rows={reportData.rows} />
+              </>
             ) : reportData.type === "workload" ? (
-              <WorkloadTable rows={reportData.rows} max={maxWorkload} />
+              <>
+                <div style={{ padding: "4px 4px 24px" }}>
+                  <BarChart data={workloadBars} />
+                </div>
+                <WorkloadTable rows={reportData.rows} max={maxWorkload} />
+              </>
             ) : (
-              <UnderstaffedTable rows={reportData.rows} />
+              <>
+                <div style={{ display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap", padding: "4px 4px 24px" }}>
+                  <DonutChart data={understaffedDonut} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "9px", flex: 1, minWidth: "200px" }}>
+                    <p style={{ fontSize: "12.5px", color: "#64748B" }}>
+                      Across {reportData.rows.length} understaffed shift{reportData.rows.length !== 1 ? "s" : ""}, roles are{" "}
+                      <strong style={{ color: "#16A34A" }}>{understaffedDonut[0]?.value ?? 0} filled</strong> vs a{" "}
+                      <strong style={{ color: "#DC2626" }}>{understaffedDonut[1]?.value ?? 0} headcount gap</strong>.
+                    </p>
+                  </div>
+                </div>
+                <UnderstaffedTable rows={reportData.rows} />
+              </>
             )}
           </div>
         )}

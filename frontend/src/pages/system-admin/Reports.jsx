@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Users, Building2, ClipboardList, CalendarDays, Download, TrendingUp, TrendingDown, ChevronUp, ChevronDown } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-reports-kf")) {
   const s = document.createElement("style");
@@ -10,7 +11,6 @@ if (typeof document !== "undefined" && !document.getElementById("sa-reports-kf")
   s.textContent = `
     @keyframes pageIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     @keyframes shimmer { from{background-position:-600px 0} to{background-position:600px 0} }
-    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
     .rpt-tab:hover { background:#F1F5F9!important; }
     .rpt-row:hover { background:#F8FAFC!important; }
     .rpt-sort:hover { color:#0F172A!important; }
@@ -45,20 +45,34 @@ function delta(curr, prev) {
 function TrendBadge({ pct }) {
   if (pct === null) return null;
   const up = pct >= 0;
+  const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "11px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
-      {up ? "▲" : "▼"} {Math.abs(pct)}%
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "11px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
+      <Icon size={11} /> {Math.abs(pct)}%
     </span>
   );
 }
 
-/* ── SVG multi-line chart ── */
+/* ── SVG multi-line chart ──
+   The coordinate system is percentage-based (W=100) so the geometry can
+   stretch to fill the full card width via preserveAspectRatio="none".
+   Text and point markers are rendered as an HTML overlay instead of SVG
+   <text>/<circle> — otherwise that same non-uniform stretch would distort
+   them into flattened, stretched glyphs and ellipses.
+   A hover crosshair (tracked via onMouseMove over the wrapper) plus gradient
+   area fills and always-visible point dots keep the chart from reading as
+   mostly-blank space when one series has a single outlier spike. */
 function LineChart({ series, labels, height = 140 }) {
-  const W = 100; // percentage-based viewBox
+  const W = 100;
   const H = height;
-  const PAD = { top: 12, right: 4, bottom: 24, left: 28 };
+  // PAD.left/right are percentages of W (the viewBox is percentage-based),
+  // while PAD.top/bottom are real pixels of H — keep left/right small or the
+  // Y-axis label gutter eats a huge chunk of the card as blank space.
+  const PAD = { top: 16, right: 2, bottom: 28, left: 5 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
+
+  const [hoverI, setHoverI] = useState(null);
 
   const allVals = series.flatMap(s => s.data);
   const maxV = Math.max(...allVals, 1);
@@ -71,49 +85,115 @@ function LineChart({ series, labels, height = 140 }) {
     if (data.length === 0) return "";
     return data.map((v, i) => `${i === 0 ? "M" : "L"}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
   }
-  function area(data, color) {
+  function area(data, fill, key) {
     if (data.length === 0) return null;
     const line = path(data);
     const close = ` L${px(data.length - 1).toFixed(1)},${(PAD.top + chartH).toFixed(1)} L${PAD.left.toFixed(1)},${(PAD.top + chartH).toFixed(1)} Z`;
     return (
-      <path d={line + close}
-        fill={color} fillOpacity="0.08" stroke="none" />
+      <path key={key} d={line + close}
+        fill={fill} stroke="none" />
     );
   }
 
+  function handleMove(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width === 0 || n === 0) return;
+    const relX = (e.clientX - rect.left) / rect.width;
+    const idx = Math.round(relX * (n - 1));
+    setHoverI(Math.max(0, Math.min(n - 1, idx)));
+  }
+
   // y-axis ticks
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map(t => ({ v: Math.round(t * maxV), y: PAD.top + (1 - t) * chartH }));
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t, i) => ({ k: i, v: Math.round(t * maxV), y: PAD.top + (1 - t) * chartH }));
   // x-axis labels: show first, middle, last
   const xShow = n <= 7 ? labels.map((l, i) => ({ l, i })) : [0, Math.floor((n - 1) / 2), n - 1].map(i => ({ l: labels[i], i }));
 
+  const tipLeftPct = hoverI !== null ? px(hoverI) : 0;
+  const tipAlign = tipLeftPct > 72 ? "right" : tipLeftPct < 18 ? "left" : "center";
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ overflow: "visible" }}>
-      {/* Grid lines */}
+    <div style={{ position: "relative", width: "100%", height: H, cursor: "crosshair" }}
+      onMouseMove={handleMove} onMouseLeave={() => setHoverI(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ overflow: "visible", display: "block" }}>
+        <defs>
+          {series.map((s, i) => (
+            <linearGradient key={"grad-" + i} id={`sa-lc-grad-${i}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color} stopOpacity="0.32" />
+              <stop offset="100%" stopColor={s.color} stopOpacity="0.02" />
+            </linearGradient>
+          ))}
+        </defs>
+        {/* Grid lines */}
+        {ticks.map(t => (
+          <line key={t.k} x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y}
+            stroke="#F1F5F9" strokeWidth="0.5" />
+        ))}
+        {/* Areas + Lines */}
+        {series.map((s, i) => area(s.data, `url(#sa-lc-grad-${i})`, s.label + "-area"))}
+        {series.map(s => (
+          <path key={s.label} d={path(s.data)}
+            fill="none" stroke={s.color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        ))}
+        {/* Hover crosshair */}
+        {hoverI !== null && (
+          <line x1={px(hoverI)} y1={PAD.top} x2={px(hoverI)} y2={PAD.top + chartH}
+            stroke="#94A3B8" strokeWidth="0.5" strokeDasharray="1.5,1.5" vectorEffect="non-scaling-stroke" />
+        )}
+      </svg>
+
+      {/* Y labels — HTML overlay, positioned as % of the chart box */}
       {ticks.map(t => (
-        <line key={t.v} x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y}
-          stroke="#F1F5F9" strokeWidth="0.5" />
-      ))}
-      {/* Y labels */}
-      {ticks.map(t => (
-        <text key={t.v} x={PAD.left - 2} y={t.y + 1} textAnchor="end" fontSize="3.5" fill="#94A3B8">{t.v}</text>
+        <span key={t.k} style={{ position: "absolute", left: 0, top: `${(t.y / H) * 100}%`, transform: "translateY(-50%)", width: `${PAD.left}%`, paddingRight: "5px", boxSizing: "border-box", textAlign: "right", fontSize: "11px", fontWeight: 500, color: "#94A3B8" }}>
+          {t.v}
+        </span>
       ))}
       {/* X labels */}
       {xShow.map(({ l, i }) => (
-        <text key={i} x={px(i)} y={H - 2} textAnchor="middle" fontSize="3.5" fill="#94A3B8">{l}</text>
+        <span key={i} style={{ position: "absolute", left: `${px(i)}%`, bottom: 0, transform: "translateX(-50%)", fontSize: "11px", color: hoverI === i ? "#0F172A" : "#94A3B8", fontWeight: hoverI === i ? 700 : 500, whiteSpace: "nowrap", transition: "color 0.1s" }}>
+          {l}
+        </span>
       ))}
-      {/* Areas + Lines */}
-      {series.map(s => area(s.data, s.color))}
-      {series.map(s => (
-        <path key={s.label} d={path(s.data)}
-          fill="none" stroke={s.color} strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
-      ))}
-      {/* Dots on last point */}
-      {series.map(s => s.data.length > 0 && (
-        <circle key={s.label + "-dot"}
-          cx={px(s.data.length - 1)} cy={py(s.data[s.data.length - 1])}
-          r="1.6" fill={s.color} />
-      ))}
-    </svg>
+      {/* Point dots — every point gets a small marker so the chart never reads as blank;
+          the hovered column and the final day pop larger for emphasis. */}
+      {series.map(s => s.data.map((v, i) => {
+        const isLast = i === s.data.length - 1;
+        const isHover = hoverI === i;
+        const size = isHover ? 9 : isLast ? 7 : 4.5;
+        return (
+          <div key={s.label + "-dot-" + i} style={{
+            position: "absolute", left: `${px(i)}%`, top: `${(py(v) / H) * 100}%`,
+            transform: "translate(-50%,-50%)", width: `${size}px`, height: `${size}px`,
+            borderRadius: "50%", background: s.color,
+            opacity: hoverI === null ? (isLast ? 1 : 0.55) : (isHover ? 1 : 0.25),
+            boxShadow: isHover ? `0 0 0 3px #fff, 0 3px 8px ${s.color}77` : "0 0 0 2px #fff",
+            transition: "width 0.12s ease, height 0.12s ease, opacity 0.12s ease",
+            pointerEvents: "none",
+          }} />
+        );
+      }))}
+
+      {/* Hover tooltip */}
+      {hoverI !== null && (
+        <div style={{
+          position: "absolute", top: "2px",
+          left: tipAlign === "center" ? `${tipLeftPct}%` : tipAlign === "left" ? `${tipLeftPct}%` : undefined,
+          right: tipAlign === "right" ? `${100 - tipLeftPct}%` : undefined,
+          transform: tipAlign === "center" ? "translateX(-50%)" : "none",
+          background: "#0F172A", color: "#FFF", borderRadius: "9px", padding: "9px 12px",
+          fontSize: "11.5px", pointerEvents: "none", boxShadow: "0 8px 20px rgba(0,0,0,0.22)",
+          whiteSpace: "nowrap", zIndex: 5,
+        }}>
+          <div style={{ fontWeight: 800, marginBottom: "5px", color: "#F1F5F9" }}>{labels[hoverI]}</div>
+          {series.map(s => (
+            <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "7px", marginTop: "3px" }}>
+              <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: s.color, flexShrink: 0 }} />
+              <span style={{ flex: 1, color: "#CBD5E1", fontWeight: 500 }}>{s.label}</span>
+              <span style={{ fontWeight: 700 }}>{s.data[hoverI] ?? 0}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -142,7 +222,9 @@ function SortableTable({ columns, rows, emptyMsg = "No data" }) {
               <th key={col} onClick={() => handleSort(i)}
                 className="rpt-sort"
                 style={{ padding: "8px 12px", textAlign: i === 0 ? "left" : "right", fontWeight: "700", fontSize: "11px", color: sortCol === i ? "#0F172A" : "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none" }}>
-                {col} {sortCol === i ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", justifyContent: i === 0 ? "flex-start" : "flex-end" }}>
+                  {col} {sortCol === i && (sortDir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                </span>
               </th>
             ))}
           </tr>
@@ -186,24 +268,226 @@ function KpiCard({ label, value, sub, pct, color = "#2563EB", bg = "#EFF6FF", ic
   );
 }
 
-/* ── Status badge ── */
+/* ── Semantic colors for known statuses ── */
 const STATUS_STYLE = {
-  completed: { bg: "#F0FDF4", color: "#16A34A" },
-  assigned:  { bg: "#EFF6FF", color: "#2563EB" },
-  open:      { bg: "#FFFBEB", color: "#D97706" },
-  cancelled: { bg: "#FEF2F2", color: "#DC2626" },
-  published: { bg: "#EFF6FF", color: "#2563EB" },
-  draft:     { bg: "#F8FAFC", color: "#64748B" },
-  approved:  { bg: "#F0FDF4", color: "#16A34A" },
-  pending:   { bg: "#FFFBEB", color: "#D97706" },
-  rejected:  { bg: "#FEF2F2", color: "#DC2626" },
+  completed: { color: "#16A34A" },
+  assigned:  { color: "#2563EB" },
+  open:      { color: "#D97706" },
+  cancelled: { color: "#DC2626" },
+  published: { color: "#2563EB" },
+  draft:     { color: "#64748B" },
+  approved:  { color: "#16A34A" },
+  pending:   { color: "#D97706" },
+  rejected:  { color: "#DC2626" },
 };
-function StatusBadge({ status }) {
-  const st = STATUS_STYLE[status] || { bg: "#F8FAFC", color: "#64748B" };
+
+/* ── Palette for series without a fixed semantic color (e.g. industries) ── */
+const PALETTE = ["#2563EB", "#059669", "#DB2777", "#D97706", "#7C3AED", "#0891B2", "#DC2626", "#65A30D", "#0EA5E9", "#EA580C"];
+
+/* ── Donut chart: stacked stroke-dasharray arcs, count in the center ──
+   Segments and the paired legend rows share a lifted `hovered`/`onHover`
+   state (see DonutPanel) so pointing at either highlights both. */
+function DonutChart({ data, size = 108, thickness = 15, hovered, onHover }) {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  const r = (size - thickness) / 2;
+  const c = 2 * Math.PI * r;
+  const hoveredEntry = data.find(d => d.label === hovered);
+  let offset = 0;
   return (
-    <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "700", background: st.bg, color: st.color, textTransform: "capitalize" }}>
-      {status}
-    </span>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0, overflow: "visible" }}>
+      <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+        {total === 0 ? (
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F1F5F9" strokeWidth={thickness} />
+        ) : data.map(d => {
+          const frac = d.count / total;
+          const dash = Math.max(frac * c - (data.length > 1 ? 1.5 : 0), 0);
+          const isHovered = hovered === d.label;
+          const dim = hovered && !isHovered;
+          const el = (
+            <circle key={d.label} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={d.color}
+              strokeWidth={isHovered ? thickness + 4 : thickness} strokeDasharray={`${dash} ${c - dash}`} strokeDashoffset={-offset}
+              strokeLinecap="round" opacity={dim ? 0.35 : 1}
+              onMouseEnter={() => onHover(d.label)} onMouseLeave={() => onHover(null)}
+              style={{ cursor: "pointer", transition: "stroke-width 0.15s ease, opacity 0.15s ease" }} />
+          );
+          offset += frac * c;
+          return el;
+        })}
+      </g>
+      <text x="50%" y="48%" textAnchor="middle" dominantBaseline="central" fontSize={size * 0.24} fontWeight="800" fill="#0F172A" style={{ transition: "font-size 0.15s" }}>
+        {hoveredEntry ? hoveredEntry.count : total}
+      </text>
+      <text x="50%" y="68%" textAnchor="middle" dominantBaseline="central" fontSize={size * 0.095} fontWeight="600" fill="#94A3B8" style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
+        {hoveredEntry ? (typeof hoveredEntry.label === "string" ? hoveredEntry.label.replace(/_/g, " ").slice(0, 12) : hoveredEntry.label) : "total"}
+      </text>
+    </svg>
+  );
+}
+
+/* ── Legend list paired with a DonutChart ── */
+function DonutLegend({ data, capitalize = true, hovered, onHover }) {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  if (data.length === 0) return <p style={{ color: "#94A3B8", fontSize: "13px", padding: "8px 0" }}>No data</p>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1, minWidth: 0 }}>
+      {data.map(d => {
+        const isHovered = hovered === d.label;
+        return (
+          <div key={d.label}
+            onMouseEnter={() => onHover(d.label)} onMouseLeave={() => onHover(null)}
+            style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", cursor: "pointer", padding: "3px 6px", margin: "0 -6px", borderRadius: "7px", background: isHovered ? "#F8FAFC" : "transparent", transition: "background 0.15s" }}>
+            <span style={{ width: "9px", height: "9px", borderRadius: "3px", background: d.color, flexShrink: 0, transform: isHovered ? "scale(1.25)" : "scale(1)", transition: "transform 0.15s" }} />
+            <span style={{ flex: 1, minWidth: 0, color: isHovered ? "#0F172A" : "#374151", fontWeight: isHovered ? "700" : "600", textTransform: capitalize ? "capitalize" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{typeof d.label === "string" ? d.label.replace(/_/g, " ") : d.label}</span>
+            <span style={{ fontWeight: "700", color: "#0F172A" }}>{d.count}</span>
+            <span style={{ color: "#94A3B8", fontSize: "11px", width: "34px", textAlign: "right" }}>{total ? Math.round((d.count / total) * 100) : 0}%</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── A card panel combining a donut chart + legend for a status/category breakdown ── */
+function DonutPanel({ title, sub, data, loading, skeletonRows = 3 }) {
+  const [hovered, setHovered] = useState(null);
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>{title}</h3>
+      <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>{sub}</p>
+      {loading ? (
+        <div style={{ display: "flex", gap: "18px", alignItems: "center" }}>
+          <Shimmer w="108px" h="108px" r="50%" />
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", flex: 1 }}>
+            {Array.from({ length: skeletonRows }).map((_, i) => <Shimmer key={i} h="14px" />)}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+          <DonutChart data={data} hovered={hovered} onHover={setHovered} />
+          <DonutLegend data={data} hovered={hovered} onHover={setHovered} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Horizontal bar chart: one bar per category, scaled to the max value.
+   Hovering a row brightens/lifts its bar and highlights the row background. */
+function BarChart({ data, barHeight = 10 }) {
+  const [hovered, setHovered] = useState(null);
+  const max = Math.max(...data.map(d => d.count), 1);
+  const total = data.reduce((s, d) => s + d.count, 0);
+  if (data.length === 0) return <p style={{ color: "#94A3B8", fontSize: "13px", padding: "8px 0" }}>No data</p>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "13px" }}>
+      {data.map((d, i) => {
+        const isHovered = hovered === d.label;
+        const pct = total ? Math.round((d.count / total) * 100) : 0;
+        return (
+          <div key={d.label}
+            onMouseEnter={() => setHovered(d.label)} onMouseLeave={() => setHovered(null)}
+            style={{ cursor: "pointer", padding: "5px 7px", margin: "-5px -7px", borderRadius: "9px", background: isHovered ? "#F8FAFC" : "transparent", transition: "background 0.15s" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+              <span style={{ fontSize: "12.5px", fontWeight: isHovered ? "700" : "600", color: isHovered ? "#0F172A" : "#1E293B", textTransform: "capitalize", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {typeof d.label === "string" ? d.label.replace(/_/g, " ") : d.label}
+              </span>
+              <span style={{ fontSize: "12.5px", fontWeight: "700", color: d.color, flexShrink: 0, marginLeft: "8px" }}>
+                {d.sub && <span style={{ color: "#16A34A", fontWeight: 600, marginRight: "8px" }}>{d.sub}</span>}
+                {d.count} <span style={{ color: "#94A3B8", fontWeight: 600 }}>({pct}%)</span>
+              </span>
+            </div>
+            <div style={{ height: `${barHeight}px`, background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
+              <div style={{
+                width: `${(d.count / max) * 100}%`, height: "100%", borderRadius: "100px",
+                background: d.color,
+                filter: isHovered ? "brightness(1.12)" : "none",
+                transform: isHovered ? "scaleY(1.25)" : "scaleY(1)",
+                transformOrigin: "center",
+                boxShadow: isHovered ? `0 2px 10px ${d.color}66` : "none",
+                transition: "width 0.6s ease, filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease",
+              }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Card panel wrapping a BarChart, mirroring DonutPanel's chrome ── */
+function BarPanel({ title, sub, data, loading, skeletonRows = 4 }) {
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>{title}</h3>
+      <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>{sub}</p>
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          {Array.from({ length: skeletonRows }).map((_, i) => <Shimmer key={i} h="24px" />)}
+        </div>
+      ) : (
+        <BarChart data={data} />
+      )}
+    </div>
+  );
+}
+
+/* ── Vertical (column) bar chart — bars rise from a shared baseline with a
+   value bubble that pops above the hovered column. Good for comparing a
+   handful of categories side by side instead of stacking them as rows. */
+function VerticalBarChart({ data, height = 180 }) {
+  const [hovered, setHovered] = useState(null);
+  const max = Math.max(...data.map(d => d.count), 1);
+  const total = data.reduce((s, d) => s + d.count, 0);
+  if (data.length === 0) return <p style={{ color: "#94A3B8", fontSize: "13px", padding: "8px 0" }}>No data</p>;
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", height: `${height}px`, padding: "28px 4px 0" }}>
+      {data.map(d => {
+        const isHovered = hovered === d.label;
+        const pct = total ? Math.round((d.count / total) * 100) : 0;
+        const barPct = Math.max((d.count / max) * 100, d.count > 0 ? 4 : 0);
+        return (
+          <div key={d.label}
+            onMouseEnter={() => setHovered(d.label)} onMouseLeave={() => setHovered(null)}
+            style={{ flex: 1, minWidth: 0, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", cursor: "pointer", position: "relative" }}>
+            {isHovered && (
+              <div style={{ position: "absolute", bottom: `calc(${barPct}% + 10px)`, background: "#0F172A", color: "#FFF", borderRadius: "7px", padding: "5px 9px", fontSize: "11.5px", fontWeight: 700, whiteSpace: "nowrap", boxShadow: "0 6px 16px rgba(0,0,0,0.2)", zIndex: 2 }}>
+                {d.count} <span style={{ color: "#94A3B8", fontWeight: 600 }}>({pct}%)</span>
+              </div>
+            )}
+            <div style={{ width: "100%", maxWidth: "42px", height: "100%", display: "flex", alignItems: "flex-end", borderRadius: "7px 7px 0 0", overflow: "hidden", background: "#F8FAFC" }}>
+              <div style={{
+                width: "100%", height: `${barPct}%`, background: d.color, borderRadius: "6px 6px 0 0",
+                filter: isHovered ? "brightness(1.12)" : "none",
+                transform: isHovered ? "scaleX(1.12)" : "scaleX(1)",
+                transformOrigin: "bottom",
+                boxShadow: isHovered ? `0 -2px 12px ${d.color}55` : "none",
+                transition: "height 0.6s ease, filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease",
+              }} />
+            </div>
+            <span style={{ marginTop: "8px", fontSize: "11px", fontWeight: isHovered ? 700 : 600, color: isHovered ? "#0F172A" : "#64748B", textTransform: "capitalize", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+              {typeof d.label === "string" ? d.label.replace(/_/g, " ") : d.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Card panel wrapping a VerticalBarChart ── */
+function VerticalBarPanel({ title, sub, data, loading, height = 180 }) {
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>{title}</h3>
+      <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "6px" }}>{sub}</p>
+      {loading ? (
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", height: `${height}px`, padding: "28px 4px 0" }}>
+          {Array.from({ length: 6 }).map((_, i) => <Shimmer key={i} w="100%" h={`${30 + Math.random() * 60}%`} r="6px 6px 0 0" />)}
+        </div>
+      ) : (
+        <VerticalBarChart data={data} height={height} />
+      )}
+    </div>
   );
 }
 
@@ -228,6 +512,7 @@ export default function AdminReports() {
   const [usersByRole, setUsersByRole]     = useState([]);
   const [leaveStats, setLeaveStats]       = useState([]);
   const [workerStats, setWorkerStats]     = useState([]);
+  const [industryStats, setIndustryStats] = useState([]);
 
   // Raw for export
   const [rawData, setRawData] = useState({});
@@ -317,6 +602,11 @@ export default function AdminReports() {
       registered: b.created_at ? new Date(b.created_at).toLocaleDateString("en-GB") : "—",
     })).sort((a, b) => b.outlets - a.outlets);
     setBizTable(bizRows);
+
+    // ── Businesses by industry ──
+    const industryMap = {};
+    biz.forEach(b => { const k = b.industry || "unspecified"; industryMap[k] = (industryMap[k] || 0) + 1; });
+    setIndustryStats(Object.entries(industryMap).map(([label, count], i) => ({ label, count, color: PALETTE[i % PALETTE.length] })).sort((a, b) => b.count - a.count));
 
     // ── Krewby requests by status ──
     const reqMap = {};
@@ -514,8 +804,6 @@ export default function AdminReports() {
     doc.save(`krewby-report-${PERIODS[period].label}-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
-  const maxRole = Math.max(...usersByRole.map(r => r.total), 1);
-
   return (
     <AdminLayout title="Reports">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
@@ -537,22 +825,22 @@ export default function AdminReports() {
               ))}
             </div>
             <button onClick={downloadCSV} disabled={loading}
-              style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1 }}>
-              ⬇ CSV
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1 }}>
+              <Download size={14} /> CSV
             </button>
             <button onClick={downloadPDF} disabled={loading}
-              style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1 }}>
-              ⬇ PDF
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1 }}>
+              <Download size={14} /> PDF
             </button>
           </div>
         </div>
 
         {/* ── KPI Cards ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: "14px", marginBottom: "20px" }}>
-          <KpiCard loading={loading} icon="👤" label="New Users"       value={kpis.users}      pct={delta(kpis.users, kpis.usersPrev)}      sub={`vs prev ${PERIODS[period].label}`} color="#2563EB" bg="#EFF6FF" />
-          <KpiCard loading={loading} icon="🏢" label="New Businesses"  value={kpis.businesses} pct={delta(kpis.businesses, kpis.bizPrev)}    sub={`vs prev ${PERIODS[period].label}`} color="#059669" bg="#ECFDF5" />
-          <KpiCard loading={loading} icon="📋" label="Krewby Requests" value={kpis.requests}   pct={delta(kpis.requests, kpis.reqPrev)}     sub={`vs prev ${PERIODS[period].label}`} color="#DB2777" bg="#FDF2F8" />
-          <KpiCard loading={loading} icon="📅" label="Shifts"          value={kpis.shifts}     pct={delta(kpis.shifts, kpis.shiftsPrev)}    sub={`vs prev ${PERIODS[period].label}`} color="#D97706" bg="#FFFBEB" />
+          <KpiCard loading={loading} icon={<Users size={18} />} label="New Users"       value={kpis.users}      pct={delta(kpis.users, kpis.usersPrev)}      sub={`vs prev ${PERIODS[period].label}`} color="#2563EB" bg="#EFF6FF" />
+          <KpiCard loading={loading} icon={<Building2 size={18} />} label="New Businesses"  value={kpis.businesses} pct={delta(kpis.businesses, kpis.bizPrev)}    sub={`vs prev ${PERIODS[period].label}`} color="#059669" bg="#ECFDF5" />
+          <KpiCard loading={loading} icon={<ClipboardList size={18} />} label="Krewby Requests" value={kpis.requests}   pct={delta(kpis.requests, kpis.reqPrev)}     sub={`vs prev ${PERIODS[period].label}`} color="#DB2777" bg="#FDF2F8" />
+          <KpiCard loading={loading} icon={<CalendarDays size={18} />} label="Shifts"          value={kpis.shifts}     pct={delta(kpis.shifts, kpis.shiftsPrev)}    sub={`vs prev ${PERIODS[period].label}`} color="#D97706" bg="#FFFBEB" />
         </div>
 
         {/* ── Activity Chart ── */}
@@ -572,16 +860,37 @@ export default function AdminReports() {
             </div>
           </div>
           {loading ? (
-            <div style={{ height: "140px", display: "flex", alignItems: "flex-end", gap: "4px" }}>
+            <div style={{ height: "280px", display: "flex", alignItems: "flex-end", gap: "4px" }}>
               {Array.from({ length: 20 }).map((_, i) => <Shimmer key={i} w="100%" h={`${20 + Math.random() * 80}px`} r="3px" />)}
             </div>
           ) : (
-            <LineChart series={chartSeries} labels={chartLabels} height={140} />
+            <LineChart series={chartSeries} labels={chartLabels} height={280} />
           )}
         </div>
 
-        {/* ── Businesses Table ── */}
-        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+        {/* ── Businesses by Industry (vertical bar) + Krewby Requests (donut) ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+          <VerticalBarPanel title="Businesses by Industry" sub="All registered businesses" loading={loading}
+            data={industryStats} />
+          <DonutPanel title="Krewby Requests" sub="Breakdown by status (all time)" loading={loading}
+            data={requestsByStatus.map((r, i) => ({ label: r.status, count: r.count, color: STATUS_STYLE[r.status]?.color || PALETTE[i % PALETTE.length] }))} />
+        </div>
+
+        {/* ── Shifts (vertical bar) + Leave Requests (donut) ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+          <VerticalBarPanel title="Shifts" sub="Breakdown by status (all time)" loading={loading}
+            data={shiftsByStatus.map((r, i) => ({ label: r.status, count: r.count, color: STATUS_STYLE[r.status]?.color || PALETTE[i % PALETTE.length] }))} />
+          <DonutPanel title="Leave Requests" sub="All time, by approval status" loading={loading}
+            data={leaveStats.map((l, i) => ({ label: l.status, count: l.count, color: STATUS_STYLE[l.status]?.color || PALETTE[i % PALETTE.length] }))} />
+        </div>
+
+        {/* ── Users by Role (bar) ── */}
+        <BarPanel title="Users by Role" sub="All registered accounts" loading={loading} skeletonRows={5}
+          data={usersByRole.map((r, i) => ({ label: r.role, count: r.total, color: PALETTE[i % PALETTE.length], sub: `${r.active} active` }))} />
+        <div style={{ marginBottom: "20px" }} />
+
+        {/* ── Businesses Table (detail) ── */}
+        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Businesses</h3>
           <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>Click a column header to sort</p>
           {loading ? (
@@ -595,121 +904,6 @@ export default function AdminReports() {
               emptyMsg="No businesses yet"
             />
           )}
-        </div>
-
-        {/* ── Request Status + Shift Status ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
-
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Krewby Requests</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>Breakdown by status (all time)</p>
-            {loading ? <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>{Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} h="36px" />)}</div> : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead><tr style={{ borderBottom: "2px solid #F1F5F9" }}>
-                  <th style={{ padding: "8px 0", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-                  <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Count</th>
-                  <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Share</th>
-                </tr></thead>
-                <tbody>
-                  {requestsByStatus.length === 0 ? (
-                    <tr><td colSpan={3} style={{ padding: "24px 0", textAlign: "center", color: "#94A3B8" }}>No data</td></tr>
-                  ) : (() => {
-                    const total = requestsByStatus.reduce((s, r) => s + r.count, 0);
-                    return requestsByStatus.map(r => (
-                      <tr key={r.status} className="rpt-row" style={{ borderBottom: "1px solid #F8FAFC" }}>
-                        <td style={{ padding: "10px 0" }}><StatusBadge status={r.status} /></td>
-                        <td style={{ padding: "10px 0", textAlign: "right", fontWeight: "700", color: "#0F172A" }}>{r.count}</td>
-                        <td style={{ padding: "10px 0", textAlign: "right", color: "#64748B", fontSize: "12px" }}>{Math.round((r.count / total) * 100)}%</td>
-                      </tr>
-                    ));
-                  })()}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Shifts</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>Breakdown by status (all time)</p>
-            {loading ? <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>{Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="36px" />)}</div> : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead><tr style={{ borderBottom: "2px solid #F1F5F9" }}>
-                  <th style={{ padding: "8px 0", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-                  <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Count</th>
-                  <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Share</th>
-                </tr></thead>
-                <tbody>
-                  {shiftsByStatus.length === 0 ? (
-                    <tr><td colSpan={3} style={{ padding: "24px 0", textAlign: "center", color: "#94A3B8" }}>No data</td></tr>
-                  ) : (() => {
-                    const total = shiftsByStatus.reduce((s, r) => s + r.count, 0);
-                    return shiftsByStatus.map(r => (
-                      <tr key={r.status} className="rpt-row" style={{ borderBottom: "1px solid #F8FAFC" }}>
-                        <td style={{ padding: "10px 0" }}><StatusBadge status={r.status} /></td>
-                        <td style={{ padding: "10px 0", textAlign: "right", fontWeight: "700", color: "#0F172A" }}>{r.count}</td>
-                        <td style={{ padding: "10px 0", textAlign: "right", color: "#64748B", fontSize: "12px" }}>{Math.round((r.count / total) * 100)}%</td>
-                      </tr>
-                    ));
-                  })()}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-
-        {/* ── Users by Role + Leave Requests ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Users by Role</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>All registered accounts</p>
-            {loading ? <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>{Array.from({ length: 5 }).map((_, i) => <Shimmer key={i} h="38px" />)}</div> : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {usersByRole.map((r, i) => (
-                  <div key={r.role} style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-                      <span style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>{r.role}</span>
-                      <div style={{ display: "flex", gap: "10px", fontSize: "12px" }}>
-                        <span style={{ color: "#16A34A", fontWeight: "600" }}>{r.active} active</span>
-                        <span style={{ fontWeight: "700", color: "#0F172A" }}>{r.total}</span>
-                      </div>
-                    </div>
-                    <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
-                      <div style={{ height: "100%", borderRadius: "100px", background: "#2563EB", width: `${(r.total / maxRole) * 100}%`, transition: "width 0.8s ease" }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Leave Requests</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>All time, by approval status</p>
-            {loading ? <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>{Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="36px" />)}</div> : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead><tr style={{ borderBottom: "2px solid #F1F5F9" }}>
-                  <th style={{ padding: "8px 0", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-                  <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Count</th>
-                  <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Share</th>
-                </tr></thead>
-                <tbody>
-                  {leaveStats.length === 0 ? (
-                    <tr><td colSpan={3} style={{ padding: "24px 0", textAlign: "center", color: "#94A3B8" }}>No data</td></tr>
-                  ) : (() => {
-                    const total = leaveStats.reduce((s, l) => s + l.count, 0);
-                    return leaveStats.map(l => (
-                      <tr key={l.status} className="rpt-row" style={{ borderBottom: "1px solid #F8FAFC" }}>
-                        <td style={{ padding: "10px 0" }}><StatusBadge status={l.status} /></td>
-                        <td style={{ padding: "10px 0", textAlign: "right", fontWeight: "700", color: "#0F172A" }}>{l.count}</td>
-                        <td style={{ padding: "10px 0", textAlign: "right", color: "#64748B", fontSize: "12px" }}>{Math.round((l.count / total) * 100)}%</td>
-                      </tr>
-                    ));
-                  })()}
-                </tbody>
-              </table>
-            )}
-          </div>
         </div>
 
       </div>

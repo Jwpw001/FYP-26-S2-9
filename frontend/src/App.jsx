@@ -27,6 +27,9 @@ import SkillSettings            from "./pages/outlet-manager/SkillSettings";
 import Timesheets               from "./pages/outlet-manager/Timesheets";
 import Capacity                 from "./pages/outlet-manager/Capacity";
 import MyTimesheets             from "./pages/regular-staff/MyTimesheets";
+import MyTasks                  from "./pages/regular-staff/MyTasks";
+import StaffProjects            from "./pages/regular-staff/Projects";
+import StaffProjectBoard        from "./pages/regular-staff/ProjectBoard";
 import MyAppointments           from "./pages/regular-staff/MyAppointments";
 import Bookings                 from "./pages/outlet-manager/Bookings";
 import CreateShift        from "./pages/outlet-manager/CreateShift";
@@ -38,6 +41,7 @@ import ManagerNotifications from "./pages/outlet-manager/Notifications";
 import ManpowerRequests    from "./pages/outlet-manager/ManpowerRequests";
 
 // System Admin
+import AdminLayout         from "./components/layout/AdminLayout";
 import AdminDashboard      from "./pages/system-admin/Dashboard";
 import SkillTags           from "./pages/system-admin/SkillTags";
 import Businesses          from "./pages/system-admin/Businesses";
@@ -140,6 +144,9 @@ function App() {
         <Route path="/system-admin/reports"              element={<PR roles={["system_admin"]}><AdminReports /></PR>} />
         <Route path="/system-admin/applications"          element={<PR roles={["system_admin"]}><AdminApplications /></PR>} />
         <Route path="/system-admin/requests"              element={<PR roles={["system_admin"]}><AdminRequests /></PR>} />
+        <Route path="/system-admin/notifications" element={<PR roles={["system_admin"]}>
+          <NotificationsPage Layout={AdminLayout} />
+        </PR>} />
 
         {/* ── Outlet Manager ───────────────────────────── */}
         <Route path="/outlet-manager/dashboard"    element={<PR roles={["outlet_manager"]}><ManagerDashboard /></PR>} />
@@ -169,6 +176,9 @@ function App() {
         <Route path="/regular-staff/leave"         element={<PR roles={["regular_staff"]}><LeaveRequests /></PR>} />
         <Route path="/regular-staff/swaps"         element={<PR roles={["regular_staff"]}><SwapRequests /></PR>} />
         <Route path="/regular-staff/timesheets"    element={<PR roles={["regular_staff"]}><MyTimesheets /></PR>} />
+        <Route path="/regular-staff/tasks"         element={<PR roles={["regular_staff"]}><MyTasks /></PR>} />
+        <Route path="/regular-staff/projects"            element={<PR roles={["regular_staff"]}><StaffProjects /></PR>} />
+        <Route path="/regular-staff/projects/:id/board"  element={<PR roles={["regular_staff"]}><StaffProjectBoard /></PR>} />
         <Route path="/regular-staff/appointments" element={<PR roles={["regular_staff"]}><MyAppointments /></PR>} />
         <Route path="/regular-staff/notifications" element={<PR roles={["regular_staff"]}>
           <NotificationsPage Layout={StaffLayout} />

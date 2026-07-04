@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { createPortal } from "react-dom";
+import { ClipboardList } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("coord-req-styles")) {
   const style = document.createElement("style");
@@ -22,7 +23,7 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
 }
 
 function fmtDate(d) {
-  if (!d) return "â€”";
+  if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -135,7 +136,7 @@ export default function CoordinatorRequests() {
 
   // Helper: find worker name
   function workerName(w) {
-    if (!w) return "â€”";
+    if (!w) return "—";
     const found = workers.find(wk => wk.krewby_worker_id === w.krewby_worker_id);
     return found?.user?.full_name || found?.user?.email || `Worker #${w.krewby_worker_id}`;
   }
@@ -147,7 +148,7 @@ export default function CoordinatorRequests() {
         <div style={{ marginBottom: "24px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Krewby Requests</h2>
           <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-            Shift requests from outlets that need Krewby workers Â· {pendingCnt} pending review
+            Shift requests from outlets that need Krewby workers · {pendingCnt} pending review
           </p>
         </div>
 
@@ -181,7 +182,7 @@ export default function CoordinatorRequests() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px", textAlign: "center" }}>
-            <div style={{ fontSize: "32px", marginBottom: "10px" }}>ðŸ“‹</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "10px" }}><ClipboardList size={32} color="#CBD5E1" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>
               No {filter === "all" ? "" : FILTERS.find(f => f.value === filter)?.label.toLowerCase()} requests
             </p>
@@ -199,11 +200,11 @@ export default function CoordinatorRequests() {
                     <div>
                       <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>
                         {req.role_name}
-                        {req.skills?.name && <span style={{ marginLeft: "8px", fontSize: "12px", fontWeight: "500", color: "#64748B" }}>Â· {req.skills.name}</span>}
+                        {req.skills?.name && <span style={{ marginLeft: "8px", fontSize: "12px", fontWeight: "500", color: "#64748B" }}>· {req.skills.name}</span>}
                       </p>
                       <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
                         {req.outlets?.name || "Unknown outlet"}
-                        {req.outlet_address && ` Â· ${req.outlet_address}`}
+                        {req.outlet_address && ` · ${req.outlet_address}`}
                       </p>
                     </div>
                     <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", background: st.bg, color: st.color, flexShrink: 0 }}>
@@ -214,7 +215,7 @@ export default function CoordinatorRequests() {
                   {/* Details row */}
                   <div style={{ display: "flex", gap: "28px", flexWrap: "wrap", padding: "14px 0", borderTop: "1px solid #F1F5F9", borderBottom: "1px solid #F1F5F9", marginBottom: "14px" }}>
                     <InfoItem label="Date"      value={fmtDate(req.shift_date)} />
-                    <InfoItem label="Time"      value={`${req.start_time?.slice(0,5)} â€“ ${req.end_time?.slice(0,5)}`} />
+                    <InfoItem label="Time"      value={`${req.start_time?.slice(0,5)} – ${req.end_time?.slice(0,5)}`} />
                     <InfoItem label="Headcount" value={`${req.headcount} worker${req.headcount > 1 ? "s" : ""}`} />
                     <InfoItem label="Submitted" value={fmtDate(req.created_at)} />
                     {req.status !== "pending_review" && req.assigned_worker && (
@@ -253,18 +254,18 @@ export default function CoordinatorRequests() {
           <div style={{ position: "relative", background: "#FFF", borderRadius: "16px", padding: "28px", width: "420px", maxWidth: "92vw", boxShadow: "0 20px 60px rgba(0,0,0,0.2)", animation: "pageIn 0.2s ease both" }}>
             <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>Assign Worker</h3>
             <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>
-              {assignModal.request.role_name} Â· {fmtDate(assignModal.request.shift_date)} Â· {assignModal.request.outlets?.name}
+              {assignModal.request.role_name} · {fmtDate(assignModal.request.shift_date)} · {assignModal.request.outlets?.name}
             </p>
 
             <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", display: "block", marginBottom: "6px" }}>Select Krewby Worker</label>
             <select value={pickedWorker} onChange={e => setPickedWorker(e.target.value)}
               style={{ width: "100%", padding: "10px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "13px", color: "#1E293B", background: "#FAFAFA", marginBottom: "20px" }}>
-              <option value="">â€” Choose a worker â€”</option>
+              <option value="">— Choose a worker —</option>
               {workers.filter(w => w.is_active).map(w => (
                 <option key={w.krewby_worker_id} value={w.krewby_worker_id}>
                   {w.user?.full_name || w.user?.email || `Worker #${w.krewby_worker_id}`}
-                  {w.preferred_location ? ` Â· ${w.preferred_location}` : ""}
-                  {w.rating ? ` Â· â­ ${Number(w.rating).toFixed(1)}` : ""}
+                  {w.preferred_location ? ` · ${w.preferred_location}` : ""}
+                  {w.rating ? ` · ★ ${Number(w.rating).toFixed(1)}` : ""}
                 </option>
               ))}
             </select>
@@ -276,7 +277,7 @@ export default function CoordinatorRequests() {
               </button>
               <button onClick={handleAssign} disabled={assigning || !pickedWorker}
                 style={{ flex: 2, padding: "11px", borderRadius: "10px", border: "none", background: assigning || !pickedWorker ? "#93C5FD" : "#3B82F6", color: "#FFF", fontSize: "14px", fontWeight: "600", cursor: assigning || !pickedWorker ? "default" : "pointer" }}>
-                {assigning ? "Assigningâ€¦" : "Confirm Assignment"}
+                {assigning ? "Assigning…" : "Confirm Assignment"}
               </button>
             </div>
           </div>
