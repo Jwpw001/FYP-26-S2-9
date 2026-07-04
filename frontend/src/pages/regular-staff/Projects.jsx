@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import StaffLayout from "../../components/layout/StaffLayout";
 import { api } from "../../lib/api";
-import { Kanban, ArrowUpRight, Users } from "lucide-react";
+import { Kanban, ArrowUpRight, Users, ClipboardList } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-proj-styles")) {
   const style = document.createElement("style");
@@ -68,7 +68,7 @@ export default function StaffProjects() {
           </div>
         ) : projects.length === 0 ? (
           <div style={{ background: "#fff", border: "1px solid #E8EDF5", borderRadius: "16px", padding: "72px", textAlign: "center" }}>
-            <div style={{ fontSize: "40px", marginBottom: "12px" }}>📋</div>
+            <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}><ClipboardList size={40} color="#94A3B8" /></div>
             <p style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B" }}>No projects yet.</p>
           </div>
         ) : (

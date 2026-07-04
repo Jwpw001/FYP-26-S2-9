@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import StaffLayout from "../../components/layout/StaffLayout";
 import { api } from "../../lib/api";
-import { Calendar, Flag, FolderKanban } from "lucide-react";
+import { Calendar, Flag, FolderKanban, CheckCircle2 } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-tasks-styles")) {
   const style = document.createElement("style");
@@ -99,7 +99,7 @@ export default function MyTasks() {
           </div>
         ) : displayed.length === 0 ? (
           <div style={{ background: "#fff", border: "1px solid #E8EDF5", borderRadius: "16px", padding: "72px", textAlign: "center" }}>
-            <p style={{ fontSize: "36px", marginBottom: "12px" }}>✅</p>
+            <p style={{ fontSize: "36px", marginBottom: "12px", display: "flex", justifyContent: "center" }}><CheckCircle2 size={36} color="#16A34A" /></p>
             <p style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B" }}>
               {filter === "done" ? "No completed tasks yet." : "Nothing assigned to you right now."}
             </p>

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { Sparkles, AlertTriangle, CheckCircle2, Star, Check, Pencil, Users, BarChart2 } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("gws-styles")) {
   const s = document.createElement("style");
@@ -125,7 +126,7 @@ export default function GenerateWeeklySchedule() {
               style={{ width:"32px",height:"32px",borderRadius:"8px",background:"#F1F5F9",border:"1px solid #E2E8F0",color:"#475569",fontSize:"15px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>←</button>
             <div style={{ width:"1px",height:"22px",background:"#E2E8F0" }}/>
             <div style={{ display:"flex",alignItems:"center",gap:"8px" }}>
-              <div style={{ width:"28px",height:"28px",borderRadius:"7px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",color:"#fff" }}>✦</div>
+              <div style={{ width:"28px",height:"28px",borderRadius:"7px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff" }}><Sparkles size={13} /></div>
               <div>
                 <div style={{ fontSize:"13px",fontWeight:"800",color:"#0F172A",lineHeight:1 }}>AI Weekly Schedule</div>
                 {weekStart && weekEnd && <div style={{ fontSize:"10px",color:"#94A3B8",marginTop:"1px" }}>{fmtRange(weekStart, weekEnd)}</div>}
@@ -172,7 +173,7 @@ export default function GenerateWeeklySchedule() {
               <div style={{ position:"relative",width:"68px",height:"68px" }}>
                 <div style={{ position:"absolute",inset:0,borderRadius:"50%",border:"3px solid #E2E8F0" }}/>
                 <div style={{ position:"absolute",inset:0,borderRadius:"50%",border:"3px solid transparent",borderTopColor:"#6366F1",animation:"gwsSpin 0.85s linear infinite" }}/>
-                <div style={{ position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px" }}>✦</div>
+                <div style={{ position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center" }}><Sparkles size={24} color="#6366F1" /></div>
               </div>
               <div style={{ textAlign:"center" }}>
                 <p style={{ fontSize:"17px",fontWeight:"800",color:"#1E293B",marginBottom:"6px" }}>Building your week…</p>
@@ -187,7 +188,7 @@ export default function GenerateWeeklySchedule() {
           {/* Error */}
           {step==="error" && (
             <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:"14px",animation:"gwsFade 0.3s ease" }}>
-              <div style={{ width:"60px",height:"60px",borderRadius:"50%",background:"#FEF2F2",border:"2px solid #FCA5A5",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px" }}>⚠️</div>
+              <div style={{ width:"60px",height:"60px",borderRadius:"50%",background:"#FEF2F2",border:"2px solid #FCA5A5",display:"flex",alignItems:"center",justifyContent:"center" }}><AlertTriangle size={26} color="#DC2626" /></div>
               <p style={{ fontSize:"16px",fontWeight:"800",color:"#DC2626" }}>Generation failed</p>
               <p style={{ fontSize:"13px",color:"#64748B",maxWidth:"340px",textAlign:"center",lineHeight:1.6 }}>{errorMsg}</p>
               <button onClick={run} style={{ padding:"9px 22px",borderRadius:"9px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",border:"none",color:"#fff",fontSize:"13px",fontWeight:"700",cursor:"pointer" }}>↺ Try Again</button>
@@ -197,7 +198,7 @@ export default function GenerateWeeklySchedule() {
           {/* Done */}
           {step==="done" && (
             <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:"14px",animation:"gwsFade 0.3s ease" }}>
-              <div style={{ width:"68px",height:"68px",borderRadius:"50%",background:"linear-gradient(135deg,#D1FAE5,#A7F3D0)",border:"2px solid #6EE7B7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"30px",boxShadow:"0 8px 24px rgba(16,185,129,0.2)" }}>✓</div>
+              <div style={{ width:"68px",height:"68px",borderRadius:"50%",background:"linear-gradient(135deg,#D1FAE5,#A7F3D0)",border:"2px solid #6EE7B7",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 8px 24px rgba(16,185,129,0.2)" }}><CheckCircle2 size={30} color="#059669" /></div>
               <p style={{ fontSize:"18px",fontWeight:"800",color:"#059669" }}>{created} shift{created!==1?"s":""} saved as draft!</p>
               <p style={{ fontSize:"13px",color:"#64748B" }}>Review and publish them from the calendar.</p>
               <button onClick={() => goTo("/outlet-manager/shifts")} style={{ padding:"9px 22px",borderRadius:"9px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",border:"none",color:"#fff",fontSize:"13px",fontWeight:"700",cursor:"pointer" }}>← Back to Shifts</button>
@@ -215,7 +216,7 @@ export default function GenerateWeeklySchedule() {
                   <button onClick={() => setAvailOpen(o => !o)}
                     style={{ width:"100%",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"#F5F3FF",border:"none",cursor:"pointer",textAlign:"left" }}>
                     <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
-                      <div style={{ width:"28px",height:"28px",borderRadius:"7px",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px" }}>👥</div>
+                      <div style={{ width:"28px",height:"28px",borderRadius:"7px",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff" }}><Users size={13} /></div>
                       <div>
                         <span style={{ fontSize:"13px",fontWeight:"800",color:"#1E293B" }}>Casual Staff Availability</span>
                         <span style={{ fontSize:"11px",color:"#64748B",marginLeft:"8px" }}>
@@ -305,7 +306,7 @@ export default function GenerateWeeklySchedule() {
                   <div style={{ display:"flex",alignItems:"center",gap:"5px",padding:"5px 10px",borderRadius:"8px",background:"#FFFBEB",border:"1px solid #FCD34D" }}>
                     <div style={{ width:"18px",height:"18px",borderRadius:"50%",background:"#FDE68A",border:"2px solid #F59E0B",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"8px",fontWeight:"800",color:"#92400E",flexShrink:0 }}>C</div>
                     <span style={{ fontSize:"11px",color:"#92400E",fontWeight:"700" }}>Casual Staff</span>
-                    <span style={{ fontSize:"9px",fontWeight:"700",color:"#D97706",background:"#FEF3C7",border:"1px solid #FCD34D",borderRadius:"100px",padding:"0px 6px" }}>★</span>
+                    <span style={{ fontSize:"9px",fontWeight:"700",color:"#D97706",background:"#FEF3C7",border:"1px solid #FCD34D",borderRadius:"100px",padding:"0px 6px",display:"inline-flex",alignItems:"center" }}><Star size={9} /></span>
                   </div>
                 </div>
               </div>
@@ -366,12 +367,12 @@ export default function GenerateWeeklySchedule() {
                                       color:      isCasual(name) ? "#92400E" : "#475569",
                                       border:     isCasual(name) ? "1px solid #FCD34D" : "1px solid transparent",
                                     }}>
-                                      {isCasual(name) && <span style={{ fontSize:"8px",fontWeight:"900",color:"#D97706" }}>★</span>}
+                                      {isCasual(name) && <Star size={8} color="#D97706" />}
                                       {name}
                                     </span>
                                   ))}
                                   {allStaff.length > 3 && <span style={{ fontSize:"9px",fontWeight:"600",color:"#94A3B8",background:"#F1F5F9",borderRadius:"100px",padding:"1px 7px" }}>+{allStaff.length-3}</span>}
-                                  {allStaff.length === 0 && <span style={{ fontSize:"9px",color:"#F59E0B",fontWeight:"600" }}>⚠ No staff</span>}
+                                  {allStaff.length === 0 && <span style={{ fontSize:"9px",color:"#F59E0B",fontWeight:"600",display:"inline-flex",alignItems:"center",gap:"3px" }}><AlertTriangle size={9} /> No staff</span>}
                                 </div>
                               </div>
 
@@ -381,7 +382,7 @@ export default function GenerateWeeklySchedule() {
                               {/* Include checkbox */}
                               <div onClick={e=>toggle(i,e)}
                                 style={{ width:"18px",height:"18px",borderRadius:"5px",border:`1.5px solid ${on?color:"#D1D5DB"}`,background:on?color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s",cursor:"pointer" }}>
-                                {on && <span style={{color:"#fff",fontSize:"10px",fontWeight:"900",lineHeight:1}}>✓</span>}
+                                {on && <Check size={10} color="#fff" strokeWidth={3} />}
                               </div>
                             </div>
                           );
@@ -453,10 +454,10 @@ export default function GenerateWeeklySchedule() {
                                 {editMode ? (
                                   <>
                                     <button onClick={cancelEdit} style={{ flex:1,padding:"8px",borderRadius:"8px",border:"1.5px solid #E2E8F0",background:"#fff",color:"#64748B",fontSize:"11px",fontWeight:"700",cursor:"pointer" }}>Cancel</button>
-                                    <button onClick={()=>saveEdit(globalIdx)} style={{ flex:2,padding:"8px",borderRadius:"8px",border:"none",background:`linear-gradient(135deg,${color},#7C3AED)`,color:"#fff",fontSize:"11px",fontWeight:"700",cursor:"pointer",boxShadow:`0 3px 8px ${color}40` }}>✓ Save</button>
+                                    <button onClick={()=>saveEdit(globalIdx)} style={{ flex:2,padding:"8px",borderRadius:"8px",border:"none",background:`linear-gradient(135deg,${color},#7C3AED)`,color:"#fff",fontSize:"11px",fontWeight:"700",cursor:"pointer",boxShadow:`0 3px 8px ${color}40`,display:"flex",alignItems:"center",justifyContent:"center",gap:"4px" }}><Check size={12} /> Save</button>
                                   </>
                                 ) : (
-                                  <button onClick={()=>startEdit(shift)} style={{ flex:1,padding:"8px",borderRadius:"8px",border:`1.5px solid ${color}`,background:`${color}0D`,color,fontSize:"11px",fontWeight:"700",cursor:"pointer" }}>✎ Edit Shift</button>
+                                  <button onClick={()=>startEdit(shift)} style={{ flex:1,padding:"8px",borderRadius:"8px",border:`1.5px solid ${color}`,background:`${color}0D`,color,fontSize:"11px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"4px" }}><Pencil size={12} /> Edit Shift</button>
                                 )}
                               </div>
                             </div>
@@ -517,7 +518,7 @@ export default function GenerateWeeklySchedule() {
                                           ))}
                                         </div>
                                       ) : (
-                                        <div style={{ fontSize:"10px",color:"#F59E0B",fontWeight:"600",display:"flex",alignItems:"center",gap:"4px" }}>⚠ Unassigned</div>
+                                        <div style={{ fontSize:"10px",color:"#F59E0B",fontWeight:"600",display:"flex",alignItems:"center",gap:"4px" }}><AlertTriangle size={10} /> Unassigned</div>
                                       )}
                                     </div>
                                   </div>
@@ -567,7 +568,7 @@ export default function GenerateWeeklySchedule() {
                   <div style={{ marginTop:"24px",borderRadius:"14px",border:"1px solid #E8EDF5",background:"#fff",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.04)" }}>
                     {/* Header */}
                     <div style={{ padding:"14px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",gap:"10px",background:"#F8FAFC" }}>
-                      <div style={{ width:"28px",height:"28px",borderRadius:"7px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px" }}>📊</div>
+                      <div style={{ width:"28px",height:"28px",borderRadius:"7px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff" }}><BarChart2 size={13} /></div>
                       <div>
                         <div style={{ fontSize:"13px",fontWeight:"800",color:"#1E293B" }}>Staff Statistics</div>
                         <div style={{ fontSize:"11px",color:"#94A3B8" }}>Based on {accepted.size} selected shifts</div>
@@ -606,7 +607,7 @@ export default function GenerateWeeklySchedule() {
                                 {/* Type */}
                                 <td style={{ padding:"12px 16px" }}>
                                   {casual
-                                    ? <span style={{ fontSize:"10px",fontWeight:"700",color:"#D97706",background:"#FEF3C7",border:"1px solid #FCD34D",borderRadius:"100px",padding:"2px 8px" }}>★ Casual</span>
+                                    ? <span style={{ fontSize:"10px",fontWeight:"700",color:"#D97706",background:"#FEF3C7",border:"1px solid #FCD34D",borderRadius:"100px",padding:"2px 8px",display:"inline-flex",alignItems:"center",gap:"3px" }}><Star size={9} /> Casual</span>
                                     : <span style={{ fontSize:"10px",fontWeight:"700",color:"#4F46E5",background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:"100px",padding:"2px 8px" }}>Regular</span>
                                   }
                                 </td>

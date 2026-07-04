@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { getUser, setUser } from "../utils/auth";
 import { api } from "../lib/api";
+import { CheckCircle2 } from "lucide-react";
 
 const DASHBOARD = {
   outlet_manager:      "/outlet-manager/dashboard",
@@ -101,7 +102,7 @@ export default function JoinByCode() {
 
         {step === "done" ? (
           <div style={{ textAlign: "center" }}>
-            <div style={s.successIcon}>✓</div>
+            <div style={s.successIcon}><CheckCircle2 size={24} color="#059669" /></div>
             <h2 style={s.title}>You're in!</h2>
             <p style={s.muted}>Redirecting to your dashboard…</p>
           </div>

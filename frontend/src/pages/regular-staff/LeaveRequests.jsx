@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import StaffLayout from "../../components/layout/StaffLayout";
+import { Palmtree } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-leave-styles")) {
   const style = document.createElement("style");
@@ -211,7 +212,7 @@ export default function LeaveRequests() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ fontSize: "36px", marginBottom: "12px" }}>🏖</div>
+            <div style={{ fontSize: "36px", marginBottom: "12px", display: "flex", justifyContent: "center" }}><Palmtree size={36} color="#D97706" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No {filter === "all" ? "" : filter} leave requests</p>
           </div>
         ) : (

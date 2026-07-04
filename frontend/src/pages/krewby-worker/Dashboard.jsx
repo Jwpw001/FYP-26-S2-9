@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import WorkerLayout from "../../components/layout/WorkerLayout";
-import { Briefcase, CheckCircle2, Star, Bell } from "lucide-react";
+import { Briefcase, CheckCircle2, Star, Bell, Hand, MapPin, SmilePlus, Flag, CalendarDays, Check } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("worker-dash-styles")) {
   const style = document.createElement("style");
@@ -287,7 +287,7 @@ export default function WorkerDashboard() {
         {/* Welcome */}
         <div style={{ marginBottom: "28px" }}>
           <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
-            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} 👋
+            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} <Hand size={20} style={{ display: "inline", verticalAlign: "middle" }} />
           </h2>
           <p style={{ fontSize: "14px", color: "#64748B" }}>Here's an overview of your upcoming jobs.</p>
         </div>
@@ -326,7 +326,7 @@ export default function WorkerDashboard() {
         {/* Preferred location banner */}
         {!loading && profile?.preferred_location && (
           <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "12px", padding: "14px 18px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "18px" }}>📍</span>
+            <MapPin size={18} color="#1D4ED8" />
             <p style={{ fontSize: "13px", color: "#1D4ED8", fontWeight: "500" }}>
               Preferred area: <strong>{profile.preferred_location}</strong>
             </p>
@@ -352,7 +352,7 @@ export default function WorkerDashboard() {
             </div>
           ) : !todayJob ? (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <p style={{ fontSize: "32px", marginBottom: "10px" }}>😌</p>
+              <p style={{ marginBottom: "10px" }}><SmilePlus size={32} color="#94A3B8" /></p>
               <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>No job today — enjoy your day!</p>
               <p style={{ fontSize: "13px", color: "#64748B", marginTop: "4px" }}>Check back when you have an upcoming assignment.</p>
             </div>
@@ -394,7 +394,7 @@ export default function WorkerDashboard() {
               <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                 {clockedIn ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#DCFCE7", border: "1.5px solid #BBF7D0", borderRadius: "10px", padding: "10px 16px" }}>
-                    <span style={{ fontSize: "16px" }}>✅</span>
+                    <CheckCircle2 size={16} color="#16A34A" />
                     <div>
                       <p style={{ fontSize: "11px", color: "#166534", fontWeight: "600" }}>Clocked In</p>
                       <p style={{ fontSize: "15px", color: "#166534", fontWeight: "800" }}>{fmtTime(clockedIn)}</p>
@@ -422,7 +422,7 @@ export default function WorkerDashboard() {
 
                 {clockedOut ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#FFF1F2", border: "1.5px solid #FECACA", borderRadius: "10px", padding: "10px 16px" }}>
-                    <span style={{ fontSize: "16px" }}>🏁</span>
+                    <Flag size={16} color="#DC2626" />
                     <div>
                       <p style={{ fontSize: "11px", color: "#9F1239", fontWeight: "600" }}>Clocked Out</p>
                       <p style={{ fontSize: "15px", color: "#9F1239", fontWeight: "800" }}>{fmtTime(clockedOut)}</p>
@@ -463,8 +463,8 @@ export default function WorkerDashboard() {
               ))}
             </div>
           ) : upcomingJobs.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "28px 0", color: "#94A3B8", fontSize: "14px" }}>
-              No upcoming jobs — you're all clear! ✓
+            <div style={{ textAlign: "center", padding: "28px 0", color: "#94A3B8", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+              No upcoming jobs — you're all clear! <Check size={14} color="#94A3B8" />
             </div>
           ) : (
             upcomingJobs.map((j, i) => (
@@ -507,15 +507,15 @@ export default function WorkerDashboard() {
           <h3 style={{ ...secTitle, marginBottom: "14px" }}>Quick Actions</h3>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
             {[
-              { label: "My Jobs",       icon: "💼", link: "/krewby-worker/jobs" },
-              { label: "Availability",  icon: "🗓", link: "/krewby-worker/availability" },
-              { label: "Notifications", icon: "🔔", link: "/krewby-worker/notifications" },
+              { label: "My Jobs",       Icon: Briefcase, link: "/krewby-worker/jobs" },
+              { label: "Availability",  Icon: CalendarDays, link: "/krewby-worker/availability" },
+              { label: "Notifications", Icon: Bell, link: "/krewby-worker/notifications" },
             ].map(a => (
               <button key={a.label}
                 className="worker-action-btn"
                 onClick={() => navigate(a.link)}
                 style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 18px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer", transition: "all 0.15s" }}>
-                <span>{a.icon}</span>{a.label}
+                <a.Icon size={18} />{a.label}
               </button>
             ))}
           </div>

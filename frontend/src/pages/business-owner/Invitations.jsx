@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { api } from "../../lib/api";
-import { Plus, Copy, Check, Clock, UserCheck, XCircle, RefreshCw, Mail } from "lucide-react";
+import { Plus, Copy, Check, Clock, UserCheck, XCircle, RefreshCw, Mail, X } from "lucide-react";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-invite-styles")) {
@@ -153,7 +153,7 @@ export default function BOInvitations() {
                 <p style={{ fontWeight: "700", color: "#166534", marginBottom: "4px" }}>Invitation sent to {successCode.email}!</p>
                 <p style={{ fontSize: "13px", color: "#4ADE80" }}>They'll receive an email with a link and this code:</p>
               </div>
-              <button onClick={() => setSuccessCode(null)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", fontSize: "16px" }}>✕</button>
+              <button onClick={() => setSuccessCode(null)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", display: "inline-flex", alignItems: "center" }}><X size={16} /></button>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "14px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "28px", fontWeight: "800", color: "#0F172A", letterSpacing: "0.12em", fontFamily: "monospace" }}>
@@ -317,7 +317,7 @@ export default function BOInvitations() {
                             </>
                           )}
                           {inv.status === "accepted" && (
-                            <span style={{ fontSize: "11px", color: "#059669", fontWeight: "600" }}>✓ Joined</span>
+                            <span style={{ fontSize: "11px", color: "#059669", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "3px" }}><Check size={12} color="#059669" /> Joined</span>
                           )}
                         </div>
                       </td>

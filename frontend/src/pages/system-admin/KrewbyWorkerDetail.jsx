@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { Pause, Play, Trash2 } from "lucide-react";
 
 const AVATAR_COLORS = ["#3B82F6","#8B5CF6","#EC4899","#F59E0B","#10B981","#EF4444","#06B6D4"];
 function avatarColor(n="") { return AVATAR_COLORS[(n.charCodeAt(0)||0)%AVATAR_COLORS.length]; }
@@ -133,11 +134,13 @@ export default function KrewbyWorkerDetail() {
           <div style={{ marginTop:"16px", display:"flex", flexDirection:"column", gap:"8px" }}>
             <button onClick={toggleActive}
               style={{ width:"100%", padding:"9px", borderRadius:"9px", fontSize:"13px", fontWeight:"600", cursor:"pointer", background: worker.is_active?"#FEF3C7":"#DCFCE7", color: worker.is_active?"#92400E":"#166534", border: worker.is_active?"1px solid #FDE68A":"1px solid #BBF7D0" }}>
-              {worker.is_active ? "⏸ Deactivate" : "▶ Activate"}
+              {worker.is_active
+                ? <span style={{ display:"inline-flex", alignItems:"center", gap:"4px", justifyContent:"center" }}><Pause size={14}/> Deactivate</span>
+                : <span style={{ display:"inline-flex", alignItems:"center", gap:"4px", justifyContent:"center" }}><Play size={14}/> Activate</span>}
             </button>
             <button onClick={() => setShowDel(true)}
               style={{ width:"100%", padding:"9px", borderRadius:"9px", fontSize:"13px", fontWeight:"600", cursor:"pointer", background:"#FEF2F2", color:"#991B1B", border:"1px solid #FECACA" }}>
-              🗑 Delete Worker
+              <span style={{ display:"inline-flex", alignItems:"center", gap:"4px", justifyContent:"center" }}><Trash2 size={14}/> Delete Worker</span>
             </button>
           </div>
         </div>
@@ -201,7 +204,7 @@ export default function KrewbyWorkerDetail() {
       {showDel && (
         <div style={s.overlay} onClick={() => setShowDel(false)}>
           <div style={s.modal} onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize:"32px", marginBottom:"10px" }}>🗑</p>
+            <p style={{ fontSize:"32px", marginBottom:"10px", display:"flex", justifyContent:"center", color:"#991B1B" }}><Trash2 size={32}/></p>
             <h3 style={s.modalTitle}>Delete Worker?</h3>
             <p style={s.modalBody}>This will permanently remove <strong>{name}</strong> and all their records.</p>
             <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>

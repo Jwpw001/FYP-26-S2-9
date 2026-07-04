@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { HardHat } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-kw-kf")) {
   const s = document.createElement("style");
@@ -138,7 +139,7 @@ export default function KrewbyWorkers() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"60px", textAlign:"center" }}>
-            <p style={{ fontSize:"32px", marginBottom:"10px" }}>👷</p>
+            <p style={{ fontSize:"32px", marginBottom:"10px", display:"flex", justifyContent:"center", color:"#64748B" }}><HardHat size={32}/></p>
             <p style={{ fontSize:"16px", fontWeight:"600", color:"#64748B" }}>No workers found</p>
           </div>
         ) : (

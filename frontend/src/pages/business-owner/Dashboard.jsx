@@ -7,19 +7,20 @@ import {
   Building2, Users, CalendarDays, AlertTriangle,
   FolderKanban, Clock, BookOpen, CheckCircle2, XCircle,
   TrendingUp, ChevronRight, Zap, BarChart2,
+  Utensils, ShoppingBag, Stethoscope, Laptop, Package, Sparkles, Hand,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────
 const INDUSTRY_META = {
-  "f&b":         { emoji:"🍽️", label:"F&B",         welcome:"Here's how your outlets are running today." },
-  "retail":      { emoji:"🛍️", label:"Retail",       welcome:"Here's your store coverage for today." },
-  "healthcare":  { emoji:"🏥", label:"Healthcare",   welcome:"Here's your clinic coverage for today." },
-  "tech":        { emoji:"💻", label:"Technology",   welcome:"Here's your team's current workload." },
-  "logistics":   { emoji:"📦", label:"Logistics",    welcome:"Here's your warehouse coverage for today." },
-  "beauty":      { emoji:"✨", label:"Beauty",       welcome:"Here's your booking status for today." },
-  "education":   { emoji:"📚", label:"Education",    welcome:"Here's your schedule for today." },
-  "hospitality": { emoji:"🏨", label:"Hospitality",  welcome:"Here's your department coverage today." },
-  "other":       { emoji:"🏢", label:"Business",     welcome:"Here's your workforce overview." },
+  "f&b":         { icon:Utensils,     label:"F&B",         welcome:"Here's how your outlets are running today." },
+  "retail":      { icon:ShoppingBag,  label:"Retail",       welcome:"Here's your store coverage for today." },
+  "healthcare":  { icon:Stethoscope,  label:"Healthcare",   welcome:"Here's your clinic coverage for today." },
+  "tech":        { icon:Laptop,       label:"Technology",   welcome:"Here's your team's current workload." },
+  "logistics":   { icon:Package,      label:"Logistics",    welcome:"Here's your warehouse coverage for today." },
+  "beauty":      { icon:Sparkles,     label:"Beauty",       welcome:"Here's your booking status for today." },
+  "education":   { icon:BookOpen,     label:"Education",    welcome:"Here's your schedule for today." },
+  "hospitality": { icon:Building2,    label:"Hospitality",  welcome:"Here's your department coverage today." },
+  "other":       { icon:Building2,    label:"Business",     welcome:"Here's your workforce overview." },
 };
 
 const PLAN_STYLES = {
@@ -206,8 +207,8 @@ function ProjectOverview({ projects, goTo }) {
             <div>
               <span style={{ fontSize:13, fontWeight:600, color:"#1E293B" }}>{p.name}</span>
               {p.end_date && (
-                <p style={{ fontSize:11, color: overdue ? "#DC2626" : "#94A3B8", marginTop:2 }}>
-                  {overdue ? "⚠ Overdue · " : "Due "}
+                <p style={{ fontSize:11, color: overdue ? "#DC2626" : "#94A3B8", marginTop:2, display:"flex", alignItems:"center", gap:4 }}>
+                  {overdue ? <><AlertTriangle size={12} color="#DC2626" /> Overdue · </> : "Due "}
                   {new Date(p.end_date).toLocaleDateString("en-SG", { day:"numeric", month:"short" })}
                 </p>
               )}
@@ -332,7 +333,7 @@ export default function BODashboard() {
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, marginBottom:24 }}>
           <div>
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4, flexWrap:"wrap" }}>
-              <h2 style={{ fontSize:22, fontWeight:800, color:"#1E293B", margin:0 }}>Welcome back 👋</h2>
+              <h2 style={{ fontSize:22, fontWeight:800, color:"#1E293B", margin:0, display:"flex", alignItems:"center", gap:8 }}>Welcome back <Hand size={20} color="#F59E0B" /></h2>
               <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:99, background:planSt.bg, color:planSt.color }}>{planSt.label}</span>
             </div>
             <p style={{ fontSize:14, color:"#64748B", margin:0 }}>
@@ -341,7 +342,7 @@ export default function BODashboard() {
             </p>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", borderRadius:10, background:"#F8FAFC", border:"1px solid #E2E8F0" }}>
-            <span style={{ fontSize:20 }}>{meta.emoji}</span>
+            <meta.icon size={20} color="#D97706" />
             <div>
               <div style={{ fontSize:12, fontWeight:700, color:"#1E293B" }}>{meta.label}</div>
               <div style={{ fontSize:11, color:"#94A3B8", textTransform:"capitalize" }}>{mode} mode</div>

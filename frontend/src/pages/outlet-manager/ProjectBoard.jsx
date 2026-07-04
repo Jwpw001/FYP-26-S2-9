@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import ManagerLayout from "../../components/layout/ManagerLayout";
-import { Plus, X, Calendar, ArrowLeft, Trash2, Save, Send, Pencil } from "lucide-react";
+import { Plus, X, Calendar, ArrowLeft, Trash2, Save, Send, Pencil, CheckCircle2 } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("kb-styles")) {
   const s = document.createElement("style");
@@ -172,7 +172,7 @@ function KrewbyRequestModal({ task, skills, onClose }) {
 
         {sent ? (
           <div style={{ padding: "40px 24px", textAlign: "center" }}>
-            <div style={{ fontSize: "48px", marginBottom: "12px" }}>✅</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}><CheckCircle2 size={48} color="#16A34A" /></div>
             <p style={{ fontSize: "16px", fontWeight: "800", color: "#1E293B", marginBottom: "6px" }}>Request Sent!</p>
             <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>Krewby admin will review and get back to you.</p>
             <button onClick={onClose} style={{ ...btnBase, background: "linear-gradient(135deg,#4F46E5,#7C3AED)", color: "#fff", margin: "0 auto" }}>Close</button>
@@ -419,7 +419,7 @@ function TaskModal({ task, skills, members, onClose, onSave, onDelete, projectId
                 )}
                 {form.required_skills.length > 0 && form.assignee_ids.length > 0 && (
                   missingSkills.length === 0 ? (
-                    <p style={{ fontSize: "11px", color: "#16A34A", fontWeight: "700" }}>✓ Selected team covers every required skill</p>
+                    <p style={{ fontSize: "11px", color: "#16A34A", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle2 size={14} /> Selected team covers every required skill</p>
                   ) : (
                     <p style={{ fontSize: "11px", color: "#D97706", fontWeight: "700" }}>Still missing: {missingSkills.join(", ")}</p>
                   )

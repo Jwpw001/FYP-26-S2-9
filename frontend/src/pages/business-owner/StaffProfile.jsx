@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { X, Plus, Check } from "lucide-react";
+import { X, Plus, Check, Trash2 } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const AVATAR_COLORS = ["#6366F1","#F59E0B","#10B981","#EF4444","#8B5CF6","#EC4899","#14B8A6","#F97316"];
@@ -120,7 +120,7 @@ function SkillSetsTab({ staffId }) {
         <div style={{ background:"#F8FAFC", border:"1.5px solid #E2E8F0", borderRadius:"12px", padding:"18px", marginTop:"4px" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
             <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", margin:0 }}>New Skill Set</p>
-            <button onClick={() => { setAdding(false); setSelSkill(null); setSelLevel("junior"); setSelYears(""); setError(""); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8", fontSize:"12px" }}>✕ Cancel</button>
+            <button onClick={() => { setAdding(false); setSelSkill(null); setSelLevel("junior"); setSelYears(""); setError(""); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8", fontSize:"12px", display:"inline-flex", alignItems:"center", gap:"4px" }}><X size={12} /> Cancel</button>
           </div>
           {error && <p style={{ fontSize:"12px", color:"#DC2626", marginBottom:"10px", background:"#FEF2F2", padding:"8px 10px", borderRadius:"7px" }}>{error}</p>}
 
@@ -280,8 +280,8 @@ export default function BOStaffProfile() {
             <p style={{ fontSize:"11px", color:"#94A3B8", textAlign:"center", marginTop:"6px", lineHeight:1.4 }}>
               {member.is_active ? "Deactivating prevents shift assignment." : "Reactivating allows shift assignment again."}
             </p>
-            <button style={{ ...s.actionBtn, marginTop:"8px", background:"#FEF2F2", color:"#991B1B", border:"1px solid #FECACA" }} onClick={() => setShowDelete(true)}>
-              🗑 Delete Staff
+            <button style={{ ...s.actionBtn, marginTop:"8px", background:"#FEF2F2", color:"#991B1B", border:"1px solid #FECACA", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:"6px" }} onClick={() => setShowDelete(true)}>
+              <Trash2 size={14} /> Delete Staff
             </button>
           </div>
         </div>
@@ -364,7 +364,7 @@ export default function BOStaffProfile() {
       {showDelete && (
         <div style={s.overlay}>
           <div style={s.modal}>
-            <div style={{ fontSize:"36px", marginBottom:"12px" }}>🗑</div>
+            <div style={{ marginBottom:"12px" }}><Trash2 size={36} color="#EF4444" /></div>
             <h3 style={{ fontSize:"18px", fontWeight:"800", color:"#1E293B", marginBottom:"10px" }}>Delete Staff Member?</h3>
             <p style={{ fontSize:"14px", color:"#64748B", lineHeight:1.6, marginBottom:"24px" }}>This will permanently remove <strong>{member.users?.full_name}</strong>. This cannot be undone.</p>
             <div style={{ display:"flex", gap:"10px", justifyContent:"center" }}>

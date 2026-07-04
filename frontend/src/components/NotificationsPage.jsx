@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { getUser } from "../utils/auth";
+import { ClipboardList, CheckCircle2, XCircle, Bell, CalendarDays, RefreshCw, Megaphone } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("shared-notif-styles")) {
   const style = document.createElement("style");
@@ -51,17 +52,17 @@ function fmtTime(ts) {
 }
 
 const TYPE_ICONS = {
-  leave_decision:   "📋",
-  leave_approved:   "✅",
-  leave_rejected:   "❌",
-  shift_published:  "📢",
-  assignment:       "📅",
-  shift_assigned:   "📅",
-  swap_decision:    "🔄",
-  swap_approved:    "✅",
-  swap_rejected:    "❌",
-  attendance:       "📋",
-  general:          "🔔",
+  leave_decision:   ClipboardList,
+  leave_approved:   CheckCircle2,
+  leave_rejected:   XCircle,
+  shift_published:  Megaphone,
+  assignment:       CalendarDays,
+  shift_assigned:   CalendarDays,
+  swap_decision:    RefreshCw,
+  swap_approved:    CheckCircle2,
+  swap_rejected:    XCircle,
+  attendance:       ClipboardList,
+  general:          Bell,
 };
 
 export default function NotificationsPage({ Layout }) {
@@ -174,7 +175,7 @@ export default function NotificationsPage({ Layout }) {
           </div>
         ) : displayed.length === 0 ? (
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔔</div>
+            <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}><Bell size={36} color="#94A3B8" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>
               {tab === "unread" ? "No unread notifications" : "No notifications yet"}
             </p>
@@ -200,8 +201,11 @@ export default function NotificationsPage({ Layout }) {
                     : <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#2563EB" }} />
                   }
                 </div>
-                <div style={{ fontSize: "20px", flexShrink: 0, lineHeight: 1, marginTop: "1px" }}>
-                  {TYPE_ICONS[n.type] || "🔔"}
+                <div style={{ flexShrink: 0, lineHeight: 1, marginTop: "1px" }}>
+                  {(() => {
+                    const Icon = TYPE_ICONS[n.type] || Bell;
+                    return <Icon size={20} color="#475569" />;
+                  })()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>

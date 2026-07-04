@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Sparkles } from "lucide-react";
 import StaffLayout from "../../components/layout/StaffLayout";
 import { api } from "../../lib/api";
 
@@ -107,7 +108,7 @@ export default function MyAppointments() {
           <div style={{ textAlign:"center",padding:"40px",color:"#94A3B8" }}>Loading…</div>
         ) : appointments.length === 0 ? (
           <div style={{ textAlign:"center",padding:"40px 20px",background:"#fff",borderRadius:"12px",border:"1px solid #E8EDF5" }}>
-            <div style={{ fontSize:"32px",marginBottom:"10px" }}>✨</div>
+            <div style={{ marginBottom:"10px",color:"#94A3B8",display:"flex",justifyContent:"center" }}><Sparkles size={32} /></div>
             <p style={{ fontSize:"14px",fontWeight:"700",color:"#1E293B",marginBottom:"4px" }}>No appointments</p>
             <p style={{ fontSize:"12px",color:"#94A3B8" }}>You have no bookings on this day.</p>
           </div>

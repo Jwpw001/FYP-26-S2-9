@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGoTo } from "../components/PageTransition";
+import { Check, Building2, User } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("gs-styles")) {
   const tag = document.createElement("style");
@@ -17,7 +18,7 @@ const ArrowIcon = () => (
   </svg>
 );
 
-function OptionCard({ icon, title, tagline, desc, bullets, accentColor, accentBg, onClick, delay }) {
+function OptionCard({ icon: Icon, title, tagline, desc, bullets, accentColor, accentBg, onClick, delay }) {
   const [hov, setHov] = useState(false);
   return (
     <button
@@ -44,8 +45,8 @@ function OptionCard({ icon, title, tagline, desc, bullets, accentColor, accentBg
       {/* Top accent stripe */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: accentColor, borderRadius: "20px 20px 0 0" }} />
 
-      <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: accentBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "26px", marginBottom: "20px" }}>
-        {icon}
+      <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: accentBg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "20px" }}>
+        <Icon size={26} color={accentColor} />
       </div>
 
       <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: accentColor, marginBottom: "8px" }}>
@@ -61,7 +62,7 @@ function OptionCard({ icon, title, tagline, desc, bullets, accentColor, accentBg
       <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", display: "flex", flexDirection: "column", gap: "10px" }}>
         {bullets.map(b => (
           <li key={b} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "13px", color: "#475569" }}>
-            <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: accentBg, color: accentColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "10px", fontWeight: "700", marginTop: "1px" }}>✓</span>
+            <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: accentBg, color: accentColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}><Check size={11} strokeWidth={3} /></span>
             {b}
           </li>
         ))}
@@ -110,7 +111,7 @@ export default function GetStarted() {
         {/* Option cards */}
         <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", justifyContent: "center", maxWidth: "880px", width: "100%" }}>
           <OptionCard
-            icon="🏢"
+            icon={Building2}
             tagline="For business owners"
             title="Register a Business"
             desc="You own or manage an F&B business and want to use Krewby to handle your workforce — scheduling, attendance, staff management, and more."
@@ -126,7 +127,7 @@ export default function GetStarted() {
             delay={100}
           />
           <OptionCard
-            icon="👤"
+            icon={User}
             tagline="For individuals"
             title="Create an Account"
             desc="You're a staff member, casual worker, or have been invited by your manager to join Krewby. Create your personal account to access your shifts and schedule."

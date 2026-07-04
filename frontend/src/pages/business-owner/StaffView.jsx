@@ -54,7 +54,7 @@ function AvatarBubble({ name, size = 40, isManager = false, isOwner = false }) {
       </div>
       {(isManager || isOwner) && (
         <div style={{ position: "absolute", bottom: -2, right: -2, width: size * 0.34, height: size * 0.34, borderRadius: "50%", background: "#F59E0B", border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: size * 0.18, color: "#fff" }}>★</span>
+          <Star size={size * 0.22} color="#fff" fill="#fff" />
         </div>
       )}
     </div>
@@ -80,8 +80,8 @@ function StaffModal({ person, onClose }) {
             </div>
             <div>
               <p style={{ fontSize: "18px", fontWeight: "800", color: "#fff", marginBottom: "4px" }}>{person.name}</p>
-              <span style={{ display: "inline-block", fontSize: "11px", fontWeight: "700", color: isManager ? "#FCD34D" : "#94A3B8", background: "rgba(255,255,255,0.12)", padding: "3px 10px", borderRadius: "99px", letterSpacing: "0.05em" }}>
-                {isManager ? "★ OUTLET MANAGER" : person.staffType === "casual" ? "CASUAL STAFF" : "REGULAR STAFF"}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: "700", color: isManager ? "#FCD34D" : "#94A3B8", background: "rgba(255,255,255,0.12)", padding: "3px 10px", borderRadius: "99px", letterSpacing: "0.05em" }}>
+                {isManager ? <><Star size={11} color="#FCD34D" fill="#FCD34D" /> OUTLET MANAGER</> : person.staffType === "casual" ? "CASUAL STAFF" : "REGULAR STAFF"}
               </span>
             </div>
           </div>
@@ -264,7 +264,7 @@ function OrgView({ outlets, outletData, loading, ownerName, staffLabel, onSelect
                               <AvatarBubble name={m.full_name} size={36} isManager />
                               <div style={{ minWidth: 0, width: "100%" }}>
                                 <p style={{ fontSize: "12px", fontWeight: "700", color: "#78350F", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.full_name}</p>
-                                <span style={{ fontSize: "9px", fontWeight: "700", color: "#92400E", background: "#FEF3C7", padding: "1px 6px", borderRadius: "99px" }}>★ Manager</span>
+                                <span style={{ fontSize: "9px", fontWeight: "700", color: "#92400E", background: "#FEF3C7", padding: "1px 6px", borderRadius: "99px", display: "inline-flex", alignItems: "center", gap: "3px" }}><Star size={8} color="#92400E" fill="#92400E" /> Manager</span>
                               </div>
                             </div>
                           ))}

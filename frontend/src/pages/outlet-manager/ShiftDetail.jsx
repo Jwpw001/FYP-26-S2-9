@@ -5,6 +5,7 @@ import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
+import { ArrowLeft, Sparkles, X, Users, CheckCircle2, Clock3, AlertTriangle } from "lucide-react";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-shift-detail-styles")) {
@@ -651,7 +652,7 @@ export default function ShiftDetail() {
 
   return (
     <ManagerLayout title="Shift Detail">
-      <button style={s.back} onClick={() => goTo("/outlet-manager/shifts")}>← Back to Shifts</button>
+      <button style={{ ...s.back, display: "inline-flex", alignItems: "center", gap: "5px" }} onClick={() => goTo("/outlet-manager/shifts")}><ArrowLeft size={14} /> Back to Shifts</button>
 
       <div style={s.shiftCard}>
         <div style={s.shiftCardTop}>
@@ -673,8 +674,10 @@ export default function ShiftDetail() {
                 disabled={aiPanel?.loading}
               >
                 {aiPanel?.loading
-                  ? <span style={{ animation: "aiPulse 1.2s ease infinite" }}>✦ Thinking…</span>
-                  : aiPanel ? "✕ Close AI" : "✦ Smart Recommend"}
+                  ? <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", animation: "aiPulse 1.2s ease infinite" }}><Sparkles size={13} /> Thinking…</span>
+                  : aiPanel
+                    ? <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><X size={13} /> Close AI</span>
+                    : <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><Sparkles size={13} /> Smart Recommend</span>}
               </button>
             )}
             {shift.status === "draft" && (
@@ -708,8 +711,12 @@ export default function ShiftDetail() {
               background: isFullyStaffed ? "#22C55E" : "#F59E0B",
             }} />
           </div>
-          <span style={s.staffingText}>
-            {totalAssigned}/{totalRoles} positions filled{isFullyStaffed && " · ✓ Ready to publish"}
+          <span style={{ ...s.staffingText, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+            {totalAssigned}/{totalRoles} positions filled{isFullyStaffed && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", marginLeft: "4px" }}>
+                · <CheckCircle2 size={13} color="#16A34A" /> Ready to publish
+              </span>
+            )}
           </span>
         </div>
       </div>
@@ -719,7 +726,7 @@ export default function ShiftDetail() {
         <div style={s.aiPanel}>
           <div style={s.aiPanelHeader}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={s.aiIcon}>✦</span>
+              <Sparkles size={16} color="#6366F1" />
               <span style={s.aiPanelTitle}>AI Staff Recommendations</span>
             </div>
             <span style={s.aiPanelSub}>Powered by Groq · Click Assign to apply a suggestion</span>
@@ -831,7 +838,7 @@ export default function ShiftDetail() {
 
       {roles.length === 0 ? (
         <div style={{ ...s.empty, padding: "40px", textAlign: "center" }}>
-          <div style={{ fontSize: "32px", marginBottom: "10px" }}>👥</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "10px" }}><Users size={32} color="#94A3B8" /></div>
           <p style={{ fontSize: "15px", fontWeight: "600", color: "#64748B", marginBottom: "4px" }}>No roles defined yet</p>
           <p style={{ fontSize: "13px", color: "#94A3B8" }}>Click "+ Add Role" above to define positions for this shift, then assign staff to each role.</p>
         </div>
@@ -852,16 +859,16 @@ export default function ShiftDetail() {
                   </p>
                 </div>
                 <div style={s.roleActions}>
-                  <span style={{ ...s.fillBadge, background: isFull ? "#DCFCE7" : "#FFFBEB", color: isFull ? "#166534" : "#D97706" }}>
-                    {isFull ? "✓ Full" : `${needed - filled} needed`}
+                  <span style={{ ...s.fillBadge, background: isFull ? "#DCFCE7" : "#FFFBEB", color: isFull ? "#166534" : "#D97706", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    {isFull ? <><CheckCircle2 size={12} /> Full</> : `${needed - filled} needed`}
                   </span>
                   {(() => {
                     const kr = krewbyRequests.find(r => r.role_id === role.role_id);
                     if (kr) {
                       if (kr.status === "assigned" || kr.status === "approved") {
-                        return <span style={s.krewbyAssignedBadge}>✓ Krewby: {kr.worker_name || "Worker assigned"}</span>;
+                        return <span style={{ ...s.krewbyAssignedBadge, display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle2 size={12} /> Krewby: {kr.worker_name || "Worker assigned"}</span>;
                       }
-                      return <span style={s.krewbyPendingBadge}>⏳ Krewby requested</span>;
+                      return <span style={{ ...s.krewbyPendingBadge, display: "inline-flex", alignItems: "center", gap: "4px" }}><Clock3 size={12} /> Krewby requested</span>;
                     }
                     if (shift.status !== "completed" && shift.status !== "cancelled" && !isFull) {
                       return (
@@ -891,17 +898,17 @@ export default function ShiftDetail() {
                   </div>
                   <div style={s.assignedRight}>
                     {a.acknowledged
-                      ? <span style={s.ackTagYes}>✓ Acknowledged</span>
+                      ? <span style={{ ...s.ackTagYes, display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle2 size={12} /> Acknowledged</span>
                       : <span style={s.ackTagNo}>Pending acknowledgement</span>
                     }
                     {(shift.status === "draft" || shift.status === "published") && (
                       <button
-                        style={s.removeBtn}
+                        style={{ ...s.removeBtn, display: "inline-flex", alignItems: "center" }}
                         title="Remove from shift"
                         onClick={() => removeAssignment(a.assignment_id)}
                         onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
                         onMouseLeave={e => { e.currentTarget.style.color = "#94A3B8"; }}
-                      >✕</button>
+                      ><X size={13} /></button>
                     )}
                   </div>
                 </div>
@@ -918,7 +925,7 @@ export default function ShiftDetail() {
                     <p style={{ ...s.assignedEmail, color: "#16A34A", fontWeight: "600" }}>Krewby Casual Worker</p>
                   </div>
                   <div style={s.assignedRight}>
-                    <span style={s.ackTagYes}>✓ Krewby Assigned</span>
+                    <span style={{ ...s.ackTagYes, display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle2 size={12} /> Krewby Assigned</span>
                   </div>
                 </div>
               )}
@@ -937,7 +944,7 @@ export default function ShiftDetail() {
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>Assign Staff — {assignModal.role.role_name}</h3>
-              <button style={s.closeBtn} onClick={() => setAssignModal(null)}>✕</button>
+              <button style={{ ...s.closeBtn, display: "inline-flex", alignItems: "center" }} onClick={() => setAssignModal(null)}><X size={16} /></button>
             </div>
 
             {assignModal.role.skills?.name && (
@@ -969,7 +976,7 @@ export default function ShiftDetail() {
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                           <p style={s.candidateName}>{c.full_name}</p>
                           {isTop && (
-                            <span style={s.recBadge}>✓ Recommended</span>
+                            <span style={{ ...s.recBadge, display: "inline-flex", alignItems: "center", gap: "3px" }}><CheckCircle2 size={11} /> Recommended</span>
                           )}
                         </div>
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "3px" }}>
@@ -1004,8 +1011,8 @@ export default function ShiftDetail() {
         <div style={s.modalOverlay}>
           <div style={{ ...s.modal, maxWidth: "480px" }}>
             <div style={s.modalHeader}>
-              <h3 style={{ ...s.modalTitle, color: "#991B1B" }}>⚠ Publish Conflicts</h3>
-              <button style={s.closeBtn} onClick={() => setConflictModal(null)}>✕</button>
+              <h3 style={{ ...s.modalTitle, color: "#991B1B", display: "inline-flex", alignItems: "center", gap: "6px" }}><AlertTriangle size={16} color="#991B1B" /> Publish Conflicts</h3>
+              <button style={{ ...s.closeBtn, display: "inline-flex", alignItems: "center" }} onClick={() => setConflictModal(null)}><X size={16} /></button>
             </div>
 
             {conflictModal.hardBlocks.length > 0 && (
@@ -1104,7 +1111,7 @@ export default function ShiftDetail() {
           <div style={{ ...s.modal, maxWidth: "420px" }} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>Request Krewby Worker</h3>
-              <button style={s.closeBtn} onClick={() => setKrewbyModal(null)}>✕</button>
+              <button style={{ ...s.closeBtn, display: "inline-flex", alignItems: "center" }} onClick={() => setKrewbyModal(null)}><X size={16} /></button>
             </div>
             <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "16px" }}>
               Requesting a Krewby casual worker for <strong>{krewbyModal.role.role_name}</strong>

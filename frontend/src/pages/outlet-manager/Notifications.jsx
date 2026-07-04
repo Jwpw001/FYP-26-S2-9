@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import { Bell, ClipboardList, CalendarDays, CheckCircle2, RefreshCw } from "lucide-react";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-notif-styles")) {
@@ -190,7 +191,7 @@ export default function Notifications() {
           </div>
         ) : displayed.length === 0 ? (
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px", textAlign: "center" }}>
-            <div style={{ fontSize: "36px", marginBottom: "10px" }}>🔔</div>
+            <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}><Bell size={36} color="#94A3B8" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>
               {tab === "unread" ? "No unread notifications" : "No notifications yet"}
             </p>
@@ -228,12 +229,12 @@ export default function Notifications() {
 
 function NotifRow({ notif, onRead, idx }) {
   const typeIconMap = {
-    leave_decision:   "📋",
-    shift_published:  "📅",
-    assignment:       "✅",
-    swap_decision:    "🔄",
+    leave_decision:   ClipboardList,
+    shift_published:  CalendarDays,
+    assignment:       CheckCircle2,
+    swap_decision:    RefreshCw,
   };
-  const icon = typeIconMap[notif.type] || "🔔";
+  const Icon = typeIconMap[notif.type] || Bell;
 
   return (
     <div
@@ -261,7 +262,7 @@ function NotifRow({ notif, onRead, idx }) {
       </div>
 
       {/* Icon */}
-      <div style={{ fontSize: "20px", flexShrink: 0, lineHeight: 1, marginTop: "1px" }}>{icon}</div>
+      <div style={{ flexShrink: 0, lineHeight: 1, marginTop: "1px" }}><Icon size={20} /></div>
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>

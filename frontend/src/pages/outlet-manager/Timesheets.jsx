@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
+import { FileText, Check, X } from "lucide-react";
 
 const toLocalISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
@@ -115,7 +116,7 @@ export default function Timesheets() {
           <div style={{ textAlign:"center", padding:"60px", color:"#94A3B8" }}>Loading…</div>
         ) : Object.keys(byStaff).length === 0 ? (
           <div style={{ textAlign:"center", padding:"60px 20px" }}>
-            <div style={{ fontSize:"36px", marginBottom:"12px" }}>📝</div>
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:"12px" }}><FileText size={36} color="#94A3B8" /></div>
             <p style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B", marginBottom:"6px" }}>No timesheets this week</p>
             <p style={{ fontSize:"13px", color:"#64748B" }}>Staff haven't submitted any hours yet for this period.</p>
           </div>
@@ -165,8 +166,8 @@ export default function Timesheets() {
                         <span style={{ fontSize:"10px", fontWeight:"700", padding:"2px 8px", borderRadius:"100px", background:st.bg, color:st.color, flexShrink:0 }}>{st.label}</span>
                         {isPending && (
                           <div style={{ display:"flex", gap:"4px", flexShrink:0 }}>
-                            <button onClick={() => review(t.timesheet_id,"approved")} style={{ padding:"4px 10px", borderRadius:"7px", border:"1px solid #BBF7D0", background:"#DCFCE7", color:"#166534", fontSize:"11px", fontWeight:"700", cursor:"pointer" }}>✓</button>
-                            <button onClick={() => review(t.timesheet_id,"rejected")} style={{ padding:"4px 10px", borderRadius:"7px", border:"1px solid #FECACA", background:"#FEE2E2", color:"#991B1B", fontSize:"11px", fontWeight:"700", cursor:"pointer" }}>✕</button>
+                            <button onClick={() => review(t.timesheet_id,"approved")} style={{ padding:"4px 10px", borderRadius:"7px", border:"1px solid #BBF7D0", background:"#DCFCE7", color:"#166534", fontSize:"11px", fontWeight:"700", cursor:"pointer", display:"flex", alignItems:"center" }}><Check size={13} /></button>
+                            <button onClick={() => review(t.timesheet_id,"rejected")} style={{ padding:"4px 10px", borderRadius:"7px", border:"1px solid #FECACA", background:"#FEE2E2", color:"#991B1B", fontSize:"11px", fontWeight:"700", cursor:"pointer", display:"flex", alignItems:"center" }}><X size={13} /></button>
                           </div>
                         )}
                       </div>

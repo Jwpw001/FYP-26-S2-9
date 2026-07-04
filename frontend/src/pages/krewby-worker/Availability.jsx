@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Check, FileText } from "lucide-react";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
 import WorkerLayout from "../../components/layout/WorkerLayout";
@@ -218,7 +219,7 @@ export default function WorkerAvailability() {
                   {/* Status dot / checkmark */}
                   <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: isAvail ? "rgba(255,255,255,0.2)" : "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", marginTop: "2px", transition: "background 0.2s" }}>
                     {isAvail
-                      ? <span style={{ fontSize: "13px", color: "#FFF" }}>✓</span>
+                      ? <Check size={13} color="#FFF" />
                       : <span style={{ fontSize: "13px", color: "#CBD5E1" }}>–</span>
                     }
                   </div>
@@ -229,8 +230,8 @@ export default function WorkerAvailability() {
                   <div style={{ padding: "0 6px 10px" }} onClick={e => e.stopPropagation()}>
                     {!showNote ? (
                       <button onClick={e => { e.stopPropagation(); toggleNote(date); }}
-                        style={{ width: "100%", padding: "4px 0", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "8px", fontSize: "10px", fontWeight: "600", color: note ? "#FFF" : "rgba(255,255,255,0.7)", cursor: "pointer", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {note ? `📝 ${note}` : "+ note"}
+                        style={{ width: "100%", padding: "4px 0", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "8px", fontSize: "10px", fontWeight: "600", color: note ? "#FFF" : "rgba(255,255,255,0.7)", cursor: "pointer", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+                        {note ? <><FileText size={11} /> {note}</> : "+ note"}
                       </button>
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>

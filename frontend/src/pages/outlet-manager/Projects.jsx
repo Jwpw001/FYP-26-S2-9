@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
-import { Kanban } from "lucide-react";
+import { Kanban, ClipboardList, X, Sprout, Star, Trophy } from "lucide-react";
 
 const STATUS_STYLE = {
   active:    { bg:"#DCFCE7", color:"#166534", label:"Active" },
@@ -76,7 +76,7 @@ export default function Projects() {
             <div style={{ textAlign:"center", padding:"40px", color:"#94A3B8" }}>Loading…</div>
           ) : projects.length === 0 ? (
             <div style={{ textAlign:"center", padding:"60px 20px" }}>
-              <div style={{ fontSize:"40px", marginBottom:"12px" }}>📋</div>
+              <div style={{ display:"flex", justifyContent:"center", marginBottom:"12px" }}><ClipboardList size={40} color="#94A3B8" /></div>
               <p style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B", marginBottom:"6px" }}>No projects yet</p>
               <p style={{ fontSize:"13px", color:"#64748B" }}>Create your first project to start assigning staff and tracking hours.</p>
             </div>
@@ -135,7 +135,7 @@ export default function Projects() {
         <div style={{ width:"360px", flexShrink:0, overflowY:"auto", padding:"24px", background:"#FAFBFE" }}>
           {!selected ? (
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", gap:"12px", color:"#94A3B8", textAlign:"center" }}>
-              <div style={{ fontSize:"36px" }}>📋</div>
+              <ClipboardList size={36} color="#94A3B8" />
               <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>Select a project</p>
               <p style={{ fontSize:"12px" }}>Click a project on the left to open its board and manage tasks.</p>
             </div>
@@ -153,7 +153,7 @@ export default function Projects() {
                       <span style={{ fontSize:"11px", fontWeight:"700", padding:"1px 7px", borderRadius:"100px", background:ss.bg, color:ss.color }}>{ss.label}</span>
                     </div>
                   </div>
-                  <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:"#94A3B8", fontSize:"16px", cursor:"pointer" }}>✕</button>
+                  <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:"#94A3B8", fontSize:"16px", cursor:"pointer", display:"flex", alignItems:"center" }}><X size={16} /></button>
                 </div>
 
                 {/* Open Board CTA */}
@@ -210,7 +210,7 @@ export default function Projects() {
                   </div>
                   <div style={{ display:"flex", flexDirection:"column", gap:"6px" }}>
                     {(selected.project_assignments||[]).map((a,i) => {
-                      const EXP = { beginner:"🌱", intermediate:"⭐", expert:"🏆" };
+                      const EXP = { beginner:Sprout, intermediate:Star, expert:Trophy };
                       return (
                         <div key={i} style={{ display:"flex", alignItems:"center", gap:"8px", padding:"8px 10px", background:"#fff", borderRadius:"8px", border:"1px solid #E8EDF5" }}>
                           <div style={{ width:"28px", height:"28px", borderRadius:"50%", background:`${selected.color||"#6366F1"}20`, border:`1.5px solid ${selected.color||"#6366F1"}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"11px", fontWeight:"800", color:selected.color||"#6366F1", flexShrink:0 }}>
@@ -224,7 +224,7 @@ export default function Projects() {
                             <div style={{ fontSize:"11px", fontWeight:"700", color:"#1E293B" }}>{Number(a.estimated_hours)}h</div>
                             <div style={{ fontSize:"9px", color:"#94A3B8" }}>estimated</div>
                           </div>
-                          <span style={{ fontSize:"12px" }}>{EXP[a.staff?.experience_level] || "⭐"}</span>
+                          <span style={{ fontSize:"12px", display:"inline-flex", alignItems:"center" }}>{(() => { const Icon = EXP[a.staff?.experience_level] || Star; return <Icon size={13} />; })()}</span>
                         </div>
                       );
                     })}

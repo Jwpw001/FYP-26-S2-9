@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import StaffLayout from "../../components/layout/StaffLayout";
 import { api } from "../../lib/api";
-import { FolderKanban, ListChecks } from "lucide-react";
+import { FolderKanban, ListChecks, CalendarDays } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-ts-styles")) {
   const style = document.createElement("style");
@@ -204,7 +204,7 @@ export default function MyTimesheets() {
             <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
               {timesheets.length === 0 ? (
                 <div style={{ textAlign:"center", padding:"60px 20px", background:"#fff", borderRadius:"16px", border:"1px solid #E8EDF5" }}>
-                  <p style={{ fontSize:"32px", marginBottom:"10px" }}>🗓️</p>
+                  <p style={{ fontSize:"32px", marginBottom:"10px", display:"flex", justifyContent:"center" }}><CalendarDays size={32} color="#94A3B8" /></p>
                   <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>No hours logged this week.</p>
                 </div>
               ) : timesheets.map((t, i) => {

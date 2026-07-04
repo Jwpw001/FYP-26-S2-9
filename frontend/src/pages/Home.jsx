@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { getUser } from "../utils/auth";
 import { useGoTo } from "../components/PageTransition";
 import NavHeader from "../components/NavHeader";
+import { CalendarDays, MapPin, Star, DollarSign } from "lucide-react";
 
 /* ─────────────────────────────────────────────
    Hook: fade-in on scroll (IntersectionObserver)
@@ -461,13 +462,13 @@ export default function Home() {
               </p>
               <div style={s.workerPerks}>
                 {[
-                  { icon:"📅", title:"Flexible schedule", desc:"Set your availability week by week. No fixed hours, no long-term commitment." },
-                  { icon:"📍", title:"Multiple outlets", desc:"Get matched to cafés, restaurants, and events that need your skills." },
-                  { icon:"⭐", title:"Build your rating", desc:"A strong profile earns you more shift offers and better opportunities." },
-                  { icon:"💰", title:"Earn on your terms", desc:"Work as much or as little as you want. You're fully in control." },
+                  { icon:CalendarDays, title:"Flexible schedule", desc:"Set your availability week by week. No fixed hours, no long-term commitment." },
+                  { icon:MapPin, title:"Multiple outlets", desc:"Get matched to cafés, restaurants, and events that need your skills." },
+                  { icon:Star, title:"Build your rating", desc:"A strong profile earns you more shift offers and better opportunities." },
+                  { icon:DollarSign, title:"Earn on your terms", desc:"Work as much or as little as you want. You're fully in control." },
                 ].map(p => (
                   <div key={p.title} style={s.workerPerk}>
-                    <span style={s.workerPerkIcon}>{p.icon}</span>
+                    <span style={s.workerPerkIcon}><p.icon size={22} /></span>
                     <div>
                       <p style={s.workerPerkTitle}>{p.title}</p>
                       <p style={s.workerPerkDesc}>{p.desc}</p>
@@ -489,7 +490,7 @@ export default function Home() {
                     <p style={s.workerCardName}>Priya N.</p>
                     <p style={s.workerCardRole}>Krewby Worker · Singapore</p>
                   </div>
-                  <div style={s.workerCardBadge}>⭐ 4.9</div>
+                  <div style={{ ...s.workerCardBadge, display:"inline-flex", alignItems:"center", gap:"4px" }}><Star size={12} fill="#F59E0B" color="#F59E0B" /> 4.9</div>
                 </div>
                 <div style={s.workerCardDivider}/>
                 <p style={s.workerCardLabel}>Upcoming shifts</p>

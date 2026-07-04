@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGoTo } from "../components/PageTransition";
 import { api } from "../lib/api";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 
 function Field({ label, id, type = "text", value, onChange, placeholder, rightEl, hint }) {
   const [focused, setFocused] = useState(false);
@@ -114,14 +115,16 @@ export default function ApplyWorker() {
               </p>
 
               <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
-                {["✓ Free to join", "✓ No commitment", "✓ Reviewed personally"].map(b => (
-                  <span key={b} style={{ fontSize: "11px", fontWeight: "600", color: "#059669", background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: "100px", padding: "4px 10px" }}>{b}</span>
+                {["Free to join", "No commitment", "Reviewed personally"].map(b => (
+                  <span key={b} style={{ fontSize: "11px", fontWeight: "600", color: "#059669", background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: "100px", padding: "4px 10px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <CheckCircle2 size={12} color="#059669" /> {b}
+                  </span>
                 ))}
               </div>
 
               {error && (
-                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 14px", marginBottom: "20px", fontSize: "13px", color: "#DC2626" }}>
-                  ⚠️ {error}
+                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 14px", marginBottom: "20px", fontSize: "13px", color: "#DC2626", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <AlertTriangle size={14} color="#DC2626" /> {error}
                 </div>
               )}
 

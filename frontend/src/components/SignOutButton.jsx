@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { clearUser } from "../utils/auth";
 import { useNavigate } from "react-router-dom";
+import { Hand } from "lucide-react";
 
 export default function SignOutButton({ style: extraStyle = {} }) {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export default function SignOutButton({ style: extraStyle = {} }) {
               width: "320px", textAlign: "center",
               boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
             }}>
-            <div style={{ fontSize: "36px", marginBottom: "12px" }}>👋</div>
+            <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}><Hand size={36} color="#1E293B" /></div>
             <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>Sign out?</h3>
             <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "24px" }}>You'll need to log in again to access your account.</p>
             <div style={{ display: "flex", gap: "10px" }}>

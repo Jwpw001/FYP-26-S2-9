@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { CalendarDays, CheckCircle2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import CasualLayout from "../../components/layout/CasualLayout";
@@ -140,7 +141,7 @@ export default function CasualMyShifts() {
           </div>
         ) : shifts.length === 0 ? (
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ fontSize: "40px", marginBottom: "12px" }}>📅</div>
+            <div style={{ marginBottom: "12px" }}><CalendarDays size={40} color="#94A3B8" /></div>
             <p style={{ fontSize: "17px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>No {filter} shifts</p>
             <p style={{ fontSize: "13px", color: "#64748B" }}>
               {filter === "upcoming"
@@ -168,7 +169,7 @@ export default function CasualMyShifts() {
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "5px" }}>
                       <span style={{ ...badge, ...shiftBadge(shift?.status) }}>{shift?.status}</span>
                       {a.acknowledged && (
-                        <span style={{ fontSize: "11px", color: "#059669", fontWeight: "600", background: "#ECFDF5", padding: "2px 8px", borderRadius: "100px" }}>✓ Acknowledged</span>
+                        <span style={{ fontSize: "11px", color: "#059669", fontWeight: "600", background: "#ECFDF5", padding: "2px 8px", borderRadius: "100px", display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle2 size={12} /> Acknowledged</span>
                       )}
                     </div>
                   </div>
@@ -183,8 +184,8 @@ export default function CasualMyShifts() {
 
                   {needsAck && (
                     <button onClick={() => acknowledge(a.assignment_id)}
-                      style={{ marginTop: "14px", width: "100%", padding: "11px", background: "#F0FDF4", border: "1.5px solid #86EFAC", borderRadius: "10px", fontSize: "14px", fontWeight: "600", color: "#166534", cursor: "pointer" }}>
-                      ✓ Acknowledge Shift
+                      style={{ marginTop: "14px", width: "100%", padding: "11px", background: "#F0FDF4", border: "1.5px solid #86EFAC", borderRadius: "10px", fontSize: "14px", fontWeight: "600", color: "#166534", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                      <CheckCircle2 size={16} /> Acknowledge Shift
                     </button>
                   )}
                 </div>

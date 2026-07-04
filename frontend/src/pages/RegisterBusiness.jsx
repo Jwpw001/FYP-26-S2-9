@@ -462,7 +462,7 @@ export default function RegisterBusiness() {
                             style={{ padding:"10px 12px",borderRadius:"10px",border:`1.5px solid ${on?indColor:"#E2E8F0"}`,background:on?`${indColor}10`:"#fff",cursor:"pointer",textAlign:"left",transition:"all 0.15s",boxShadow:on?`0 0 0 2px ${indColor}25`:"none" }}>
                             <div style={{ display:"flex",alignItems:"center",gap:"6px",marginBottom:"2px" }}>
                               <div style={{ width:"14px",height:"14px",borderRadius:"4px",border:`1.5px solid ${on?indColor:"#CBD5E1"}`,background:on?indColor:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
-                                {on && <span style={{ color:"#fff",fontSize:"8px",fontWeight:"900",lineHeight:1 }}>✓</span>}
+                                {on && <Check size={10} color="#fff" strokeWidth={3} />}
                               </div>
                               <span style={{ fontSize:"12px",fontWeight:"700",color:on?indColor:"#1E293B" }}>{s.name}</span>
                             </div>

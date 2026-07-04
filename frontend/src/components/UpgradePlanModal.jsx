@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { X, CheckCircle2 } from "lucide-react";
 import { Pricing } from "./Pricing";
 import { supabase } from "../lib/supabaseClient";
 import { getUser } from "../utils/auth";
@@ -128,8 +128,8 @@ export function UpgradePlanModal({ currentPlan, onClose, onUpgraded }) {
         {/* Footer CTA */}
         <div style={{ padding: "20px 28px 28px", background: "#fff", borderTop: "1px solid #F1F5F9", borderRadius: "0 0 24px 24px", position: "sticky", bottom: 0 }}>
           {done ? (
-            <div style={{ textAlign: "center", padding: "12px", fontSize: "15px", fontWeight: "700", color: "#10B981" }}>
-              ✓ Plan updated to {selectedPlan?.label}!
+            <div style={{ textAlign: "center", padding: "12px", fontSize: "15px", fontWeight: "700", color: "#10B981", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+              <CheckCircle2 size={18} color="#10B981" /> Plan updated to {selectedPlan?.label}!
             </div>
           ) : (
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>

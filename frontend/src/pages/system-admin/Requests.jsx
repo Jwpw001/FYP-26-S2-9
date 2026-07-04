@@ -265,7 +265,7 @@ export default function CoordinatorRequests() {
                 <option key={w.krewby_worker_id} value={w.krewby_worker_id}>
                   {w.user?.full_name || w.user?.email || `Worker #${w.krewby_worker_id}`}
                   {w.preferred_location ? ` · ${w.preferred_location}` : ""}
-                  {w.rating ? ` · ★ ${Number(w.rating).toFixed(1)}` : ""}
+                  {w.rating ? ` · (${Number(w.rating).toFixed(1)})` : ""}
                 </option>
               ))}
             </select>

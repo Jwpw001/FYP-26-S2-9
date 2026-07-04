@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { CalendarDays, Bell, Hand, AlertTriangle, SmilePlus, CheckCircle2, Flag } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import CasualLayout from "../../components/layout/CasualLayout";
@@ -212,15 +213,15 @@ export default function CasualDashboard() {
   }
 
   const statCards = [
-    { label: "Upcoming Shifts",          value: upcomingShifts.length, icon: "📅", color: "#2563EB", bg: "#EFF6FF", link: "/outlet-casual-staff/shifts" },
-    { label: "Availability Slots (Week)", value: availabilityCount,     icon: "🗓",  color: "#059669", bg: "#ECFDF5", link: "/outlet-casual-staff/availability" },
-    { label: "Unread Notifications",     value: unreadCount,           icon: "🔔",  color: "#7C3AED", bg: "#F5F3FF", link: "/outlet-casual-staff/notifications" },
+    { label: "Upcoming Shifts",          value: upcomingShifts.length, Icon: CalendarDays, color: "#2563EB", bg: "#EFF6FF", link: "/outlet-casual-staff/shifts" },
+    { label: "Availability Slots (Week)", value: availabilityCount,     Icon: CalendarDays, color: "#059669", bg: "#ECFDF5", link: "/outlet-casual-staff/availability" },
+    { label: "Unread Notifications",     value: unreadCount,           Icon: Bell,         color: "#7C3AED", bg: "#F5F3FF", link: "/outlet-casual-staff/notifications" },
   ];
 
   const quickActions = [
-    { label: "Submit Availability", icon: "🗓", link: "/outlet-casual-staff/availability" },
-    { label: "View My Shifts",      icon: "📅", link: "/outlet-casual-staff/shifts" },
-    { label: "Notifications",       icon: "🔔", link: "/outlet-casual-staff/notifications" },
+    { label: "Submit Availability", Icon: CalendarDays, link: "/outlet-casual-staff/availability" },
+    { label: "View My Shifts",      Icon: CalendarDays, link: "/outlet-casual-staff/shifts" },
+    { label: "Notifications",       Icon: Bell,          link: "/outlet-casual-staff/notifications" },
   ];
 
   const clockInAllowed = todayShift && canClockIn(todayShift.shifts?.start_time);
@@ -233,7 +234,7 @@ export default function CasualDashboard() {
         {/* Welcome */}
         <div style={{ marginBottom: "28px" }}>
           <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
-            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} 👋
+            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} <Hand size={20} style={{ display: "inline", verticalAlign: "middle" }} />
           </h2>
           <p style={{ fontSize: "14px", color: "#64748B" }}>Check your upcoming shifts and submit your weekly availability.</p>
         </div>
@@ -266,9 +267,9 @@ export default function CasualDashboard() {
                   width: "44px", height: "44px", borderRadius: "10px",
                   background: card.bg, color: card.color,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "20px", marginBottom: "14px",
+                  marginBottom: "14px",
                 }}>
-                  {card.icon}
+                  <card.Icon size={20} color={card.color} />
                 </div>
                 <p style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", lineHeight: 1 }}>{card.value}</p>
                 <p style={{ fontSize: "13px", fontWeight: "500", color: "#64748B", marginTop: "6px" }}>{card.label}</p>
@@ -284,7 +285,7 @@ export default function CasualDashboard() {
             padding: "18px 22px", display: "flex", alignItems: "center", gap: "14px",
             marginBottom: "24px", flexWrap: "wrap",
           }}>
-            <span style={{ fontSize: "22px", flexShrink: 0 }}>⚠️</span>
+            <AlertTriangle size={22} color="#D97706" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: "14px", fontWeight: "700", color: "#92400E" }}>Submit your availability for this week</p>
               <p style={{ fontSize: "13px", color: "#B45309", marginTop: "2px" }}>You haven't submitted any slots yet. Submit now so the manager can schedule you.</p>
@@ -311,7 +312,7 @@ export default function CasualDashboard() {
             </div>
           ) : todayShift === false ? (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <p style={{ fontSize: "32px", marginBottom: "10px" }}>😌</p>
+              <p style={{ marginBottom: "10px" }}><SmilePlus size={32} color="#94A3B8" /></p>
               <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>No shift today — take a well-earned rest!</p>
               <p style={{ fontSize: "13px", color: "#64748B", marginTop: "4px" }}>Enjoy your day off. Check back tomorrow.</p>
             </div>
@@ -346,7 +347,7 @@ export default function CasualDashboard() {
                 {/* Clock In */}
                 {todayAttend?.clock_in ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#DCFCE7", border: "1.5px solid #BBF7D0", borderRadius: "10px", padding: "10px 16px" }}>
-                    <span style={{ fontSize: "16px" }}>✅</span>
+                    <CheckCircle2 size={16} color="#16A34A" />
                     <div>
                       <p style={{ fontSize: "11px", color: "#166534", fontWeight: "600" }}>Clocked In</p>
                       <p style={{ fontSize: "15px", color: "#166534", fontWeight: "800" }}>{fmtTime(todayAttend.clock_in)}</p>
@@ -375,7 +376,7 @@ export default function CasualDashboard() {
                 {/* Clock Out */}
                 {todayAttend?.clock_out ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#FFF1F2", border: "1.5px solid #FECACA", borderRadius: "10px", padding: "10px 16px" }}>
-                    <span style={{ fontSize: "16px" }}>🏁</span>
+                    <Flag size={16} color="#DC2626" />
                     <div>
                       <p style={{ fontSize: "11px", color: "#9F1239", fontWeight: "600" }}>Clocked Out</p>
                       <p style={{ fontSize: "15px", color: "#9F1239", fontWeight: "800" }}>{fmtTime(todayAttend.clock_out)}</p>
@@ -420,7 +421,7 @@ export default function CasualDashboard() {
             </div>
           ) : upcomingShifts.length === 0 ? (
             <div style={s.emptyInner}>
-              <span style={{ fontSize: "28px" }}>📅</span>
+              <CalendarDays size={28} color="#94A3B8" />
               <p style={{ fontSize: "14px", color: "#64748B", marginTop: "8px" }}>No upcoming shifts assigned in the next 7 days.</p>
             </div>
           ) : (
@@ -464,7 +465,7 @@ export default function CasualDashboard() {
                   fontSize: "13px", fontWeight: "600", color: "#1E293B",
                   cursor: "pointer", transition: "all 0.15s",
                 }}>
-                <span>{a.icon}</span>{a.label}
+                <a.Icon size={18} />{a.label}
               </button>
             ))}
           </div>

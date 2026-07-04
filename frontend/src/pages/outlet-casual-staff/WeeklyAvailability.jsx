@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Check, CalendarDays, CheckCircle2, X } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import CasualLayout from "../../components/layout/CasualLayout";
@@ -308,7 +309,7 @@ export default function WeeklyAvailability() {
                         </span>
                         <div style={{ width: "26px", height: "26px", borderRadius: "50%", background: isAvail ? "rgba(255,255,255,0.22)" : "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", marginTop: "2px", transition: "background 0.2s" }}>
                           {isAvail
-                            ? <span style={{ fontSize: "13px", color: "#FFF", fontWeight: "700" }}>✓</span>
+                            ? <Check size={13} color="#FFF" strokeWidth={3} />
                             : <span style={{ fontSize: "14px", color: "#CBD5E1" }}>–</span>
                           }
                         </div>
@@ -357,7 +358,7 @@ export default function WeeklyAvailability() {
                 </div>
               ) : enabledCount === 0 ? (
                 <div style={{ padding: "48px 20px", textAlign: "center" }}>
-                  <div style={{ fontSize: "32px", marginBottom: "10px" }}>📅</div>
+                  <div style={{ marginBottom: "10px" }}><CalendarDays size={32} color="#94A3B8" /></div>
                   <p style={{ fontSize: "14px", fontWeight: "600", color: "#94A3B8" }}>No days selected</p>
                   <p style={{ fontSize: "12px", color: "#CBD5E1", marginTop: "4px" }}>Tap a day card to get started</p>
                 </div>
@@ -414,7 +415,7 @@ export default function WeeklyAvailability() {
 
       {toast && (
         <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#FFF", padding: "13px 22px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both", display: "flex", alignItems: "center", gap: "8px" }}>
-          {toast.type === "success" ? "✓" : "✕"} {toast.msg}
+          {toast.type === "success" ? <CheckCircle2 size={16} /> : <X size={16} />} {toast.msg}
         </div>
       )}
 

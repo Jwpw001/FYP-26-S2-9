@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
+import { AlertTriangle, CheckCircle2, CalendarDays, Zap, X } from "lucide-react";
 
 const toLocalISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
@@ -112,8 +113,10 @@ export default function Bookings() {
               <h2 style={{ fontSize:"20px", fontWeight:"800", color:"#0F172A", marginBottom:"2px" }}>
                 {new Date(date+"T00:00:00").toLocaleDateString("en-SG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
               </h2>
-              <p style={{ fontSize:"12px", color:"#94A3B8" }}>
-                {confirmed.length} booking{confirmed.length!==1?"s":""} · {unassigned.length > 0 ? `${unassigned.length} unassigned ⚠` : "all assigned ✓"}
+              <p style={{ fontSize:"12px", color:"#94A3B8", display:"flex", alignItems:"center", gap:"4px" }}>
+                {confirmed.length} booking{confirmed.length!==1?"s":""} · {unassigned.length > 0
+                  ? <span style={{ display:"inline-flex", alignItems:"center", gap:"4px" }}><AlertTriangle size={12} color="#D97706" /> {unassigned.length} unassigned</span>
+                  : <span style={{ display:"inline-flex", alignItems:"center", gap:"4px" }}><CheckCircle2 size={12} color="#16A34A" /> all assigned</span>}
               </p>
             </div>
             <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
@@ -131,7 +134,7 @@ export default function Bookings() {
           {/* Gap alerts */}
           {gaps.length > 0 && (
             <div style={{ background:"#FEF3C7", border:"1px solid #FDE68A", borderRadius:"10px", padding:"10px 14px", marginBottom:"14px" }}>
-              <div style={{ fontSize:"12px", fontWeight:"700", color:"#92400E", marginBottom:"4px" }}>⚠ {gaps.length} gap{gaps.length!==1?"s":""} in your schedule today</div>
+              <div style={{ fontSize:"12px", fontWeight:"700", color:"#92400E", marginBottom:"4px", display:"flex", alignItems:"center", gap:"4px" }}><AlertTriangle size={14} color="#92400E" /> {gaps.length} gap{gaps.length!==1?"s":""} in your schedule today</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
                 {gaps.map((g,i) => (
                   <span key={i} style={{ fontSize:"11px", color:"#B45309", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:"100px", padding:"2px 10px", fontWeight:"600" }}>
@@ -147,7 +150,7 @@ export default function Bookings() {
             <div style={{ textAlign:"center", padding:"60px", color:"#94A3B8" }}>Loading…</div>
           ) : bookings.length === 0 ? (
             <div style={{ textAlign:"center", padding:"60px 20px" }}>
-              <div style={{ fontSize:"40px", marginBottom:"12px" }}>📅</div>
+              <div style={{ marginBottom:"12px", display:"flex", justifyContent:"center" }}><CalendarDays size={40} color="#94A3B8" /></div>
               <p style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B", marginBottom:"6px" }}>No bookings today</p>
               <p style={{ fontSize:"13px", color:"#64748B" }}>Add your first booking for this day.</p>
             </div>
@@ -189,7 +192,7 @@ export default function Bookings() {
                       ) : (
                         <button onClick={e => { e.stopPropagation(); handleAutoAssign(b.booking_id); }}
                           style={{ padding:"4px 10px", borderRadius:"7px", border:"1px solid #FDE68A", background:"#FFFBEB", color:"#B45309", fontSize:"11px", fontWeight:"700", cursor:"pointer" }}>
-                          {assigning===b.booking_id ? "…" : "⚡ Auto-assign"}
+                          {assigning===b.booking_id ? "…" : <span style={{ display:"inline-flex", alignItems:"center", gap:"4px" }}><Zap size={11} /> Auto-assign</span>}
                         </button>
                       )}
                     </div>
@@ -242,7 +245,7 @@ export default function Bookings() {
                     <div style={{ fontSize:"15px", fontWeight:"800", color:"#0F172A", marginBottom:"2px" }}>{selected.customer_name}</div>
                     {selected.customer_phone && <div style={{ fontSize:"11px", color:"#64748B" }}>{selected.customer_phone}</div>}
                   </div>
-                  <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:"#94A3B8", fontSize:"16px", cursor:"pointer" }}>✕</button>
+                  <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:"#94A3B8", fontSize:"16px", cursor:"pointer" }}><X size={16} /></button>
                 </div>
 
                 {/* Service & time */}
@@ -269,7 +272,7 @@ export default function Bookings() {
                   ) : (
                     <button onClick={() => handleAutoAssign(selected.booking_id)}
                       style={{ width:"100%", padding:"9px", borderRadius:"9px", border:"1.5px dashed #FDE68A", background:"#FFFBEB", color:"#B45309", fontSize:"12px", fontWeight:"700", cursor:"pointer" }}>
-                      {assigning===selected.booking_id ? "Assigning…" : "⚡ Auto-assign Staff"}
+                      {assigning===selected.booking_id ? "Assigning…" : <span style={{ display:"inline-flex", alignItems:"center", gap:"4px", justifyContent:"center" }}><Zap size={12} /> Auto-assign Staff</span>}
                     </button>
                   )}
                 </div>

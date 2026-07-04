@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { Briefcase } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import WorkerLayout from "../../components/layout/WorkerLayout";
@@ -175,7 +176,7 @@ export default function WorkerMyJobs() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px", textAlign: "center" }}>
-            <div style={{ fontSize: "32px", marginBottom: "10px" }}>💼</div>
+            <div style={{ marginBottom: "10px" }}><Briefcase size={32} color="#94A3B8" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No {filter} jobs</p>
           </div>
         ) : (

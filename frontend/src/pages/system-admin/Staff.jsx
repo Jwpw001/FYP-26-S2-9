@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { Users, MapPin } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-staff-kf")) {
   const s = document.createElement("style");
@@ -140,7 +141,7 @@ export default function AdminStaff() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"60px", textAlign:"center" }}>
-            <p style={{ fontSize:"28px", marginBottom:"10px" }}>👥</p>
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:"10px" }}><Users size={28} color="#CBD5E1" /></div>
             <p style={{ fontSize:"15px", fontWeight:"600", color:"#64748B" }}>No staff found</p>
           </div>
         ) : (
@@ -169,8 +170,8 @@ export default function AdminStaff() {
 
                     {/* Outlet */}
                     {s.outlets?.name && (
-                      <p style={{ fontSize:"11px", color:"#94A3B8", marginBottom:"10px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                        📍 {s.outlets.name}
+                      <p style={{ fontSize:"11px", color:"#94A3B8", marginBottom:"10px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:"4px" }}>
+                        <MapPin size={12} style={{ flexShrink:0 }} /> {s.outlets.name}
                       </p>
                     )}
 

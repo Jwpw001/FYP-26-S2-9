@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { createPortal } from "react-dom";
+import { Handshake, CalendarDays, Users, BarChart2, Pencil, Star, AlertTriangle, CheckCircle2, X } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("mgr-manpower-styles")) {
   const style = document.createElement("style");
@@ -193,7 +194,7 @@ export default function ManpowerRequests() {
       ));
       setRatingTarget(null);
       setRatingValue(0);
-      showToast(`Rated ${ratingValue} ⭐ — thank you for your feedback!`);
+      showToast(`Rated ${ratingValue} stars — thank you for your feedback!`);
     } catch (err) {
       showToast(err.message || "Failed to save rating.", "error");
     } finally {
@@ -285,7 +286,7 @@ export default function ManpowerRequests() {
           </div>
         ) : displayed.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "72px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ fontSize: "40px", marginBottom: "12px" }}>🧑‍🤝‍🧑</div>
+            <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}><Handshake size={40} color="#CBD5E1" /></div>
             <p style={{ fontSize: "17px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>
               {filter === "all" ? "No requests yet" : `No ${FILTERS.find(f => f.value === filter)?.label.toLowerCase()} requests`}
             </p>
@@ -330,9 +331,9 @@ export default function ManpowerRequests() {
 
                   {/* Details grid */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px", padding: "14px 0", borderTop: "1px solid #F1F5F9", borderBottom: req.override_note ? "1px solid #F1F5F9" : "none", marginBottom: req.override_note || req.status === "pending_review" ? "14px" : 0 }}>
-                    <InfoItem icon="📅" label="Date"    value={fmtDate(req.shift_date)} />
-                    <InfoItem icon="👥" label="Workers" value={`${req.headcount} worker${req.headcount > 1 ? "s" : ""}`} />
-                    <InfoItem icon="📊" label="Status"  value={st.label} />
+                    <InfoItem icon={<CalendarDays size={13} />} label="Date"    value={fmtDate(req.shift_date)} />
+                    <InfoItem icon={<Users size={13} />} label="Workers" value={`${req.headcount} worker${req.headcount > 1 ? "s" : ""}`} />
+                    <InfoItem icon={<BarChart2 size={13} />} label="Status"  value={st.label} />
                   </div>
 
                   {req.override_note && (
@@ -370,7 +371,7 @@ export default function ManpowerRequests() {
                       <button
                         onClick={() => { setRatingTarget({ requestId: req.request_id, workerId: req.assigned_worker_id, workerName: req.assigned_worker?.users?.full_name }); setRatingValue(req.manager_rating || 0); }}
                         style={{ padding: "5px 12px", borderRadius: "7px", border: "1px solid #E2E8F0", background: "#FFF", color: "#475569", fontSize: "12px", fontWeight: "600", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", gap: "5px" }}>
-                        {req.manager_rating ? "✏ Edit" : "⭐ Rate"}
+                        {req.manager_rating ? <><Pencil size={12} /> Edit</> : <><Star size={12} /> Rate</>}
                       </button>
                     </div>
                   )}
@@ -560,7 +561,7 @@ export default function ManpowerRequests() {
         <div style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setCancelTarget(null)} />
           <div style={{ position: "relative", background: "#FFF", borderRadius: "16px", padding: "28px", width: "360px", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)", animation: "modalIn 0.2s ease both" }}>
-            <div style={{ fontSize: "36px", marginBottom: "12px" }}>⚠️</div>
+            <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}><AlertTriangle size={36} color="#F59E0B" /></div>
             <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>Cancel this request?</h3>
             <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "22px" }}>The coordinator won't be able to action it after cancellation.</p>
             <div style={{ display: "flex", gap: "10px" }}>
@@ -580,7 +581,7 @@ export default function ManpowerRequests() {
 
       {toast && (
         <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 99999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#FFF", padding: "13px 22px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both", display: "flex", alignItems: "center", gap: "8px" }}>
-          {toast.type === "success" ? "✓" : "✕"} {toast.msg}
+          {toast.type === "success" ? <CheckCircle2 size={16} /> : <X size={16} />} {toast.msg}
         </div>
       )}
     </ManagerLayout>

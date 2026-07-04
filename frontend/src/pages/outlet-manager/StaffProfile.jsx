@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { X, Plus, Check } from "lucide-react";
+import { X, Plus, Check, Pause, Play, Trash2 } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const AVATAR_COLORS = ["#6366F1","#F59E0B","#10B981","#EF4444","#8B5CF6","#EC4899","#14B8A6","#F97316"];
@@ -146,7 +146,7 @@ function SkillSetsTab({ staffId }) {
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
             <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", margin:0 }}>New Skill Set</p>
             <button onClick={() => { setAdding(false); setSelSkill(null); setSelLevel("junior"); setSelYears(""); setError(""); }}
-              style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8", fontSize:"12px" }}>✕ Cancel</button>
+              style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8", fontSize:"12px", display:"inline-flex", alignItems:"center", gap:"3px" }}><X size={11} /> Cancel</button>
           </div>
 
           {error && <p style={{ fontSize:"12px", color:"#DC2626", marginBottom:"10px", background:"#FEF2F2", padding:"8px 10px", borderRadius:"7px" }}>{error}</p>}
@@ -338,14 +338,14 @@ export default function StaffProfile() {
           )}
 
           <div style={s.cardActions}>
-            <button style={{ ...s.actionBtn, background: member.is_active ? "#FEF3C7" : "#DCFCE7", color: member.is_active ? "#92400E" : "#166534", border: member.is_active ? "1px solid #FDE68A" : "1px solid #BBF7D0" }} onClick={toggleActive}>
-              {member.is_active ? "⏸ Deactivate" : "▶ Reactivate"}
+            <button style={{ ...s.actionBtn, background: member.is_active ? "#FEF3C7" : "#DCFCE7", color: member.is_active ? "#92400E" : "#166534", border: member.is_active ? "1px solid #FDE68A" : "1px solid #BBF7D0", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px" }} onClick={toggleActive}>
+              {member.is_active ? <><Pause size={13} /> Deactivate</> : <><Play size={13} /> Reactivate</>}
             </button>
             <p style={{ fontSize:"11px", color:"#94A3B8", textAlign:"center", marginTop:"6px", lineHeight:1.4 }}>
               {member.is_active ? "Deactivating prevents shift assignment but keeps staff on the list." : "Reactivating allows this staff to be assigned shifts again."}
             </p>
-            <button style={{ ...s.actionBtn, marginTop:"8px", background:"#FEF2F2", color:"#991B1B", border:"1px solid #FECACA" }} onClick={() => setShowDeleteConfirm(true)}>
-              🗑 Delete Staff
+            <button style={{ ...s.actionBtn, marginTop:"8px", background:"#FEF2F2", color:"#991B1B", border:"1px solid #FECACA", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px" }} onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 size={13} /> Delete Staff
             </button>
           </div>
         </div>
@@ -447,7 +447,7 @@ export default function StaffProfile() {
       {showDeleteConfirm && (
         <div style={s.overlay}>
           <div style={s.modal}>
-            <div style={s.modalIcon}>🗑</div>
+            <div style={{ ...s.modalIcon, display:"flex", justifyContent:"center" }}><Trash2 size={36} color="#DC2626" /></div>
             <h3 style={s.modalTitle}>Delete Staff Member?</h3>
             <p style={s.modalBody}>This will permanently remove <strong>{member.users?.full_name}</strong> and all their records. This cannot be undone.</p>
             <div style={s.modalActions}>

@@ -6,6 +6,7 @@ import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
 import { useBusinessContext } from "../../context/BusinessContext";
+import { Trash2, CalendarDays, Sparkles, X, CheckCircle2, AlertTriangle, Pencil } from "lucide-react";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-shifts-styles")) {
@@ -373,7 +374,7 @@ export default function ShiftsList() {
             {selectMode && selected.size > 0 && (
               <button onClick={deleteSelected} disabled={deleting}
                 style={{ padding: "7px 14px", borderRadius: "9px", border: "none", background: "#EF4444", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
-                {deleting ? "Deleting…" : `🗑 Delete (${selected.size})`}
+                {deleting ? "Deleting…" : <><Trash2 size={14} /> Delete ({selected.size})</>}
               </button>
             )}
             <button onClick={() => { setSelectMode(p => !p); setSelected(new Set()); }}
@@ -402,7 +403,7 @@ export default function ShiftsList() {
         ) : view === "list" ? (
           filtered.length === 0 ? (
             <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px 40px", textAlign: "center" }}>
-              <div style={{ fontSize: "40px", marginBottom: "12px" }}>📅</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}><CalendarDays size={40} color="#94A3B8" /></div>
               <p style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", marginBottom: "8px" }}>No shifts yet</p>
               <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "24px" }}>Create your first shift to get started.</p>
               <CreateShiftBtn onClick={() => goTo("/outlet-manager/shifts/new")} />
@@ -433,7 +434,7 @@ export default function ShiftsList() {
                     goTo(`/outlet-manager/shifts/generate?weekStart=${weekStart}&weekEnd=${weekEnd}`);
                   }}
                   style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", borderRadius: "9px", border: "none", background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", fontSize: "12px", fontWeight: "700", cursor: "pointer", whiteSpace: "nowrap" }}>
-                  ✦ Generate Week
+                  <Sparkles size={13} /> Generate Week
                 </button>
                 <WeekNavBtn label="→" onClick={() => setWeekOffset(p => p + 1)} />
               </div>
@@ -459,7 +460,7 @@ export default function ShiftsList() {
                             onClick={() => selectMode ? toggleSelect(shift.shift_id) : goTo(`/outlet-manager/shifts/${shift.shift_id}`)}>
                             {selectMode && (
                               <div style={{ width: "13px", height: "13px", borderRadius: "3px", border: `2px solid ${isSelected ? "#6366F1" : "rgba(0,0,0,0.25)"}`, background: isSelected ? "#6366F1" : "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}>
-                                {isSelected && <span style={{ color: "#fff", fontSize: "9px", fontWeight: "900", lineHeight: 1 }}>✓</span>}
+                                {isSelected && <CheckCircle2 size={9} color="#fff" />}
                               </div>
                             )}
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -470,9 +471,9 @@ export default function ShiftsList() {
                         );
                       })}
                       <div
-                        style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", cursor: "pointer", padding: "3px", borderRadius: "6px", border: "1px dashed #E2E8F0", marginTop: dayShifts.length > 0 ? "2px" : 0 }}
+                        style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", cursor: "pointer", padding: "3px", borderRadius: "6px", border: "1px dashed #E2E8F0", marginTop: dayShifts.length > 0 ? "2px" : 0, display: "flex", alignItems: "center", justifyContent: "center", gap: "2px" }}
                         onClick={() => openAiCreate(date.toISOString().split("T")[0])}>
-                        ✦+
+                        <Sparkles size={12} />+
                       </div>
                     </div>
                   </div>
@@ -492,7 +493,7 @@ export default function ShiftsList() {
             <div style={ms.header}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "15px", color: "#6366F1" }}>✦</span>
+                  <Sparkles size={15} color="#6366F1" />
                   <span style={ms.title}>
                     {aiCreate.step === "form" ? "AI-Powered Shift Creator" :
                      aiCreate.step === "recommending" ? "Creating & Analysing…" :
@@ -502,7 +503,7 @@ export default function ShiftsList() {
                 <p style={ms.sub}>{fmtDateLong(aiCreate.date)}</p>
               </div>
               {aiCreate.step !== "recommending" && (
-                <button style={ms.closeBtn} onClick={() => setAiCreate(null)}>✕</button>
+                <button style={{ ...ms.closeBtn, display: "inline-flex", alignItems: "center" }} onClick={() => setAiCreate(null)}><X size={16} /></button>
               )}
             </div>
 
@@ -562,14 +563,14 @@ export default function ShiftsList() {
                         value={role.headcount}
                         onChange={e => setAiCreateForm(p => ({ ...p, roles: p.roles.map((r, i) => i === idx ? { ...r, headcount: e.target.value } : r) }))} />
                       {aiCreateForm.roles.length > 1 && (
-                        <button style={ms.removeRoleBtn} onClick={() => setAiCreateForm(p => ({ ...p, roles: p.roles.filter((_, i) => i !== idx) }))}>✕</button>
+                        <button style={{ ...ms.removeRoleBtn, display: "inline-flex", alignItems: "center" }} onClick={() => setAiCreateForm(p => ({ ...p, roles: p.roles.filter((_, i) => i !== idx) }))}><X size={13} /></button>
                       )}
                     </div>
                   ))}
                 </div>
 
-                <button style={ms.aiSubmitBtn} onClick={handleAiCreateSubmit}>
-                  ✦ Create & Get AI Suggestions
+                <button style={{ ...ms.aiSubmitBtn, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }} onClick={handleAiCreateSubmit}>
+                  <Sparkles size={14} /> Create & Get AI Suggestions
                 </button>
               </div>
             )}
@@ -577,7 +578,7 @@ export default function ShiftsList() {
             {/* Step 2: Loading */}
             {aiCreate.step === "recommending" && (
               <div style={{ textAlign: "center", padding: "40px 0" }}>
-                <div style={{ fontSize: "32px", marginBottom: "14px", animation: "aiPulse 1.2s ease infinite" }}>✦</div>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "14px", animation: "aiPulse 1.2s ease infinite" }}><Sparkles size={32} color="#6366F1" /></div>
                 <p style={{ fontSize: "15px", fontWeight: "700", color: "#4338CA" }}>Creating shift and analysing staff…</p>
                 <p style={{ fontSize: "13px", color: "#6D28D9", opacity: 0.7, marginTop: "6px" }}>Groq AI is picking the best people for your roles</p>
               </div>
@@ -630,7 +631,7 @@ export default function ShiftsList() {
                               disabled={isAssigned || !!aiCreateAssigning}
                               onClick={() => handleAiCreateAssign(sug.staff_id, rec.role_id, sug.name)}
                             >
-                              {isAssigned ? "✓ Assigned" : aiCreateAssigning === Number(sug.staff_id) ? "…" : "Assign"}
+                              {isAssigned ? <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle2 size={12} /> Assigned</span> : aiCreateAssigning === Number(sug.staff_id) ? "…" : "Assign"}
                             </button>
                           </div>
                         );
@@ -656,7 +657,7 @@ export default function ShiftsList() {
               <div style={{ position:"absolute",bottom:"-60px",left:"30%",width:"200px",height:"200px",borderRadius:"50%",background:"rgba(255,255,255,0.03)",pointerEvents:"none" }} />
               <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",position:"relative" }}>
                 <div style={{ display:"flex",alignItems:"center",gap:"12px" }}>
-                  <div style={{ width:"38px",height:"38px",borderRadius:"10px",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0 }}>✦</div>
+                  <div style={{ width:"38px",height:"38px",borderRadius:"10px",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><Sparkles size={18} color="#fff" /></div>
                   <div>
                     <div style={{ fontSize:"15px",fontWeight:"800",color:"#fff",letterSpacing:"-0.2px" }}>AI Weekly Schedule</div>
                     <div style={{ fontSize:"11px",color:"rgba(255,255,255,0.6)",fontWeight:"500",marginTop:"1px" }}>
@@ -681,7 +682,7 @@ export default function ShiftsList() {
                     ));
                   })()}
                   {!["generating","creating"].includes(weeklyAI.step) && (
-                    <button onClick={() => setWeeklyAI(null)} style={{ width:"32px",height:"32px",borderRadius:"8px",background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.8)",fontSize:"14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>✕</button>
+                    <button onClick={() => setWeeklyAI(null)} style={{ width:"32px",height:"32px",borderRadius:"8px",background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.8)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><X size={14} /></button>
                   )}
                 </div>
               </div>
@@ -696,7 +697,7 @@ export default function ShiftsList() {
                   <div style={{ position:"relative",width:"72px",height:"72px" }}>
                     <div style={{ position:"absolute",inset:0,borderRadius:"50%",border:"3px solid #EEF2FF" }} />
                     <div style={{ position:"absolute",inset:0,borderRadius:"50%",border:"3px solid transparent",borderTopColor:"#6366F1",animation:"aiSpin 0.85s linear infinite" }} />
-                    <div style={{ position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px" }}>✦</div>
+                    <div style={{ position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center" }}><Sparkles size={26} color="#6366F1" /></div>
                   </div>
                   <div style={{ textAlign:"center" }}>
                     <p style={{ fontSize:"17px",fontWeight:"800",color:"#1E293B",marginBottom:"6px" }}>Building your week…</p>
@@ -711,7 +712,7 @@ export default function ShiftsList() {
               {/* Error */}
               {weeklyAI.step === "error" && (
                 <div style={{ display:"flex",flexDirection:"column",alignItems:"center",padding:"80px 20px",gap:"14px" }}>
-                  <div style={{ width:"64px",height:"64px",borderRadius:"50%",background:"#FEF2F2",border:"2px solid #FCA5A5",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px" }}>⚠️</div>
+                  <div style={{ width:"64px",height:"64px",borderRadius:"50%",background:"#FEF2F2",border:"2px solid #FCA5A5",display:"flex",alignItems:"center",justifyContent:"center" }}><AlertTriangle size={28} color="#DC2626" /></div>
                   <p style={{ fontSize:"16px",fontWeight:"800",color:"#DC2626" }}>Generation failed</p>
                   <p style={{ fontSize:"13px",color:"#64748B",maxWidth:"360px",textAlign:"center",lineHeight:1.6 }}>{weeklyAI.message}</p>
                 </div>
@@ -720,7 +721,7 @@ export default function ShiftsList() {
               {/* Done */}
               {weeklyAI.step === "done" && (
                 <div style={{ display:"flex",flexDirection:"column",alignItems:"center",padding:"80px 20px",gap:"14px" }}>
-                  <div style={{ width:"72px",height:"72px",borderRadius:"50%",background:"linear-gradient(135deg,#D1FAE5,#A7F3D0)",border:"2px solid #6EE7B7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"32px",boxShadow:"0 8px 24px rgba(16,185,129,0.25)" }}>✓</div>
+                  <div style={{ width:"72px",height:"72px",borderRadius:"50%",background:"linear-gradient(135deg,#D1FAE5,#A7F3D0)",border:"2px solid #6EE7B7",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 8px 24px rgba(16,185,129,0.25)" }}><CheckCircle2 size={32} color="#059669" /></div>
                   <p style={{ fontSize:"18px",fontWeight:"800",color:"#059669" }}>{weeklyAI.created} shift{weeklyAI.created!==1?"s":""} saved as draft!</p>
                   <p style={{ fontSize:"13px",color:"#64748B" }}>Review and publish them from the calendar view.</p>
                 </div>
@@ -938,7 +939,7 @@ function WeeklySchedulePreview({ schedule, accepted, onToggle, onEdit }) {
                         {/* Checkbox */}
                         <div onClick={e=>{e.stopPropagation();onToggle(i);}}
                           style={{ width:"14px",height:"14px",borderRadius:"4px",border:`1.5px solid ${checked?cc.top:"#D1D5DB"}`,background:checked?cc.top:"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,transition:"all 0.15s" }}>
-                          {checked && <span style={{color:"#fff",fontSize:"8px",fontWeight:"900",lineHeight:1}}>✓</span>}
+                          {checked && <CheckCircle2 size={8} color="#fff" />}
                         </div>
                       </div>
 
@@ -974,8 +975,8 @@ function WeeklySchedulePreview({ schedule, accepted, onToggle, onEdit }) {
 
                       {/* Edit / Done button */}
                       <button onClick={e=>{e.stopPropagation(); isEditing?cancelEdit():startEdit(i);}}
-                        style={{ width:"100%",padding:"4px 0",borderRadius:"6px",border:`1px solid ${isEditing?"#FECACA":cc.border}`,background:isEditing?"#FEF2F2":cc.bg,color:isEditing?"#DC2626":cc.text,fontSize:"9px",fontWeight:"700",cursor:"pointer",transition:"all 0.15s" }}>
-                        {isEditing?"✕ Close":"✎ Edit"}
+                        style={{ width:"100%",padding:"4px 0",borderRadius:"6px",border:`1px solid ${isEditing?"#FECACA":cc.border}`,background:isEditing?"#FEF2F2":cc.bg,color:isEditing?"#DC2626":cc.text,fontSize:"9px",fontWeight:"700",cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:"3px" }}>
+                        {isEditing?<><X size={9} /> Close</>:<><Pencil size={9} /> Edit</>}
                       </button>
                     </div>
                   </div>
@@ -1002,7 +1003,7 @@ function WeeklySchedulePreview({ schedule, accepted, onToggle, onEdit }) {
                   <p style={{ fontSize:"11px",color:"#64748B",marginTop:"2px" }}>{schedule[editingIdx]?.date}</p>
                 </div>
               </div>
-              <button onClick={cancelEdit} style={{ width:"28px",height:"28px",borderRadius:"8px",border:`1px solid ${cc.border}`,background:"#fff",color:"#64748B",fontSize:"12px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
+              <button onClick={cancelEdit} style={{ width:"28px",height:"28px",borderRadius:"8px",border:`1px solid ${cc.border}`,background:"#fff",color:"#64748B",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}><X size={13} /></button>
             </div>
 
             <div style={{ padding:"16px" }}>

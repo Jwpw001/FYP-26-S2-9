@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { api } from "../../lib/api";
 import { useBusinessContext } from "../../context/BusinessContext";
-import { Plus, X, Search } from "lucide-react";
+import { Plus, X, Search, Check, Sparkles, PartyPopper } from "lucide-react";
 
 export default function BOSkills() {
   const { industry, schedulingMode } = useBusinessContext();
@@ -156,8 +156,8 @@ export default function BOSkills() {
           )}
 
           {(error || success) && (
-            <p style={{ fontSize:"12px", color: error ? "#DC2626" : "#059669", marginBottom:"12px", flexShrink:0 }}>
-              {error || `✓ ${success}`}
+            <p style={{ fontSize:"12px", color: error ? "#DC2626" : "#059669", marginBottom:"12px", flexShrink:0, display:"flex", alignItems:"center", gap:"4px" }}>
+              {error ? error : <><Check size={13} color="#059669" /> {success}</>}
             </p>
           )}
 
@@ -182,8 +182,8 @@ export default function BOSkills() {
               </div>
             ) : filtered.length === 0 ? (
               <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"60%", textAlign:"center", gap:"12px" }}>
-                <div style={{ width:"52px", height:"52px", borderRadius:"50%", background:"#F1F5F9", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"22px" }}>
-                  {search ? "🔍" : "✦"}
+                <div style={{ width:"52px", height:"52px", borderRadius:"50%", background:"#F1F5F9", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {search ? <Search size={22} color="#94A3B8" /> : <Sparkles size={22} color="#94A3B8" />}
                 </div>
                 <div>
                   <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>
@@ -251,7 +251,7 @@ export default function BOSkills() {
           <div style={{ flex:1, overflowY:"auto", padding:"12px 16px" }}>
             {suggestions.length === 0 ? (
               <div style={{ textAlign:"center", padding:"40px 16px" }}>
-                <p style={{ fontSize:"22px", marginBottom:"8px" }}>🎉</p>
+                <p style={{ marginBottom:"8px" }}><PartyPopper size={22} color="#F59E0B" /></p>
                 <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>All suggestions added!</p>
                 <p style={{ fontSize:"11px", color:"#94A3B8" }}>You can still type custom skills in the input.</p>
               </div>

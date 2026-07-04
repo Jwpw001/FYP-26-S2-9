@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
 import { useBusinessContext } from "../../context/BusinessContext";
-import { Plus, X, Search } from "lucide-react";
+import { Plus, X, Search, CheckCircle2, Sparkles, PartyPopper } from "lucide-react";
 
 export default function SkillSettings() {
   const { industry, schedulingMode } = useBusinessContext();
@@ -144,8 +144,8 @@ export default function SkillSettings() {
           )}
 
           {(error || success) && (
-            <p style={{ fontSize:"12px", color: error ? "#DC2626" : "#059669", marginBottom:"12px", flexShrink:0 }}>
-              {error || `✓ ${success}`}
+            <p style={{ fontSize:"12px", color: error ? "#DC2626" : "#059669", marginBottom:"12px", flexShrink:0, display:"flex", alignItems:"center", gap:"4px" }}>
+              {error || <><CheckCircle2 size={13} color="#059669" /> {success}</>}
             </p>
           )}
 
@@ -154,7 +154,7 @@ export default function SkillSettings() {
               <Search size={13} color="#94A3B8" strokeWidth={2}/>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search skills…"
                 style={{ border:"none", outline:"none", fontSize:"12px", color:"#1E293B", background:"transparent", flex:1, fontFamily:"inherit" }}/>
-              {search && <button onClick={() => setSearch("")} style={{ background:"none", border:"none", color:"#94A3B8", cursor:"pointer", fontSize:"15px", lineHeight:1, padding:"0" }}>×</button>}
+              {search && <button onClick={() => setSearch("")} style={{ background:"none", border:"none", color:"#94A3B8", cursor:"pointer", lineHeight:1, padding:"0", display:"flex", alignItems:"center" }}><X size={13} /></button>}
             </div>
           )}
 
@@ -167,8 +167,8 @@ export default function SkillSettings() {
               </div>
             ) : filtered.length === 0 ? (
               <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"60%", textAlign:"center", gap:"12px" }}>
-                <div style={{ width:"52px", height:"52px", borderRadius:"50%", background:"#F1F5F9", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"22px" }}>
-                  {search ? "🔍" : "✦"}
+                <div style={{ width:"52px", height:"52px", borderRadius:"50%", background:"#F1F5F9", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {search ? <Search size={22} color="#64748B" /> : <Sparkles size={22} color="#64748B" />}
                 </div>
                 <div>
                   <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>
@@ -222,7 +222,7 @@ export default function SkillSettings() {
           <div style={{ flex:1, overflowY:"auto", padding:"12px 16px" }}>
             {suggestions.length === 0 ? (
               <div style={{ textAlign:"center", padding:"40px 16px" }}>
-                <p style={{ fontSize:"22px", marginBottom:"8px" }}>🎉</p>
+                <div style={{ display:"flex", justifyContent:"center", marginBottom:"8px" }}><PartyPopper size={22} color="#3B82F6" /></div>
                 <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>All suggestions added!</p>
                 <p style={{ fontSize:"11px", color:"#94A3B8" }}>You can still type custom skills in the input.</p>
               </div>

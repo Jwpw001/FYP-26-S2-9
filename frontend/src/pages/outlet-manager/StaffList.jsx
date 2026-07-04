@@ -5,7 +5,7 @@ import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { useBusinessContext } from "../../context/BusinessContext";
-import { LayoutList, Network, Building2 } from "lucide-react";
+import { LayoutList, Network, Building2, Users, Star } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("mgr-staff-styles")) {
   const style = document.createElement("style");
@@ -199,7 +199,7 @@ export default function StaffList() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center" }}>
-            <p style={{ fontSize: "32px", marginBottom: "10px" }}>👥</p>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "10px" }}><Users size={32} color="#94A3B8" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No staff found</p>
           </div>
         ) : (
@@ -273,7 +273,7 @@ function AvatarBubble({ name, size = 40, isManager = false }) {
       </div>
       {isManager && (
         <div style={{ position: "absolute", bottom: -2, right: -2, width: size * 0.34, height: size * 0.34, borderRadius: "50%", background: "#F59E0B", border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: size * 0.18, color: "#fff" }}>★</span>
+          <Star size={size * 0.18} color="#fff" fill="#fff" />
         </div>
       )}
     </div>

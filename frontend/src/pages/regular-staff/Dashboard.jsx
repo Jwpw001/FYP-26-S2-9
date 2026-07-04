@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import { useBusinessContext } from "../../context/BusinessContext";
 import StaffLayout from "../../components/layout/StaffLayout";
+import { CalendarDays, Palmtree, RefreshCw, Bell, SmilePlus, CheckCircle2, Flag, ClipboardList, Sparkles, Hand, Timer } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-dash-styles")) {
   const style = document.createElement("style");
@@ -233,16 +234,16 @@ function ShiftStaffDashboard() {
   }
 
   const statCards = [
-    { label: "Upcoming Shifts",   value: upcomingShifts.length, icon: "📅", color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/shifts" },
-    { label: "Pending Leave",     value: pendingLeave,           icon: "🏖",  color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
-    { label: "Pending Swaps",     value: pendingSwaps,           icon: "🔄",  color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/swaps" },
-    { label: "Unread Notifications", value: unreadCount,         icon: "🔔",  color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
+    { label: "Upcoming Shifts",   value: upcomingShifts.length, icon: CalendarDays, color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/shifts" },
+    { label: "Pending Leave",     value: pendingLeave,           icon: Palmtree,     color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
+    { label: "Pending Swaps",     value: pendingSwaps,           icon: RefreshCw,    color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/swaps" },
+    { label: "Unread Notifications", value: unreadCount,         icon: Bell,         color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
   ];
 
   const quickActions = [
-    { label: "Request Leave",    icon: "🏖",  link: "/regular-staff/leave" },
-    { label: "Swap Requests",    icon: "🔄",  link: "/regular-staff/swaps" },
-    { label: "Notifications",    icon: "🔔",  link: "/regular-staff/notifications" },
+    { label: "Request Leave",    icon: Palmtree,  link: "/regular-staff/leave" },
+    { label: "Swap Requests",    icon: RefreshCw, link: "/regular-staff/swaps" },
+    { label: "Notifications",    icon: Bell,      link: "/regular-staff/notifications" },
   ];
 
   const clockInAllowed = todayShift && canClockIn(todayShift.shifts?.start_time);
@@ -255,7 +256,9 @@ function ShiftStaffDashboard() {
         {/* Welcome */}
         <div style={{ marginBottom: "28px" }}>
           <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
-            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} 👋
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} <Hand size={22} color="#F59E0B" />
+            </span>
           </h2>
           <p style={{ fontSize: "14px", color: "#64748B" }}>Here's your schedule and updates for the coming days.</p>
         </div>
@@ -292,7 +295,7 @@ function ShiftStaffDashboard() {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: "20px", marginBottom: "14px",
                 }}>
-                  {card.icon}
+                  <card.icon size={20} />
                 </div>
                 <p style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", lineHeight: 1 }}>{card.value}</p>
                 <p style={{ fontSize: "13px", fontWeight: "500", color: "#64748B", marginTop: "6px" }}>{card.label}</p>
@@ -316,7 +319,7 @@ function ShiftStaffDashboard() {
             </div>
           ) : todayShift === false ? (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <p style={{ fontSize: "32px", marginBottom: "10px" }}>😌</p>
+              <p style={{ fontSize: "32px", marginBottom: "10px", display: "flex", justifyContent: "center" }}><SmilePlus size={32} color="#64748B" /></p>
               <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>No shift today — take a well-earned rest!</p>
               <p style={{ fontSize: "13px", color: "#64748B", marginTop: "4px" }}>Enjoy your day off. Check back tomorrow.</p>
             </div>
@@ -348,7 +351,7 @@ function ShiftStaffDashboard() {
               <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                 {todayAttend?.clock_in ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#DCFCE7", border: "1.5px solid #BBF7D0", borderRadius: "10px", padding: "10px 16px" }}>
-                    <span style={{ fontSize: "16px" }}>✅</span>
+                    <span style={{ fontSize: "16px", display: "inline-flex" }}><CheckCircle2 size={16} color="#16A34A" /></span>
                     <div>
                       <p style={{ fontSize: "11px", color: "#166534", fontWeight: "600" }}>Clocked In</p>
                       <p style={{ fontSize: "15px", color: "#166534", fontWeight: "800" }}>{fmtTime(todayAttend.clock_in)}</p>
@@ -376,7 +379,7 @@ function ShiftStaffDashboard() {
 
                 {todayAttend?.clock_out ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#FFF1F2", border: "1.5px solid #FECACA", borderRadius: "10px", padding: "10px 16px" }}>
-                    <span style={{ fontSize: "16px" }}>🏁</span>
+                    <span style={{ fontSize: "16px", display: "inline-flex" }}><Flag size={16} color="#DC2626" /></span>
                     <div>
                       <p style={{ fontSize: "11px", color: "#9F1239", fontWeight: "600" }}>Clocked Out</p>
                       <p style={{ fontSize: "15px", color: "#9F1239", fontWeight: "800" }}>{fmtTime(todayAttend.clock_out)}</p>
@@ -422,7 +425,7 @@ function ShiftStaffDashboard() {
             </div>
           ) : upcomingShifts.length === 0 ? (
             <div style={s.emptyInner}>
-              <span style={{ fontSize: "28px" }}>📅</span>
+              <span style={{ fontSize: "28px", display: "inline-flex" }}><CalendarDays size={28} color="#94A3B8" /></span>
               <p style={{ fontSize: "14px", color: "#64748B", marginTop: "8px" }}>No upcoming shifts in the next 14 days.</p>
             </div>
           ) : (
@@ -467,7 +470,7 @@ function ShiftStaffDashboard() {
                   fontSize: "13px", fontWeight: "600", color: "#1E293B",
                   cursor: "pointer", transition: "all 0.15s",
                 }}>
-                <span>{a.icon}</span>{a.label}
+                <span style={{ display: "inline-flex", alignItems: "center" }}><a.icon size={16} /></span>{a.label}
               </button>
             ))}
           </div>
@@ -546,17 +549,17 @@ function FlexibleStaffDashboard() {
   const topTasks = openTasks.slice(0, 5);
 
   const statCards = [
-    { label: "Open Tasks",           value: openTasks.length,     icon: "✅", color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/tasks" },
-    { label: "Hours This Week",      value: `${weekHours}h`,      icon: "⏱",  color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/timesheets" },
-    { label: "Pending Leave",        value: pendingLeave,         icon: "🏖",  color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
-    { label: "Unread Notifications", value: unreadCount,          icon: "🔔",  color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
+    { label: "Open Tasks",           value: openTasks.length,     icon: CheckCircle2, color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/tasks" },
+    { label: "Hours This Week",      value: `${weekHours}h`,      icon: Timer,        color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/timesheets" },
+    { label: "Pending Leave",        value: pendingLeave,         icon: Palmtree,     color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
+    { label: "Unread Notifications", value: unreadCount,          icon: Bell,         color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
   ];
 
   const quickActions = [
-    { label: "Log Hours",     icon: "⏱",  link: "/regular-staff/timesheets" },
-    { label: "My Tasks",      icon: "✅", link: "/regular-staff/tasks" },
-    { label: "Request Leave", icon: "🏖",  link: "/regular-staff/leave" },
-    { label: "Notifications", icon: "🔔",  link: "/regular-staff/notifications" },
+    { label: "Log Hours",     icon: Timer,       link: "/regular-staff/timesheets" },
+    { label: "My Tasks",      icon: CheckCircle2, link: "/regular-staff/tasks" },
+    { label: "Request Leave", icon: Palmtree,    link: "/regular-staff/leave" },
+    { label: "Notifications", icon: Bell,        link: "/regular-staff/notifications" },
   ];
 
   return (
@@ -565,7 +568,9 @@ function FlexibleStaffDashboard() {
 
         <div style={{ marginBottom: "28px" }}>
           <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
-            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} 👋
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} <Hand size={22} color="#F59E0B" />
+            </span>
           </h2>
           <p style={{ fontSize: "14px", color: "#64748B" }}>Here's what's on your plate.</p>
         </div>
@@ -586,7 +591,7 @@ function FlexibleStaffDashboard() {
               <div key={card.label} className="staff-stat-card" onClick={() => navigate(card.link)}
                 style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", transition: "transform 0.18s, box-shadow 0.18s", animation: `fadeSlideUp 0.35s ease ${i * 0.07}s both` }}>
                 <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: card.bg, color: card.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", marginBottom: "14px" }}>
-                  {card.icon}
+                  <card.icon size={20} />
                 </div>
                 <p style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", lineHeight: 1 }}>{card.value}</p>
                 <p style={{ fontSize: "13px", fontWeight: "500", color: "#64748B", marginTop: "6px" }}>{card.label}</p>
@@ -616,7 +621,7 @@ function FlexibleStaffDashboard() {
             </div>
           ) : topTasks.length === 0 ? (
             <div style={s.emptyInner}>
-              <span style={{ fontSize: "28px" }}>✅</span>
+              <span style={{ fontSize: "28px", display: "inline-flex" }}><CheckCircle2 size={28} color="#2563EB" /></span>
               <p style={{ fontSize: "14px", color: "#64748B", marginTop: "8px" }}>Nothing assigned to you right now.</p>
             </div>
           ) : (
@@ -648,7 +653,7 @@ function FlexibleStaffDashboard() {
             {quickActions.map(a => (
               <button key={a.label} className="staff-action-btn" onClick={() => navigate(a.link)}
                 style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 18px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer", transition: "all 0.15s" }}>
-                <span>{a.icon}</span>{a.label}
+                <span style={{ display: "inline-flex", alignItems: "center" }}><a.icon size={16} /></span>{a.label}
               </button>
             ))}
           </div>
@@ -709,16 +714,16 @@ function AppointmentStaffDashboard() {
   }, [userId]);
 
   const statCards = [
-    { label: "Today's Appointments", value: todayAppts.length, icon: "📋", color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/appointments" },
-    { label: "Next 7 Days",          value: weekCount,          icon: "📆", color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/appointments" },
-    { label: "Pending Leave",        value: pendingLeave,       icon: "🏖",  color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
-    { label: "Unread Notifications", value: unreadCount,        icon: "🔔",  color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
+    { label: "Today's Appointments", value: todayAppts.length, icon: ClipboardList, color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/appointments" },
+    { label: "Next 7 Days",          value: weekCount,          icon: CalendarDays,  color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/appointments" },
+    { label: "Pending Leave",        value: pendingLeave,       icon: Palmtree,      color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
+    { label: "Unread Notifications", value: unreadCount,        icon: Bell,          color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
   ];
 
   const quickActions = [
-    { label: "My Appointments", icon: "📋", link: "/regular-staff/appointments" },
-    { label: "Request Leave",   icon: "🏖",  link: "/regular-staff/leave" },
-    { label: "Notifications",   icon: "🔔",  link: "/regular-staff/notifications" },
+    { label: "My Appointments", icon: ClipboardList, link: "/regular-staff/appointments" },
+    { label: "Request Leave",   icon: Palmtree,      link: "/regular-staff/leave" },
+    { label: "Notifications",   icon: Bell,          link: "/regular-staff/notifications" },
   ];
 
   return (
@@ -727,7 +732,9 @@ function AppointmentStaffDashboard() {
 
         <div style={{ marginBottom: "28px" }}>
           <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
-            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} 👋
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} <Hand size={22} color="#F59E0B" />
+            </span>
           </h2>
           <p style={{ fontSize: "14px", color: "#64748B" }}>Here's your appointment schedule.</p>
         </div>
@@ -748,7 +755,7 @@ function AppointmentStaffDashboard() {
               <div key={card.label} className="staff-stat-card" onClick={() => navigate(card.link)}
                 style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", transition: "transform 0.18s, box-shadow 0.18s", animation: `fadeSlideUp 0.35s ease ${i * 0.07}s both` }}>
                 <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: card.bg, color: card.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", marginBottom: "14px" }}>
-                  {card.icon}
+                  <card.icon size={20} />
                 </div>
                 <p style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", lineHeight: 1 }}>{card.value}</p>
                 <p style={{ fontSize: "13px", fontWeight: "500", color: "#64748B", marginTop: "6px" }}>{card.label}</p>
@@ -778,7 +785,7 @@ function AppointmentStaffDashboard() {
             </div>
           ) : todayAppts.length === 0 ? (
             <div style={s.emptyInner}>
-              <span style={{ fontSize: "28px" }}>✨</span>
+              <span style={{ fontSize: "28px", display: "inline-flex" }}><Sparkles size={28} color="#94A3B8" /></span>
               <p style={{ fontSize: "14px", color: "#64748B", marginTop: "8px" }}>No appointments today.</p>
             </div>
           ) : (
@@ -805,7 +812,7 @@ function AppointmentStaffDashboard() {
             {quickActions.map(a => (
               <button key={a.label} className="staff-action-btn" onClick={() => navigate(a.link)}
                 style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 18px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer", transition: "all 0.15s" }}>
-                <span>{a.icon}</span>{a.label}
+                <span style={{ display: "inline-flex", alignItems: "center" }}><a.icon size={16} /></span>{a.label}
               </button>
             ))}
           </div>

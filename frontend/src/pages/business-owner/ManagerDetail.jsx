@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { Building2 } from "lucide-react";
+import { Building2, Trash2 } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-managerdetail-styles")) {
   const style = document.createElement("style");
@@ -157,10 +157,11 @@ export default function BOManagerDetail() {
               style={{ ...s.actionBtn, marginTop: "8px",
                 background: "#FEF2F2", color: "#991B1B",
                 border: "1px solid #FECACA",
+                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px",
               }}
               onClick={() => setShowDeleteConfirm(true)}
             >
-              🗑 Remove Manager
+              <Trash2 size={14} /> Remove Manager
             </button>
           </div>
         </div>
@@ -210,7 +211,7 @@ export default function BOManagerDetail() {
       {showDeleteConfirm && (
         <div style={s.overlay}>
           <div style={s.modal}>
-            <div style={s.modalIcon}>🗑</div>
+            <div style={s.modalIcon}><Trash2 size={36} color="#EF4444" /></div>
             <h3 style={s.modalTitle}>Remove Manager?</h3>
             <p style={s.modalBody}>
               This will permanently remove <strong>{manager.full_name}</strong> and their account.

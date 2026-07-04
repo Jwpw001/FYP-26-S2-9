@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
 import { useBusinessContext } from "../../context/BusinessContext";
+import { Sprout, Star, Trophy, AlertTriangle, Lightbulb, BarChart2 } from "lucide-react";
 
 const toLocalISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
@@ -13,7 +14,7 @@ function getWeekRange(offset = 0) {
   return { weekStart: toLocalISO(mon), weekEnd: toLocalISO(sun), mon };
 }
 
-const EXP_ICON = { beginner:"🌱", intermediate:"⭐", expert:"🏆" };
+const EXP_ICON = { beginner:Sprout, intermediate:Star, expert:Trophy };
 
 const CAPACITY_ENDPOINT = {
   flexible:    { url: "/api/projects/capacity", source: "hours logged via timesheets" },
@@ -65,13 +66,13 @@ export default function Capacity() {
 
         {/* Alert banners */}
         {overCapacity.length > 0 && (
-          <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:"10px", padding:"10px 16px", marginBottom:"12px", fontSize:"13px", color:"#991B1B", fontWeight:"600" }}>
-            ⚠ {overCapacity.length} staff member{overCapacity.length!==1?"s are":" is"} over 40h this week: {overCapacity.map(c=>c.name).join(", ")}
+          <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:"10px", padding:"10px 16px", marginBottom:"12px", fontSize:"13px", color:"#991B1B", fontWeight:"600", display:"flex", alignItems:"center", gap:"6px" }}>
+            <AlertTriangle size={14} color="#991B1B" /> {overCapacity.length} staff member{overCapacity.length!==1?"s are":" is"} over 40h this week: {overCapacity.map(c=>c.name).join(", ")}
           </div>
         )}
         {underUtilised.length > 0 && (
-          <div style={{ background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:"10px", padding:"10px 16px", marginBottom:"16px", fontSize:"13px", color:"#92400E", fontWeight:"600" }}>
-            💡 {underUtilised.length} staff member{underUtilised.length!==1?"s are":" is"} under 20h — consider assigning more work
+          <div style={{ background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:"10px", padding:"10px 16px", marginBottom:"16px", fontSize:"13px", color:"#92400E", fontWeight:"600", display:"flex", alignItems:"center", gap:"6px" }}>
+            <Lightbulb size={14} color="#92400E" /> {underUtilised.length} staff member{underUtilised.length!==1?"s are":" is"} under 20h — consider assigning more work
           </div>
         )}
 
@@ -79,7 +80,7 @@ export default function Capacity() {
           <div style={{ textAlign:"center", padding:"60px", color:"#94A3B8" }}>Loading…</div>
         ) : capacity.length === 0 ? (
           <div style={{ textAlign:"center", padding:"60px" }}>
-            <div style={{ fontSize:"36px", marginBottom:"12px" }}>📊</div>
+            <div style={{ marginBottom:"12px", display:"flex", justifyContent:"center" }}><BarChart2 size={36} color="#94A3B8" /></div>
             <p style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B" }}>No staff data found</p>
           </div>
         ) : (
@@ -105,8 +106,8 @@ export default function Capacity() {
                     {/* Name + exp */}
                     <div style={{ flex:"0 0 160px" }}>
                       <div style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B" }}>{c.name}</div>
-                      <div style={{ fontSize:"10px", color:"#94A3B8" }}>
-                        {EXP_ICON[c.experience] || "⭐"} {c.experience}
+                      <div style={{ fontSize:"10px", color:"#94A3B8", display:"flex", alignItems:"center", gap:"4px" }}>
+                        {(() => { const ExpIcon = EXP_ICON[c.experience] || Star; return <ExpIcon size={11} />; })()} {c.experience}
                         {c.on_leave && <span style={{ marginLeft:"6px", color:"#F59E0B", fontWeight:"600" }}>· On Leave</span>}
                       </div>
                     </div>
@@ -114,8 +115,8 @@ export default function Capacity() {
                     <div style={{ flex:1 }}>
                       <div style={{ display:"flex", justifyContent:"space-between", fontSize:"10px", color:"#94A3B8", marginBottom:"4px" }}>
                         <span>{c.hours_logged}h logged</span>
-                        <span style={{ color: isOver?"#DC2626":"#94A3B8", fontWeight: isOver?"700":"400" }}>
-                          {isOver ? `⚠ ${c.hours_logged-40}h over` : `${40-c.hours_logged}h remaining`}
+                        <span style={{ color: isOver?"#DC2626":"#94A3B8", fontWeight: isOver?"700":"400", display:"inline-flex", alignItems:"center", gap:"3px" }}>
+                          {isOver ? <><AlertTriangle size={10} color="#DC2626" /> {c.hours_logged-40}h over</> : `${40-c.hours_logged}h remaining`}
                         </span>
                       </div>
                       <div style={{ height:"8px", borderRadius:"8px", background:"#F1F5F9", overflow:"hidden", position:"relative" }}>
