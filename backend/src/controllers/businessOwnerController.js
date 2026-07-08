@@ -53,9 +53,15 @@ const createOutlet = async (req, res) => {
     if (outletErr) throw new Error(outletErr.message);
 
     if (Array.isArray(role_templates) && role_templates.length > 0) {
-      const rows = role_templates
-        .filter(r => r.role_name?.trim())
-        .map(r => ({ outlet_id: outlet.outlet_id, role_name: r.role_name.trim(), skill_id: r.skill_id || null, headcount: Number(r.headcount) || 1 }));
+      const filtered = role_templates.filter(r => r.role_name?.trim());
+      const allSkills = await prisma.skills.findMany({ select: { skill_id: true, name: true } });
+      const skillByName = Object.fromEntries(allSkills.map(s => [s.name.toLowerCase(), s.skill_id]));
+      const rows = filtered.map(r => ({
+        outlet_id: outlet.outlet_id,
+        role_name: r.role_name.trim(),
+        skill_id: skillByName[r.role_name.trim().toLowerCase()] || null,
+        headcount: Number(r.headcount) || 1,
+      }));
       if (rows.length > 0) await supabaseAdmin.from("outlet_role_templates").insert(rows);
     }
 
@@ -311,9 +317,15 @@ const upsertRoleTemplates = async (req, res) => {
     await supabaseAdmin.from("outlet_role_templates").delete().eq("outlet_id", outlet_id);
 
     if (Array.isArray(role_templates) && role_templates.length > 0) {
-      const rows = role_templates
-        .filter(r => r.role_name?.trim())
-        .map(r => ({ outlet_id, role_name: r.role_name.trim(), skill_id: r.skill_id || null, headcount: Number(r.headcount) || 1 }));
+      const filtered = role_templates.filter(r => r.role_name?.trim());
+      const allSkills = await prisma.skills.findMany({ select: { skill_id: true, name: true } });
+      const skillByName = Object.fromEntries(allSkills.map(s => [s.name.toLowerCase(), s.skill_id]));
+      const rows = filtered.map(r => ({
+        outlet_id,
+        role_name: r.role_name.trim(),
+        skill_id: skillByName[r.role_name.trim().toLowerCase()] || null,
+        headcount: Number(r.headcount) || 1,
+      }));
       if (rows.length > 0) await supabaseAdmin.from("outlet_role_templates").insert(rows);
     }
 
@@ -529,4 +541,151 @@ const getBusinessStats = async (req, res) => {
   }
 };
 
-module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates };
+// ── Business-level skills (backed by business_roles table) ──
+
+const getBusinessSkills = async (req, res) => {
+  try {
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("owner_id", req.user.user_id).maybeSingle();
+    if (!biz) return res.json({ skills: [], suggestions: [], industry: "" });
+
+    const { data: roles, error } = await supabaseAdmin
+      .from("business_roles")
+      .select("role_id, role_name, description, is_suggested, created_at")
+      .eq("business_id", biz.business_id)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const skills = (roles || []).map(r => ({
+      skill_id: r.role_id,
+      name: r.role_name,
+      description: r.description || "",
+      is_suggested: r.is_suggested,
+    }));
+
+    const existingNames = new Set((roles || []).map(r => r.role_name.toLowerCase()));
+    const allSkills = await prisma.skills.findMany({ orderBy: { name: "asc" }, select: { skill_id: true, name: true, description: true } });
+    const suggestions = allSkills.filter(s => !existingNames.has(s.name.toLowerCase()));
+
+    return res.json({ skills, suggestions, industry: biz.industry || "" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const createBusinessSkill = async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    if (!name?.trim()) return res.status(400).json({ success: false, message: "Skill name is required." });
+
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const { data: existing } = await supabaseAdmin
+      .from("business_roles")
+      .select("role_id")
+      .eq("business_id", biz.business_id)
+      .ilike("role_name", name.trim())
+      .maybeSingle();
+    if (existing) return res.status(409).json({ success: false, message: "A skill with this name already exists." });
+
+    const { data: role, error } = await supabaseAdmin
+      .from("business_roles")
+      .insert({ business_id: biz.business_id, role_name: name.trim(), description: description || "", is_suggested: false })
+      .select("role_id, role_name, description")
+      .single();
+    if (error) throw new Error(error.message);
+
+    return res.status(201).json({ success: true, skill: { skill_id: role.role_id, name: role.role_name, description: description || "" } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const deleteBusinessSkill = async (req, res) => {
+  try {
+    const roleId = Number(req.params.skill_id);
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const { error } = await supabaseAdmin
+      .from("business_roles")
+      .delete()
+      .eq("role_id", roleId)
+      .eq("business_id", biz.business_id);
+    if (error) throw new Error(error.message);
+
+    return res.json({ success: true, message: "Skill deleted." });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ── Business settings & allocation preferences ──────────
+
+const getBusinessSettings = async (req, res) => {
+  try {
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const [{ data: settings }, { data: prefs }] = await Promise.all([
+      supabaseAdmin.from("business_settings").select("*").eq("business_id", biz.business_id).maybeSingle(),
+      supabaseAdmin.from("allocation_preferences").select("*").eq("business_id", biz.business_id).maybeSingle(),
+    ]);
+
+    return res.json({ success: true, settings: settings || null, allocation: prefs || null });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const updateBusinessSettings = async (req, res) => {
+  try {
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const { operating_days, open_time, close_time, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment } = req.body;
+
+    if (operating_days && !/^[01]{7}$/.test(operating_days)) {
+      return res.status(400).json({ success: false, message: "operating_days must be a 7-character string of 0s and 1s." });
+    }
+
+    const updates = {};
+    if (operating_days !== undefined) updates.operating_days = operating_days;
+    if (open_time !== undefined) updates.open_time = open_time;
+    if (close_time !== undefined) updates.close_time = close_time;
+    if (holidays !== undefined) updates.holidays = holidays;
+    if (work_hours_day !== undefined) updates.work_hours_day = work_hours_day;
+    if (max_work_hours_day !== undefined) updates.max_work_hours_day = max_work_hours_day;
+    if (max_consecutive_days !== undefined) updates.max_consecutive_days = max_consecutive_days;
+    if (allow_overtime !== undefined) updates.allow_overtime = allow_overtime;
+    if (min_workers_per_assignment !== undefined) updates.min_workers_per_assignment = min_workers_per_assignment;
+
+    const { data, error } = await supabaseAdmin.from("business_settings").update(updates).eq("business_id", biz.business_id).select("*").single();
+    if (error) throw new Error(error.message);
+
+    return res.json({ success: true, settings: data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const updateAllocationPrefs = async (req, res) => {
+  try {
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const { weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload } = req.body;
+    const total = (weight_availability || 0) + (weight_skills || 0) + (weight_attendance || 0) + (weight_performance || 0) + (weight_workload || 0);
+    if (total !== 100) return res.status(400).json({ success: false, message: "Allocation weights must sum to 100." });
+
+    const updates = { weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload };
+    const { data, error } = await supabaseAdmin.from("allocation_preferences").update(updates).eq("business_id", biz.business_id).select("*").single();
+    if (error) throw new Error(error.message);
+
+    return res.json({ success: true, allocation: data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs };

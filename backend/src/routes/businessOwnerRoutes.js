@@ -1,7 +1,7 @@
 ﻿const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/authMiddleware");
-const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates } = require("../controllers/businessOwnerController");
+const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs } = require("../controllers/businessOwnerController");
 
 router.use(protect);
 
@@ -21,6 +21,12 @@ router.delete("/managers/:user_id",              deleteManagerDetail);
 router.get("/staff/:staff_id",                   getStaffDetail);
 router.patch("/staff/:staff_id",                 updateStaffDetail);
 router.delete("/staff/:staff_id",                deleteStaffDetail);
+router.get("/settings",                                getBusinessSettings);
+router.put("/settings",                                updateBusinessSettings);
+router.put("/settings/allocation",                     updateAllocationPrefs);
+router.get("/skills",                                  getBusinessSkills);
+router.post("/skills",                                createBusinessSkill);
+router.delete("/skills/:skill_id",                    deleteBusinessSkill);
 router.get("/outlets/:outlet_id/skills",              getOutletSkills);
 router.post("/outlets/:outlet_id/skills",             createOutletSkill);
 router.patch("/outlets/:outlet_id/skills/:skill_id",  updateOutletSkill);

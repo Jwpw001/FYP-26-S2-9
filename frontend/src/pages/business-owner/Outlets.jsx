@@ -3,8 +3,7 @@ import { createPortal } from "react-dom";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
-import { supabase } from "../../lib/supabaseClient";
-import { Plus, Building2, MapPin, ArrowRight, Clock, Check } from "lucide-react";
+import { Plus, Building2, MapPin, ArrowRight, Clock, Check, Search, X } from "lucide-react";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-outlet-styles")) {
@@ -40,6 +39,8 @@ export default function BOOutlets() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [skills, setSkills] = useState([]);
+  const [roleSearch, setRoleSearch] = useState("");
+  const [roleDropOpen, setRoleDropOpen] = useState(false);
   const [upgradeModal, setUpgradeModal] = useState(null);
 
   const load = () => {
@@ -52,13 +53,15 @@ export default function BOOutlets() {
   useEffect(load, []);
 
   useEffect(() => {
-    supabase.from("skills").select("skill_id, name").order("name").then(({ data }) => setSkills(data || []));
+    api.get("/api/business/skills").then(r => setSkills((r.skills || []).map(s => ({ skill_id: s.skill_id, name: s.name })))).catch(() => {});
   }, []);
 
   function openWizard() {
     setForm(EMPTY_FORM);
     setStep(1);
     setError("");
+    setRoleSearch("");
+    setRoleDropOpen(false);
     setShowWizard(true);
   }
 
@@ -68,7 +71,7 @@ export default function BOOutlets() {
   }
 
   function nextStep() {
-    if (step === 1 && !form.name.trim()) { setError("Outlet name is required."); return; }
+    if (step === 1 && !form.name.trim()) { setError("Branch name is required."); return; }
     setError("");
     setStep(s => s + 1);
   }
@@ -121,19 +124,19 @@ export default function BOOutlets() {
   const STEPS = ["Basic Info", "Operating Hours", "Role Requirements"];
 
   return (
-    <BusinessOwnerLayout title="Outlets">
+    <BusinessOwnerLayout title="Branches">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Outlets</h2>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Branches</h2>
             <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {loading ? "Loading…" : `${outlets.length} outlet${outlets.length !== 1 ? "s" : ""} across your business`}
+              {loading ? "Loading…" : `${outlets.length} branch${outlets.length !== 1 ? "es" : ""} across your business`}
             </p>
           </div>
           <button onClick={openWizard} style={s.btnPrimary}>
-            <Plus size={15} /> Add Outlet
+            <Plus size={15} /> Add Branch
           </button>
         </div>
 
@@ -173,9 +176,9 @@ export default function BOOutlets() {
               {step === 1 && (
                 <div style={{ animation: "fadeSlideUp 0.25s ease both" }}>
                   <h3 style={s.stepTitle}>Basic Information</h3>
-                  <p style={s.stepSub}>Give your outlet a name and location.</p>
+                  <p style={s.stepSub}>Give your branch a name and location.</p>
                   <div style={s.fieldGroup}>
-                    <label style={s.label}>Outlet Name <span style={{ color: "#EF4444" }}>*</span></label>
+                    <label style={s.label}>Branch Name <span style={{ color: "#EF4444" }}>*</span></label>
                     <input style={s.input} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Downtown Branch" />
                   </div>
                   <div style={s.fieldGroup}>
@@ -189,7 +192,7 @@ export default function BOOutlets() {
               {step === 2 && (
                 <div style={{ animation: "fadeSlideUp 0.25s ease both" }}>
                   <h3 style={s.stepTitle}>Operating Hours</h3>
-                  <p style={s.stepSub}>Set the daily opening and closing times for this outlet.</p>
+                  <p style={s.stepSub}>Set the daily opening and closing times for this branch.</p>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                     <div style={s.fieldGroup}>
                       <label style={s.label}><Clock size={12} style={{ marginRight: 4 }} />Opening Time</label>
@@ -207,49 +210,130 @@ export default function BOOutlets() {
               )}
 
               {/* Step 3 — Role Requirements */}
-              {step === 3 && (
+              {step === 3 && (() => {
+                const available = skills.filter(sk =>
+                  !form.role_templates.some(r => String(r.skill_id) === String(sk.skill_id)) &&
+                  sk.name.toLowerCase().includes(roleSearch.toLowerCase())
+                );
+                return (
                 <div style={{ animation: "fadeSlideUp 0.25s ease both" }}>
                   <h3 style={s.stepTitle}>Daily Role Requirements</h3>
-                  <p style={s.stepSub}>Select the skills needed every day. Set headcount for each selected role.</p>
+                  <p style={s.stepSub}>Search and add skills needed every day. Set headcount for each role.</p>
 
-                  {/* Tag picker */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "20px", background: "#F8FAFC", borderRadius: "14px", padding: "16px", border: "1px solid #E2E8F0", minHeight: "80px" }}>
-                    {skills.length === 0 ? (
-                      <p style={{ fontSize: "13px", color: "#94A3B8" }}>No skill tags available. Ask your system admin to create some.</p>
-                    ) : skills.map(sk => {
-                      const selected = form.role_templates.some(r => String(r.skill_id) === String(sk.skill_id));
-                      return (
-                        <button key={sk.skill_id} onClick={() => toggleSkill(sk)} style={{
-                          padding: "6px 16px", borderRadius: "100px", fontSize: "13px", fontWeight: "600", cursor: "pointer",
-                          border: selected ? "2px solid #F59E0B" : "2px solid transparent",
-                          background: selected ? "#FEF3C7" : "#E2E8F0",
-                          color: selected ? "#92400E" : "#475569",
-                          transition: "all 0.15s",
-                        }}>
-                          {selected && <Check size={12} style={{ marginRight: "5px", verticalAlign: "-2px" }} />}{sk.name}
+                  {/* Search input */}
+                  <div style={{ position: "relative", marginBottom: "16px" }}>
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: "8px",
+                      background: "#F8FAFC", borderRadius: "10px", padding: "10px 14px",
+                      border: roleDropOpen ? "1.5px solid #F59E0B" : "1.5px solid #E2E8F0",
+                      transition: "border-color 0.15s",
+                    }}>
+                      <Search size={15} color="#94A3B8" />
+                      <input
+                        value={roleSearch}
+                        onChange={e => { setRoleSearch(e.target.value); setRoleDropOpen(true); }}
+                        onFocus={() => setRoleDropOpen(true)}
+                        placeholder="Search skills to add…"
+                        style={{ border: "none", outline: "none", fontSize: "13px", color: "#1E293B", background: "transparent", flex: 1, fontFamily: "inherit" }}
+                      />
+                      {roleSearch && (
+                        <button onClick={() => { setRoleSearch(""); }} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", padding: "0", display: "flex" }}>
+                          <X size={14} />
                         </button>
-                      );
-                    })}
+                      )}
+                    </div>
+
+                    {/* Dropdown results */}
+                    {roleDropOpen && (
+                      <div style={{
+                        position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
+                        background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "12px",
+                        boxShadow: "0 12px 32px rgba(0,0,0,0.1)", marginTop: "4px",
+                        maxHeight: "200px", overflowY: "auto",
+                      }}>
+                        {skills.length === 0 ? (
+                          <div style={{ padding: "20px", textAlign: "center" }}>
+                            <p style={{ fontSize: "13px", color: "#94A3B8" }}>No skill tags available yet.</p>
+                            <p style={{ fontSize: "11px", color: "#CBD5E1", marginTop: "4px" }}>Add skills in Skill Tags first.</p>
+                          </div>
+                        ) : available.length === 0 ? (
+                          <div style={{ padding: "16px", textAlign: "center" }}>
+                            <p style={{ fontSize: "13px", color: "#94A3B8" }}>
+                              {roleSearch ? "No matching skills found" : "All skills have been added"}
+                            </p>
+                          </div>
+                        ) : available.map(sk => (
+                          <div key={sk.skill_id}
+                            onClick={() => { toggleSkill(sk); setRoleSearch(""); setRoleDropOpen(false); }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "10px",
+                              padding: "10px 14px", cursor: "pointer", transition: "background 0.1s",
+                              borderBottom: "1px solid #F8FAFC",
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#FEF3C7"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                          >
+                            <div style={{
+                              width: "32px", height: "32px", borderRadius: "8px",
+                              background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: "13px", fontWeight: "700", color: "#64748B", flexShrink: 0,
+                            }}>
+                              {sk.name[0]?.toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>{sk.name}</span>
+                            <Plus size={14} color="#F59E0B" style={{ marginLeft: "auto" }} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Headcount for selected skills */}
-                  {form.role_templates.length > 0 && (
+                  {/* Selected roles with headcount */}
+                  {form.role_templates.length > 0 ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      <p style={{ fontSize: "12px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>Set Headcount</p>
-                      {form.role_templates.map(row => (
-                        <div key={row.skill_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "10px", padding: "10px 14px" }}>
-                          <span style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>{row.role_name}</span>
+                      <p style={{ fontSize: "12px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>
+                        Selected Roles ({form.role_templates.length})
+                      </p>
+                      {form.role_templates.map((row, i) => (
+                        <div key={row.skill_id} style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "10px 14px",
+                          animation: `fadeSlideUp 0.2s ease ${i * 0.04}s both`,
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div style={{
+                              width: "32px", height: "32px", borderRadius: "8px",
+                              background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: "13px", fontWeight: "700", color: "#92400E", flexShrink: 0,
+                            }}>
+                              {row.role_name[0]?.toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>{row.role_name}</span>
+                          </div>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             <button onClick={() => updateHeadcount(row.skill_id, Math.max(1, Number(row.headcount) - 1))} style={s.counterBtn}>−</button>
                             <span style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", minWidth: "24px", textAlign: "center" }}>{row.headcount}</span>
                             <button onClick={() => updateHeadcount(row.skill_id, Number(row.headcount) + 1)} style={s.counterBtn}>+</button>
+                            <button onClick={() => toggleSkill({ skill_id: row.skill_id, name: row.role_name })}
+                              style={{ width: "28px", height: "28px", borderRadius: "7px", border: "1px solid #FEE2E2", background: "#FFF", color: "#EF4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: "4px", transition: "all 0.15s" }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "#FFF"; }}
+                            >
+                              <X size={12} strokeWidth={2.5} />
+                            </button>
                           </div>
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "28px 16px", background: "#F8FAFC", borderRadius: "12px", border: "1px dashed #E2E8F0" }}>
+                      <Search size={24} color="#CBD5E1" style={{ marginBottom: "8px" }} />
+                      <p style={{ fontSize: "13px", color: "#94A3B8" }}>Search above to add roles for this branch</p>
+                    </div>
                   )}
                 </div>
-              )}
+                );
+              })()}
 
               {error && <p style={{ color: "#EF4444", fontSize: "13px", marginTop: "14px" }}>{error}</p>}
 
@@ -264,7 +348,7 @@ export default function BOOutlets() {
                   </button>
                 ) : (
                   <button onClick={handleCreate} disabled={submitting} style={s.btnPrimary}>
-                    {submitting ? "Creating…" : "Create Outlet"}
+                    {submitting ? "Creating…" : "Create Branch"}
                   </button>
                 )}
               </div>
@@ -288,8 +372,8 @@ export default function BOOutlets() {
         ) : outlets.length === 0 ? (
           <div style={s.empty}>
             <Building2 size={40} color="#CBD5E1" />
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No outlets yet</p>
-            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Create your first outlet to get started.</p>
+            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No branches yet</p>
+            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Create your first branch to get started.</p>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "18px" }}>

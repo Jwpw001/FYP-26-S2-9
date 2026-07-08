@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
-import { Users, CalendarDays, CalendarClock, Handshake, Download, TrendingUp, TrendingDown } from "lucide-react";
+import { Users, CalendarDays, CalendarClock, Download, TrendingUp, TrendingDown } from "lucide-react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -155,13 +155,12 @@ export default function BOReports() {
   const [loading, setLoading] = useState(true);
   const [businessName, setBusinessName] = useState("");
 
-  const [kpis, setKpis] = useState({ staff: 0, staffPrev: 0, shifts: 0, shiftsPrev: 0, leave: 0, leavePrev: 0, krewby: 0, krewbyPrev: 0 });
+  const [kpis, setKpis] = useState({ staff: 0, staffPrev: 0, shifts: 0, shiftsPrev: 0, leave: 0, leavePrev: 0 });
   const [chartLabels, setChartLabels] = useState([]);
   const [chartSeries, setChartSeries] = useState([]);
   const [outletRows, setOutletRows] = useState([]);
   const [shiftsByStatus, setShiftsByStatus] = useState([]);
   const [leaveByStatus, setLeaveByStatus] = useState([]);
-  const [krewbyByStatus, setKrewbyByStatus] = useState([]);
   const [staffByType, setStaffByType] = useState([]);
 
   const days = PERIODS[period].days;
@@ -199,22 +198,18 @@ export default function BOReports() {
       const periodStart = new Date(now); periodStart.setDate(now.getDate() - days);
       const prevStart   = new Date(now); prevStart.setDate(now.getDate() - days * 2);
 
-      // Fetch shifts, leave, krewby requests for these outlets
-      const [{ data: shiftsAll }, { data: leaveAll }, { data: krewbyAll }] = await Promise.all([
+      // Fetch shifts, leave requests for these outlets
+      const [{ data: shiftsAll }, { data: leaveAll }] = await Promise.all([
         outletIds.length > 0
           ? supabase.from("shifts").select("shift_id, status, shift_date, outlet_id").in("outlet_id", outletIds)
           : Promise.resolve({ data: [] }),
         staffIds.length > 0
           ? supabase.from("availability").select("request_id, status, start_date, staff_id").in("staff_id", staffIds)
           : Promise.resolve({ data: [] }),
-        outletIds.length > 0
-          ? supabase.from("krewby_requests").select("request_id, status, created_at, outlet_id").in("outlet_id", outletIds)
-          : Promise.resolve({ data: [] }),
       ]);
 
       const shifts  = shiftsAll  || [];
       const leave   = leaveAll   || [];
-      const krewby  = krewbyAll  || [];
 
       const inPeriod = ts => ts && new Date(ts) >= periodStart;
       const inPrev   = ts => ts && new Date(ts) >= prevStart && new Date(ts) < periodStart;
@@ -223,11 +218,9 @@ export default function BOReports() {
       const prevShifts = shifts.filter(s => inPrev(s.shift_date  ? s.shift_date + "T00:00:00"  : null)).length;
       const newLeave   = leave.filter(l => inPeriod(l.start_date  ? l.start_date + "T00:00:00"  : null)).length;
       const prevLeave  = leave.filter(l => inPrev(l.start_date    ? l.start_date + "T00:00:00"  : null)).length;
-      const newKrewby  = krewby.filter(k => inPeriod(k.created_at)).length;
-      const prevKrewby = krewby.filter(k => inPrev(k.created_at)).length;
       const activeStaff = allStaff.filter(s => s.is_active).length;
 
-      setKpis({ staff: activeStaff, staffPrev: 0, shifts: newShifts, shiftsPrev: prevShifts, leave: newLeave, leavePrev: prevLeave, krewby: newKrewby, krewbyPrev: prevKrewby });
+      setKpis({ staff: activeStaff, staffPrev: 0, shifts: newShifts, shiftsPrev: prevShifts, leave: newLeave, leavePrev: prevLeave });
 
       // Chart
       const dayCount = Math.min(days, 30);
@@ -248,7 +241,6 @@ export default function BOReports() {
       setChartSeries([
         { label: "Shifts",          data: dailyCount(shifts, s => s.shift_date), color: "#2563EB" },
         { label: "Leave Requests",  data: dailyCount(leave,  l => l.start_date), color: "#D97706" },
-        { label: "Krewby Requests", data: dailyCount(krewby, k => k.created_at), color: "#DB2777" },
       ]);
 
       // Outlets table
@@ -266,9 +258,6 @@ export default function BOReports() {
 
       const leaveMap = {}; leave.forEach(l => { leaveMap[l.status] = (leaveMap[l.status] || 0) + 1; });
       setLeaveByStatus(Object.entries(leaveMap).map(([s, c]) => ({ status: s, count: c })).sort((a, b) => b.count - a.count));
-
-      const krewbyMap = {}; krewby.forEach(k => { krewbyMap[k.status] = (krewbyMap[k.status] || 0) + 1; });
-      setKrewbyByStatus(Object.entries(krewbyMap).map(([s, c]) => ({ status: s, count: c })).sort((a, b) => b.count - a.count));
 
       const typeMap = {}; allStaff.forEach(s => { const t = s.staff_type || "unknown"; typeMap[t] = (typeMap[t] || 0) + 1; });
       setStaffByType(Object.entries(typeMap).map(([t, c]) => ({ type: t, count: c })));
@@ -293,7 +282,6 @@ export default function BOReports() {
     lines.push(`Active Staff,${kpis.staff}`);
     lines.push(`Shifts (period),${kpis.shifts}`);
     lines.push(`Leave Requests (period),${kpis.leave}`);
-    lines.push(`Krewby Requests (period),${kpis.krewby}`);
     lines.push("");
     lines.push("OUTLETS");
     lines.push("Outlet,Total Staff,Active Staff,Total Shifts,Published");
@@ -342,7 +330,6 @@ export default function BOReports() {
         ["Active Staff",              kpis.staff,   "—"],
         ["Shifts (period)",           kpis.shifts,  `${delta(kpis.shifts, kpis.shiftsPrev)}%`],
         ["Leave Requests (period)",   kpis.leave,   `${delta(kpis.leave, kpis.leavePrev)}%`],
-        ["Krewby Requests (period)",  kpis.krewby,  `${delta(kpis.krewby, kpis.krewbyPrev)}%`],
       ],
       headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 8 },
       bodyStyles: { fontSize: 8 },
@@ -426,7 +413,6 @@ export default function BOReports() {
           <KpiCard loading={loading} Icon={Users}         label="Active Staff"      value={kpis.staff}   pct={null}                                          sub="across all outlets"                 color="#2563EB" bg="#EFF6FF" />
           <KpiCard loading={loading} Icon={CalendarDays}  label="Shifts"            value={kpis.shifts}  pct={delta(kpis.shifts,  kpis.shiftsPrev)}          sub={`vs prev ${PERIODS[period].label}`} color="#059669" bg="#ECFDF5" />
           <KpiCard loading={loading} Icon={CalendarClock} label="Leave Requests"    value={kpis.leave}   pct={delta(kpis.leave,   kpis.leavePrev)}           sub={`vs prev ${PERIODS[period].label}`} color="#D97706" bg="#FFFBEB" />
-          <KpiCard loading={loading} Icon={Handshake}     label="Krewby Requests"   value={kpis.krewby}  pct={delta(kpis.krewby,  kpis.krewbyPrev)}          sub={`vs prev ${PERIODS[period].label}`} color="#DB2777" bg="#FDF2F8" />
         </div>
 
         {/* Activity Chart */}
@@ -481,7 +467,7 @@ export default function BOReports() {
         </div>
 
         {/* Breakdowns */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Shifts</h3>
             <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By status (all time)</p>
@@ -491,11 +477,6 @@ export default function BOReports() {
             <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Leave Requests</h3>
             <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By approval status (all time)</p>
             <StatusTable rows={leaveByStatus} loading={loading} />
-          </div>
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Krewby Requests</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By status (all time)</p>
-            <StatusTable rows={krewbyByStatus} loading={loading} />
           </div>
         </div>
 

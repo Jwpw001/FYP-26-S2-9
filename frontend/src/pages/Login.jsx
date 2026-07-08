@@ -30,6 +30,18 @@ const CheckIcon = () => (
   </svg>
 );
 
+const TicketIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>
+  </svg>
+);
+
+const CheckIcon2 = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+);
+
 const WarnIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -79,6 +91,11 @@ export default function Login() {
   const [error, setError]             = useState("");
   const [loading, setLoading]         = useState(false);
   const [visible, setVisible]         = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
+  const [inviteCode, setInviteCode]   = useState("");
+  const [codeError, setCodeError]     = useState("");
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [codeSuccess, setCodeSuccess] = useState(false);
 
   useEffect(() => {
     // inject keyframes once
@@ -121,7 +138,14 @@ export default function Login() {
       });
       const profile = { ...response.user, token: response.token };
       const route = ROLE_ROUTES[profile.role];
-      if (!route) { setError(`Unrecognised role: "${profile.role}". Contact support.`); return; }
+      if (!route) {
+        if (profile.role === "pending") {
+          setPendingUser(profile);
+          return;
+        }
+        setError("Your account role is not yet configured. Please contact your administrator.");
+        return;
+      }
       setUser(profile);
       localStorage.setItem("token", response.token);
       goTo(redirectTo || route);
@@ -129,6 +153,39 @@ export default function Login() {
       setError(err?.response?.data?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  function formatCode(val) {
+    const clean = val.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (clean.length <= 4) return clean;
+    return clean.slice(0, 4) + "-" + clean.slice(4, 8);
+  }
+
+  async function handleCodeSubmit(e) {
+    e.preventDefault();
+    setCodeLoading(true); setCodeError("");
+    try {
+      const BASE = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${BASE}/api/invitations/check-code/${inviteCode.replace("-", "")}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Invalid code");
+      const invite = data.invitation;
+      const acceptRes = await fetch(`${BASE}/api/invitations/${invite.token}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ existing_user_id: pendingUser.user_id }),
+      });
+      const acceptData = await acceptRes.json();
+      if (!acceptRes.ok) throw new Error(acceptData.message || "Failed to accept invitation");
+      setUser(acceptData.user);
+      localStorage.setItem("token", acceptData.token);
+      setCodeSuccess(true);
+      setTimeout(() => goTo(ROLE_ROUTES[acceptData.user.role] || "/"), 1500);
+    } catch (err) {
+      setCodeError(err.message);
+    } finally {
+      setCodeLoading(false);
     }
   }
 
@@ -172,62 +229,135 @@ export default function Login() {
 
       {/* ── Right panel ── */}
       <section style={s.right}>
-        <form
-          style={{ ...s.card, animation: visible ? "slideUp 0.45s cubic-bezier(.22,1,.36,1) both" : "none" }}
-          onSubmit={handleLogin}
-          autoComplete="off"
-          noValidate
-        >
-          {/* Mobile logo */}
-          <Link to="/" style={{ ...s.logoRow, marginBottom: "28px", display: "none", ...s.mobileLogoShow }}>
-            <div style={{ ...s.logoMark, background: "#0F172A" }}>K</div>
-            <span style={{ ...s.logoText, color: "#0F172A" }}>Krewby</span>
-          </Link>
+        {pendingUser ? (
+          <div style={{ ...s.card, animation: visible ? "slideUp 0.45s cubic-bezier(.22,1,.36,1) both" : "none" }}>
+            {codeSuccess ? (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#D1FAE5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                  <CheckIcon2 />
+                </div>
+                <h2 style={s.cardTitle}>You're in!</h2>
+                <p style={s.cardSub}>Redirecting to your dashboard...</p>
+              </div>
+            ) : (
+              <>
+                <div style={{ textAlign: "center", marginBottom: "24px" }}>
+                  <div style={{ width: "56px", height: "56px", borderRadius: "14px", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                    <TicketIcon />
+                  </div>
+                  <h2 style={s.cardTitle}>Welcome, {pendingUser.full_name?.split(" ")[0] || "there"}!</h2>
+                  <p style={s.cardSub}>Your account is set up. Do you have an invitation code from your manager?</p>
+                </div>
 
-          <h2 style={s.cardTitle}>Welcome back</h2>
-          <p style={s.cardSub}>Sign in to your account to continue.</p>
+                <form onSubmit={handleCodeSubmit}>
+                  <label style={s.label}>Invitation Code</label>
+                  <input
+                    value={inviteCode}
+                    onChange={e => { setInviteCode(formatCode(e.target.value)); setCodeError(""); }}
+                    placeholder="XXXX-XXXX"
+                    maxLength={9}
+                    required
+                    style={{
+                      width: "100%", padding: "14px 16px", border: "2px solid #E2E8F0", borderRadius: "12px",
+                      fontSize: "22px", fontWeight: "800", textAlign: "center", letterSpacing: "0.15em",
+                      outline: "none", boxSizing: "border-box", color: "#0F172A", fontFamily: "monospace",
+                    }}
+                  />
 
-          {error && (
-            <div style={s.errorBox} role="alert">
-              <WarnIcon />
-              <span>{error}</span>
-            </div>
-          )}
+                  {codeError && (
+                    <div style={{ ...s.errorBox, marginTop: "12px" }} role="alert">
+                      <WarnIcon />
+                      <span>{codeError}</span>
+                    </div>
+                  )}
 
-          <Field
-            id="email" label="Email address" name="email" type="email"
-            value={form.email} onChange={handleChange}
-            placeholder="you@example.com" autoComplete="off" disabled={loading}
-          />
+                  <button
+                    type="submit"
+                    disabled={codeLoading || inviteCode.length < 9}
+                    style={{
+                      width: "100%", padding: "12px", borderRadius: "10px", border: "none",
+                      background: inviteCode.length < 9 ? "#E2E8F0" : "#F59E0B",
+                      color: inviteCode.length < 9 ? "#94A3B8" : "#1C1917",
+                      fontSize: "14px", fontWeight: "700", cursor: inviteCode.length < 9 ? "not-allowed" : "pointer",
+                      marginTop: "16px", transition: "all 0.15s",
+                    }}
+                  >
+                    {codeLoading ? "Joining..." : "Join Team"}
+                  </button>
+                </form>
 
-          <Field
-            id="password" label="Password" name="password"
-            type={showPassword ? "text" : "password"}
-            value={form.password} onChange={handleChange}
-            placeholder="Enter your password" autoComplete="new-password" disabled={loading}
-            right={
-              <button type="button" style={s.eyeBtn} onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "Hide password" : "Show password"}>
-                <EyeIcon open={showPassword} />
-              </button>
-            }
-          />
-
-          <div style={s.forgotRow}>
-            <Link to="/forgot-password" style={s.forgotLink}>Forgot password?</Link>
+                <div style={{ textAlign: "center", marginTop: "20px", paddingTop: "16px", borderTop: "1px solid #F1F5F9" }}>
+                  <p style={{ fontSize: "13px", color: "#94A3B8", lineHeight: 1.6 }}>
+                    Don't have a code? Ask your manager to send you an invitation from their dashboard.
+                  </p>
+                  <button
+                    onClick={() => { setPendingUser(null); setInviteCode(""); setCodeError(""); }}
+                    style={{ background: "none", border: "none", color: "#3B82F6", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginTop: "10px" }}
+                  >
+                    ← Back to login
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-
-          <SubmitBtn loading={loading} />
-
-          <p style={s.backRow}>
-            <Link to="/" style={s.backLink}>← Back to home</Link>
-          </p>
-          <p style={{ textAlign:"center", marginTop:"14px", fontSize:"13px", color:"#94A3B8" }}>
-            Don't have an account?{" "}
-            <Link to="/get-started" style={{ color:"#3B82F6", fontWeight:"700", textDecoration:"none" }}>
-              Click here to sign up
+        ) : (
+          <form
+            style={{ ...s.card, animation: visible ? "slideUp 0.45s cubic-bezier(.22,1,.36,1) both" : "none" }}
+            onSubmit={handleLogin}
+            autoComplete="off"
+            noValidate
+          >
+            {/* Mobile logo */}
+            <Link to="/" style={{ ...s.logoRow, marginBottom: "28px", display: "none", ...s.mobileLogoShow }}>
+              <div style={{ ...s.logoMark, background: "#0F172A" }}>K</div>
+              <span style={{ ...s.logoText, color: "#0F172A" }}>Krewby</span>
             </Link>
-          </p>
-        </form>
+
+            <h2 style={s.cardTitle}>Welcome back</h2>
+            <p style={s.cardSub}>Sign in to your account to continue.</p>
+
+            {error && (
+              <div style={s.errorBox} role="alert">
+                <WarnIcon />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <Field
+              id="email" label="Email address" name="email" type="email"
+              value={form.email} onChange={handleChange}
+              placeholder="you@example.com" autoComplete="off" disabled={loading}
+            />
+
+            <Field
+              id="password" label="Password" name="password"
+              type={showPassword ? "text" : "password"}
+              value={form.password} onChange={handleChange}
+              placeholder="Enter your password" autoComplete="new-password" disabled={loading}
+              right={
+                <button type="button" style={s.eyeBtn} onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "Hide password" : "Show password"}>
+                  <EyeIcon open={showPassword} />
+                </button>
+              }
+            />
+
+            <div style={s.forgotRow}>
+              <Link to="/forgot-password" style={s.forgotLink}>Forgot password?</Link>
+            </div>
+
+            <SubmitBtn loading={loading} />
+
+            <p style={s.backRow}>
+              <Link to="/" style={s.backLink}>← Back to home</Link>
+            </p>
+            <p style={{ textAlign:"center", marginTop:"14px", fontSize:"13px", color:"#94A3B8" }}>
+              Don't have an account?{" "}
+              <Link to="/get-started" style={{ color:"#3B82F6", fontWeight:"700", textDecoration:"none" }}>
+                Click here to sign up
+              </Link>
+            </p>
+          </form>
+        )}
       </section>
     </main>
   );

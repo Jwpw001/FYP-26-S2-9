@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { api } from "../../lib/api";
-import { Plus, Copy, Check, Clock, UserCheck, XCircle, RefreshCw, Mail, X } from "lucide-react";
+import { Plus, Copy, Check, Clock, UserCheck, XCircle, RefreshCw, Mail, X, Send, Users, LinkIcon, Building2 } from "lucide-react";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-invite-styles")) {
@@ -12,9 +12,14 @@ if (typeof document !== "undefined" && !document.getElementById("bo-invite-style
     @keyframes fadeSlideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
     @keyframes shimmer { from { background-position:-600px 0; } to { background-position:600px 0; } }
     @keyframes pageIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-    .bo-invite-row { transition: background 0.15s; }
-    .bo-invite-row:hover { background: #F8FAFC; }
-    .bo-invite-icon-btn:hover { background: #F1F5F9 !important; }
+    @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+    .bo-invite-card { transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; }
+    .bo-invite-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important; border-color: #CBD5E1 !important; }
+    .bo-invite-action-btn { transition: all 0.15s; }
+    .bo-invite-action-btn:hover { background: #F1F5F9 !important; transform: scale(1.08); }
+    .bo-invite-stat:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; }
+    .bo-invite-filter-btn { transition: all 0.15s; }
+    .bo-invite-filter-btn:hover { background: #F8FAFC !important; }
   `;
   document.head.appendChild(style);
 }
@@ -23,15 +28,21 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />;
 }
 
-const STATUS_COLORS = {
-  pending:   { bg: "#FEF3C7", text: "#D97706" },
-  accepted:  { bg: "#D1FAE5", text: "#059669" },
-  cancelled: { bg: "#F1F5F9", text: "#94A3B8" },
-  expired:   { bg: "#FEE2E2", text: "#DC2626" },
+const STATUS_META = {
+  pending:   { bg: "#FEF3C7", text: "#D97706", icon: Clock, label: "Pending" },
+  accepted:  { bg: "#D1FAE5", text: "#059669", icon: Check, label: "Accepted" },
+  cancelled: { bg: "#F1F5F9", text: "#94A3B8", icon: XCircle, label: "Cancelled" },
+  expired:   { bg: "#FEE2E2", text: "#DC2626", icon: Clock, label: "Expired" },
+};
+
+const ROLE_META = {
+  outlet_manager:      { label: "Branch Manager", bg: "#EDE9FE", text: "#7C3AED", icon: "shield" },
+  regular_staff:       { label: "Regular Staff", bg: "#EFF6FF", text: "#3B82F6", icon: "user" },
+  outlet_casual_staff: { label: "Casual Staff", bg: "#FFF7ED", text: "#EA580C", icon: "clock" },
 };
 
 const ROLES = [
-  { value: "outlet_manager",      label: "Outlet Manager" },
+  { value: "outlet_manager",      label: "Branch Manager" },
   { value: "regular_staff",       label: "Regular Staff" },
   { value: "outlet_casual_staff", label: "Casual Staff" },
 ];
@@ -49,7 +60,7 @@ export default function BOInvitations() {
   const [resending, setResending] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [upgradeModal, setUpgradeModal] = useState(null); // { limitType, plan, message }
+  const [upgradeModal, setUpgradeModal] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -66,7 +77,7 @@ export default function BOInvitations() {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!form.outlet_id) { setError("Please select an outlet."); return; }
+    if (!form.outlet_id) { setError("Please select a branch."); return; }
     setSubmitting(true); setError("");
     try {
       const body = { email: form.email, role: form.role, outlet_id: parseInt(form.outlet_id) };
@@ -87,9 +98,7 @@ export default function BOInvitations() {
     }
   };
 
-  const handleCancel = async (id) => {
-    setConfirmCancel(id);
-  };
+  const handleCancel = async (id) => { setConfirmCancel(id); };
 
   const confirmCancelAction = async () => {
     await api.delete(`/api/invitations/${confirmCancel}/cancel`);
@@ -133,219 +142,298 @@ export default function BOInvitations() {
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Invitations</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              Invite outlet managers and staff to join your business
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>Invitations</h2>
+            <p style={{ fontSize: "13px", color: "#64748B" }}>
+              Invite branch managers and staff to join your business
             </p>
           </div>
-          <button onClick={() => { setShowForm(v => !v); setError(""); setSuccessCode(null); }} style={s.btnPrimary}>
-            <Plus size={15} /> Send Invite
+          <button onClick={() => { setShowForm(v => !v); setError(""); setSuccessCode(null); }} style={sty.btnPrimary}>
+            <Send size={14} /> Send Invite
           </button>
         </div>
 
-        {/* Success banner after sending */}
-        {successCode && (
-          <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "14px", padding: "20px 24px", marginBottom: "20px", animation: "fadeSlideUp 0.3s ease both" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-              <div>
-                <p style={{ fontWeight: "700", color: "#166534", marginBottom: "4px" }}>Invitation sent to {successCode.email}!</p>
-                <p style={{ fontSize: "13px", color: "#4ADE80" }}>They'll receive an email with a link and this code:</p>
+        {/* Stats row */}
+        {!loading && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px", marginBottom: "24px" }}>
+            {[
+              { label: "Total Sent", value: visibleInvites.length, icon: Mail, color: "#3B82F6", bg: "#EFF6FF" },
+              { label: "Pending", value: counts.pending, icon: Clock, color: "#D97706", bg: "#FEF3C7" },
+              { label: "Accepted", value: counts.accepted, icon: UserCheck, color: "#059669", bg: "#D1FAE5" },
+            ].map(stat => (
+              <div key={stat.label} className="bo-invite-stat" style={{
+                background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "18px 20px",
+                display: "flex", alignItems: "center", gap: "14px", transition: "all 0.2s", cursor: "default",
+              }}>
+                <div style={{ width: "42px", height: "42px", borderRadius: "11px", background: stat.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <stat.icon size={20} color={stat.color} />
+                </div>
+                <div>
+                  <p style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", lineHeight: 1 }}>{stat.value}</p>
+                  <p style={{ fontSize: "12px", color: "#94A3B8", fontWeight: "500", marginTop: "2px" }}>{stat.label}</p>
+                </div>
               </div>
-              <button onClick={() => setSuccessCode(null)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", display: "inline-flex", alignItems: "center" }}><X size={16} /></button>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "14px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "28px", fontWeight: "800", color: "#0F172A", letterSpacing: "0.12em", fontFamily: "monospace" }}>
-                {successCode.code}
-              </span>
-              <button onClick={() => copyCode(successCode.code)} style={{ ...s.iconBtn, background: "#FFF" }}>
-                {copied === `code-${successCode.code}` ? <Check size={14} color="#10B981" /> : <Copy size={14} />}
-                <span style={{ fontSize: "12px", marginLeft: "4px" }}>{copied === `code-${successCode.code}` ? "Copied!" : "Copy code"}</span>
-              </button>
-            </div>
-            {successCode.link && (
-              <div style={{ marginTop: "12px", padding: "10px 14px", background: "#FFF", border: "1px solid #BBF7D0", borderRadius: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "12px", color: "#64748B", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {successCode.link}
-                </span>
-                <button onClick={() => { navigator.clipboard.writeText(successCode.link); setCopied("invite-link"); setTimeout(() => setCopied(null), 2000); }}
-                  style={{ ...s.iconBtn, background: "none", flexShrink: 0 }}>
-                  {copied === "invite-link" ? <Check size={13} color="#10B981" /> : <Copy size={13} />}
-                  <span style={{ fontSize: "11px", marginLeft: "3px" }}>{copied === "invite-link" ? "Copied!" : "Copy link"}</span>
-                </button>
-              </div>
-            )}
+            ))}
           </div>
         )}
 
-        {/* Invite form */}
-        {showForm && (
-          <div style={{ ...s.formCard, animation: "fadeSlideUp 0.3s ease both" }}>
-            <h3 style={s.formTitle}>Send New Invitation</h3>
-            <form onSubmit={handleSend}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
-                <div>
-                  <label style={s.label}>Email Address *</label>
-                  <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                    placeholder="staff@example.com" required style={s.input} />
+        {/* Success banner after sending */}
+        {successCode && (
+          <div style={{ background: "linear-gradient(135deg, #F0FDF4, #ECFDF5)", border: "1px solid #BBF7D0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", animation: "fadeSlideUp 0.3s ease both" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#BBF7D0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Check size={18} color="#059669" />
                 </div>
                 <div>
-                  <label style={s.label}>Role *</label>
-                  <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} style={s.input}>
-                    {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
+                  <p style={{ fontWeight: "700", color: "#166534", marginBottom: "2px", fontSize: "14px" }}>Invitation sent to {successCode.email}</p>
+                  <p style={{ fontSize: "12px", color: "#4ADE80" }}>Share the code below or copy the invite link</p>
                 </div>
               </div>
-              <div style={{ marginBottom: "18px" }}>
-                <label style={s.label}>Outlet *</label>
-                <select value={form.outlet_id} onChange={e => setForm(p => ({ ...p, outlet_id: e.target.value }))} required style={s.input}>
-                  <option value="">— Select outlet —</option>
-                  {outlets.map(o => <option key={o.outlet_id} value={o.outlet_id}>{o.name}</option>)}
-                </select>
+              <button onClick={() => setSuccessCode(null)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", display: "inline-flex", alignItems: "center", padding: "4px" }}><X size={16} /></button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "16px", flexWrap: "wrap" }}>
+              <div style={{ background: "#FFF", borderRadius: "12px", padding: "10px 20px", border: "2px dashed #BBF7D0" }}>
+                <span style={{ fontSize: "28px", fontWeight: "800", color: "#0F172A", letterSpacing: "0.14em", fontFamily: "monospace" }}>
+                  {successCode.code}
+                </span>
               </div>
-              {error && <p style={{ color: "#EF4444", fontSize: "13px", marginBottom: "12px" }}>{error}</p>}
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button type="submit" disabled={submitting} style={s.btnPrimary}>
-                  <Mail size={14} /> {submitting ? "Sending…" : "Send Invitation"}
-                </button>
-                <button type="button" onClick={() => { setShowForm(false); setError(""); }} style={s.btnSecondary}>Cancel</button>
-              </div>
-            </form>
+              <button onClick={() => copyCode(successCode.code)} style={{ ...sty.actionBtn, background: "#FFF", border: "1px solid #BBF7D0" }}>
+                {copied === `code-${successCode.code}` ? <Check size={14} color="#10B981" /> : <Copy size={14} color="#059669" />}
+                <span style={{ fontSize: "12px", color: "#059669", fontWeight: "600" }}>{copied === `code-${successCode.code}` ? "Copied!" : "Copy code"}</span>
+              </button>
+            </div>
           </div>
+        )}
+
+        {/* Invite form — modal style */}
+        {showForm && createPortal(
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ background: "#FFF", borderRadius: "20px", padding: "32px", width: "520px", maxWidth: "95vw", boxShadow: "0 24px 64px rgba(0,0,0,0.18)", animation: "fadeSlideUp 0.25s ease both" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+                <div style={{ width: "40px", height: "40px", borderRadius: "11px", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Send size={18} color="#D97706" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B" }}>Send New Invitation</h3>
+                  <p style={{ fontSize: "12px", color: "#94A3B8" }}>Fill in the details to invite a team member</p>
+                </div>
+              </div>
+              <form onSubmit={handleSend}>
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={sty.label}><Mail size={12} style={{ marginRight: "4px" }} /> Email Address</label>
+                  <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="name@company.com" required style={sty.input} />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
+                  <div>
+                    <label style={sty.label}><Users size={12} style={{ marginRight: "4px" }} /> Role</label>
+                    <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} style={sty.input}>
+                      {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={sty.label}><Building2 size={12} style={{ marginRight: "4px" }} /> Branch</label>
+                    <select value={form.outlet_id} onChange={e => setForm(p => ({ ...p, outlet_id: e.target.value }))} required style={sty.input}>
+                      <option value="">Select branch</option>
+                      {outlets.map(o => <option key={o.outlet_id} value={o.outlet_id}>{o.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {error && (
+                  <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "10px 14px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <XCircle size={14} color="#EF4444" />
+                    <p style={{ color: "#DC2626", fontSize: "13px", fontWeight: "500" }}>{error}</p>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "24px", paddingTop: "20px", borderTop: "1px solid #F1F5F9" }}>
+                  <button type="button" onClick={() => { setShowForm(false); setError(""); }} style={sty.btnSecondary}>Cancel</button>
+                  <button type="submit" disabled={submitting} style={sty.btnPrimary}>
+                    <Send size={14} /> {submitting ? "Sending..." : "Send Invitation"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
         )}
 
         {/* Filter tabs */}
         {!loading && invites.length > 0 && (
-          <div style={{ display: "flex", gap: "6px", marginBottom: "16px" }}>
+          <div style={{ display: "flex", gap: "6px", marginBottom: "18px" }}>
             {["all", "pending", "accepted"].map(st => (
-              <button key={st} onClick={() => setFilterStatus(st)}
-                style={{ padding: "6px 14px", borderRadius: "100px", border: "1.5px solid", fontSize: "12px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s",
-                  borderColor: filterStatus === st ? "#0F172A" : "#E2E8F0",
-                  background: filterStatus === st ? "#0F172A" : "#FFF",
-                  color: filterStatus === st ? "#FFF" : "#64748B",
+              <button key={st} onClick={() => setFilterStatus(st)} className="bo-invite-filter-btn"
+                style={{
+                  padding: "7px 16px", borderRadius: "10px", border: "1.5px solid", fontSize: "12px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s",
+                  borderColor: filterStatus === st ? "#F59E0B" : "#E2E8F0",
+                  background: filterStatus === st ? "#FEF3C7" : "#FFF",
+                  color: filterStatus === st ? "#92400E" : "#64748B",
                 }}>
-                {st === "all" ? "All" : st.charAt(0).toUpperCase() + st.slice(1)} ({counts[st] ?? 0})
+                {st === "all" ? "All" : st.charAt(0).toUpperCase() + st.slice(1)}
+                <span style={{
+                  marginLeft: "6px", fontSize: "11px", fontWeight: "700", padding: "1px 7px", borderRadius: "100px",
+                  background: filterStatus === st ? "#F59E0B" : "#F1F5F9",
+                  color: filterStatus === st ? "#FFF" : "#94A3B8",
+                }}>
+                  {counts[st] ?? 0}
+                </span>
               </button>
             ))}
           </div>
         )}
 
-        {/* Table */}
+        {/* Invitation cards */}
         {loading ? (
-          <div style={s.tableWrap}>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr", gap: "12px", padding: "16px", borderBottom: "1px solid #F8FAFC" }}>
-                <Shimmer h="14px" /> <Shimmer h="20px" r="100px" /> <Shimmer h="20px" r="100px" /> <Shimmer h="14px" /> <Shimmer h="20px" r="100px" /> <Shimmer h="14px" w="80px" />
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px 24px", display: "flex", gap: "16px", alignItems: "center" }}>
+                <Shimmer w="44px" h="44px" r="11px" />
+                <div style={{ flex: 1 }}>
+                  <Shimmer w="40%" h="14px" r="6px" />
+                  <div style={{ marginTop: "8px" }}><Shimmer w="60%" h="12px" r="5px" /></div>
+                </div>
+                <Shimmer w="70px" h="24px" r="100px" />
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div style={s.empty}>
-            <UserCheck size={40} color="#CBD5E1" />
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>
+          <div style={{
+            textAlign: "center", padding: "60px 20px", background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px",
+            backgroundImage: "radial-gradient(circle at 50% 0%, rgba(245,158,11,0.04) 0%, transparent 60%)",
+          }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "16px", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <Send size={28} color="#D97706" />
+            </div>
+            <p style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>
               {invites.length === 0 ? "No invitations yet" : "No invitations match this filter"}
             </p>
-            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Send an invite to bring on managers or staff.</p>
+            <p style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "20px" }}>
+              {invites.length === 0 ? "Send your first invite to start building your team" : "Try a different filter to see more"}
+            </p>
+            {invites.length === 0 && (
+              <button onClick={() => { setShowForm(true); setError(""); }} style={sty.btnPrimary}>
+                <Send size={14} /> Send Your First Invite
+              </button>
+            )}
           </div>
         ) : (
-          <div style={s.tableWrap}>
-            <table style={s.table}>
-              <thead>
-                <tr style={s.thead}>
-                  <th style={s.th}>Email</th>
-                  <th style={s.th}>Role</th>
-                  <th style={s.th}>Outlet</th>
-                  <th style={s.th}>Code</th>
-                  <th style={s.th}>Status</th>
-                  <th style={s.th}>Expires</th>
-                  <th style={s.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((inv, i) => {
-                  const col = STATUS_COLORS[inv.status] || STATUS_COLORS.pending;
-                  const isExpired = inv.expires_at && new Date(inv.expires_at) < new Date() && inv.status === "pending";
-                  return (
-                    <tr key={inv.id} className="bo-invite-row" style={{ ...s.tr, animation: `fadeSlideUp 0.3s ease ${i * 0.04}s both` }}>
-                      <td style={s.td}>
-                        <p style={{ fontWeight: "600", color: "#0F172A", marginBottom: "2px" }}>{inv.email}</p>
-                      </td>
-                      <td style={s.td}>
-                        <span style={s.roleTag}>{inv.role?.replace(/_/g, " ")}</span>
-                      </td>
-                      <td style={{ ...s.td, color: "#64748B", fontSize: "12px" }}>
-                        {inv.outlets?.name || "—"}
-                      </td>
-                      <td style={s.td}>
-                        {inv.invitation_code ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "13px", color: "#0F172A", letterSpacing: "0.08em" }}>
-                              {inv.invitation_code}
-                            </span>
-                            <button onClick={() => copyCode(inv.invitation_code)} className="bo-invite-icon-btn" style={{ ...s.iconBtn, padding: "3px 5px" }} title="Copy code">
-                              {copied === `code-${inv.invitation_code}` ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
-                            </button>
-                          </div>
-                        ) : <span style={{ color: "#CBD5E1" }}>—</span>}
-                      </td>
-                      <td style={s.td}>
-                        <span style={{ ...s.statusBadge, background: isExpired ? "#FEE2E2" : col.bg, color: isExpired ? "#DC2626" : col.text }}>
-                          {isExpired ? "expired" : inv.status}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {filtered.map((inv, i) => {
+              const isExpired = inv.expires_at && new Date(inv.expires_at) < new Date() && inv.status === "pending";
+              const status = isExpired ? "expired" : inv.status;
+              const sm = STATUS_META[status] || STATUS_META.pending;
+              const rm = ROLE_META[inv.role] || ROLE_META.regular_staff;
+              const StatusIcon = sm.icon;
+
+              return (
+                <div key={inv.id} className="bo-invite-card" style={{
+                  background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px",
+                  padding: "18px 22px", display: "flex", alignItems: "center", gap: "16px",
+                  animation: `fadeSlideUp 0.3s ease ${i * 0.04}s both`, cursor: "default",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                }}>
+                  {/* Avatar circle */}
+                  <div style={{
+                    width: "44px", height: "44px", borderRadius: "12px", flexShrink: 0,
+                    background: `linear-gradient(135deg, ${rm.bg}, ${rm.bg}dd)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "16px", fontWeight: "800", color: rm.text,
+                  }}>
+                    {inv.email?.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: "700", color: "#0F172A", fontSize: "14px", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.email}</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{ background: rm.bg, color: rm.text, fontSize: "11px", fontWeight: "600", padding: "2px 10px", borderRadius: "100px" }}>
+                        {rm.label}
+                      </span>
+                      {inv.outlets?.name && (
+                        <span style={{ fontSize: "11px", color: "#94A3B8", display: "flex", alignItems: "center", gap: "3px" }}>
+                          <Building2 size={10} /> {inv.outlets.name}
                         </span>
-                      </td>
-                      <td style={{ ...s.td, color: "#94A3B8", fontSize: "12px" }}>
-                        {inv.expires_at ? (
-                          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            <Clock size={11} />{new Date(inv.expires_at).toLocaleDateString()}
-                          </span>
-                        ) : "—"}
-                      </td>
-                      <td style={s.td}>
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          {inv.status === "pending" && !isExpired && (
-                            <>
-                              <button onClick={() => copyLink(inv.token)} className="bo-invite-icon-btn" style={s.iconBtn} title="Copy invite link">
-                                {copied === `link-${inv.token}` ? <Check size={14} color="#10B981" /> : <Copy size={14} />}
-                              </button>
-                              <button onClick={() => handleResend(inv.id)} disabled={resending === inv.id} className="bo-invite-icon-btn" style={s.iconBtn} title="Resend email">
-                                {copied === `resent-${inv.id}` ? <Check size={14} color="#10B981" /> : <RefreshCw size={14} style={resending === inv.id ? { animation: "spin 1s linear infinite" } : {}} />}
-                              </button>
-                              <button onClick={() => handleCancel(inv.id)} className="bo-invite-icon-btn" style={{ ...s.iconBtn, color: "#EF4444" }} title="Cancel">
-                                <XCircle size={14} />
-                              </button>
-                            </>
-                          )}
-                          {inv.status === "accepted" && (
-                            <span style={{ fontSize: "11px", color: "#059669", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "3px" }}><Check size={12} color="#059669" /> Joined</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      )}
+                      {inv.expires_at && (
+                        <span style={{ fontSize: "11px", color: "#CBD5E1", display: "flex", alignItems: "center", gap: "3px" }}>
+                          <Clock size={10} /> {new Date(inv.expires_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Invite code */}
+                  {inv.invitation_code && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
+                      <span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "13px", color: "#334155", letterSpacing: "0.08em" }}>
+                        {inv.invitation_code}
+                      </span>
+                      <button onClick={() => copyCode(inv.invitation_code)} className="bo-invite-action-btn"
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", display: "flex", borderRadius: "4px" }} title="Copy code">
+                        {copied === `code-${inv.invitation_code}` ? <Check size={12} color="#10B981" /> : <Copy size={12} color="#94A3B8" />}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Status badge */}
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: "5px",
+                    background: sm.bg, color: sm.text, fontSize: "11px", fontWeight: "700",
+                    padding: "5px 12px", borderRadius: "100px", flexShrink: 0,
+                  }}>
+                    <StatusIcon size={12} />
+                    {sm.label}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                    {inv.status === "pending" && !isExpired && (
+                      <>
+                        <button onClick={() => copyLink(inv.token)} className="bo-invite-action-btn"
+                          style={sty.iconBtn} title="Copy invite link">
+                          {copied === `link-${inv.token}` ? <Check size={14} color="#10B981" /> : <LinkIcon size={14} />}
+                        </button>
+                        <button onClick={() => handleResend(inv.id)} disabled={resending === inv.id} className="bo-invite-action-btn"
+                          style={sty.iconBtn} title="Resend email">
+                          {copied === `resent-${inv.id}` ? <Check size={14} color="#10B981" /> : <RefreshCw size={14} style={resending === inv.id ? { animation: "spin 1s linear infinite" } : {}} />}
+                        </button>
+                        <button onClick={() => handleCancel(inv.id)} className="bo-invite-action-btn"
+                          style={{ ...sty.iconBtn, color: "#EF4444" }} title="Cancel invitation">
+                          <XCircle size={14} />
+                        </button>
+                      </>
+                    )}
+                    {inv.status === "accepted" && (
+                      <span style={{ fontSize: "11px", color: "#059669", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", padding: "0 4px" }}>
+                        <Check size={13} strokeWidth={3} /> Joined
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
-      {confirmCancel && createPortal(
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: "#FFF", borderRadius: "16px", padding: "28px 32px", width: "360px", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#0F172A", marginBottom: "8px" }}>Cancel Invitation?</h3>
-            <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "24px" }}>This invitation will be cancelled and the link and code will no longer work.</p>
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-              <button onClick={() => setConfirmCancel(null)} style={{ padding: "8px 18px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
-                Keep It
-              </button>
-              <button onClick={confirmCancelAction} style={{ padding: "8px 18px", borderRadius: "9px", border: "none", background: "#EF4444", color: "#FFF", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}>
-                Yes, Cancel
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
 
+        {confirmCancel && createPortal(
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+            <div style={{ background: "#FFF", borderRadius: "20px", padding: "28px 32px", width: "380px", boxShadow: "0 24px 64px rgba(0,0,0,0.2)", animation: "fadeSlideUp 0.2s ease both" }}>
+              <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                <XCircle size={24} color="#EF4444" />
+              </div>
+              <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#0F172A", marginBottom: "8px" }}>Cancel Invitation?</h3>
+              <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "24px", lineHeight: "1.5" }}>This invitation will be cancelled and the link and code will no longer work.</p>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button onClick={() => setConfirmCancel(null)} style={sty.btnSecondary}>Keep It</button>
+                <button onClick={confirmCancelAction} style={{ ...sty.btnPrimary, background: "#EF4444", color: "#FFF" }}>Yes, Cancel</button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
 
       {upgradeModal && (
@@ -359,21 +447,11 @@ export default function BOInvitations() {
   );
 }
 
-const s = {
-  btnPrimary: { display: "inline-flex", alignItems: "center", gap: "6px", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "13px", fontWeight: "700", cursor: "pointer" },
-  btnSecondary: { background: "#F1F5F9", color: "#475569", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "13px", fontWeight: "600", cursor: "pointer" },
-  formCard: { background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
-  formTitle: { fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "16px" },
-  label: { display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" },
-  input: { width: "100%", padding: "9px 12px", border: "1px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", outline: "none", boxSizing: "border-box" },
-  empty: { textAlign: "center", padding: "60px 20px", background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px" },
-  tableWrap: { background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", overflow: "hidden" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  thead: { background: "#F8FAFC" },
-  th: { padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #F1F5F9" },
-  tr: { borderBottom: "1px solid #F8FAFC" },
-  td: { padding: "14px 16px", fontSize: "13px", color: "#334155" },
-  roleTag: { background: "#EFF6FF", color: "#3B82F6", fontSize: "11px", fontWeight: "600", padding: "3px 9px", borderRadius: "100px", textTransform: "capitalize", whiteSpace: "nowrap" },
-  statusBadge: { fontSize: "11px", fontWeight: "700", padding: "3px 10px", borderRadius: "100px", textTransform: "capitalize" },
-  iconBtn: { background: "none", border: "1px solid #E2E8F0", borderRadius: "6px", padding: "5px 7px", cursor: "pointer", display: "inline-flex", alignItems: "center", color: "#64748B", transition: "background 0.15s" },
+const sty = {
+  btnPrimary: { display: "inline-flex", alignItems: "center", gap: "7px", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "13px", fontWeight: "700", cursor: "pointer", transition: "all 0.15s" },
+  btnSecondary: { background: "#F1F5F9", color: "#475569", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" },
+  label: { display: "flex", alignItems: "center", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "7px" },
+  input: { width: "100%", padding: "10px 14px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "14px", outline: "none", boxSizing: "border-box", color: "#1E293B", background: "#FAFAFA", transition: "border-color 0.15s" },
+  iconBtn: { background: "none", border: "1px solid #E2E8F0", borderRadius: "8px", width: "32px", height: "32px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#64748B", transition: "all 0.15s" },
+  actionBtn: { display: "inline-flex", alignItems: "center", gap: "6px", border: "none", borderRadius: "8px", padding: "7px 14px", cursor: "pointer", transition: "all 0.15s" },
 };

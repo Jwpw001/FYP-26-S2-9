@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
-import { supabase } from "../../lib/supabaseClient";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star } from "lucide-react";
@@ -61,7 +60,7 @@ export default function OutletDetail() {
   const [skills, setSkills] = useState([]);
 
   useEffect(() => { fetchOutlet(); fetchStaff(); fetchManagers(); fetchRoleTemplates(); }, [id]);
-  useEffect(() => { supabase.from("skills").select("skill_id, name").order("name").then(({ data }) => setSkills(data || [])); }, []);
+  useEffect(() => { api.get("/api/business/skills").then(r => setSkills((r.skills || []).map(sk => ({ skill_id: sk.skill_id, name: sk.name })))).catch(() => {}); }, []);
 
   async function fetchOutlet() {
     setLoading(true);
@@ -115,7 +114,7 @@ export default function OutletDetail() {
   }
 
   async function handleSave() {
-    if (!form.name.trim()) { setError("Outlet name is required."); return; }
+    if (!form.name.trim()) { setError("Branch name is required."); return; }
     setSaving(true); setError(""); setSuccess("");
     try {
       const data = await api.patch(`/api/business/outlets/${id}`, {
@@ -125,7 +124,7 @@ export default function OutletDetail() {
         close_time: form.close_time ? form.close_time + ":00" : undefined,
       });
       setOutlet(data.outlet);
-      setSuccess("Outlet updated successfully.");
+      setSuccess("Branch updated successfully.");
       setEditing(false);
     } catch (err) {
       setError(err.message || "Failed to save. Please try again.");
@@ -168,7 +167,7 @@ export default function OutletDetail() {
       await api.delete(`/api/business/outlets/${id}`);
       goTo("/business-owner/outlets");
     } catch (err) {
-      setError(err.message || "Failed to delete outlet. Please try again.");
+      setError(err.message || "Failed to delete branch. Please try again.");
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
@@ -176,20 +175,20 @@ export default function OutletDetail() {
 
   if (loading) {
     return (
-      <BusinessOwnerLayout title="Outlet Details">
+      <BusinessOwnerLayout title="Branch Details">
         <div style={{ textAlign: "center", padding: "60px", color: "#64748B", fontSize: "14px" }}>
-          Loading outlet…
+          Loading branch…
         </div>
       </BusinessOwnerLayout>
     );
   }
 
   return (
-    <BusinessOwnerLayout title="Outlet Details">
-      <button style={s.back} onClick={() => goTo("/business-owner/outlets")}>← Back to Outlets</button>
+    <BusinessOwnerLayout title="Branch Details">
+      <button style={s.back} onClick={() => goTo("/business-owner/outlets")}>← Back to Branches</button>
 
       <div style={s.layout}>
-        {/* ── Left: outlet card ── */}
+        {/* ── Left: branch card ── */}
         <div style={s.profileCard}>
           <div style={s.avatarLg}><Building2 size={28} color="#F59E0B" /></div>
           <h2 style={s.profileName}>{outlet.name}</h2>
@@ -200,7 +199,7 @@ export default function OutletDetail() {
           )}
 
           <div style={s.managerSection}>
-            <p style={s.managerLabel}><ShieldCheck size={12} /> Outlet Manager</p>
+            <p style={s.managerLabel}><ShieldCheck size={12} /> Branch Manager</p>
             {managersLoading ? (
               <Shimmer w="100%" h="34px" r="9px" />
             ) : managers.length === 0 ? (
@@ -223,10 +222,10 @@ export default function OutletDetail() {
               style={{ ...s.actionBtn, background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
               onClick={() => setShowDeleteConfirm(true)}
             >
-              <Trash2 size={14} /> Delete Outlet
+              <Trash2 size={14} /> Delete Branch
             </button>
             <p style={{ fontSize: "11px", color: "#94A3B8", textAlign: "center", marginTop: "6px", lineHeight: 1.4 }}>
-              Deleting also removes this outlet's staff, shifts, and reports.
+              Deleting also removes this branch's staff, shifts, and reports.
             </p>
           </div>
         </div>
@@ -234,7 +233,7 @@ export default function OutletDetail() {
         {/* ── Right: edit form ── */}
         <div style={s.formCard}>
           <div style={s.formHeader}>
-            <h3 style={s.formTitle}>Outlet Details</h3>
+            <h3 style={s.formTitle}>Branch Details</h3>
             {!editing ? (
               <button style={s.editBtn} onClick={() => { setEditing(true); setError(""); setSuccess(""); }}>Edit</button>
             ) : (
@@ -252,7 +251,7 @@ export default function OutletDetail() {
 
           <div style={s.fields}>
             <div style={s.field}>
-              <label style={s.label}>Outlet Name</label>
+              <label style={s.label}>Branch Name</label>
               {editing
                 ? <input style={s.input} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
                 : <p style={s.value}>{outlet.name}</p>}
@@ -344,13 +343,11 @@ export default function OutletDetail() {
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}>
               {rolesDraft.map((row, i) => (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 80px 32px", gap: "8px", alignItems: "center" }}>
-                  <select style={s.input} value={row.skill_id || ""} onChange={e => {
-                    const sk = skills.find(s => String(s.skill_id) === e.target.value);
-                    updateRoleDraft(i, "skill_id", e.target.value);
-                    updateRoleDraft(i, "role_name", sk?.name || "");
+                  <select style={s.input} value={row.role_name || ""} onChange={e => {
+                    updateRoleDraft(i, "role_name", e.target.value);
                   }}>
                     <option value="">— Select skill —</option>
-                    {skills.map(sk => <option key={sk.skill_id} value={sk.skill_id}>{sk.name}</option>)}
+                    {skills.map(sk => <option key={sk.skill_id} value={sk.name}>{sk.name}</option>)}
                   </select>
                   <input type="number" min="1" max="99" style={{ ...s.input, textAlign: "center" }} value={row.headcount} onChange={e => updateRoleDraft(i, "headcount", e.target.value)} />
                   <button onClick={() => setRolesDraft(p => p.filter((_, idx) => idx !== i))} style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "7px", color: "#EF4444", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -366,10 +363,10 @@ export default function OutletDetail() {
         )}
       </div>
 
-      {/* ── Staff at this outlet ── */}
+      {/* ── Staff at this branch ── */}
       <div style={s.staffSection}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-          <h3 style={s.formTitle}>Staff at this Outlet</h3>
+          <h3 style={s.formTitle}>Staff at this Branch</h3>
           <span style={{ fontSize: "12px", color: "#94A3B8" }}>
             {staffLoading ? "Loading…" : `${staff.length} member${staff.length !== 1 ? "s" : ""}`}
           </span>
@@ -393,7 +390,7 @@ export default function OutletDetail() {
         ) : staff.length === 0 ? (
           <div style={s.staffEmpty}>
             <Users size={36} color="#CBD5E1" />
-            <p style={{ fontSize: "14px", color: "#94A3B8", marginTop: "10px" }}>No staff assigned to this outlet yet.</p>
+            <p style={{ fontSize: "14px", color: "#94A3B8", marginTop: "10px" }}>No staff assigned to this branch yet.</p>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
@@ -431,7 +428,7 @@ export default function OutletDetail() {
         <div style={s.overlay}>
           <div style={s.modal}>
             <div style={s.modalIcon}><Trash2 size={36} color="#EF4444" /></div>
-            <h3 style={s.modalTitle}>Delete Outlet?</h3>
+            <h3 style={s.modalTitle}>Delete Branch?</h3>
             <p style={s.modalBody}>
               This will permanently remove <strong>{outlet.name}</strong> along with its staff, shifts, and reports.
               This cannot be undone.

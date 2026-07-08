@@ -57,6 +57,7 @@ import BOManagerDetail from "./pages/business-owner/ManagerDetail";
 import BOInvitations from "./pages/business-owner/Invitations";
 import BOSkills      from "./pages/business-owner/Skills";
 import BOReports     from "./pages/business-owner/Reports";
+import BOSettings    from "./pages/business-owner/Settings";
 import BusinessOwnerLayout from "./components/layout/BusinessOwnerLayout";
 import AcceptInvite  from "./pages/AcceptInvite";
 import JoinByCode    from "./pages/JoinByCode";
@@ -102,6 +103,7 @@ function App() {
         <Route path="/business-owner/invitations" element={<PR roles={["business_owner"]}><BOInvitations /></PR>} />
         <Route path="/business-owner/skills"      element={<PR roles={["business_owner"]}><BOSkills /></PR>} />
         <Route path="/business-owner/reports"     element={<PR roles={["business_owner"]}><BOReports /></PR>} />
+        <Route path="/business-owner/settings"    element={<PR roles={["business_owner"]}><BOSettings /></PR>} />
         <Route path="/business-owner/notifications" element={<PR roles={["business_owner"]}>
           <NotificationsPage Layout={BusinessOwnerLayout} />
         </PR>} />

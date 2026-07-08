@@ -84,7 +84,7 @@ const register = async (req, res) => {
         if (authErr) return res.status(400).json({ success: false, message: authErr.message });
 
         const newUser = await prisma.users.create({
-            data: { full_name, username, email, role: role || null, is_active: true },
+            data: { full_name, username, email, role: role || "pending", is_active: true },
         });
 
         if (role === "krewby_casual_worker") {
@@ -108,7 +108,10 @@ const register = async (req, res) => {
 
 const registerBusiness = async (req, res) => {
     try {
-        const { business_name, description, owner_name, email, phone, address, password, plan } = req.body;
+        const {
+            business_name, description, owner_name, email, phone, address, password,
+            plan, business_settings, business_roles, allocation_preferences,
+        } = req.body;
         const validPlans = ["free", "premium", "enterprise"];
         const selectedPlan = validPlans.includes(plan) ? plan : "free";
 
@@ -118,6 +121,21 @@ const registerBusiness = async (req, res) => {
 
         if (!isValidEmail(email)) {
             return res.status(400).json({ success: false, message: "Please enter a valid email address." });
+        }
+
+        if (business_settings?.operating_days && !/^[01]{7}$/.test(business_settings.operating_days)) {
+            return res.status(400).json({ success: false, message: "operating_days must be a 7-character string of 0s and 1s." });
+        }
+
+        if (allocation_preferences) {
+            const { weight_availability = 40, weight_skills = 30, weight_attendance = 15, weight_performance = 10, weight_workload = 5 } = allocation_preferences;
+            if (weight_availability + weight_skills + weight_attendance + weight_performance + weight_workload !== 100) {
+                return res.status(400).json({ success: false, message: "Allocation weights must sum to 100." });
+            }
+        }
+
+        if (business_roles && business_roles.length > 0 && business_roles.length < 3) {
+            return res.status(400).json({ success: false, message: "Please add at least 3 workforce roles." });
         }
 
         const existing = await prisma.users.findUnique({ where: { email } });
@@ -141,7 +159,7 @@ const registerBusiness = async (req, res) => {
                 data: { full_name: owner_name, username, email, role: "business_owner", is_active: true },
             });
 
-            const { error: bizErr } = await supabaseAdmin.from("businesses").insert({
+            const { data: bizData, error: bizErr } = await supabaseAdmin.from("businesses").insert({
                 name: business_name,
                 description: description || null,
                 contact_email: email,
@@ -149,10 +167,39 @@ const registerBusiness = async (req, res) => {
                 address: address || null,
                 owner_id: newUser.user_id,
                 plan: selectedPlan,
-            });
+            }).select("business_id").single();
             if (bizErr) throw new Error(bizErr.message);
+
+            const businessId = bizData.business_id;
+
+            const settingsDefaults = {
+                operating_days: "1111100", open_time: "09:00", close_time: "18:00",
+                holidays: [], work_hours_day: 8, max_work_hours_day: 12,
+                max_consecutive_days: 6, allow_overtime: false, min_workers_per_assignment: 1,
+            };
+            const settingsRow = { business_id: businessId, ...settingsDefaults, ...(business_settings || {}) };
+            const { error: setErr } = await supabaseAdmin.from("business_settings").insert(settingsRow);
+            if (setErr) throw new Error(setErr.message);
+
+            if (business_roles && business_roles.length > 0) {
+                const roleRows = business_roles.map(r => ({
+                    business_id: businessId,
+                    role_name: r.role_name,
+                    description: r.description || "",
+                    is_suggested: r.is_suggested || false,
+                }));
+                const { error: roleErr } = await supabaseAdmin.from("business_roles").insert(roleRows);
+                if (roleErr) throw new Error(roleErr.message);
+            }
+
+            const prefDefaults = {
+                weight_availability: 40, weight_skills: 30, weight_attendance: 15,
+                weight_performance: 10, weight_workload: 5,
+            };
+            const prefRow = { business_id: businessId, ...prefDefaults, ...(allocation_preferences || {}) };
+            const { error: prefErr } = await supabaseAdmin.from("allocation_preferences").insert(prefRow);
+            if (prefErr) throw new Error(prefErr.message);
         } catch (innerErr) {
-            // Roll back the Supabase auth user to avoid orphaned records
             await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
             throw innerErr;
         }
