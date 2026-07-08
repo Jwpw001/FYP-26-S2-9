@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { Users } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("mgr-staff-styles")) {
   const style = document.createElement("style");
@@ -168,7 +169,7 @@ export default function StaffList() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center" }}>
-            <p style={{ fontSize: "32px", marginBottom: "10px" }}>👥</p>
+            <div style={{ marginBottom: "10px" }}><Users size={32} color="#64748B" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No staff found</p>
           </div>
         ) : (

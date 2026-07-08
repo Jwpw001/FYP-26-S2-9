@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AlertTriangle, Tag } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 
@@ -99,7 +100,7 @@ export default function SkillTags() {
           <div style={{ background: "#FFF", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "400px", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
             onClick={e => e.stopPropagation()}>
             <div style={{ width: "48px", height: "48px", borderRadius: "50%", margin: "0 auto 14px", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: "22px" }}>⚠️</span>
+              <AlertTriangle size={22} color="#EF4444" />
             </div>
             <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>Delete skill tag?</h3>
             <p style={{ fontSize: "13px", color: "#64748B", lineHeight: 1.6, marginBottom: "22px" }}>
@@ -176,7 +177,7 @@ export default function SkillTags() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center" }}>
-            <p style={{ fontSize: "32px", marginBottom: "10px" }}>🏷️</p>
+            <p style={{ fontSize: "32px", marginBottom: "10px" }}><Tag size={32} color="#64748B" /></p>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>
               {search ? "No tags match your search" : "No skill tags yet"}
             </p>

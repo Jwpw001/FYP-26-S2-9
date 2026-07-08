@@ -1,6 +1,8 @@
 const ROLES = {
     SYSTEM_ADMIN: "system_admin",
 
+    BUSINESS_OWNER: "business_owner",
+
     OUTLET_MANAGER: "outlet_manager",
 
     REGULAR_STAFF: "regular_staff",

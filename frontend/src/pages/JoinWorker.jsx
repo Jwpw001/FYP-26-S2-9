@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useGoTo } from "../components/PageTransition";
+import {
+  CalendarDays, DollarSign, MapPin, Star, Bell, Shield, BarChart2, Handshake,
+} from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("join-styles")) {
   const tag = document.createElement("style");
@@ -18,14 +21,14 @@ if (typeof document !== "undefined" && !document.getElementById("join-styles")) 
 }
 
 const BENEFITS = [
-  { icon: "📅", title: "Flexible scheduling",    desc: "No rosters. No fixed hours. Pick shifts that actually fit your life." },
-  { icon: "💰", title: "Earn on your terms",      desc: "Work as much or as little as you want — every shift is your decision." },
-  { icon: "📍", title: "Multiple venues",          desc: "Cafés, restaurants, hotels, events. Grow your experience across the city." },
-  { icon: "⭐", title: "Build your reputation",   desc: "Great ratings unlock premium placements and more opportunities." },
-  { icon: "🔔", title: "Instant notifications",   desc: "Know the moment a matching shift opens up near you." },
-  { icon: "🛡️", title: "Vetted placements only",  desc: "Every outlet is verified by our team. You work somewhere safe and professional." },
-  { icon: "📊", title: "Your own dashboard",      desc: "Track shifts, earnings, and performance — all in one place." },
-  { icon: "🤝", title: "Real human support",      desc: "Our coordinators are available to help you from day one." },
+  { icon: CalendarDays, title: "Flexible scheduling",    desc: "No rosters. No fixed hours. Pick shifts that actually fit your life." },
+  { icon: DollarSign, title: "Earn on your terms",      desc: "Work as much or as little as you want — every shift is your decision." },
+  { icon: MapPin, title: "Multiple venues",          desc: "Cafés, restaurants, hotels, events. Grow your experience across the city." },
+  { icon: Star, title: "Build your reputation",   desc: "Great ratings unlock premium placements and more opportunities." },
+  { icon: Bell, title: "Instant notifications",   desc: "Know the moment a matching shift opens up near you." },
+  { icon: Shield, title: "Vetted placements only",  desc: "Every outlet is verified by our team. You work somewhere safe and professional." },
+  { icon: BarChart2, title: "Your own dashboard",      desc: "Track shifts, earnings, and performance — all in one place." },
+  { icon: Handshake, title: "Real human support",      desc: "Our coordinators are available to help you from day one." },
 ];
 
 const HOW = [
@@ -111,12 +114,14 @@ export default function JoinWorker() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               {[
                 { val: "500+", label: "Monthly shifts",    bg: "rgba(167,139,250,0.12)", border: "rgba(167,139,250,0.25)", val_c: "#C4B5FD" },
-                { val: "4.8★", label: "Worker rating",     bg: "rgba(99,102,241,0.18)",  border: "rgba(99,102,241,0.35)",  val_c: "#A5B4FC" },
+                { val: "4.8", label: "Worker rating",     bg: "rgba(99,102,241,0.18)",  border: "rgba(99,102,241,0.35)",  val_c: "#A5B4FC", showStar: true },
                 { val: "100%", label: "Free to join",      bg: "rgba(99,102,241,0.18)",  border: "rgba(99,102,241,0.35)",  val_c: "#A5B4FC" },
                 { val: "2–3",  label: "Days to approve",   bg: "rgba(167,139,250,0.12)", border: "rgba(167,139,250,0.25)", val_c: "#C4B5FD" },
               ].map(s => (
                 <div key={s.val} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: "16px", padding: "28px 22px" }}>
-                  <p style={{ fontSize: "32px", fontWeight: "900", color: s.val_c, letterSpacing: "-0.03em", marginBottom: "6px" }}>{s.val}</p>
+                  <p style={{ fontSize: "32px", fontWeight: "900", color: s.val_c, letterSpacing: "-0.03em", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    {s.val}{s.showStar && <Star size={22} fill={s.val_c} color={s.val_c} />}
+                  </p>
                   <p style={{ fontSize: "12px", color: "#7C83A0", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>{s.label}</p>
                 </div>
               ))}
@@ -151,7 +156,7 @@ export default function JoinWorker() {
             {BENEFITS.map(b => (
               <div key={b.title} className="jcard"
                 style={{ background: "#fff", border: "1.5px solid #EDE9FE", borderRadius: "16px", padding: "24px" }}>
-                <div style={{ fontSize: "24px", marginBottom: "14px" }}>{b.icon}</div>
+                <div style={{ marginBottom: "14px" }}><b.icon size={24} color="#7C3AED" /></div>
                 <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E1B4B", marginBottom: "8px" }}>{b.title}</p>
                 <p style={{ fontSize: "12px", color: "#6B7280", lineHeight: 1.75 }}>{b.desc}</p>
               </div>
@@ -175,16 +180,18 @@ export default function JoinWorker() {
                   <p style={{ fontSize: "14px", fontWeight: "700", color: "#E0E7FF" }}>Priya N.</p>
                   <p style={{ fontSize: "13px", color: "#6366F1" }}>Krewby Worker · Singapore</p>
                   <div style={{ display: "flex", gap: "2px", marginTop: "5px" }}>
-                    {[1,2,3,4,5].map(s => <span key={s} style={{ color: "#FCD34D", fontSize: "13px" }}>★</span>)}
+                    {[1,2,3,4,5].map(s => <Star key={s} size={13} fill="#FCD34D" color="#FCD34D" />)}
                   </div>
                 </div>
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {[["Shifts completed","47"],["Avg rating","4.9★"],["Venues worked","12"],["Months active","8"]].map(([l,v]) => (
+              {[["Shifts completed","47"],["Avg rating","4.9",true],["Venues worked","12"],["Months active","8"]].map(([l,v,showStar]) => (
                 <div key={l} style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "12px", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: "13px", color: "#818CF8" }}>{l}</span>
-                  <span style={{ fontSize: "19px", fontWeight: "800", color: "#E0E7FF" }}>{v}</span>
+                  <span style={{ fontSize: "19px", fontWeight: "800", color: "#E0E7FF", display: "flex", alignItems: "center", gap: "4px" }}>
+                    {v}{showStar && <Star size={15} fill="#FCD34D" color="#FCD34D" />}
+                  </span>
                 </div>
               ))}
             </div>

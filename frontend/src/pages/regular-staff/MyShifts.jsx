@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import StaffLayout from "../../components/layout/StaffLayout";
+import { Calendar, Check } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-shifts-styles")) {
   const style = document.createElement("style");
@@ -143,7 +144,7 @@ export default function MyShifts() {
           </div>
         ) : shifts.length === 0 ? (
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ fontSize: "40px", marginBottom: "12px" }}>📅</div>
+            <div style={{ marginBottom: "12px" }}><Calendar size={40} color="#64748B" /></div>
             <p style={{ fontSize: "17px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>No {filter} shifts</p>
             <p style={{ fontSize: "13px", color: "#64748B" }}>
               {filter === "upcoming" ? "You have no upcoming shifts. Your manager will assign them soon." : "No shifts found for this period."}
@@ -170,7 +171,7 @@ export default function MyShifts() {
                       <span style={{ ...badge, ...shiftBadge(shift?.status) }}>{shift?.status}</span>
                       {a.acknowledged && (
                         <span style={{ fontSize: "11px", color: "#059669", fontWeight: "600", background: "#ECFDF5", padding: "2px 8px", borderRadius: "100px" }}>
-                          ✓ Acknowledged
+                          <Check size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} /> Acknowledged
                         </span>
                       )}
                     </div>
@@ -193,7 +194,7 @@ export default function MyShifts() {
                         borderRadius: "10px", fontSize: "14px", fontWeight: "600",
                         color: "#166534", cursor: "pointer",
                       }}>
-                      ✓ Acknowledge Shift
+                      <Check size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} /> Acknowledge Shift
                     </button>
                   )}
                 </div>

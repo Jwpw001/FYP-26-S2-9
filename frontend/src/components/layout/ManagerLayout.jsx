@@ -4,17 +4,19 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail, Tag } from "lucide-react";
 import "./sidebarStyles.js";
+import ProfileModal from "../ProfileModal";
 
 const NAV = [
   { label: "Dashboard",    path: "/outlet-manager/dashboard",    Icon: LayoutDashboard },
-  { label: "Staff",        path: "/outlet-manager/staff",        Icon: Users },
+  { label: "Workforce",    path: "/outlet-manager/staff",        Icon: Users },
   { label: "Shifts",       path: "/outlet-manager/shifts",       Icon: CalendarDays },
   { label: "Availability", path: "/outlet-manager/availability", Icon: CalendarClock },
   { label: "Attendance",   path: "/outlet-manager/attendance",   Icon: ClipboardCheck },
   { label: "Reports",      path: "/outlet-manager/reports",      Icon: BarChart2 },
   { label: "Manpower",     path: "/outlet-manager/manpower",     Icon: UserPlus },
+  { label: "Skills",       path: "/outlet-manager/skills",       Icon: Tag },
   { label: "Invitations",  path: "/outlet-manager/invitations",  Icon: Mail },
 ];
 
@@ -25,6 +27,7 @@ export default function ManagerLayout({ children, title }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -72,13 +75,14 @@ export default function ManagerLayout({ children, title }) {
         </nav>
 
         <div style={{ ...s.sidebarBottom, padding: "12px" }}>
-          <div style={{ ...s.userRow, marginBottom: "10px" }}>
+          <button onClick={() => setShowProfile(true)} title="View profile"
+            style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
             <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "M"}</div>
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Manager"}</p>
-              <p style={s.userRole}>Outlet Manager</p>
+              <p style={s.userRole}>Manager</p>
             </div>
-          </div>
+          </button>
           <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
             <SignOutButton />
           </div>
@@ -130,6 +134,7 @@ export default function ManagerLayout({ children, title }) {
           {children}
         </div>
       </div>
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
       <AIAssistantWidget />
     </div>
   );
@@ -219,9 +224,10 @@ const s = {
     color: "#93C5FD",
   },
   navIcon: {
-    fontSize: "16px",
     width: "20px",
-    textAlign: "center",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0,
   },
 

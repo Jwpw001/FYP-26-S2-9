@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
+import { User, Building2, ClipboardList, Calendar } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -549,10 +550,10 @@ export default function AdminReports() {
 
         {/* ── KPI Cards ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: "14px", marginBottom: "20px" }}>
-          <KpiCard loading={loading} icon="👤" label="New Users"       value={kpis.users}      pct={delta(kpis.users, kpis.usersPrev)}      sub={`vs prev ${PERIODS[period].label}`} color="#2563EB" bg="#EFF6FF" />
-          <KpiCard loading={loading} icon="🏢" label="New Businesses"  value={kpis.businesses} pct={delta(kpis.businesses, kpis.bizPrev)}    sub={`vs prev ${PERIODS[period].label}`} color="#059669" bg="#ECFDF5" />
-          <KpiCard loading={loading} icon="📋" label="Krewby Requests" value={kpis.requests}   pct={delta(kpis.requests, kpis.reqPrev)}     sub={`vs prev ${PERIODS[period].label}`} color="#DB2777" bg="#FDF2F8" />
-          <KpiCard loading={loading} icon="📅" label="Shifts"          value={kpis.shifts}     pct={delta(kpis.shifts, kpis.shiftsPrev)}    sub={`vs prev ${PERIODS[period].label}`} color="#D97706" bg="#FFFBEB" />
+          <KpiCard loading={loading} icon={<User size={17} />} label="New Users"       value={kpis.users}      pct={delta(kpis.users, kpis.usersPrev)}      sub={`vs prev ${PERIODS[period].label}`} color="#2563EB" bg="#EFF6FF" />
+          <KpiCard loading={loading} icon={<Building2 size={17} />} label="New Businesses"  value={kpis.businesses} pct={delta(kpis.businesses, kpis.bizPrev)}    sub={`vs prev ${PERIODS[period].label}`} color="#059669" bg="#ECFDF5" />
+          <KpiCard loading={loading} icon={<ClipboardList size={17} />} label="Requests" value={kpis.requests}   pct={delta(kpis.requests, kpis.reqPrev)}     sub={`vs prev ${PERIODS[period].label}`} color="#DB2777" bg="#FDF2F8" />
+          <KpiCard loading={loading} icon={<Calendar size={17} />} label="Shifts"          value={kpis.shifts}     pct={delta(kpis.shifts, kpis.shiftsPrev)}    sub={`vs prev ${PERIODS[period].label}`} color="#D97706" bg="#FFFBEB" />
         </div>
 
         {/* ── Activity Chart ── */}

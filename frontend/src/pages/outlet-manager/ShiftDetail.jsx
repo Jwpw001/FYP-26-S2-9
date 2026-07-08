@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { Sparkles, X, Check, AlertTriangle, Users } from "lucide-react";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 
@@ -672,8 +673,8 @@ export default function ShiftDetail() {
                 disabled={aiPanel?.loading}
               >
                 {aiPanel?.loading
-                  ? <span style={{ animation: "aiPulse 1.2s ease infinite" }}>✦ Thinking…</span>
-                  : aiPanel ? "✕ Close AI" : "✦ Smart Recommend"}
+                  ? <span style={{ animation: "aiPulse 1.2s ease infinite" }}><Sparkles size={14} style={{verticalAlign:"middle",marginRight:4}} /> Thinking…</span>
+                  : aiPanel ? <><X size={14} style={{verticalAlign:"middle",marginRight:4}} /> Close AI</> : <><Sparkles size={14} style={{verticalAlign:"middle",marginRight:4}} /> Smart Recommend</>}
               </button>
             )}
             {shift.status === "draft" && (
@@ -708,7 +709,7 @@ export default function ShiftDetail() {
             }} />
           </div>
           <span style={s.staffingText}>
-            {totalAssigned}/{totalRoles} positions filled{isFullyStaffed && " · ✓ Ready to publish"}
+            {totalAssigned}/{totalRoles} positions filled{isFullyStaffed && " ·  Ready to publish"}
           </span>
         </div>
       </div>
@@ -830,7 +831,7 @@ export default function ShiftDetail() {
 
       {roles.length === 0 ? (
         <div style={{ ...s.empty, padding: "40px", textAlign: "center" }}>
-          <div style={{ fontSize: "32px", marginBottom: "10px" }}>👥</div>
+          <div style={{ marginBottom: "10px" }}><Users size={32} color="#64748B" /></div>
           <p style={{ fontSize: "15px", fontWeight: "600", color: "#64748B", marginBottom: "4px" }}>No roles defined yet</p>
           <p style={{ fontSize: "13px", color: "#94A3B8" }}>Click "+ Add Role" above to define positions for this shift, then assign staff to each role.</p>
         </div>
@@ -852,13 +853,13 @@ export default function ShiftDetail() {
                 </div>
                 <div style={s.roleActions}>
                   <span style={{ ...s.fillBadge, background: isFull ? "#DCFCE7" : "#FFFBEB", color: isFull ? "#166534" : "#D97706" }}>
-                    {isFull ? "✓ Full" : `${needed - filled} needed`}
+                    {isFull ? "Full" : `${needed - filled} needed`}
                   </span>
                   {(() => {
                     const kr = krewbyRequests.find(r => r.role_id === role.role_id);
                     if (kr) {
                       if (kr.status === "assigned" || kr.status === "approved") {
-                        return <span style={s.krewbyAssignedBadge}>✓ Krewby: {kr.worker_name || "Worker assigned"}</span>;
+                        return <span style={s.krewbyAssignedBadge}>Krewby:{kr.worker_name || "Worker assigned"}</span>;
                       }
                       return <span style={s.krewbyPendingBadge}>⏳ Krewby requested</span>;
                     }
@@ -890,7 +891,7 @@ export default function ShiftDetail() {
                   </div>
                   <div style={s.assignedRight}>
                     {a.acknowledged
-                      ? <span style={s.ackTagYes}>✓ Acknowledged</span>
+                      ? <span style={s.ackTagYes}>Acknowledged</span>
                       : <span style={s.ackTagNo}>Pending acknowledgement</span>
                     }
                     {(shift.status === "draft" || shift.status === "published") && (
@@ -900,7 +901,7 @@ export default function ShiftDetail() {
                         onClick={() => removeAssignment(a.assignment_id)}
                         onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
                         onMouseLeave={e => { e.currentTarget.style.color = "#94A3B8"; }}
-                      >✕</button>
+                      ><X size={14} /></button>
                     )}
                   </div>
                 </div>
@@ -917,7 +918,7 @@ export default function ShiftDetail() {
                     <p style={{ ...s.assignedEmail, color: "#16A34A", fontWeight: "600" }}>Krewby Casual Worker</p>
                   </div>
                   <div style={s.assignedRight}>
-                    <span style={s.ackTagYes}>✓ Krewby Assigned</span>
+                    <span style={s.ackTagYes}>Krewby Assigned</span>
                   </div>
                 </div>
               )}
@@ -936,7 +937,7 @@ export default function ShiftDetail() {
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>Assign Staff — {assignModal.role.role_name}</h3>
-              <button style={s.closeBtn} onClick={() => setAssignModal(null)}>✕</button>
+              <button style={s.closeBtn} onClick={() => setAssignModal(null)}><X size={18} /></button>
             </div>
 
             {assignModal.role.skills?.name && (
@@ -968,7 +969,7 @@ export default function ShiftDetail() {
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                           <p style={s.candidateName}>{c.full_name}</p>
                           {isTop && (
-                            <span style={s.recBadge}>✓ Recommended</span>
+                            <span style={s.recBadge}>Recommended</span>
                           )}
                         </div>
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "3px" }}>
@@ -1003,8 +1004,8 @@ export default function ShiftDetail() {
         <div style={s.modalOverlay}>
           <div style={{ ...s.modal, maxWidth: "480px" }}>
             <div style={s.modalHeader}>
-              <h3 style={{ ...s.modalTitle, color: "#991B1B" }}>⚠ Publish Conflicts</h3>
-              <button style={s.closeBtn} onClick={() => setConflictModal(null)}>✕</button>
+              <h3 style={{ ...s.modalTitle, color: "#991B1B", display:"flex", alignItems:"center", gap:"6px" }}><AlertTriangle size={18} /> Publish Conflicts</h3>
+              <button style={s.closeBtn} onClick={() => setConflictModal(null)}><X size={18} /></button>
             </div>
 
             {conflictModal.hardBlocks.length > 0 && (
@@ -1103,7 +1104,7 @@ export default function ShiftDetail() {
           <div style={{ ...s.modal, maxWidth: "420px" }} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>Request Krewby Worker</h3>
-              <button style={s.closeBtn} onClick={() => setKrewbyModal(null)}>✕</button>
+              <button style={s.closeBtn} onClick={() => setKrewbyModal(null)}><X size={18} /></button>
             </div>
             <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "16px" }}>
               Requesting a Krewby casual worker for <strong>{krewbyModal.role.role_name}</strong>

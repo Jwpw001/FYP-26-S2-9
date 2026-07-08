@@ -4,7 +4,7 @@ import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase } from "lucide-react";
+import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-outletdetail-styles")) {
   const style = document.createElement("style");
@@ -220,10 +220,10 @@ export default function OutletDetail() {
 
           <div style={s.cardActions}>
             <button
-              style={{ ...s.actionBtn, background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }}
+              style={{ ...s.actionBtn, background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
               onClick={() => setShowDeleteConfirm(true)}
             >
-              🗑 Delete Outlet
+              <Trash2 size={14} /> Delete Outlet
             </button>
             <p style={{ fontSize: "11px", color: "#94A3B8", textAlign: "center", marginTop: "6px", lineHeight: 1.4 }}>
               Deleting also removes this outlet's staff, shifts, and reports.
@@ -430,7 +430,7 @@ export default function OutletDetail() {
       {showDeleteConfirm && (
         <div style={s.overlay}>
           <div style={s.modal}>
-            <div style={s.modalIcon}>🗑</div>
+            <div style={s.modalIcon}><Trash2 size={36} color="#EF4444" /></div>
             <h3 style={s.modalTitle}>Delete Outlet?</h3>
             <p style={s.modalBody}>
               This will permanently remove <strong>{outlet.name}</strong> along with its staff, shifts, and reports.

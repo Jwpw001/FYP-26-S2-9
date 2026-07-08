@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useGoTo } from "../components/PageTransition";
 import { api } from "../lib/api";
 import { setUser } from "../utils/auth";
-import { Check } from "lucide-react";
+import { Check, UtensilsCrossed, ShoppingBag, Stethoscope, Code2, Package, Sparkles, BookOpen, Hotel, Building2 } from "lucide-react";
 import { Pricing } from "../components/Pricing";
 
 const PLANS = [
@@ -20,8 +20,8 @@ const PLANS = [
     buttonText: "Start for free",
     description: "No credit card required",
     features: [
-      "1 outlet",
-      "Up to 20 staff",
+      "1 branch",
+      "Up to 20 workers",
       "Shift scheduling",
       "Leave & swap requests",
       "Basic reports",
@@ -41,8 +41,8 @@ const PLANS = [
     buttonText: "Get Premium",
     description: "Billed monthly, cancel anytime",
     features: [
-      "1 outlet",
-      "Unlimited staff",
+      "1 branch",
+      "Unlimited workers",
       "Everything in Free",
       "Advanced reports",
       "AI scheduling assistant",
@@ -56,7 +56,7 @@ const PLANS = [
     price: "120",
     yearlyPrice: "96",
     period: "/ month",
-    tagline: "For multi-outlet operations",
+    tagline: "For multi-branch operations",
     accent: "#7C3AED",
     accentLight: "#F5F3FF",
     isPopular: false,
@@ -64,8 +64,8 @@ const PLANS = [
     description: "Custom onboarding included",
     features: [
       "Up to 2 businesses",
-      "Unlimited outlets",
-      "Unlimited staff",
+      "Unlimited branches",
+      "Unlimited workers",
       "Everything in Premium",
       "Dedicated account manager",
       "Custom onboarding",
@@ -180,7 +180,7 @@ export default function RegisterBusiness() {
             Set up your business on Krewby
           </h1>
           <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.8)", lineHeight: 1.7, maxWidth: "380px" }}>
-            Create your Business Owner account, then add outlets, invite managers, and start building schedules across your whole operation.
+            Create your Business Owner account, then add branches, invite managers, and start building schedules across your whole operation.
           </p>
 
           {/* Step indicators */}

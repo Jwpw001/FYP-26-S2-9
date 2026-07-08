@@ -16,6 +16,7 @@ const reportRoutes = require("./routes/reportRoutes");
 const aiAssistantRoutes = require("./routes/aiAssistantRoutes");
 const invitationRoutes = require("./routes/invitationRoutes");
 const businessOwnerRoutes = require("./routes/businessOwnerRoutes");
+const skillsRoutes = require("./routes/skillsRoutes");
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/ai-assistant", aiAssistantRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api/business", businessOwnerRoutes);
+app.use("/api/skills", skillsRoutes);
 
 app.use(errorHandler);
 

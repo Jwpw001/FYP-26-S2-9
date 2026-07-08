@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
+import { AlertTriangle } from "lucide-react";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -53,8 +54,8 @@ export default function ForgotPassword() {
             </p>
 
             {error && (
-              <div style={styles.error} role="alert">
-                <span>⚠ </span>{error}
+              <div style={{ ...styles.error, display: "flex", alignItems: "center", gap: "6px" }} role="alert">
+                <AlertTriangle size={14} color="#991B1B" />{error}
               </div>
             )}
 

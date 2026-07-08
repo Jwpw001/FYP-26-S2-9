@@ -2,15 +2,15 @@ import { useLocation, Link } from "react-router-dom";
 import { getUser } from "../../utils/auth";
 import { useState } from "react";
 import SignOutButton from "../SignOutButton";
-import { LayoutDashboard, Building2, Users, Tag, Briefcase, BarChart2, ClipboardList, FileCheck } from "lucide-react";
+import { LayoutDashboard, Building2, Users, Tag, BarChart2, ClipboardList, FileCheck } from "lucide-react";
 import "./sidebarStyles.js";
+import ProfileModal from "../ProfileModal";
 
 const NAV = [
   { label: "Dashboard",      path: "/system-admin/dashboard",        Icon: LayoutDashboard },
   { label: "Businesses",     path: "/system-admin/businesses",       Icon: Building2 },
-  { label: "Staff",          path: "/system-admin/staff",            Icon: Users },
+  { label: "Workers",        path: "/system-admin/staff",            Icon: Users },
   { label: "Skill Tags",     path: "/system-admin/skills",           Icon: Tag },
-  { label: "Krewby Workers", path: "/system-admin/krewby-workers",   Icon: Briefcase },
   { label: "Applications",   path: "/system-admin/applications",     Icon: FileCheck },
   { label: "Requests",       path: "/system-admin/requests",         Icon: ClipboardList },
   { label: "Reports",        path: "/system-admin/reports",          Icon: BarChart2 },
@@ -20,6 +20,7 @@ export default function AdminLayout({ children, title }) {
   const location = useLocation();
   const user = getUser();
   const [expanded, setExpanded] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   return (
     <div style={s.shell}>
@@ -56,13 +57,14 @@ export default function AdminLayout({ children, title }) {
         </nav>
 
         <div style={{ ...s.sidebarBottom, padding: "12px" }}>
-          <div style={{ ...s.userRow, marginBottom: "10px" }}>
+          <button onClick={() => setShowProfile(true)} title="View profile"
+            style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
             <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "A"}</div>
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Admin"}</p>
-              <p style={s.userRole}>System Admin</p>
+              <p style={s.userRole}>System Administrator</p>
             </div>
-          </div>
+          </button>
           <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
             <SignOutButton />
           </div>
@@ -75,6 +77,7 @@ export default function AdminLayout({ children, title }) {
         </header>
         <div style={s.content}>{children}</div>
       </div>
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
     </div>
   );
 }

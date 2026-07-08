@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGoTo } from "../components/PageTransition";
 import { api } from "../lib/api";
+import { PenLine, Briefcase, Key, CheckCircle2 } from "lucide-react";
 
 function Field({ label, id, type = "text", value, onChange, placeholder, half }) {
   const [focused, setFocused] = useState(false);
@@ -99,12 +100,12 @@ export default function CreateAccount() {
 
           <div style={{ marginTop: "40px", display: "flex", flexDirection: "column", gap: "20px" }}>
             {[
-              ["✍️", "Quick sign-up", "Just your name, email, and a password to get started."],
-              ["🧑‍💼", "Role assigned for you", "Your manager links your account to the right outlet and role."],
-              ["🔑", "Ready to log in", "Once assigned, sign in and access your dashboard right away."],
-            ].map(([icon, title, desc]) => (
+              [PenLine, "Quick sign-up", "Just your name, email, and a password to get started."],
+              [Briefcase, "Role assigned for you", "Your manager links your account to the right outlet and role."],
+              [Key, "Ready to log in", "Once assigned, sign in and access your dashboard right away."],
+            ].map(([Icon, title, desc]) => (
               <div key={title} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
-                <div style={{ fontSize: "22px", lineHeight: 1 }}>{icon}</div>
+                <div style={{ lineHeight: 1 }}><Icon size={22} color="#fff" /></div>
                 <div>
                   <p style={{ fontSize: "14px", fontWeight: "700", color: "#fff", marginBottom: "2px" }}>{title}</p>
                   <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>{desc}</p>
@@ -129,7 +130,7 @@ export default function CreateAccount() {
 
           {done ? (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <div style={{ fontSize: "48px", marginBottom: "16px" }}>✅</div>
+              <div style={{ marginBottom: "16px", display: "flex", justifyContent: "center" }}><CheckCircle2 size={48} color="#059669" /></div>
               <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "10px" }}>Account created!</h2>
               <p style={{ fontSize: "14px", color: "#64748B", lineHeight: 1.7, marginBottom: "28px", maxWidth: "420px", margin: "0 auto 28px" }}>
                 Your account has been set up. Your manager or administrator will assign your role.

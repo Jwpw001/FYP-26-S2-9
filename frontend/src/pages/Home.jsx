@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { getUser } from "../utils/auth";
 import { useGoTo } from "../components/PageTransition";
 import NavHeader from "../components/NavHeader";
+import { CalendarDays, Users, Star, BarChart3 } from "lucide-react";
 
 /* ─────────────────────────────────────────────
    Hook: fade-in on scroll (IntersectionObserver)
@@ -68,8 +69,6 @@ const ROLE_ROUTES = {
   outlet_manager:       "/outlet-manager/dashboard",
   regular_staff:        "/regular-staff/dashboard",
   outlet_casual_staff:  "/outlet-casual-staff/dashboard",
-  krewby_coordinator:   "/krewby-coordinator/dashboard",
-  krewby_casual_worker: "/krewby-worker/dashboard",
 };
 
 /* ─────────────────────────────────────────────
@@ -283,11 +282,6 @@ export default function Home() {
         />
         <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
           {!user && (
-            <Btn baseStyle={s.navJoin} onClick={()=>goTo("/join")}>
-              Join as Worker
-            </Btn>
-          )}
-          {!user && (
             <Btn baseStyle={{ ...s.navCta, background:"transparent", color:"#0F172A", border:"1.5px solid #E2E8F0", boxShadow:"none" }} onClick={()=>goTo("/get-started")}>
               Sign up
             </Btn>
@@ -308,14 +302,14 @@ export default function Home() {
 
         <div style={s.hero}>
           <div style={{ ...s.heroLeft, animation:"slideInLeft 0.7s ease both" }}>
-            <span style={s.eyebrow}>F&amp;B Workforce Platform</span>
+            <span style={s.eyebrow}>Workforce Management Platform</span>
             <h1 style={s.heroTitle}>
               Stop juggling spreadsheets.<br/>
               <span style={s.heroAccent}>Run your team smarter.</span>
             </h1>
             <p style={s.heroDesc}>
-              Krewby is the all-in-one workforce platform built specifically for food &amp; beverage businesses.
-              Schedule shifts, track attendance, manage staff, and request casual workers — without the chaos.
+              Krewby is the all-in-one workforce management platform for modern businesses.
+              Schedule shifts, track attendance, manage your workforce, and streamline operations — without the chaos.
             </p>
             <div style={s.heroActions}>
               <Btn baseStyle={s.btnPrimary} onClick={()=>go()}>
@@ -326,7 +320,7 @@ export default function Home() {
               </Btn>
             </div>
             <div style={s.trustRow}>
-              {["Shift scheduling","Attendance tracking","Casual workforce","Role-based access"].map(t=>(
+              {["Shift scheduling","Attendance tracking","Skill matching","Role-based access"].map(t=>(
                 <div key={t} style={s.trustPill}>
                   <span style={{ ...s.trustDot, animation:"pulse 2s ease-in-out infinite" }}/>
                   {t}
@@ -346,9 +340,9 @@ export default function Home() {
       <div style={s.statsBar}>
         {[
           {val:100,  suffix:"+", label:"Shifts managed"},
-          {val:6,    suffix:"",  label:"User role types"},
+          {val:5,    suffix:"",  label:"User role types"},
           {val:"Real-time", label:"Attendance sync"},
-          {val:"1-click",  label:"Casual worker requests"},
+          {val:"1-click",  label:"Branch management"},
           {val:0,    suffix:"",  label:"Spreadsheets needed"},
         ].map((st,i,arr)=>(
           <div key={st.label} style={{ ...s.statItem, borderRight: i<arr.length-1?"1px solid rgba(255,255,255,0.08)":"none" }}>
@@ -365,7 +359,7 @@ export default function Home() {
         <div style={s.marqueeTrack}>
           {[...Array(2)].map((_,pass)=>(
             <div key={pass} style={s.marqueeInner}>
-              {["Smart Scheduling","Attendance Tracking","Casual Workforce","Role-Based Dashboards","Shift Notifications","Skill Matching","Multi-Outlet Support","Live Roster","Audit Trail","Reports & Insights","Swap Requests","Leave Approvals"].map(label=>(
+              {["Smart Scheduling","Attendance Tracking","Workforce Management","Role-Based Dashboards","Shift Notifications","Skill Matching","Multi-Branch Support","Live Roster","Audit Trail","Reports & Insights","Swap Requests","Leave Approvals"].map(label=>(
                 <span key={label} style={s.marqueeItem}>
                   <span style={s.marqueeDot}/>
                   {label}
@@ -382,15 +376,15 @@ export default function Home() {
           <Reveal>
             <div style={s.sectionHead}>
               <p style={s.sectionEyebrow}>THE PROBLEM</p>
-              <h2 style={s.sectionTitle}>F&amp;B scheduling is broken</h2>
-              <p style={s.sectionSub}>Most outlets still rely on WhatsApp groups, paper rosters, and manual spreadsheets — and it shows.</p>
+              <h2 style={s.sectionTitle}>Workforce scheduling is broken</h2>
+              <p style={s.sectionSub}>Most businesses still rely on WhatsApp groups, paper rosters, and manual spreadsheets — and it shows.</p>
             </div>
           </Reveal>
           <div style={s.compareGrid}>
             <Reveal delay={0}>
               <div style={{ ...s.compareCard, ...s.compareCardBad }}>
                 <p style={s.compareCardTitle}>Without Krewby</p>
-                {["Last-minute shift changes sent over WhatsApp","No visibility into who is actually working","Attendance tracked with pen and paper","Short-staffed shifts with no backup plan","Managers spending hours building rosters","No audit trail when disputes arise"].map(item=>(
+                {["Last-minute shift changes sent over WhatsApp","No visibility into who is actually working","Attendance tracked with pen and paper","Short-staffed shifts with no backup plan","Managers spending hours building rosters","No audit trail when issues arise"].map(item=>(
                   <div key={item} style={s.compareRow}><span style={s.compareIcon}>{Icon.x}</span><span style={s.compareText}>{item}</span></div>
                 ))}
               </div>
@@ -398,7 +392,7 @@ export default function Home() {
             <Reveal delay={150}>
               <div style={{ ...s.compareCard, ...s.compareCardGood }}>
                 <div style={s.compareCardBadge}>With Krewby</div>
-                {["Instant shift notifications sent to all staff","Live roster visible to everyone on any device","Digital attendance marked per shift, per person","Request vetted casual workers in one click","Build and publish rosters in minutes","Full audit trail for every shift and change"].map(item=>(
+                {["Instant shift notifications sent to all workers","Live roster visible to everyone on any device","Digital attendance marked per shift, per person","Skill-based worker matching for every role","Build and publish rosters in minutes","Full audit trail for every shift and change"].map(item=>(
                   <div key={item} style={s.compareRow}><span style={s.compareIcon}>{Icon.tick}</span><span style={{ ...s.compareText, color:"#0F172A" }}>{item}</span></div>
                 ))}
               </div>
@@ -414,7 +408,7 @@ export default function Home() {
             <div style={s.sectionHead}>
               <p style={s.sectionEyebrow}>FEATURES</p>
               <h2 style={s.sectionTitle}>Everything your team needs</h2>
-              <p style={s.sectionSub}>Purpose-built for F&amp;B operations — not retrofitted HR software.</p>
+              <p style={s.sectionSub}>Purpose-built for workforce operations — not retrofitted HR software.</p>
             </div>
           </Reveal>
           <div style={s.featureGrid}>
@@ -443,75 +437,6 @@ export default function Home() {
                 <RoleCard r={r}/>
               </Reveal>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══ JOIN AS WORKER ══════════════════════════════════ */}
-      <section id="join-worker" style={s.workerSection}>
-        <div style={s.inner}>
-          <div style={s.workerInner}>
-            {/* Left copy */}
-            <Reveal style={{ flex:"1 1 420px" }}>
-              <p style={{ ...s.sectionEyebrow, color:"#A78BFA" }}>FOR CASUAL WORKERS</p>
-              <h2 style={{ ...s.sectionTitle, color:"#F8FAFC" }}>Earn flexibly.<br/>Work on your terms.</h2>
-              <p style={{ fontSize:"15px", color:"#94A3B8", lineHeight:1.8, marginBottom:"32px", maxWidth:"440px" }}>
-                The Krewby Worker Pool connects vetted casual workers with F&amp;B outlets that need extra hands.
-                You choose your availability, pick up shifts that fit your schedule, and build a track record across multiple outlets.
-              </p>
-              <div style={s.workerPerks}>
-                {[
-                  { icon:"📅", title:"Flexible schedule", desc:"Set your availability week by week. No fixed hours, no long-term commitment." },
-                  { icon:"📍", title:"Multiple outlets", desc:"Get matched to cafés, restaurants, and events that need your skills." },
-                  { icon:"⭐", title:"Build your rating", desc:"A strong profile earns you more shift offers and better opportunities." },
-                  { icon:"💰", title:"Earn on your terms", desc:"Work as much or as little as you want. You're fully in control." },
-                ].map(p => (
-                  <div key={p.title} style={s.workerPerk}>
-                    <span style={s.workerPerkIcon}>{p.icon}</span>
-                    <div>
-                      <p style={s.workerPerkTitle}>{p.title}</p>
-                      <p style={s.workerPerkDesc}>{p.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Btn baseStyle={s.workerJoinBtn} onClick={()=>goTo("/join")}>
-                Join the worker pool <span style={{marginLeft:8}}>{Icon.arrow}</span>
-              </Btn>
-            </Reveal>
-
-            {/* Right visual */}
-            <Reveal delay={150} style={{ flex:"0 0 auto" }}>
-              <div style={s.workerCard}>
-                <div style={s.workerCardHeader}>
-                  <div style={s.workerCardAvatar}>P</div>
-                  <div>
-                    <p style={s.workerCardName}>Priya N.</p>
-                    <p style={s.workerCardRole}>Krewby Worker · Singapore</p>
-                  </div>
-                  <div style={s.workerCardBadge}>⭐ 4.9</div>
-                </div>
-                <div style={s.workerCardDivider}/>
-                <p style={s.workerCardLabel}>Upcoming shifts</p>
-                {[
-                  { outlet:"The Daily Grind", date:"Sat, 21 Jun", time:"08:00 – 14:00", tag:"Confirmed" },
-                  { outlet:"Horizon Bistro", date:"Sun, 22 Jun", time:"17:00 – 23:00", tag:"Confirmed" },
-                  { outlet:"Bloom Café", date:"Mon, 23 Jun", time:"09:00 – 15:00", tag:"Pending" },
-                ].map(sh => (
-                  <div key={sh.outlet} style={s.workerShiftRow}>
-                    <div style={{ flex:1 }}>
-                      <p style={s.workerShiftOutlet}>{sh.outlet}</p>
-                      <p style={s.workerShiftTime}>{sh.date} · {sh.time}</p>
-                    </div>
-                    <span style={{ ...s.workerShiftTag, background: sh.tag==="Confirmed"?"rgba(34,197,94,0.12)":"rgba(245,158,11,0.12)", color: sh.tag==="Confirmed"?"#22C55E":"#F59E0B" }}>{sh.tag}</span>
-                  </div>
-                ))}
-                <div style={s.workerCardFooter}>
-                  <span style={s.workerCardStat}>12 shifts completed</span>
-                  <span style={s.workerCardStat}>3 outlets</span>
-                </div>
-              </div>
-            </Reveal>
           </div>
         </div>
       </section>
@@ -545,7 +470,7 @@ export default function Home() {
         <Reveal>
           <div style={{ textAlign:"center", marginBottom:"48px" }}>
             <p style={{ ...s.sectionEyebrow, color:"rgba(255,255,255,0.35)" }}>WHAT PEOPLE SAY</p>
-            <h2 style={{ ...s.sectionTitle, color:"#F8FAFC" }}>Trusted by F&amp;B teams</h2>
+            <h2 style={{ ...s.sectionTitle, color:"#F8FAFC" }}>Trusted by teams everywhere</h2>
           </div>
         </Reveal>
         <TestimonialsCarousel/>
@@ -578,7 +503,7 @@ export default function Home() {
             Ready to get started?
           </span>
           <h2 style={s.ctaTitle}>Your team deserves better than WhatsApp rosters.</h2>
-          <p style={s.ctaDesc}>Join outlets already using Krewby to plan smarter, track better, and stress less.</p>
+          <p style={s.ctaDesc}>Join businesses already using Krewby to plan smarter, track better, and stress less.</p>
           <Btn baseStyle={s.ctaBtn} onClick={()=>go()}>
             {user?"Go to dashboard":"Get started for free"} <span style={{marginLeft:8}}>{Icon.arrow}</span>
           </Btn>
@@ -597,7 +522,7 @@ export default function Home() {
               <div style={s.footerLogoMark}>K</div>
               <span style={s.footerLogoText}>Krewby</span>
             </div>
-            <p style={s.footerTagline}>Workforce management built for the speed and scale of modern F&amp;B operations.</p>
+            <p style={s.footerTagline}>Workforce management built for the speed and scale of modern business operations.</p>
             <p style={s.footerCopy}>© {new Date().getFullYear()} Krewby · CSIT321 FYP-26-S2-9</p>
           </div>
 
@@ -612,7 +537,7 @@ export default function Home() {
           {/* Use cases */}
           <div>
             <p style={s.footerColTitle}>Use cases</p>
-            {["Restaurant chains","Café groups","Hotel F&B","Event catering","Quick service"].map(l=>(
+            {["Retail chains","Service businesses","Hospitality","Healthcare","Multi-branch teams"].map(l=>(
               <span key={l} style={s.footerStaticLink}>{l}</span>
             ))}
           </div>
@@ -620,7 +545,7 @@ export default function Home() {
           {/* Platform */}
           <div>
             <p style={s.footerColTitle}>Platform</p>
-            {[{l:"Log in",fn:()=>go()},{l:"System Admin",fn:()=>go("/login")},{l:"Outlet Manager",fn:()=>go("/login")},{l:"Staff Portal",fn:()=>go("/login")}].map(({l,fn})=>(
+            {[{l:"Log in",fn:()=>go()},{l:"System Admin",fn:()=>go("/login")},{l:"Manager Portal",fn:()=>go("/login")},{l:"Worker Portal",fn:()=>go("/login")}].map(({l,fn})=>(
               <a key={l} href="#" style={s.footerLink} onClick={e=>{e.preventDefault();fn();}}>{l}</a>
             ))}
           </div>
@@ -715,61 +640,61 @@ function TestimonialsCarousel() {
 ───────────────────────────────────────────── */
 const FEATURES = [
   { icon:Icon.calendar, title:"Smart Scheduling",         color:"#2563EB", bg:"#EFF6FF", desc:"Build weekly rosters in minutes with conflict detection, availability checks, and automatic staff recommendations based on skills." },
-  { icon:Icon.users,    title:"Role-Based Dashboards",    color:"#059669", bg:"#ECFDF5", desc:"Every user type — admin, manager, regular staff, casual staff, Krewby coordinator — gets a dashboard built exactly for their needs." },
+  { icon:Icon.users,    title:"Role-Based Dashboards",    color:"#059669", bg:"#ECFDF5", desc:"Every user type — admin, business owner, manager, regular worker, casual worker — gets a dashboard built exactly for their needs." },
   { icon:Icon.check,    title:"Attendance Tracking",      color:"#D97706", bg:"#FFFBEB", desc:"Mark attendance digitally per shift. Handle last-minute no-shows, replacements, and late arrivals with a complete audit trail." },
   { icon:Icon.bell,     title:"Real-Time Notifications",  color:"#7C3AED", bg:"#F5F3FF", desc:"Push alerts for shift assignments, swap requests, leave approvals, and understaffed warnings — so nothing slips through the cracks." },
-  { icon:Icon.briefcase,title:"On-Demand Casual Workers", color:"#DB2777", bg:"#FDF2F8", desc:"Tap into the Krewby casual worker pool when your roster falls short. Request vetted workers by skill, availability, and outlet match." },
+  { icon:Icon.briefcase,title:"Workforce Management",     color:"#DB2777", bg:"#FDF2F8", desc:"Manage your entire workforce from one place. Track worker availability, assign shifts by skill, and keep every branch fully staffed." },
   { icon:Icon.bar,      title:"Reports & Insights",       color:"#0891B2", bg:"#ECFEFF", desc:"Exportable attendance reports, workload breakdowns, and understaffed shift analysis so management always has the full picture." },
-  { icon:Icon.shield,   title:"Skill-Based Matching",     color:"#4F46E5", bg:"#EEF2FF", desc:"Tag staff and casual workers with skill sets. When building a roster, Krewby surfaces the right people for the right roles automatically." },
-  { icon:Icon.users,    title:"Multi-Outlet Support",     color:"#0369A1", bg:"#F0F9FF", desc:"Manage multiple restaurant or café locations from a single admin account. Each outlet operates independently with shared oversight." },
+  { icon:Icon.shield,   title:"Skill-Based Matching",     color:"#4F46E5", bg:"#EEF2FF", desc:"Tag workers with skill sets. When building a roster, Krewby surfaces the right people for the right roles automatically." },
+  { icon:Icon.users,    title:"Multi-Branch Support",     color:"#0369A1", bg:"#F0F9FF", desc:"Manage multiple branches from a single account. Each branch operates independently with shared oversight." },
 ];
 
 const ROLES = [
   {
     icon: Icon.briefcase, title:"Business Owner", color:"#3B82F6", bg:"#EFF6FF",
-    desc:"Full visibility and control across your outlets, staff, and operations — all from one place.",
-    bullets:["Register your business and outlets","Appoint and manage outlet managers","Access platform-wide reports","Oversee your entire workforce"],
+    desc:"Full visibility and control across your branches, workers, and operations — all from one place.",
+    bullets:["Register your business and branches","Appoint and manage branch managers","Access platform-wide reports","Oversee your entire workforce"],
   },
   {
-    icon: Icon.users, title:"Outlet Manager", color:"#059669", bg:"#ECFDF5",
-    desc:"Own the day-to-day scheduling and staff management for your outlet or multiple locations.",
-    bullets:["Build and publish weekly rosters","Approve leave & swap requests","Mark and review attendance","Request Krewby casual workers"],
+    icon: Icon.users, title:"Manager", color:"#059669", bg:"#ECFDF5",
+    desc:"Own the day-to-day scheduling and workforce management for your branch.",
+    bullets:["Build and publish weekly rosters","Approve leave & swap requests","Mark and review attendance","Manage worker skills and assignments"],
   },
   {
-    icon: Icon.calendar, title:"Regular Staff", color:"#D97706", bg:"#FFFBEB",
+    icon: Icon.calendar, title:"Regular Worker", color:"#D97706", bg:"#FFFBEB",
     desc:"See your upcoming shifts, submit availability, and manage requests — all in one place.",
     bullets:["View assigned shifts","Submit leave requests","Request shift swaps","Receive real-time notifications"],
   },
   {
-    icon: Icon.briefcase, title:"Krewby Worker", color:"#7C3AED", bg:"#F5F3FF",
-    desc:"Pick up casual shifts at F&B outlets that match your skills and availability.",
-    bullets:["Browse available shift requests","Accept or decline assignments","Track your engagement history","Build a verified skill profile"],
+    icon: Icon.check, title:"Casual Worker", color:"#7C3AED", bg:"#F5F3FF",
+    desc:"View your assigned shifts, set weekly availability, and stay connected with your branch.",
+    bullets:["View assigned shifts","Set weekly availability","Acknowledge shift assignments","Receive real-time notifications"],
   },
 ];
 
 const STEPS = [
-  { title:"Register your outlet",   desc:"Sign up, add your business details, outlet locations, and configure your team structure in minutes." },
-  { title:"Invite your team",        desc:"Managers and staff receive role-tailored access. Everyone sees exactly what they need — nothing more, nothing less." },
-  { title:"Build your roster",       desc:"Drag shifts, assign staff by availability and skill, then publish. Your whole team gets notified instantly." },
-  { title:"Track attendance & act",  desc:"Mark attendance as shifts happen. Spot gaps, request casual workers, and export reports for management review." },
+  { title:"Register your business",   desc:"Sign up, add your business details, branch locations, and configure your team structure in minutes." },
+  { title:"Invite your team",        desc:"Managers and workers receive role-tailored access. Everyone sees exactly what they need — nothing more, nothing less." },
+  { title:"Build your roster",       desc:"Create shifts, assign workers by availability and skill, then publish. Your whole team gets notified instantly." },
+  { title:"Track attendance & act",  desc:"Mark attendance as shifts happen. Spot gaps, reassign workers, and export reports for management review." },
 ];
 
 const TESTIMONIALS = [
-  { name:"Sarah L.", role:"Outlet Manager, The Daily Grind Café", color:"#3B82F6",
+  { name:"Sarah L.", role:"Branch Manager, The Daily Grind", color:"#3B82F6",
     text:"We used to spend 3 hours every Sunday building the weekly roster on Excel. Krewby cut that down to under 30 minutes. The team also stopped missing shifts because everyone actually gets a notification now." },
-  { name:"Marcus T.", role:"F&B Director, Horizon Hospitality Group", color:"#059669",
-    text:"Managing 4 outlets with different staff pools was a nightmare. Krewby gave us one place to see everything. The casual worker feature alone has saved us during peak periods more times than I can count." },
-  { name:"Priya N.", role:"Krewby Casual Worker", color:"#7C3AED",
-    text:"I pick up shifts at different cafés on weekends. The app is straightforward — I can see what's available, accept the ones that fit my schedule, and just show up. No back-and-forth with managers over text." },
+  { name:"Marcus T.", role:"Operations Director, Horizon Group", color:"#059669",
+    text:"Managing 4 branches with different worker pools was a nightmare. Krewby gave us one place to see everything. The skill matching feature alone has saved us during peak periods more times than I can count." },
+  { name:"Priya N.", role:"Regular Worker", color:"#7C3AED",
+    text:"I used to find out about my shifts through group chats. Now everything is in the app — I can see my schedule, request swaps, and get notified instantly. No more back-and-forth with managers over text." },
 ];
 
 const FAQ = [
-  { q:"What types of F&B businesses can use Krewby?", a:"Krewby is designed for any food and beverage operation that manages shift-based staff — cafés, restaurants, hotel F&B, quick service outlets, and catering businesses. It scales from single-location setups to multi-outlet groups." },
-  { q:"How does the casual worker feature work?", a:"When your internal roster has gaps, outlet managers can submit a request through Krewby for casual workers. The Krewby coordinator reviews available vetted workers, matches them by skill and availability, and assigns them to your shift." },
-  { q:"Can staff see their schedules on their phones?", a:"Yes. Krewby is a web-based platform accessible from any device. Staff log in to their own portal to view upcoming shifts, submit leave, request swaps, and receive notifications — no app download required." },
-  { q:"What happens when a staff member calls in sick last minute?", a:"The outlet manager is notified immediately. They can reassign the shift to another available staff member, or submit an urgent Krewby casual worker request to fill the gap — all within the platform." },
-  { q:"Is Krewby suitable for businesses with multiple outlets?", a:"Absolutely. The system admin account provides full visibility across all outlets. Each outlet operates with its own manager and staff, while management retains a consolidated view and reporting access." },
-  { q:"Does Krewby support different roles and permissions?", a:"Yes. There are six distinct role types: System Admin, Outlet Manager, Regular Staff, Outlet Casual Staff, Krewby Coordinator, and Krewby Casual Worker. Each role has a dedicated dashboard and access level." },
+  { q:"What types of businesses can use Krewby?", a:"Krewby is designed for any business that manages shift-based workers — retail, hospitality, healthcare, service businesses, and more. It scales from single-location setups to multi-branch operations." },
+  { q:"How does skill-based matching work?", a:"Managers can tag workers with skill sets. When building a roster, Krewby surfaces the right people for the right roles automatically, helping you assign the best-fit workers to every shift." },
+  { q:"Can workers see their schedules on their phones?", a:"Yes. Krewby is a web-based platform accessible from any device. Workers log in to their own portal to view upcoming shifts, submit leave, request swaps, and receive notifications — no app download required." },
+  { q:"What happens when a worker calls in sick last minute?", a:"The manager is notified immediately. They can reassign the shift to another available worker or use skill-based matching to find a suitable replacement — all within the platform." },
+  { q:"Is Krewby suitable for businesses with multiple branches?", a:"Absolutely. The business owner account provides full visibility across all branches. Each branch operates with its own manager and workers, while management retains a consolidated view and reporting access." },
+  { q:"Does Krewby support different roles and permissions?", a:"Yes. There are five distinct role types: System Administrator, Business Owner, Manager, Regular Worker, and Casual Worker. Each role has a dedicated dashboard and access level." },
 ];
 
 /* ─────────────────────────────────────────────

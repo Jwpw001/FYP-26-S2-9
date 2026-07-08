@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import { Inbox, X, Check, RefreshCw } from "lucide-react";
 import { api } from "../../lib/api";
 import AdminLayout from "../../components/layout/AdminLayout";
 
@@ -114,7 +115,7 @@ export default function CoordinatorApplications() {
             <p style={{ fontSize: "14px", color: "#64748B" }}>Review and manage incoming Krewby worker applications.</p>
           </div>
           <button onClick={loadApps} style={{ background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#374151", padding: "9px 18px", borderRadius: "9px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
-            â†» Refresh
+            <RefreshCw size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} /> Refresh
           </button>
         </div>
 
@@ -152,7 +153,7 @@ export default function CoordinatorApplications() {
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: "48px", textAlign: "center" }}>
-              <div style={{ fontSize: "32px", marginBottom: "12px" }}>ðŸ“­</div>
+              <div style={{ fontSize: "32px", marginBottom: "12px" }}><Inbox size={32} color="#64748B" /></div>
               <p style={{ fontSize: "15px", fontWeight: "700", color: "#0F172A", marginBottom: "6px" }}>No applications</p>
               <p style={{ fontSize: "13px", color: "#64748B" }}>No {filter === "pending" ? "pending" : ""} applications at the moment.</p>
             </div>
@@ -186,7 +187,7 @@ export default function CoordinatorApplications() {
             <div style={{ background: "#fff", borderRadius: "20px", padding: "36px", width: "100%", maxWidth: "480px", boxShadow: "0 20px 60px rgba(15,23,42,0.2)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
                 <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0F172A" }}>Application Details</h2>
-                <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "#94A3B8", fontSize: "20px", cursor: "pointer", lineHeight: 1 }}>Ã—</button>
+                <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "#94A3B8", fontSize: "20px", cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center" }}><X size={20} /></button>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
@@ -215,14 +216,14 @@ export default function CoordinatorApplications() {
                     disabled={actioning}
                     style={{ flex: 1, padding: "13px", background: "#059669", color: "#fff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: "700", cursor: actioning ? "not-allowed" : "pointer", opacity: actioning ? 0.7 : 1 }}
                   >
-                    {actioning ? "Processingâ€¦" : "âœ“ Approve"}
+                    {actioning ? "Processing…" : <><Check size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} /> Approve</>}
                   </button>
                   <button
                     onClick={() => handleReject(selected.id)}
                     disabled={actioning}
                     style={{ flex: 1, padding: "13px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "12px", fontSize: "14px", fontWeight: "700", cursor: actioning ? "not-allowed" : "pointer", opacity: actioning ? 0.7 : 1 }}
                   >
-                    âœ• Reject
+                    <X size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} /> Reject
                   </button>
                 </div>
               )}

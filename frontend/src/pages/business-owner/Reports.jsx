@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
-import { Users, CalendarDays, CalendarClock, Handshake, Download } from "lucide-react";
+import { Users, CalendarDays, CalendarClock, Handshake, Download, TrendingUp, TrendingDown } from "lucide-react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -39,9 +39,10 @@ function delta(curr, prev) {
 function TrendBadge({ pct }) {
   if (pct === null) return null;
   const up = pct >= 0;
+  const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "11px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
-      {up ? "▲" : "▼"} {Math.abs(pct)}%
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "11px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
+      <Icon size={11} /> {Math.abs(pct)}%
     </span>
   );
 }

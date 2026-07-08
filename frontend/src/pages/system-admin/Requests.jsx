@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import { ClipboardList } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import AdminLayout from "../../components/layout/AdminLayout";
@@ -181,7 +182,7 @@ export default function CoordinatorRequests() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px", textAlign: "center" }}>
-            <div style={{ fontSize: "32px", marginBottom: "10px" }}>ðŸ“‹</div>
+            <div style={{ fontSize: "32px", marginBottom: "10px" }}><ClipboardList size={32} color="#64748B" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>
               No {filter === "all" ? "" : FILTERS.find(f => f.value === filter)?.label.toLowerCase()} requests
             </p>
@@ -264,7 +265,7 @@ export default function CoordinatorRequests() {
                 <option key={w.krewby_worker_id} value={w.krewby_worker_id}>
                   {w.user?.full_name || w.user?.email || `Worker #${w.krewby_worker_id}`}
                   {w.preferred_location ? ` Â· ${w.preferred_location}` : ""}
-                  {w.rating ? ` Â· â­ ${Number(w.rating).toFixed(1)}` : ""}
+                  {w.rating ? ` · ★ ${Number(w.rating).toFixed(1)}` : ""}
                 </option>
               ))}
             </select>

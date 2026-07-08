@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
 import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag } from "lucide-react";
+import ProfileModal from "../ProfileModal";
 
 const NAV = [
   { label: "Dashboard",  path: "/business-owner/dashboard",    Icon: LayoutDashboard },
-  { label: "Outlets",    path: "/business-owner/outlets",      Icon: Building2 },
-  { label: "All Staff",  path: "/business-owner/staff",        Icon: Users },
+  { label: "Branches",   path: "/business-owner/outlets",      Icon: Building2 },
+  { label: "Workforce",  path: "/business-owner/staff",        Icon: Users },
   { label: "Invitations",path: "/business-owner/invitations",  Icon: UserPlus },
   { label: "Skill Tags", path: "/business-owner/skills",       Icon: Tag },
   { label: "Reports",    path: "/business-owner/reports",      Icon: BarChart2 },
@@ -27,6 +28,7 @@ export default function BusinessOwnerLayout({ children, title }) {
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
   const [plan, setPlan] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -80,13 +82,14 @@ export default function BusinessOwnerLayout({ children, title }) {
             </div>
           )}
 
-          <div style={{ ...s.userRow, marginBottom: "10px" }}>
+          <button onClick={() => setShowProfile(true)} title="View profile"
+            style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
             <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "B"}</div>
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s, max-width 0.25s", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Business Owner"}</p>
               <p style={s.userRole}>Business Owner</p>
             </div>
-          </div>
+          </button>
           <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s, max-height 0.25s", overflow: "hidden" }}>
             <SignOutButton />
           </div>
@@ -106,6 +109,7 @@ export default function BusinessOwnerLayout({ children, title }) {
         </header>
         <div style={s.content}>{children}</div>
       </div>
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
     </div>
   );
 }

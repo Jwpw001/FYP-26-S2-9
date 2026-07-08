@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import { ClipboardList } from "lucide-react";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-leave-styles")) {
@@ -784,7 +785,7 @@ function ShimmerCards() {
 function EmptyState({ label }) {
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px", textAlign: "center" }}>
-      <div style={{ fontSize: "32px", marginBottom: "10px" }}>📋</div>
+      <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}><ClipboardList size={32} color="#94A3B8" /></div>
       <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>{label}</p>
     </div>
   );

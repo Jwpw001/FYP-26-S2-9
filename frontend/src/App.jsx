@@ -8,8 +8,6 @@ import NotFound from "./pages/NotFound";
 import GetStarted from "./pages/GetStarted";
 import RegisterBusiness from "./pages/RegisterBusiness";
 import CreateAccount from "./pages/CreateAccount";
-import JoinWorker   from "./pages/JoinWorker";
-import ApplyWorker  from "./pages/ApplyWorker";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotificationsPage from "./components/NotificationsPage";
 
@@ -26,6 +24,7 @@ import Attendance         from "./pages/outlet-manager/Attendance";
 import Reports            from "./pages/outlet-manager/Reports";
 import ManagerNotifications from "./pages/outlet-manager/Notifications";
 import ManpowerRequests    from "./pages/outlet-manager/ManpowerRequests";
+import SkillSettings       from "./pages/outlet-manager/SkillSettings";
 
 // System Admin
 import AdminDashboard      from "./pages/system-admin/Dashboard";
@@ -33,8 +32,6 @@ import SkillTags           from "./pages/system-admin/SkillTags";
 import Businesses          from "./pages/system-admin/Businesses";
 import BusinessDetail      from "./pages/system-admin/BusinessDetail";
 import OutletDetail        from "./pages/system-admin/OutletDetail";
-import KrewbyWorkers       from "./pages/system-admin/KrewbyWorkers";
-import KrewbyWorkerDetail  from "./pages/system-admin/KrewbyWorkerDetail";
 import AdminStaff          from "./pages/system-admin/Staff";
 import AdminStaffDetail    from "./pages/system-admin/StaffDetail";
 import AdminReports        from "./pages/system-admin/Reports";
@@ -69,11 +66,6 @@ import OMInvitations from "./pages/outlet-manager/Invitations";
 import AdminApplications  from "./pages/system-admin/Applications";
 import AdminRequests      from "./pages/system-admin/Requests";
 
-// Krewby Worker
-import WorkerDashboard    from "./pages/krewby-worker/Dashboard";
-import WorkerMyJobs       from "./pages/krewby-worker/MyJobs";
-import WorkerAvailability from "./pages/krewby-worker/Availability";
-import WorkerLayout    from "./components/layout/WorkerLayout";
 
 // Layouts
 import StaffLayout   from "./components/layout/StaffLayout";
@@ -95,8 +87,6 @@ function App() {
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/register/business" element={<RegisterBusiness />} />
         <Route path="/register/account" element={<CreateAccount />} />
-        <Route path="/join" element={<JoinWorker />} />
-        <Route path="/join/apply" element={<ApplyWorker />} />
 
         {/* Public: Accept Invite / Join by code */}
         <Route path="/invite/:token" element={<AcceptInvite />} />
@@ -122,8 +112,6 @@ function App() {
         <Route path="/system-admin/businesses/:id"        element={<PR roles={["system_admin"]}><BusinessDetail /></PR>} />
         <Route path="/system-admin/outlets/:id"           element={<PR roles={["system_admin"]}><OutletDetail /></PR>} />
         <Route path="/system-admin/skills"                element={<PR roles={["system_admin"]}><SkillTags /></PR>} />
-        <Route path="/system-admin/krewby-workers"        element={<PR roles={["system_admin"]}><KrewbyWorkers /></PR>} />
-        <Route path="/system-admin/krewby-workers/:id"    element={<PR roles={["system_admin"]}><KrewbyWorkerDetail /></PR>} />
         <Route path="/system-admin/staff"                 element={<PR roles={["system_admin"]}><AdminStaff /></PR>} />
         <Route path="/system-admin/staff/:id"             element={<PR roles={["system_admin"]}><AdminStaffDetail /></PR>} />
         <Route path="/system-admin/reports"              element={<PR roles={["system_admin"]}><AdminReports /></PR>} />
@@ -143,6 +131,7 @@ function App() {
         <Route path="/outlet-manager/reports"        element={<PR roles={["outlet_manager"]}><Reports /></PR>} />
         <Route path="/outlet-manager/notifications" element={<PR roles={["outlet_manager"]}><ManagerNotifications /></PR>} />
         <Route path="/outlet-manager/manpower"       element={<PR roles={["outlet_manager"]}><ManpowerRequests /></PR>} />
+        <Route path="/outlet-manager/skills"        element={<PR roles={["outlet_manager"]}><SkillSettings /></PR>} />
         <Route path="/outlet-manager/invitations"   element={<PR roles={["outlet_manager"]}><OMInvitations /></PR>} />
 
         {/* ── Regular Staff ────────────────────────────── */}
@@ -163,13 +152,6 @@ function App() {
         </PR>} />
 
 
-        {/* ── Krewby Worker ────────────────────────────── */}
-        <Route path="/krewby-worker/dashboard"     element={<PR roles={["krewby_casual_worker"]}><WorkerDashboard /></PR>} />
-        <Route path="/krewby-worker/jobs"          element={<PR roles={["krewby_casual_worker"]}><WorkerMyJobs /></PR>} />
-        <Route path="/krewby-worker/availability"  element={<PR roles={["krewby_casual_worker"]}><WorkerAvailability /></PR>} />
-        <Route path="/krewby-worker/notifications" element={<PR roles={["krewby_casual_worker"]}>
-          <NotificationsPage Layout={WorkerLayout} />
-        </PR>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

@@ -105,7 +105,7 @@ export default function AIAssistantWidget() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hi! I'm your Krewby AI Workforce Assistant 👋\n\nI can answer questions about your shifts, staff availability, leave requests, and more. What would you like to know?",
+      content: "Hi! I'm your Krewby AI Workforce Assistant.\n\nI can answer questions about your shifts, staff availability, leave requests, and more. What would you like to know?",
     },
   ]);
   const [input, setInput] = useState("");

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import StaffLayout from "../../components/layout/StaffLayout";
+import { CalendarDays, Palmtree, RefreshCw, Bell, SmilePlus, CheckCircle2, Flag, Hand } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-dash-styles")) {
   const style = document.createElement("style");
@@ -200,16 +201,16 @@ export default function StaffDashboard() {
   }
 
   const statCards = [
-    { label: "Upcoming Shifts",   value: upcomingShifts.length, icon: "📅", color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/shifts" },
-    { label: "Pending Leave",     value: pendingLeave,           icon: "🏖",  color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
-    { label: "Pending Swaps",     value: pendingSwaps,           icon: "🔄",  color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/swaps" },
-    { label: "Unread Notifications", value: unreadCount,         icon: "🔔",  color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
+    { label: "Upcoming Shifts",   value: upcomingShifts.length, icon: CalendarDays, color: "#2563EB", bg: "#EFF6FF", link: "/regular-staff/shifts" },
+    { label: "Pending Leave",     value: pendingLeave,           icon: Palmtree,     color: "#D97706", bg: "#FFFBEB", link: "/regular-staff/leave" },
+    { label: "Pending Swaps",     value: pendingSwaps,           icon: RefreshCw,    color: "#7C3AED", bg: "#F5F3FF", link: "/regular-staff/swaps" },
+    { label: "Unread Notifications", value: unreadCount,         icon: Bell,         color: "#059669", bg: "#ECFDF5", link: "/regular-staff/notifications" },
   ];
 
   const quickActions = [
-    { label: "Request Leave",    icon: "🏖",  link: "/regular-staff/leave" },
-    { label: "Swap Requests",    icon: "🔄",  link: "/regular-staff/swaps" },
-    { label: "Notifications",    icon: "🔔",  link: "/regular-staff/notifications" },
+    { label: "Request Leave",    icon: Palmtree,  link: "/regular-staff/leave" },
+    { label: "Swap Requests",    icon: RefreshCw, link: "/regular-staff/swaps" },
+    { label: "Notifications",    icon: Bell,      link: "/regular-staff/notifications" },
   ];
 
   const clockInAllowed = todayShift && canClockIn(todayShift.shifts?.start_time);
@@ -222,7 +223,9 @@ export default function StaffDashboard() {
         {/* Welcome */}
         <div style={{ marginBottom: "28px" }}>
           <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
-            Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} 👋
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} <Hand size={22} color="#F59E0B" />
+            </span>
           </h2>
           <p style={{ fontSize: "14px", color: "#64748B" }}>Here's your schedule and updates for the coming days.</p>
         </div>
@@ -259,7 +262,7 @@ export default function StaffDashboard() {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: "20px", marginBottom: "14px",
                 }}>
-                  {card.icon}
+                  <card.icon size={20} />
                 </div>
                 <p style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", lineHeight: 1 }}>{card.value}</p>
                 <p style={{ fontSize: "13px", fontWeight: "500", color: "#64748B", marginTop: "6px" }}>{card.label}</p>
@@ -283,7 +286,7 @@ export default function StaffDashboard() {
             </div>
           ) : todayShift === false ? (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <p style={{ fontSize: "32px", marginBottom: "10px" }}>😌</p>
+              <p style={{ fontSize: "32px", marginBottom: "10px", display: "flex", justifyContent: "center" }}><SmilePlus size={32} color="#64748B" /></p>
               <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>No shift today — take a well-earned rest!</p>
               <p style={{ fontSize: "13px", color: "#64748B", marginTop: "4px" }}>Enjoy your day off. Check back tomorrow.</p>
             </div>
@@ -315,7 +318,7 @@ export default function StaffDashboard() {
               <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                 {todayAttend?.clock_in ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#DCFCE7", border: "1.5px solid #BBF7D0", borderRadius: "10px", padding: "10px 16px" }}>
-                    <span style={{ fontSize: "16px" }}>✅</span>
+                    <span style={{ fontSize: "16px", display: "inline-flex" }}><CheckCircle2 size={16} color="#16A34A" /></span>
                     <div>
                       <p style={{ fontSize: "11px", color: "#166534", fontWeight: "600" }}>Clocked In</p>
                       <p style={{ fontSize: "15px", color: "#166534", fontWeight: "800" }}>{fmtTime(todayAttend.clock_in)}</p>
@@ -343,7 +346,7 @@ export default function StaffDashboard() {
 
                 {todayAttend?.clock_out ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#FFF1F2", border: "1.5px solid #FECACA", borderRadius: "10px", padding: "10px 16px" }}>
-                    <span style={{ fontSize: "16px" }}>🏁</span>
+                    <span style={{ fontSize: "16px", display: "inline-flex" }}><Flag size={16} color="#DC2626" /></span>
                     <div>
                       <p style={{ fontSize: "11px", color: "#9F1239", fontWeight: "600" }}>Clocked Out</p>
                       <p style={{ fontSize: "15px", color: "#9F1239", fontWeight: "800" }}>{fmtTime(todayAttend.clock_out)}</p>
@@ -389,7 +392,7 @@ export default function StaffDashboard() {
             </div>
           ) : upcomingShifts.length === 0 ? (
             <div style={s.emptyInner}>
-              <span style={{ fontSize: "28px" }}>📅</span>
+              <span style={{ fontSize: "28px", display: "inline-flex" }}><CalendarDays size={28} color="#94A3B8" /></span>
               <p style={{ fontSize: "14px", color: "#64748B", marginTop: "8px" }}>No upcoming shifts in the next 14 days.</p>
             </div>
           ) : (
@@ -434,7 +437,7 @@ export default function StaffDashboard() {
                   fontSize: "13px", fontWeight: "600", color: "#1E293B",
                   cursor: "pointer", transition: "all 0.15s",
                 }}>
-                <span>{a.icon}</span>{a.label}
+                <span style={{ display: "inline-flex", alignItems: "center" }}><a.icon size={16} /></span>{a.label}
               </button>
             ))}
           </div>

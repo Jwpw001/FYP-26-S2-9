@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import StaffLayout from "../../components/layout/StaffLayout";
+import { RefreshCw, AlertCircle } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-swaps-styles")) {
   const style = document.createElement("style");
@@ -244,7 +245,7 @@ export default function SwapRequests() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔄</div>
+            <div style={{ marginBottom: "12px" }}><RefreshCw size={36} color="#64748B" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No swap requests yet</p>
             <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "6px" }}>Submit a request when you need to swap or find cover for a shift.</p>
           </div>
@@ -264,7 +265,7 @@ export default function SwapRequests() {
                   }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                     <span style={{ padding: "5px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", background: typeColor.bg, color: typeColor.color }}>
-                      {r.request_type === "swap" ? "🔄 Shift Swap" : "🆘 Replacement"}
+                      {r.request_type === "swap" ? <><RefreshCw size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} /> Shift Swap</> : <><AlertCircle size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} /> Replacement</>}
                     </span>
                     <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", ...statusStyle(r.status) }}>
                       {r.status.charAt(0).toUpperCase() + r.status.slice(1)}

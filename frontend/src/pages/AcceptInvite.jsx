@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { getUser, setUser } from "../utils/auth";
+import { X, CheckCircle2 } from "lucide-react";
 
 const DASHBOARD = {
   outlet_manager:      "/outlet-manager/dashboard",
@@ -104,7 +105,7 @@ export default function AcceptInvite() {
 
         ) : inviteError ? (
           <div style={{ textAlign: "center" }}>
-            <div style={{ width: "56px", height: "56px", background: "#FEF2F2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", margin: "0 auto 16px" }}>✕</div>
+            <div style={{ width: "56px", height: "56px", background: "#FEF2F2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><X size={24} color="#DC2626" /></div>
             <p style={{ fontWeight: "700", color: "#0F172A", marginBottom: "8px" }}>Invitation Invalid</p>
             <p style={{ ...s.muted, marginBottom: "20px" }}>{inviteError}</p>
             <Link to="/login" style={s.btnPrimary}>Go to Login</Link>
@@ -112,7 +113,7 @@ export default function AcceptInvite() {
 
         ) : done ? (
           <div style={{ textAlign: "center" }}>
-            <div style={s.successIcon}>✓</div>
+            <div style={s.successIcon}><CheckCircle2 size={24} color="#059669" /></div>
             <h2 style={s.title}>You're in!</h2>
             <p style={s.muted}>Redirecting to your dashboard…</p>
           </div>

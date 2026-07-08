@@ -3,7 +3,7 @@ import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import { supabase } from "../../lib/supabaseClient";
-import { Plus, Copy, Check, Clock, UserCheck, XCircle, RefreshCw, Mail } from "lucide-react";
+import { Plus, Copy, Check, Clock, UserCheck, XCircle, RefreshCw, Mail, X, CheckCircle2 } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("om-invite-styles")) {
   const style = document.createElement("style");
@@ -158,7 +158,7 @@ export default function OMInvitations() {
                 <p style={{ fontWeight: "700", color: "#166534", marginBottom: "4px" }}>Invitation sent to {successCode.email}!</p>
                 <p style={{ fontSize: "13px", color: "#4ADE80" }}>Share this code with them:</p>
               </div>
-              <button onClick={() => setSuccessCode(null)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer" }}>✕</button>
+              <button onClick={() => setSuccessCode(null)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer" }}><X size={16} /></button>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "14px" }}>
               <span style={{ fontSize: "28px", fontWeight: "800", color: "#0F172A", letterSpacing: "0.12em", fontFamily: "monospace" }}>
@@ -291,7 +291,7 @@ export default function OMInvitations() {
                               </button>
                             </>
                           )}
-                          {inv.status === "accepted" && <span style={{ fontSize: "11px", color: "#059669", fontWeight: "600" }}>✓ Joined</span>}
+                          {inv.status === "accepted" && <span style={{ fontSize: "11px", color: "#059669", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle2 size={14} /> Joined</span>}
                         </div>
                       </td>
                     </tr>

@@ -4,7 +4,7 @@ import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
-import { Plus, Building2, MapPin, ArrowRight, Clock } from "lucide-react";
+import { Plus, Building2, MapPin, ArrowRight, Clock, Check } from "lucide-react";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-outlet-styles")) {
@@ -157,7 +157,7 @@ export default function BOOutlets() {
                           color: done ? "#1C1917" : active ? "#FFFFFF" : "#94A3B8",
                           transition: "all 0.2s",
                         }}>
-                          {done ? "✓" : num}
+                          {done ? <Check size={14} /> : num}
                         </div>
                         <span style={{ fontSize: "11px", fontWeight: active ? "700" : "500", color: active ? "#1E293B" : "#94A3B8", whiteSpace: "nowrap" }}>{label}</span>
                       </div>
@@ -226,7 +226,7 @@ export default function BOOutlets() {
                           color: selected ? "#92400E" : "#475569",
                           transition: "all 0.15s",
                         }}>
-                          {selected && <span style={{ marginRight: "5px" }}>✓</span>}{sk.name}
+                          {selected && <Check size={12} style={{ marginRight: "5px", verticalAlign: "-2px" }} />}{sk.name}
                         </button>
                       );
                     })}

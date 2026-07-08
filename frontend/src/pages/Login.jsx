@@ -11,8 +11,6 @@ const ROLE_ROUTES = {
   outlet_manager:       "/outlet-manager/dashboard",
   regular_staff:        "/regular-staff/dashboard",
   outlet_casual_staff:  "/outlet-casual-staff/dashboard",
-  krewby_coordinator:   "/system-admin/dashboard",
-  krewby_casual_worker: "/krewby-worker/dashboard",
 };
 
 /* ── Icons ── */
@@ -155,10 +153,10 @@ export default function Login() {
               Workforce scheduling,<br />done right.
             </h2>
             <p style={s.leftDesc}>
-              Manage shifts, availability, attendance, and casual worker requests — all in one platform.
+              Manage shifts, availability, attendance, and your entire workforce — all in one platform.
             </p>
             <div style={s.featureList}>
-              {["Smart shift scheduling", "Role-based dashboards", "Real-time attendance tracking", "On-demand casual workers"].map(f => (
+              {["Smart shift scheduling", "Role-based dashboards", "Real-time attendance tracking", "Skill-based matching"].map(f => (
                 <div key={f} style={s.featureItem}>
                   <CheckIcon />
                   <span>{f}</span>
@@ -292,8 +290,8 @@ function PanelGraphic() {
 
       {/* Mini stat cards */}
       {[
-        { x: 16,  val: "47",  sub: "Staff active", c: "#3B82F6" },
-        { x: 118, val: "12",  sub: "Outlets",      c: "#22C55E" },
+        { x: 16,  val: "47",  sub: "Workers active", c: "#3B82F6" },
+        { x: 118, val: "12",  sub: "Branches",      c: "#22C55E" },
         { x: 218, val: "98%", sub: "Attendance",   c: "#A78BFA" },
       ].map(c => (
         <g key={c.x}>

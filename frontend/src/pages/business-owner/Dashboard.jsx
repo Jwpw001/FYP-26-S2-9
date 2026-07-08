@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
-import { Building2, Users } from "lucide-react";
+import { Building2, Users, Hand } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-dash-styles")) {
   const style = document.createElement("style");
@@ -93,7 +93,7 @@ export default function BODashboard() {
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         <div style={s.welcomeBox}>
-          <h2 style={s.welcomeTitle}>Welcome back 👋</h2>
+          <h2 style={s.welcomeTitle}>Welcome back <Hand size={20} color="#F59E0B" /></h2>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
             <p style={s.welcomeSub}>{business?.name || "Your Business"} · Business Owner Portal</p>
             {business?.plan && (() => {

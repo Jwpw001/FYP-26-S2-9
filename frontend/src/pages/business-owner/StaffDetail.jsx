@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { Star, Trash2 } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-staffdetail-styles")) {
   const style = document.createElement("style");
@@ -186,10 +187,11 @@ export default function BOStaffDetail() {
               style={{ ...s.actionBtn, marginTop: "8px",
                 background: "#FEF2F2", color: "#991B1B",
                 border: "1px solid #FECACA",
+                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px",
               }}
               onClick={() => setShowDeleteConfirm(true)}
             >
-              🗑 Delete Staff
+              <Trash2 size={14} /> Delete Staff
             </button>
           </div>
         </div>
@@ -317,7 +319,7 @@ export default function BOStaffDetail() {
       {showDeleteConfirm && (
         <div style={s.overlay}>
           <div style={s.modal}>
-            <div style={s.modalIcon}>🗑</div>
+            <div style={s.modalIcon}><Trash2 size={36} color="#EF4444" /></div>
             <h3 style={s.modalTitle}>Delete Staff Member?</h3>
             <p style={s.modalBody}>
               This will permanently remove <strong>{member.users?.full_name}</strong> and all their records.
