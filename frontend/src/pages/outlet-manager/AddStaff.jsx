@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
+import { Search } from "lucide-react";
 
 export default function AddStaff() {
   const goTo = useGoTo();
@@ -15,8 +16,9 @@ export default function AddStaff() {
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState("");
   const [success, setSuccess]   = useState("");
-  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState([]); // [{skill_id, name, experience_level, years_of_experience}]
 
+  const [skillSearch, setSkillSearch] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     full_name: "", username: "", email: "", password: "", staff_type: "regular",
@@ -26,24 +28,32 @@ export default function AddStaff() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [{ data: myStaff }, { data: skillRows }] = await Promise.all([
+      const [{ data: myStaff }, skillRes] = await Promise.all([
         supabase.from("staff").select("outlet_id")
           .eq("user_id", userId).eq("is_active", true).limit(1),
-        supabase.from("skills").select("skill_id, name").order("name"),
+        api.get("/api/business/skills/assignable").catch(() => ({ skills: [] })),
       ]);
       if (!cancelled) {
         setOutletId(myStaff?.[0]?.outlet_id || null);
-        setSkills(skillRows || []);
+        setSkills(skillRes.skills || []);
       }
     }
     load();
     return () => { cancelled = true; };
   }, [userId]);
 
-  function toggleSkill(skillId) {
-    setSelectedSkills(prev =>
-      prev.includes(skillId) ? prev.filter(s => s !== skillId) : [...prev, skillId]
-    );
+  const LEVELS = ["junior", "intermediate", "senior", "lead"];
+
+  function toggleSkill(skill) {
+    setSelectedSkills(prev => {
+      const exists = prev.find(s => s.skill_id === skill.skill_id);
+      if (exists) return prev.filter(s => s.skill_id !== skill.skill_id);
+      return [...prev, { skill_id: skill.skill_id, name: skill.name, experience_level: "junior", years_of_experience: "" }];
+    });
+  }
+
+  function updateSkillField(skill_id, field, value) {
+    setSelectedSkills(prev => prev.map(s => s.skill_id === skill_id ? { ...s, [field]: value } : s));
   }
 
   async function handleSubmit() {
@@ -67,7 +77,11 @@ export default function AddStaff() {
         staff_type: form.staff_type,
         default_work_days: form.staff_type === "regular" ? form.default_work_days : null,
         hired_at: form.hired_at || null,
-        skill_ids: selectedSkills,
+        skill_assignments: selectedSkills.map(s => ({
+          skill_id: s.skill_id,
+          experience_level: s.experience_level || null,
+          years_of_experience: s.years_of_experience !== "" ? Number(s.years_of_experience) : null,
+        })),
       });
 
       setSuccess("Staff member added successfully!");
@@ -98,7 +112,7 @@ export default function AddStaff() {
           <div style={s.fields}>
             <div style={s.field}>
               <label style={s.label}>Full Name *</label>
-              <input style={s.input} placeholder="e.g. Sarah Tan"
+              <input style={s.input} placeholder="e.g. Sarah Tan" autoComplete="off"
                 value={form.full_name}
                 onChange={e => {
                   const name = e.target.value;
@@ -114,14 +128,14 @@ export default function AddStaff() {
             </div>
             <div style={s.field}>
               <label style={s.label}>Username *</label>
-              <input style={s.input} placeholder="e.g. sarah_tan"
+              <input style={s.input} placeholder="e.g. sarah_tan" autoComplete="off"
                 value={form.username}
                 onChange={e => setForm(p => ({ ...p, username: e.target.value.toLowerCase().replace(/\s+/g, "_") }))} />
               <p style={s.hint}>Auto-filled from name. You can edit it.</p>
             </div>
             <div style={s.field}>
               <label style={s.label}>Email Address *</label>
-              <input style={s.input} type="email" placeholder="sarah@example.com"
+              <input style={s.input} type="email" placeholder="sarah@example.com" autoComplete="off"
                 value={form.email}
                 onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
               <p style={s.hint}>They will use this email to log in.</p>
@@ -133,6 +147,7 @@ export default function AddStaff() {
                   style={{ ...s.input, paddingRight: "40px" }}
                   type={showPassword ? "text" : "password"}
                   placeholder="Minimum 6 characters"
+                  autoComplete="new-password"
                   value={form.password}
                   onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                 />
@@ -189,20 +204,98 @@ export default function AddStaff() {
         <div style={s.section}>
           <h3 style={s.sectionTitle}>Skill Tags</h3>
           <p style={s.sectionSub}>Select the skills this staff member has.</p>
-          <div style={s.skillGrid}>
-            {skills.map(sk => {
-              const active = selectedSkills.includes(sk.skill_id);
+          {skills.length > 4 && (
+            <div style={{ display:"flex", alignItems:"center", gap:"8px", background:"#F7F6F3", borderRadius:"9px", padding:"8px 12px", border:"1px solid #E5E2DC", marginBottom:"14px" }}>
+              <Search size={13} color="#7A7870" strokeWidth={2}/>
+              <input value={skillSearch} onChange={e => setSkillSearch(e.target.value)}
+                placeholder="Search skills…"
+                style={{ border:"none", outline:"none", fontSize:"12px", color:"#1C1B18", background:"transparent", flex:1, fontFamily:"inherit" }}/>
+              {skillSearch && <button onClick={() => setSkillSearch("")} style={{ background:"none", border:"none", color:"#7A7870", cursor:"pointer", fontSize:"15px", lineHeight:1, padding:"0" }}>×</button>}
+            </div>
+          )}
+          <div style={s.skillGridNew}>
+            {skills.filter(sk => sk.name.toLowerCase().includes(skillSearch.toLowerCase())).map((sk) => {
+              const active = selectedSkills.some(s => s.skill_id === sk.skill_id);
               return (
                 <button key={sk.skill_id} type="button"
-                  style={{ ...s.skillChip, ...(active ? s.skillChipActive : {}) }}
-                  onClick={() => toggleSkill(sk.skill_id)}>
-                  {sk.name}
+                  style={{ ...s.skillCardNew, ...(active ? s.skillCardNewActive : {}) }}
+                  onMouseEnter={(e) => {
+                    if (!active) { e.currentTarget.style.background = "#F7F6F3"; e.currentTarget.style.borderColor = "#D8D5CE"; }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "#E5E2DC"; }
+                  }}
+                  onClick={() => toggleSkill(sk)}>
+                  <div style={{ ...s.skillCardAvatar, background: active ? "#FFFFFF" : "#7A7870", color: active ? "#1C1B18" : "#FFFFFF" }}>
+                    {sk.name[0]?.toUpperCase()}
+                  </div>
+                  <p style={{ ...s.skillCardName, color: active ? "#FFFFFF" : "#1C1B18" }}>{sk.name}</p>
+                  {active && (
+                    <div style={s.skillCardCheck}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
+                  )}
                 </button>
               );
             })}
           </div>
           {skills.length === 0 && (
-            <p style={s.noSkills}>No skill tags set up yet. Add them in System Admin → Skill Tags.</p>
+            <p style={s.noSkills}>No skill sets added yet. Add them in Skill Tags first.</p>
+          )}
+
+          {/* Experience details for selected skills */}
+          {selectedSkills.length > 0 && (
+            <div style={{ marginTop: "18px", display: "flex", flexDirection: "column", gap: "10px" }}>
+              <p style={{ fontSize: "11px", fontWeight: "700", color: "#7A7870", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Experience Details
+              </p>
+              {selectedSkills.map(sel => (
+                <div key={sel.skill_id} style={{ background: "#F7F6F3", border: "1px solid #E5E2DC", borderRadius: "10px", padding: "12px 14px" }}>
+                  <p style={{ fontSize: "13px", fontWeight: "700", color: "#1C1B18", marginBottom: "10px" }}>{sel.name}</p>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px" }}>
+                    {LEVELS.map(lv => (
+                      <button key={lv} type="button"
+                        onClick={() => updateSkillField(sel.skill_id, "experience_level", lv)}
+                        style={{
+                          padding: "4px 12px", borderRadius: "99px", fontSize: "11px", fontWeight: "700", cursor: "pointer",
+                          background: sel.experience_level === lv ? "#1C1B18" : "#FFFFFF",
+                          color: sel.experience_level === lv ? "#FFFFFF" : "#7A7870",
+                          border: `1.5px solid ${sel.experience_level === lv ? "#1C1B18" : "#D8D5CE"}`,
+                        }}>
+                        {lv.charAt(0).toUpperCase() + lv.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: "600", color: "#7A7870", marginRight: "6px" }}>Years</span>
+                    <button type="button"
+                      onClick={() => updateSkillField(sel.skill_id, "years_of_experience", Math.max(0, (Number(sel.years_of_experience) || 0) - 1))}
+                      style={{ width: "28px", height: "28px", borderRadius: "50%", border: "1.5px solid #D8D5CE", background: "#FFFFFF", color: "#1C1B18", fontSize: "16px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }}>
+                      −
+                    </button>
+                    <div style={{ minWidth: "52px", height: "28px", background: "#FFFFFF", border: "1.5px solid #D8D5CE", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "3px" }}>
+                      <span style={{ fontSize: "13px", fontWeight: "700", color: "#1C1B18" }}>
+                        {sel.years_of_experience !== "" && sel.years_of_experience != null ? sel.years_of_experience : "—"}
+                      </span>
+                      {(sel.years_of_experience !== "" && sel.years_of_experience != null) && (
+                        <span style={{ fontSize: "10px", color: "#7A7870", fontWeight: "600" }}>yr{Number(sel.years_of_experience) !== 1 ? "s" : ""}</span>
+                      )}
+                    </div>
+                    <button type="button"
+                      onClick={() => updateSkillField(sel.skill_id, "years_of_experience", (Number(sel.years_of_experience) || 0) + 1)}
+                      style={{ width: "28px", height: "28px", borderRadius: "50%", border: "1.5px solid #D8D5CE", background: "#FFFFFF", color: "#1C1B18", fontSize: "16px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }}>
+                      +
+                    </button>
+                    {(sel.years_of_experience !== "" && sel.years_of_experience != null && Number(sel.years_of_experience) > 0) && (
+                      <button type="button" onClick={() => updateSkillField(sel.skill_id, "years_of_experience", "")}
+                        style={{ background: "none", border: "none", color: "#A09D97", cursor: "pointer", fontSize: "13px", marginLeft: "2px", padding: "0 2px" }}>×</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -240,10 +333,60 @@ const s = {
   dayBtn: { padding:"6px 10px", border:"1.5px solid #E5E2DC", borderRadius:"8px",
     fontSize:"12px", fontWeight:"600", color:"#7A7870", background:"#F7F6F3", cursor:"pointer" },
   dayBtnActive: { background:"#1C1B18", color:"#FFFFFF", border:"1.5px solid #1C1B18" },
-  skillGrid: { display:"flex", flexWrap:"wrap", gap:"8px" },
-  skillChip: { padding:"7px 14px", border:"1.5px solid #E5E2DC", borderRadius:"100px",
-    fontSize:"13px", fontWeight:"500", color:"#55524A", background:"#F7F6F3", cursor:"pointer" },
-  skillChipActive: { background:"#1C1B18", color:"#FFFFFF", border:"1.5px solid #1C1B18" },
+  skillGridNew: { display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:"12px" },
+  skillCardNew: {
+    background:"#FFFFFF",
+    border:"1.5px solid #E5E2DC",
+    borderRadius:"14px",
+    padding:"16px 14px",
+    cursor:"pointer",
+    textAlign:"center",
+    display:"flex",
+    flexDirection:"column",
+    alignItems:"center",
+    gap:"10px",
+    transition:"all 0.2s ease",
+    position:"relative",
+  },
+  skillCardNewActive: {
+    background:"#1C1B18",
+    borderColor:"#1C1B18",
+  },
+  skillCardAvatar: {
+    width:"40px",
+    height:"40px",
+    borderRadius:"50%",
+    background:"#7A7870",
+    color:"#FFFFFF",
+    fontSize:"16px",
+    fontWeight:"700",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"center",
+    flexShrink:0,
+  },
+  skillCardName: {
+    fontSize:"13px",
+    fontWeight:"600",
+    color:"#1C1B18",
+    margin:0,
+    lineHeight:"1.3",
+    wordBreak:"break-word",
+  },
+  skillCardCheck: {
+    position:"absolute",
+    top:"8px",
+    right:"8px",
+    width:"24px",
+    height:"24px",
+    background:"#1C1B18",
+    borderRadius:"6px",
+    color:"#FFFFFF",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"center",
+    flexShrink:0,
+  },
   noSkills: { fontSize:"13px", color:"#A09D97" },
   actions: { display:"flex", justifyContent:"flex-end", gap:"10px" },
   cancelBtn: { background:"#F7F6F3", border:"1px solid #E5E2DC", borderRadius:"10px",

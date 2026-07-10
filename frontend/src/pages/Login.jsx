@@ -150,7 +150,12 @@ export default function Login() {
       localStorage.setItem("token", response.token);
       goTo(redirectTo || route);
     } catch (err) {
-      setError(err?.response?.data?.message || "Something went wrong. Please try again.");
+      const msg = err?.message || "";
+      setError(
+        msg === "Failed to fetch"
+          ? "Cannot connect to the server. Please try again."
+          : msg || "Something went wrong. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -167,7 +172,7 @@ export default function Login() {
     setCodeLoading(true); setCodeError("");
     try {
       const BASE = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${BASE}/api/invitations/check-code/${inviteCode.replace("-", "")}`);
+      const res = await fetch(`${BASE}/api/invitations/check-code/${encodeURIComponent(inviteCode)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Invalid code");
       const invite = data.invitation;

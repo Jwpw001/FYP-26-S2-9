@@ -163,7 +163,7 @@ export default function ManagerDashboard() {
               .eq("outlet_id", outletId).gte("shift_date", today).lte("shift_date", future)
               .order("shift_date", { ascending: true }),
             supabase.from("staff").select("*", { count: "exact", head: true })
-              .eq("outlet_id", outletId).eq("is_active", true),
+              .eq("outlet_id", outletId).eq("is_active", true).neq("user_id", userId),
             outletStaffIds.length > 0
               ? supabase.from("availability").select("*", { count: "exact", head: true })
                   .eq("status", "pending").in("staff_id", outletStaffIds)

@@ -3,17 +3,18 @@ import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
-import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings } from "lucide-react";
+import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings, Briefcase } from "lucide-react";
 import ProfileModal from "../ProfileModal";
 
 const NAV = [
-  { label: "Dashboard",  path: "/business-owner/dashboard",    Icon: LayoutDashboard },
-  { label: "Branches",   path: "/business-owner/outlets",      Icon: Building2 },
-  { label: "Workforce",  path: "/business-owner/staff",        Icon: Users },
-  { label: "Invitations",path: "/business-owner/invitations",  Icon: UserPlus },
-  { label: "Skill Tags", path: "/business-owner/skills",       Icon: Tag },
-  { label: "Reports",    path: "/business-owner/reports",      Icon: BarChart2 },
-  { label: "Settings",   path: "/business-owner/settings",     Icon: Settings },
+  { label: "Dashboard",   path: "/business-owner/dashboard",    Icon: LayoutDashboard },
+  { label: "Branches",    path: "/business-owner/outlets",      Icon: Building2 },
+  { label: "Workforce",   path: "/business-owner/staff",        Icon: Users },
+  { label: "Casual Pool", path: "/business-owner/casual-pool",  Icon: Briefcase },
+  { label: "Invitations", path: "/business-owner/invitations",  Icon: UserPlus },
+  { label: "Skill Tags",  path: "/business-owner/skills",       Icon: Tag },
+  { label: "Reports",     path: "/business-owner/reports",      Icon: BarChart2 },
+  { label: "Settings",    path: "/business-owner/settings",     Icon: Settings },
 ];
 
 const PLAN_BADGE = {

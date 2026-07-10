@@ -9,6 +9,7 @@ export default function BOSkills() {
   const [apiIndustry, setApiIndustry] = useState("");
   const [loading,     setLoading]     = useState(true);
   const [search,      setSearch]      = useState("");
+  const [suggestSearch, setSuggestSearch] = useState("");
   const [newSkill,    setNewSkill]    = useState("");
   const [pendingName, setPendingName] = useState("");
   const [newDesc,     setNewDesc]     = useState("");
@@ -56,6 +57,7 @@ export default function BOSkills() {
   }
 
   const filtered = skills.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredSuggestions = suggestions.filter(s => s.name.toLowerCase().includes(suggestSearch.toLowerCase()));
   const industryLabel = apiIndustry === "f&b" ? "F&B" : apiIndustry ? apiIndustry.charAt(0).toUpperCase() + apiIndustry.slice(1) : "";
 
   return (
@@ -239,7 +241,14 @@ export default function BOSkills() {
                 </span>
               )}
             </div>
-            <p style={{ fontSize:"11px", color:"#94A3B8" }}>Click any skill to add it to your list</p>
+            <p style={{ fontSize:"11px", color:"#94A3B8", marginBottom:"12px" }}>Click any skill to add it to your list</p>
+            <div style={{ display:"flex", alignItems:"center", gap:"8px", background:"#F8FAFC", borderRadius:"9px", padding:"7px 12px", border:"1px solid #E8EDF5" }}>
+              <Search size={13} color="#94A3B8" strokeWidth={2}/>
+              <input value={suggestSearch} onChange={e => setSuggestSearch(e.target.value)}
+                placeholder="Search suggestions…"
+                style={{ border:"none", outline:"none", fontSize:"12px", color:"#1E293B", background:"transparent", flex:1, fontFamily:"inherit" }}/>
+              {suggestSearch && <button onClick={() => setSuggestSearch("")} style={{ background:"none", border:"none", color:"#94A3B8", cursor:"pointer", fontSize:"15px", lineHeight:1, padding:"0" }}>×</button>}
+            </div>
           </div>
 
           <div style={{ flex:1, overflowY:"auto", padding:"12px 16px" }}>
@@ -249,9 +258,15 @@ export default function BOSkills() {
                 <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>All suggestions added!</p>
                 <p style={{ fontSize:"11px", color:"#94A3B8" }}>You can still type custom skills in the input.</p>
               </div>
+            ) : filteredSuggestions.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"40px 16px" }}>
+                <Search size={22} color="#94A3B8" style={{ marginBottom:"8px" }} />
+                <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>No matches</p>
+                <p style={{ fontSize:"11px", color:"#94A3B8" }}>Try a different keyword.</p>
+              </div>
             ) : (
               <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
-                {suggestions.map((s, i) => (
+                {filteredSuggestions.map((s, i) => (
                   <div key={s.skill_id} onClick={() => addSkill(s.name, s.description)}
                     className="card-hover"
                     style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"16px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", cursor:"pointer", animation:`pageSlideUp 0.2s ease ${i*0.03}s both` }}>

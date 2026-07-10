@@ -42,16 +42,18 @@ export default function BOStaff() {
       api.get("/api/business/staff"),
       api.get("/api/business/managers"),
     ]).then(([staffRes, mgrRes]) => {
-      const staffRows = (staffRes.staff || []).map(s => ({
-        key: `staff-${s.staff_id}`,
-        nav: `/business-owner/staff/${s.staff_id}`,
-        name: s.users?.full_name || "—",
-        email: s.users?.email || "—",
-        type: s.staff_type === "regular" ? "regular" : "casual",
-        outlet_id: s.outlet_id,
-        outlet_name: s.outlet_name,
-        is_active: s.is_active,
-      }));
+      const staffRows = (staffRes.staff || [])
+        .filter(s => s.users?.role !== "outlet_manager")
+        .map(s => ({
+          key: `staff-${s.staff_id}`,
+          nav: `/business-owner/staff/${s.staff_id}`,
+          name: s.users?.full_name || "—",
+          email: s.users?.email || "—",
+          type: s.staff_type === "regular" ? "regular" : "casual",
+          outlet_id: s.outlet_id,
+          outlet_name: s.outlet_name,
+          is_active: s.is_active,
+        }));
       const managerRows = (mgrRes.managers || []).map(m => ({
         key: `manager-${m.user_id}`,
         nav: `/business-owner/managers/${m.user_id}`,

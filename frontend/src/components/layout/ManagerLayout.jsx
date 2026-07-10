@@ -4,20 +4,21 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail, Tag } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail, Tag, Briefcase } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 
 const NAV = [
-  { label: "Dashboard",    path: "/outlet-manager/dashboard",    Icon: LayoutDashboard },
-  { label: "Workforce",    path: "/outlet-manager/staff",        Icon: Users },
-  { label: "Shifts",       path: "/outlet-manager/shifts",       Icon: CalendarDays },
-  { label: "Availability", path: "/outlet-manager/availability", Icon: CalendarClock },
-  { label: "Attendance",   path: "/outlet-manager/attendance",   Icon: ClipboardCheck },
-  { label: "Reports",      path: "/outlet-manager/reports",      Icon: BarChart2 },
-  { label: "Manpower",     path: "/outlet-manager/manpower",     Icon: UserPlus },
-  { label: "Skills",       path: "/outlet-manager/skills",       Icon: Tag },
-  { label: "Invitations",  path: "/outlet-manager/invitations",  Icon: Mail },
+  { label: "Dashboard",    path: "/outlet-manager/dashboard",       Icon: LayoutDashboard },
+  { label: "Workforce",    path: "/outlet-manager/staff",           Icon: Users },
+  { label: "Tasks",        path: "/outlet-manager/shifts",          Icon: CalendarDays },
+  { label: "Casual",       path: "/outlet-manager/casual-requests", Icon: Briefcase },
+  { label: "Availability", path: "/outlet-manager/availability",    Icon: CalendarClock },
+  { label: "Attendance",   path: "/outlet-manager/attendance",      Icon: ClipboardCheck },
+  { label: "Reports",      path: "/outlet-manager/reports",         Icon: BarChart2 },
+  { label: "Manpower",     path: "/outlet-manager/manpower",        Icon: UserPlus },
+  { label: "Skills",       path: "/outlet-manager/skills",          Icon: Tag },
+  { label: "Invitations",  path: "/outlet-manager/invitations",     Icon: Mail },
 ];
 
 export default function ManagerLayout({ children, title }) {

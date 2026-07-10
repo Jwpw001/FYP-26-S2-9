@@ -337,14 +337,14 @@ export default function ShiftsList() {
   ];
 
   return (
-    <ManagerLayout title="Shifts">
+    <ManagerLayout title="Tasks">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Shifts</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>{shifts.length} total shifts</p>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Tasks</h2>
+            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>{shifts.length} total tasks</p>
           </div>
           <CreateShiftBtn onClick={() => goTo("/outlet-manager/shifts/new")} />
         </div>
@@ -399,8 +399,8 @@ export default function ShiftsList() {
           filtered.length === 0 ? (
             <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px 40px", textAlign: "center" }}>
               <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}><Calendar size={40} color="#CBD5E1" /></div>
-              <p style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", marginBottom: "8px" }}>No shifts yet</p>
-              <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "24px" }}>Create your first shift to get started.</p>
+              <p style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", marginBottom: "8px" }}>No tasks yet</p>
+              <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "24px" }}>Create your first task to get started.</p>
               <CreateShiftBtn onClick={() => goTo("/outlet-manager/shifts/new")} />
             </div>
           ) : (
@@ -454,7 +454,7 @@ export default function ShiftsList() {
                               </div>
                             )}
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "1px" }}>{shift.title || "Shift"}</p>
+                              <p style={{ fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "1px" }}>{shift.title || "Task"}</p>
                               <p style={{ opacity: 0.75 }}>{shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}</p>
                             </div>
                           </div>
@@ -775,7 +775,7 @@ function ShiftRow({ shift, fill, onNav }) {
         transition: "background 0.15s", cursor: "pointer",
       }}>
       <span style={{ fontWeight: "600" }}>{fmtDate(shift.shift_date)}</span>
-      <span style={{ fontWeight: "500" }}>{shift.title || "Untitled Shift"}</span>
+      <span style={{ fontWeight: "500" }}>{shift.title || "Untitled Task"}</span>
       <span style={{ color: "#64748B" }}>{shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}</span>
       <span style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
         <span style={{ color: "#64748B" }}>{shift.shift_roles?.length || 0} role{shift.shift_roles?.length !== 1 ? "s" : ""}</span>
@@ -1048,7 +1048,7 @@ function CreateShiftBtn({ onClick }) {
         padding: "10px 18px", borderRadius: "10px", fontSize: "14px",
         fontWeight: "600", cursor: "pointer", transition: "background 0.15s",
       }}>
-      + Create Shift
+      + Create Task
     </button>
   );
 }

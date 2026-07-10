@@ -172,6 +172,7 @@ model shifts {
   shift_date        DateTime            @db.Date
   start_time        DateTime            @db.Time(6)
   end_time          DateTime            @db.Time(6)
+  deadline          DateTime?           @db.Date
   status            String              @default("draft") @db.VarChar(20)
   created_by        Int?
   shift_assignments shift_assignments[]

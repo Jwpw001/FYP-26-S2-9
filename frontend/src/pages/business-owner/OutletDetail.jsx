@@ -394,7 +394,7 @@ export default function OutletDetail() {
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
-            {staff.map((m, i) => {
+            {staff.filter(m => m.users?.role !== "outlet_manager").map((m, i) => {
               const name = m.users?.full_name || "—";
               const initials = name[0]?.toUpperCase() || "?";
               const color = avatarColor(name);
@@ -408,8 +408,8 @@ export default function OutletDetail() {
                     </div>
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
-                    <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: m.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: m.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
-                      {m.staff_type === "regular" ? "Regular" : "Casual"}
+                    <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: m.staff_type === "casual" ? "#F3E8FF" : "#DBEAFE", color: m.staff_type === "casual" ? "#6B21A8" : "#1E40AF" }}>
+                      {m.staff_type === "casual" ? "Casual" : "Regular"}
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: "600", color: m.is_active ? "#16A34A" : "#94A3B8" }}>
                       <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: m.is_active ? "#22C55E" : "#D1D5DB", display: "inline-block" }} />

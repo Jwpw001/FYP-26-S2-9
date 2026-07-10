@@ -214,8 +214,8 @@ function StaffCard({ member: m, index, onNav }) {
 
       {/* Type + skill tags */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px" }}>
-        <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: m.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: m.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
-          {m.staff_type === "regular" ? "Regular" : "Casual"}
+        <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: m.users?.role === "outlet_manager" ? "#EDE9FE" : m.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: m.users?.role === "outlet_manager" ? "#7C3AED" : m.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
+          {m.users?.role === "outlet_manager" ? "Manager" : m.staff_type === "regular" ? "Regular" : "Casual"}
         </span>
         {m.skillTags?.slice(0, 2).map(t => (
           <span key={t.id} style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "500", background: "#F1F5F9", color: "#475569" }}>{t.name}</span>

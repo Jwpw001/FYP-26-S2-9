@@ -2,6 +2,21 @@ const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { getLimits } = require("../utils/planLimits");
 
+// Resolves business_id for both business owners and outlet managers
+async function resolveBusinessId(user) {
+  if (user.role === "business_owner") {
+    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("owner_id", user.user_id).maybeSingle();
+    return biz || null;
+  }
+  // outlet_manager: find their outlet → business
+  const { data: link } = await supabaseAdmin.from("outlet_managers").select("outlet_id").eq("user_id", user.user_id).limit(1).maybeSingle();
+  if (!link) return null;
+  const outlet = await prisma.outlets.findUnique({ where: { outlet_id: link.outlet_id }, select: { business_id: true } });
+  if (!outlet) return null;
+  const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("business_id", outlet.business_id).maybeSingle();
+  return biz || null;
+}
+
 // ── Outlets ──────────────────────────────────────────────
 
 // GET /api/business/outlets
@@ -545,7 +560,7 @@ const getBusinessStats = async (req, res) => {
 
 const getBusinessSkills = async (req, res) => {
   try {
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("owner_id", req.user.user_id).maybeSingle();
+    const biz = await resolveBusinessId(req.user);
     if (!biz) return res.json({ skills: [], suggestions: [], industry: "" });
 
     const { data: roles, error } = await supabaseAdmin
@@ -577,7 +592,7 @@ const createBusinessSkill = async (req, res) => {
     const { name, description } = req.body;
     if (!name?.trim()) return res.status(400).json({ success: false, message: "Skill name is required." });
 
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    const biz = await resolveBusinessId(req.user);
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const { data: existing } = await supabaseAdmin
@@ -595,7 +610,40 @@ const createBusinessSkill = async (req, res) => {
       .single();
     if (error) throw new Error(error.message);
 
+    // Ensure matching entry exists in global skills table for staff assignment
+    const existingSkill = await prisma.skills.findFirst({ where: { name: { equals: name.trim(), mode: "insensitive" } } });
+    if (!existingSkill) {
+      await prisma.skills.create({ data: { name: name.trim(), description: description || "" } });
+    }
+
     return res.status(201).json({ success: true, skill: { skill_id: role.role_id, name: role.role_name, description: description || "" } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET /api/business/skills/assignable — returns skills table IDs filtered to this business's roles
+const getBusinessSkillsForAssignment = async (req, res) => {
+  try {
+    const biz = await resolveBusinessId(req.user);
+    if (!biz) return res.json({ success: true, skills: [] });
+
+    const { data: roles } = await supabaseAdmin
+      .from("business_roles")
+      .select("role_name")
+      .eq("business_id", biz.business_id)
+      .order("role_name", { ascending: true });
+
+    if (!roles || roles.length === 0) return res.json({ success: true, skills: [] });
+
+    const roleNames = roles.map(r => r.role_name);
+    const skills = await prisma.skills.findMany({
+      where: { name: { in: roleNames } },
+      select: { skill_id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+
+    return res.json({ success: true, skills });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -604,7 +652,7 @@ const createBusinessSkill = async (req, res) => {
 const deleteBusinessSkill = async (req, res) => {
   try {
     const roleId = Number(req.params.skill_id);
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    const biz = await resolveBusinessId(req.user);
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const { error } = await supabaseAdmin
@@ -688,4 +736,4 @@ const updateAllocationPrefs = async (req, res) => {
   }
 };
 
-module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs };
+module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs };

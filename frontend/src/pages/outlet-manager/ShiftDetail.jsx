@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { Sparkles, X, Check, AlertTriangle, Users } from "lucide-react";
+import { Sparkles, X, Check, AlertTriangle, Users, Trash2, Calendar, Clock, MapPin } from "lucide-react";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 
@@ -488,7 +488,8 @@ export default function ShiftDetail() {
         const krewbyFilled = (kr?.status === "assigned" || kr?.status === "approved") ? 1 : 0;
         const filled = (role.shift_assignments?.length || 0) + krewbyFilled;
         if (filled < (role.headcount || 1)) {
-          warnings.push(`Role "${role.role_name}" is understaffed (${filled}/${role.headcount || 1})`);
+          const label = role.role_name || role.skills?.name || "Unnamed role";
+          warnings.push(`"${label}" is understaffed (${filled}/${role.headcount || 1})`);
         }
       }
 
@@ -655,17 +656,40 @@ export default function ShiftDetail() {
 
       <div style={s.shiftCard}>
         <div style={s.shiftCardTop}>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={s.shiftTitleRow}>
               <h2 style={s.shiftTitle}>{shift.title || "Untitled Shift"}</h2>
               <span style={{ ...s.badge, ...STATUS_STYLES[shift.status] }}>{shift.status}</span>
             </div>
-            <p style={s.shiftMeta}>
-              {fmtDate(shift.shift_date)} · {shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}
-              {shift.outlets?.name && ` · ${shift.outlets.name}`}
-            </p>
+            <div style={s.shiftMetaRow}>
+              <span style={s.shiftMetaPill}>
+                <Calendar size={11} style={{ flexShrink: 0 }} />
+                {fmtDate(shift.shift_date)}
+              </span>
+              <span style={s.shiftMetaPill}>
+                <Clock size={11} style={{ flexShrink: 0 }} />
+                {shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}
+              </span>
+              {shift.outlets?.name && (
+                <span style={s.shiftMetaPill}>
+                  <MapPin size={11} style={{ flexShrink: 0 }} />
+                  {shift.outlets.name}
+                </span>
+              )}
+              {shift.deadline && (
+                <span style={{ ...s.shiftMetaPill, background: "#FFFBEB", color: "#D97706", border: "1px solid #FDE68A" }}>
+                  <Calendar size={11} style={{ flexShrink: 0 }} />
+                  Due {new Date(shift.deadline).toLocaleDateString("en-SG", { day: "numeric", month: "short" })}
+                </span>
+              )}
+            </div>
           </div>
           <div style={s.shiftActions}>
+            {shift.status === "draft" && (
+              <button style={s.deleteIconBtn} onClick={handleDelete} title="Delete shift">
+                <Trash2 size={15} />
+              </button>
+            )}
             {shift.status !== "completed" && shift.status !== "cancelled" && (
               <button
                 style={s.aiBtn}
@@ -679,7 +703,6 @@ export default function ShiftDetail() {
             )}
             {shift.status === "draft" && (
               <>
-                <button style={s.deleteBtn} onClick={handleDelete}>Delete</button>
                 <button
                   style={{ ...s.publishBtn, ...(isFullyStaffed ? {} : s.publishBtnWarn) }}
                   onClick={handlePublish}
@@ -687,6 +710,7 @@ export default function ShiftDetail() {
                 >
                   {publishing ? "Checking…" : "Publish Shift"}
                 </button>
+                <button style={s.cancelShiftBtn} onClick={handleCancelShift}>Cancel</button>
               </>
             )}
             {shift.status === "published" && (
@@ -694,9 +718,6 @@ export default function ShiftDetail() {
                 <button style={s.unpublishBtn} onClick={handleUnpublish}>Move to Draft</button>
                 <button style={s.cancelShiftBtn} onClick={handleCancelShift}>Cancel Shift</button>
               </>
-            )}
-            {shift.status === "draft" && (
-              <button style={s.cancelShiftBtn} onClick={handleCancelShift}>Cancel Shift</button>
             )}
           </div>
         </div>
@@ -709,7 +730,7 @@ export default function ShiftDetail() {
             }} />
           </div>
           <span style={s.staffingText}>
-            {totalAssigned}/{totalRoles} positions filled{isFullyStaffed && " ·  Ready to publish"}
+            {totalAssigned}/{totalRoles} filled{isFullyStaffed ? " · Ready to publish ✓" : ""}
           </span>
         </div>
       </div>
@@ -862,13 +883,6 @@ export default function ShiftDetail() {
                         return <span style={s.krewbyAssignedBadge}>Krewby:{kr.worker_name || "Worker assigned"}</span>;
                       }
                       return <span style={s.krewbyPendingBadge}>⏳ Krewby requested</span>;
-                    }
-                    if (shift.status !== "completed" && shift.status !== "cancelled" && !isFull) {
-                      return (
-                        <button style={s.krewbyBtn} onClick={() => { setKrewbyModal({ role }); setKrewbyNote(""); }}>
-                          + Request Krewby
-                        </button>
-                      );
                     }
                     return null;
                   })()}
@@ -1157,14 +1171,15 @@ function fmtDate(d) {
 const s = {
   back: { background: "none", border: "none", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer", marginBottom: "20px", padding: 0 },
   empty: { textAlign: "center", padding: "40px", color: "#64748B", fontSize: "14px" },
-  shiftCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px", marginBottom: "24px" },
-  shiftCardTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", flexWrap: "wrap", gap: "12px" },
-  shiftTitleRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" },
-  shiftTitle: { fontSize: "20px", fontWeight: "800", color: "#1E293B" },
-  badge: { display: "inline-block", padding: "3px 8px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", textTransform: "capitalize" },
-  shiftMeta: { fontSize: "14px", color: "#64748B" },
-  shiftActions: { display: "flex", gap: "8px", flexWrap: "wrap" },
-  deleteBtn: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "9px", padding: "8px 14px", fontSize: "13px", fontWeight: "600", color: "#991B1B", cursor: "pointer" },
+  shiftCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" },
+  shiftCardTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px", flexWrap: "wrap", gap: "14px" },
+  shiftTitleRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px", flexWrap: "wrap" },
+  shiftTitle: { fontSize: "20px", fontWeight: "800", color: "#0F172A", letterSpacing: "-0.3px" },
+  badge: { display: "inline-block", padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "700", textTransform: "capitalize", letterSpacing: "0.02em" },
+  shiftMetaRow: { display: "flex", flexWrap: "wrap", gap: "6px" },
+  shiftMetaPill: { display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#475569", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "100px", padding: "3px 10px", fontWeight: "500" },
+  shiftActions: { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" },
+  deleteIconBtn: { display: "flex", alignItems: "center", justifyContent: "center", width: "34px", height: "34px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "9px", color: "#EF4444", cursor: "pointer", padding: 0, flexShrink: 0 },
   publishBtn: { background: "#2563EB", border: "none", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "700", color: "#FFFFFF", cursor: "pointer" },
   publishBtnWarn: { background: "#D97706" },
   unpublishBtn: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "9px", padding: "8px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
@@ -1176,10 +1191,10 @@ const s = {
   sectionTitle: { fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "14px" },
   formLabel: { display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "6px" },
   formInput: { display: "block", width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", color: "#1E293B", background: "#FFFFFF", boxSizing: "border-box" },
-  roleCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginBottom: "12px" },
-  roleCardTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px", flexWrap: "wrap", gap: "8px" },
-  roleName: { fontSize: "15px", fontWeight: "700", color: "#1E293B" },
-  roleMeta: { fontSize: "12px", color: "#64748B", marginTop: "2px" },
+  roleCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "18px 20px", marginBottom: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" },
+  roleCardTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "10px" },
+  roleName: { fontSize: "15px", fontWeight: "700", color: "#0F172A" },
+  roleMeta: { fontSize: "12px", color: "#64748B", marginTop: "3px" },
   roleActions: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
   fillBadge: { padding: "3px 8px", borderRadius: "100px", fontSize: "11px", fontWeight: "600" },
   assignBtn: { background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "7px", padding: "5px 12px", fontSize: "12px", fontWeight: "600", color: "#1D4ED8", cursor: "pointer" },

@@ -234,7 +234,7 @@ const resetPassword = async (req, res) => {
 // Used by managers to create staff accounts (bypasses email domain restrictions)
 const createStaffAccount = async (req, res) => {
     try {
-        const { full_name, username, email, password, role, outlet_id, staff_type, default_work_days, hired_at, skill_ids } = req.body;
+        const { full_name, username, email, password, role, outlet_id, staff_type, default_work_days, hired_at, skill_ids, skill_assignments } = req.body;
 
         if (!email || !password || !full_name || !username) {
             return res.status(400).json({ success: false, message: "Missing required fields." });
@@ -275,12 +275,26 @@ const createStaffAccount = async (req, res) => {
             },
         });
 
-        // Assign skill tags
-        if (skill_ids && skill_ids.length > 0) {
+        // Assign skill tags — write to both tables
+        const assignments = skill_assignments || (skill_ids ? skill_ids.map(id => ({ skill_id: id })) : []);
+        if (assignments.length > 0) {
+            const newStaff = await prisma.staff.findFirst({ where: { user_id: newUser.user_id, outlet_id: Number(outlet_id) } });
             await prisma.user_skill_tags.createMany({
-                data: skill_ids.map(skill_id => ({ user_id: newUser.user_id, skill_id: Number(skill_id) })),
+                data: assignments.map(a => ({ user_id: newUser.user_id, skill_id: Number(a.skill_id) })),
                 skipDuplicates: true,
             });
+            if (newStaff) {
+                const { error: ssErr } = await supabaseAdmin.from("staff_skills").upsert(
+                    assignments.map(a => ({
+                        staff_id: newStaff.staff_id,
+                        skill_id: Number(a.skill_id),
+                        experience_level: a.experience_level || null,
+                        years_of_experience: a.years_of_experience != null && a.years_of_experience !== "" ? Number(a.years_of_experience) : null,
+                    })),
+                    { onConflict: "staff_id,skill_id" }
+                );
+                if (ssErr) console.error("staff_skills insert error:", ssErr.message);
+            }
         }
 
         return res.status(201).json({ success: true, message: "Staff account created successfully." });

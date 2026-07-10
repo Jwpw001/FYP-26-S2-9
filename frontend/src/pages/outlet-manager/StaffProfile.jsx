@@ -50,7 +50,7 @@ function SkillSetsTab({ staffId }) {
     setLoading(true);
     Promise.all([
       api.get(`/api/skills/staff/${staffId}`).catch(() => ({ skills: [] })),
-      api.get("/api/business/skills").catch(() => ({ skills: [] })),
+      api.get("/api/business/skills/assignable").catch(() => ({ skills: [] })),
     ]).then(([asg, lib]) => {
       setAssigned(asg.skills || []);
       setLibrary(lib.skills || []);
