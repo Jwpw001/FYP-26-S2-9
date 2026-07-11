@@ -27,7 +27,6 @@ const icons = {
   managers: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
   staff:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
   skills:   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
-  workers:  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>,
   arrowUpRight: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>,
   chevron:  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
 };
@@ -127,11 +126,10 @@ function SkeletonCard() {
 /* ── Bottom section: Platform overview + Quick actions ── */
 function BottomSection({ stats, actions, ready, goTo }) {
   const bars = [
-    { label: "Outlets",  val: stats.outlets,      color: "#2563EB", bg: "#EFF6FF" },
-    { label: "Managers", val: stats.managers,      color: "#059669", bg: "#ECFDF5" },
-    { label: "Staff",    val: stats.staff,         color: "#D97706", bg: "#FFFBEB" },
-    { label: "Skills",   val: stats.skills,        color: "#7C3AED", bg: "#F5F3FF" },
-    { label: "Workers",  val: stats.krewbyWorkers, color: "#DB2777", bg: "#FDF2F8" },
+    { label: "Branches",   val: stats.outlets,   color: "#2563EB", bg: "#EFF6FF" },
+    { label: "Managers",   val: stats.managers,  color: "#059669", bg: "#ECFDF5" },
+    { label: "Staff",      val: stats.staff,     color: "#D97706", bg: "#FFFBEB" },
+    { label: "Skill Tags", val: stats.skills,    color: "#7C3AED", bg: "#F5F3FF" },
   ];
   const max   = Math.max(...bars.map(b => b.val), 1);
   const total = bars.reduce((acc, b) => acc + b.val, 0);
@@ -283,11 +281,11 @@ function BizOutletCard({ stats, ready, goTo }) {
         <div style={{ width: "1px", height: "32px", background: "#E2E8F0", flexShrink: 0 }} />
         <div style={{ textAlign: "center" }}>
           <p style={{ ...s.statValue, fontSize: "26px", color: "#2563EB" }}>{outletCount}</p>
-          <p style={{ fontSize: "10px", fontWeight: "600", color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Outlets</p>
+          <p style={{ fontSize: "10px", fontWeight: "600", color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Branches</p>
         </div>
       </div>
 
-      <p style={{ ...s.statLabel, marginBottom: "14px" }}>Businesses &amp; Outlets</p>
+      <p style={{ ...s.statLabel, marginBottom: "14px" }}>Businesses &amp; Branches</p>
 
       <div style={{ ...s.statBar, background: "#EFF6FF" }}>
         <div style={{
@@ -304,7 +302,7 @@ function BizOutletCard({ stats, ready, goTo }) {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const user = getUser();
-  const [stats, setStats] = useState({ businesses: 0, outlets: 0, managers: 0, staff: 0, skills: 0, krewbyWorkers: 0 });
+  const [stats, setStats] = useState({ businesses: 0, outlets: 0, managers: 0, staff: 0, skills: 0 });
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const [fading, setFading] = useState(false);
@@ -317,17 +315,16 @@ export default function AdminDashboard() {
     async function load() {
       try {
         const [
-          { count: bizCount }, { count: outletCount }, { count: mgr }, { count: stf }, { count: skl }, { count: kw },
+          { count: bizCount }, { count: outletCount }, { count: mgr }, { count: stf }, { count: skl },
         ] = await Promise.all([
           supabase.from("businesses").select("*", { count: "exact", head: true }),
           supabase.from("outlets").select("*", { count: "exact", head: true }),
           supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "outlet_manager"),
           supabase.from("staff").select("*", { count: "exact", head: true }).eq("is_active", true),
           supabase.from("skills").select("*", { count: "exact", head: true }),
-          supabase.from("krewby_workers").select("*", { count: "exact", head: true }).eq("is_active", true),
         ]);
         if (!cancelled) {
-          setStats({ businesses: bizCount || 0, outlets: outletCount || 0, managers: mgr || 0, staff: stf || 0, skills: skl || 0, krewbyWorkers: kw || 0 });
+          setStats({ businesses: bizCount || 0, outlets: outletCount || 0, managers: mgr || 0, staff: stf || 0, skills: skl || 0 });
           setLoading(false);
           // small delay so CSS animations fire after paint
           setTimeout(() => setReady(true), 30);
@@ -342,21 +339,19 @@ export default function AdminDashboard() {
   }, []);
 
   const cards = [
-    { label: "Outlet Managers", value: stats.managers,      icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
-    { label: "Active Staff",    value: stats.staff,         icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
-    { label: "Skill Tags",      value: stats.skills,        icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
-    { label: "Krewby Workers",  value: stats.krewbyWorkers, icon: icons.workers,  color: "#DB2777", bg: "#FDF2F8", link: "/system-admin/krewby-workers" },
+    { label: "Managers",   value: stats.managers, icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
+    { label: "Staff",      value: stats.staff,    icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
+    { label: "Skill Tags", value: stats.skills,   icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
   ];
 
   const reportsIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
 
   const actions = [
-    { label: "Businesses",     desc: "Browse businesses & outlets",         icon: icons.outlets,  color: "#2563EB", bg: "#EFF6FF", link: "/system-admin/businesses" },
-    { label: "Managers",       desc: "View outlet managers",                icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
-    { label: "Staff",          desc: "Browse all staff across platform",    icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
-    { label: "Skill Tags",     desc: "View skill categories",               icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
-    { label: "Krewby Workers", desc: "Monitor casual worker pool",          icon: icons.workers,  color: "#DB2777", bg: "#FDF2F8", link: "/system-admin/krewby-workers" },
-    { label: "Reports",        desc: "Platform analytics & reports",        icon: reportsIcon,    color: "#0891B2", bg: "#ECFEFF", link: "/system-admin/reports" },
+    { label: "Businesses", desc: "Browse businesses & branches",      icon: icons.outlets,  color: "#2563EB", bg: "#EFF6FF", link: "/system-admin/businesses" },
+    { label: "Managers",   desc: "View outlet managers",             icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
+    { label: "Staff",      desc: "Browse all staff across platform", icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
+    { label: "Skill Tags", desc: "View skill categories",            icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
+    { label: "Reports",    desc: "Platform analytics & reports",     icon: reportsIcon,    color: "#0891B2", bg: "#ECFEFF", link: "/system-admin/reports" },
   ];
 
   return (
@@ -381,7 +376,7 @@ export default function AdminDashboard() {
 
       <div style={s.statsGrid}>
         {loading
-          ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+          ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
           : [
               <BizOutletCard key="biz" stats={stats} ready={ready} goTo={goTo} />,
               ...cards.map((card, i) => <StatCard key={card.label} card={card} index={i + 1} ready={ready} goTo={goTo} />),

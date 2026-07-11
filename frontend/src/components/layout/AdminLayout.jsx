@@ -2,7 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import { getUser } from "../../utils/auth";
 import { useState } from "react";
 import SignOutButton from "../SignOutButton";
-import { LayoutDashboard, Building2, Users, Tag, BarChart2, ClipboardList, FileCheck } from "lucide-react";
+import { LayoutDashboard, Building2, Users, Tag, BarChart2 } from "lucide-react"; // nav icons
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 
@@ -11,8 +11,6 @@ const NAV = [
   { label: "Businesses",     path: "/system-admin/businesses",       Icon: Building2 },
   { label: "Workers",        path: "/system-admin/staff",            Icon: Users },
   { label: "Skill Tags",     path: "/system-admin/skills",           Icon: Tag },
-  { label: "Applications",   path: "/system-admin/applications",     Icon: FileCheck },
-  { label: "Requests",       path: "/system-admin/requests",         Icon: ClipboardList },
   { label: "Reports",        path: "/system-admin/reports",          Icon: BarChart2 },
 ];
 
