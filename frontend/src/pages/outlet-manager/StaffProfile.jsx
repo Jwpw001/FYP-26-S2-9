@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { X, Plus, Check, Pause, Play, Trash2 } from "lucide-react";
+import { X, Plus, Check, Pause, Play, Trash2, Pencil } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const AVATAR_COLORS = ["#6366F1","#F59E0B","#10B981","#EF4444","#8B5CF6","#EC4899","#14B8A6","#F97316"];
@@ -38,13 +38,20 @@ function SkillSetsTab({ staffId }) {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
 
-  // Add-skill form (always visible)
+  // Add-skill form
   const [selSkill, setSelSkill] = useState(null);
   const [selLevel, setSelLevel] = useState("junior");
   const [selYears, setSelYears] = useState("");
   const [adding,   setAdding]   = useState(false);
   const [saving,   setSaving]   = useState(false);
   const [saveOk,   setSaveOk]   = useState(false);
+
+  // Edit-skill form
+  const [editingId,    setEditingId]    = useState(null); // skill_id being edited
+  const [editLevel,    setEditLevel]    = useState("junior");
+  const [editYears,    setEditYears]    = useState("");
+  const [editSaving,   setEditSaving]   = useState(false);
+  const [editError,    setEditError]    = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -86,6 +93,33 @@ function SkillSetsTab({ staffId }) {
     } catch (e) { console.error(e); }
   }
 
+  function startEdit(sk) {
+    setEditingId(sk.skill_id);
+    setEditLevel(sk.experience_level || "junior");
+    setEditYears(sk.years_of_experience ?? "");
+    setEditError("");
+  }
+
+  async function handleEditSave(skill_id) {
+    setEditSaving(true); setEditError("");
+    try {
+      await api.patch(`/api/skills/staff/${staffId}/${skill_id}`, {
+        experience_level: editLevel,
+        years_of_experience: editYears !== "" ? Number(editYears) : null,
+      });
+      setAssigned(prev => prev.map(s =>
+        s.skill_id === skill_id
+          ? { ...s, experience_level: editLevel, years_of_experience: editYears !== "" ? Number(editYears) : null }
+          : s
+      ));
+      setEditingId(null);
+    } catch (e) {
+      setEditError(e.message || "Failed to save.");
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
   if (loading) return <p style={{ color:"#94A3B8", fontSize:"13px" }}>Loading…</p>;
 
   return (
@@ -111,29 +145,69 @@ function SkillSetsTab({ staffId }) {
         <div style={{ display:"flex", flexDirection:"column", gap:"8px", marginBottom: adding ? "16px" : "0" }}>
           {assigned.map(sk => {
             const m = LEVEL_META[sk.experience_level] || null;
+            const isEditing = editingId === sk.skill_id;
             return (
-              <div key={sk.skill_id} style={{ display:"flex", alignItems:"center", gap:"12px", padding:"12px 16px", background:"#F8FAFC", borderRadius:"10px", border:"1px solid #E2E8F0" }}>
-                {/* Skill info */}
-                <div style={{ flex:1 }}>
-                  <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", margin:"0 0 4px" }}>{sk.name}</p>
-                  <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-                    {m ? (
-                      <span style={{ fontSize:"11px", fontWeight:"700", padding:"2px 10px", borderRadius:"99px", background:m.bg, color:m.color, border:`1px solid ${m.border}` }}>
-                        {m.label}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize:"11px", color:"#CBD5E1" }}>No level set</span>
-                    )}
-                    {sk.years_of_experience != null && (
-                      <span style={{ fontSize:"12px", color:"#64748B", fontWeight:"600" }}>
-                        {sk.years_of_experience} yr{Number(sk.years_of_experience) !== 1 ? "s" : ""} experience
-                      </span>
-                    )}
+              <div key={sk.skill_id} style={{ background:"#F8FAFC", borderRadius:"10px", border:`1px solid ${isEditing ? "#6366F1" : "#E2E8F0"}`, overflow:"hidden" }}>
+                {/* View row */}
+                <div style={{ display:"flex", alignItems:"center", gap:"12px", padding:"12px 16px" }}>
+                  <div style={{ flex:1 }}>
+                    <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", margin:"0 0 4px" }}>{sk.name}</p>
+                    <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+                      {m ? (
+                        <span style={{ fontSize:"11px", fontWeight:"700", padding:"2px 10px", borderRadius:"99px", background:m.bg, color:m.color, border:`1px solid ${m.border}` }}>
+                          {m.label}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize:"11px", color:"#CBD5E1" }}>No level set</span>
+                      )}
+                      {sk.years_of_experience != null && (
+                        <span style={{ fontSize:"12px", color:"#64748B", fontWeight:"600" }}>
+                          {sk.years_of_experience} yr{Number(sk.years_of_experience) !== 1 ? "s" : ""} experience
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <button onClick={() => isEditing ? setEditingId(null) : startEdit(sk)}
+                    style={{ background: isEditing ? "#EEF2FF" : "#F1F5F9", border:`1px solid ${isEditing ? "#C7D2FE" : "#E2E8F0"}`, borderRadius:"7px", padding:"5px 7px", cursor:"pointer", display:"flex", alignItems:"center", flexShrink:0 }}>
+                    <Pencil size={12} color={isEditing ? "#4338CA" : "#64748B"} />
+                  </button>
+                  <button onClick={() => handleRemove(sk.skill_id)} style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:"7px", padding:"5px 7px", cursor:"pointer", display:"flex", alignItems:"center", flexShrink:0 }}>
+                    <X size={12} color="#DC2626" />
+                  </button>
                 </div>
-                <button onClick={() => handleRemove(sk.skill_id)} style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:"7px", padding:"5px 7px", cursor:"pointer", display:"flex", alignItems:"center", flexShrink:0 }}>
-                  <X size={12} color="#DC2626" />
-                </button>
+
+                {/* Inline edit form */}
+                {isEditing && (
+                  <div style={{ borderTop:"1px solid #E2E8F0", padding:"14px 16px", background:"#fff" }}>
+                    {editError && <p style={{ fontSize:"12px", color:"#DC2626", marginBottom:"10px" }}>{editError}</p>}
+                    <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"7px" }}>EXPERIENCE LEVEL</p>
+                    <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"14px" }}>
+                      {LEVELS.map(l => {
+                        const lm = LEVEL_META[l];
+                        const active = editLevel === l;
+                        return (
+                          <button key={l} onClick={() => setEditLevel(l)}
+                            style={{ padding:"5px 14px", borderRadius:"99px", border:`1.5px solid ${active ? lm.color : "#E2E8F0"}`, background: active ? lm.bg : "#fff", color: active ? lm.color : "#94A3B8", fontSize:"12px", fontWeight:"700", cursor:"pointer" }}>
+                            {lm.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"7px" }}>YEARS OF EXPERIENCE</p>
+                    <input type="number" min="0" step="0.5" value={editYears} onChange={e => setEditYears(e.target.value)} placeholder="e.g. 3"
+                      style={{ width:"110px", padding:"7px 10px", borderRadius:"8px", border:"1.5px solid #E2E8F0", fontSize:"13px", outline:"none", fontFamily:"inherit", color:"#1E293B", background:"#fff", marginBottom:"14px" }} />
+                    <div style={{ display:"flex", gap:"8px" }}>
+                      <button onClick={() => handleEditSave(sk.skill_id)} disabled={editSaving}
+                        style={{ padding:"7px 20px", borderRadius:"8px", background:"#6366F1", color:"#fff", border:"none", fontSize:"12px", fontWeight:"700", cursor:"pointer", opacity: editSaving ? 0.6 : 1 }}>
+                        {editSaving ? "Saving…" : "Save"}
+                      </button>
+                      <button onClick={() => setEditingId(null)}
+                        style={{ padding:"7px 14px", borderRadius:"8px", background:"#F1F5F9", color:"#64748B", border:"none", fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
@@ -8,6 +8,7 @@ import { Plus, Trash2, Clock, Calendar, Tag, Users, Search, ChevronDown, X } fro
 
 export default function CreateShift() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const user = getUser();
   const userId = user?.user_id;
 
@@ -17,7 +18,7 @@ export default function CreateShift() {
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState("");
 
-  const [form, setForm] = useState({ title: "", shift_date: "", start_time: "", end_time: "", deadline: "" });
+  const [form, setForm] = useState({ title: "", shift_date: searchParams.get("date") || "", start_time: "", end_time: "", deadline: "" });
   const [roles, setRoles] = useState([{ role_name: "", skill_id: "", headcount: 1 }]);
 
   useEffect(() => {

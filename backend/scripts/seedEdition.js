@@ -219,6 +219,29 @@ async function run() {
   if (availErr) console.error("Casual availability:", availErr.message);
   else console.log("Casual availability rows created:", availRows.length);
 
+  // 11. Assign skills to staff with experience_level and years_of_experience
+  const LEVELS = ["junior", "intermediate", "senior", "expert"];
+  const allSkillIds = skills ? skills.map(s => s.skill_id) : [];
+  if (allSkillIds.length > 0) {
+    const staffSkillRows = [];
+    for (const s of staffData) {
+      // Give each staff member 2–3 random skills
+      const shuffled = [...allSkillIds].sort(() => Math.random() - 0.5);
+      const count = 2 + Math.floor(Math.random() * 2); // 2 or 3
+      const picked = shuffled.slice(0, Math.min(count, shuffled.length));
+      for (const skill_id of picked) {
+        const level = LEVELS[Math.floor(Math.random() * LEVELS.length)];
+        const years = 1 + Math.floor(Math.random() * 8); // 1–8 years
+        staffSkillRows.push({ staff_id: s.staff_id, skill_id, experience_level: level, years_of_experience: years });
+      }
+    }
+    const { error: ssErr } = await supabaseAdmin.from("staff_skills").insert(staffSkillRows);
+    if (ssErr) console.error("Staff skills:", ssErr.message);
+    else console.log("Staff skill assignments created:", staffSkillRows.length);
+  } else {
+    console.log("No skills found, skipping staff skill assignments");
+  }
+
   console.log("\n=== Done! All Edition data seeded. Login with any @edition.sg email and password: mock123 ===");
 }
 

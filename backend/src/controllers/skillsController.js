@@ -64,6 +64,24 @@ const addStaffSkill = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
+const updateStaffSkill = async (req, res) => {
+  try {
+    const { staff_id, skill_id } = req.params;
+    const { experience_level, years_of_experience } = req.body;
+    const updates = {};
+    if (experience_level !== undefined) updates.experience_level = experience_level || null;
+    if (years_of_experience !== undefined)
+      updates.years_of_experience = years_of_experience !== "" && years_of_experience !== null ? Number(years_of_experience) : null;
+    const { error } = await supabaseAdmin
+      .from("staff_skills")
+      .update(updates)
+      .eq("staff_id", staff_id)
+      .eq("skill_id", skill_id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
 const removeStaffSkill = async (req, res) => {
   try {
     const { staff_id, skill_id } = req.params;
@@ -101,5 +119,5 @@ const getOutletStaffSkills = async (req, res) => {
 };
 
 module.exports = {
-  getStaffSkills, addStaffSkill, removeStaffSkill, getOutletStaffSkills,
+  getStaffSkills, addStaffSkill, updateStaffSkill, removeStaffSkill, getOutletStaffSkills,
 };

@@ -26,7 +26,6 @@ import ManagerNotifications from "./pages/outlet-manager/Notifications";
 import SkillSettings       from "./pages/outlet-manager/SkillSettings";
 import ManagerSettings     from "./pages/outlet-manager/Settings";
 import ManagerCasualPool   from "./pages/outlet-manager/CasualPool";
-import TaskBoard           from "./pages/outlet-manager/TaskBoard";
 
 // System Admin
 import AdminDashboard      from "./pages/system-admin/Dashboard";
@@ -48,7 +47,6 @@ import SwapRequests   from "./pages/regular-staff/SwapRequests";
 import CasualDashboard    from "./pages/outlet-casual-staff/Dashboard";
 import CasualBranches      from "./pages/outlet-casual-staff/Branches";
 import CasualAvailability  from "./pages/outlet-casual-staff/Availability";
-import CasualTasks         from "./pages/outlet-casual-staff/Tasks";
 import RegisterCasual     from "./pages/RegisterCasual";
 
 // Business Owner
@@ -141,7 +139,6 @@ function App() {
         <Route path="/outlet-manager/invitations"           element={<PR roles={["outlet_manager"]}><OMInvitations /></PR>} />
         <Route path="/outlet-manager/settings"            element={<PR roles={["outlet_manager"]}><ManagerSettings /></PR>} />
         <Route path="/outlet-manager/casual"              element={<PR roles={["outlet_manager"]}><ManagerCasualPool /></PR>} />
-        <Route path="/outlet-manager/task-board"          element={<PR roles={["outlet_manager"]}><TaskBoard /></PR>} />
 
         {/* ── Regular Staff ────────────────────────────── */}
         <Route path="/regular-staff/dashboard"     element={<PR roles={["regular_staff"]}><StaffDashboard /></PR>} />
@@ -156,7 +153,6 @@ function App() {
         <Route path="/outlet-casual-staff/dashboard"        element={<PR roles={["outlet_casual_staff"]}><CasualDashboard /></PR>} />
         <Route path="/outlet-casual-staff/availability"      element={<PR roles={["outlet_casual_staff"]}><CasualAvailability /></PR>} />
         <Route path="/outlet-casual-staff/branches"          element={<PR roles={["outlet_casual_staff"]}><CasualBranches /></PR>} />
-        <Route path="/outlet-casual-staff/tasks"             element={<PR roles={["outlet_casual_staff"]}><CasualTasks /></PR>} />
         <Route path="/outlet-casual-staff/notifications"    element={<PR roles={["outlet_casual_staff"]}>
           <NotificationsPage Layout={CasualLayout} />
         </PR>} />

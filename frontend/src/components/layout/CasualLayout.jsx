@@ -3,13 +3,12 @@ import SignOutButton from "../SignOutButton";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
-import { LayoutDashboard, Building2, CalendarClock, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarClock } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 
 const NAV = [
   { label: "Dashboard",    path: "/outlet-casual-staff/dashboard",    Icon: LayoutDashboard },
-  { label: "Tasks",        path: "/outlet-casual-staff/tasks",        Icon: ClipboardList },
   { label: "Availability", path: "/outlet-casual-staff/availability", Icon: CalendarClock },
   { label: "Branches",     path: "/outlet-casual-staff/branches",     Icon: Building2 },
 ];
