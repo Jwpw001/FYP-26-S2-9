@@ -239,14 +239,14 @@ export default function ManagerDashboard() {
   }
 
   const cardDefs = [
-    { label: "Upcoming Shifts", key: "upcomingShifts", sub: "Next 7 days",      icon: Icons.calendar,  color: "#2563EB", bg: "#EFF6FF", link: "/outlet-manager/shifts" },
+    { label: "Upcoming Tasks",  key: "upcomingShifts", sub: "Next 7 days",      icon: Icons.calendar,  color: "#2563EB", bg: "#EFF6FF", link: "/outlet-manager/shifts" },
     { label: "Total Staff",     key: "totalStaff",     sub: "Active members",   icon: Icons.users,     color: "#059669", bg: "#ECFDF5", link: "/outlet-manager/staff" },
     { label: "Pending Leave",   key: "pendingLeave",   sub: "Awaiting approval",icon: Icons.clipboard, color: "#D97706", bg: "#FFFBEB", link: "/outlet-manager/availability" },
     { label: "Swap Requests",   key: "pendingSwaps",   sub: "Needs review",     icon: Icons.refresh,   color: "#7C3AED", bg: "#F5F3FF", link: "/outlet-manager/availability" },
   ];
 
   const quickActions = [
-    { label: "Create Shift",  icon: Icons.plus,      link: "/outlet-manager/shifts/new" },
+    { label: "Create Task",   icon: Icons.plus,      link: "/outlet-manager/shifts/new" },
     { label: "View Staff",    icon: Icons.users,     link: "/outlet-manager/staff" },
     { label: "Approve Leave", icon: Icons.check,     link: "/outlet-manager/availability" },
     { label: "View Reports",  icon: Icons.chart,     link: "/outlet-manager/reports" },
@@ -354,7 +354,7 @@ export default function ManagerDashboard() {
           {/* Bar chart */}
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px" }}>
             <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "20px" }}>
-              Shifts This Week by Day
+              Tasks This Week by Day
             </h3>
             {loading ? (
               <div style={{ display: "flex", gap: "10px", alignItems: "flex-end", height: "100px" }}>
@@ -399,7 +399,7 @@ export default function ManagerDashboard() {
         {/* Upcoming shifts table */}
         <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-            <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Upcoming Shifts</h3>
+            <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Upcoming Tasks</h3>
             <button style={{ background: "none", border: "none", fontSize: "13px", color: "#2563EB", fontWeight: "600", cursor: "pointer" }}
               onClick={() => goTo("/outlet-manager/shifts")}>
               View all →
@@ -419,7 +419,7 @@ export default function ManagerDashboard() {
             </div>
           ) : recentShifts.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px", color: "#64748B", fontSize: "14px" }}>
-              No shifts in the next 7 days.
+              No tasks in the next 7 days.
             </div>
           ) : (
             <div style={{ width: "100%" }}>

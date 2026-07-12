@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
-import StaffLayout from "../../components/layout/StaffLayout";
+import CasualLayout from "../../components/layout/CasualLayout";
 import { Calendar, Clock, ChevronDown, ChevronUp } from "lucide-react";
 
-if (typeof document !== "undefined" && !document.getElementById("staff-tasks-styles")) {
+if (typeof document !== "undefined" && !document.getElementById("casual-tasks-styles")) {
   const style = document.createElement("style");
-  style.id = "staff-tasks-styles";
+  style.id = "casual-tasks-styles";
   style.textContent = `
     @keyframes fadeSlideUp {
       from { opacity: 0; transform: translateY(14px); }
@@ -53,7 +53,7 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
   );
 }
 
-export default function MyShifts() {
+export default function CasualTasks() {
   const user   = getUser();
   const userId = user?.user_id;
 
@@ -176,7 +176,7 @@ export default function MyShifts() {
   });
 
   return (
-    <StaffLayout title="Tasks">
+    <CasualLayout title="Tasks">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
@@ -274,7 +274,7 @@ export default function MyShifts() {
           {toast.msg}
         </div>
       )}
-    </StaffLayout>
+    </CasualLayout>
   );
 }
 
@@ -297,7 +297,6 @@ function TaskCard({ task, idx, today, saving, logOpen, logEntry, timesheets, log
       animation: `fadeSlideUp 0.3s ease ${idx * 0.06}s both`,
     }}>
 
-      {/* Card body */}
       <div style={{ padding: "20px 22px" }}>
 
         {/* Title row */}

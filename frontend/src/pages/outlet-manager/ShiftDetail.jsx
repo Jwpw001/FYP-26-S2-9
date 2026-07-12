@@ -135,9 +135,32 @@ export default function ShiftDetail() {
   const [krewbyNote, setKrewbyNote] = useState("");
   const [krewbySubmitting, setKrewbySubmitting] = useState(false);
 
+  // Casual auto-assign
+  const [autoAssigning, setAutoAssigning] = useState(null); // role_id being processed
+  const [autoAssignResults, setAutoAssignResults] = useState({}); // role_id → { success, name } | { flagged, reason }
+
   function showToast(msg, type = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
+  }
+
+  async function handleAutoAssign(role) {
+    setAutoAssigning(role.role_id);
+    setAutoAssignResults(prev => { const n = {...prev}; delete n[role.role_id]; return n; });
+    try {
+      const res = await api.post("/api/casual/manager/auto-assign", { shift_id: Number(id), role_id: role.role_id });
+      if (res.success) {
+        setAutoAssignResults(prev => ({ ...prev, [role.role_id]: { success: true, name: res.assigned.full_name } }));
+        showToast(`Assigned ${res.assigned.full_name} to ${role.role_name}`);
+        await reloadRoles();
+      } else if (res.flagged) {
+        setAutoAssignResults(prev => ({ ...prev, [role.role_id]: { flagged: true, reason: res.reason } }));
+      }
+    } catch (err) {
+      showToast("Auto-assign failed", "error");
+    } finally {
+      setAutoAssigning(null);
+    }
   }
 
   async function reloadRoles() {
@@ -887,9 +910,20 @@ export default function ShiftDetail() {
                     return null;
                   })()}
                   {shift.status !== "completed" && shift.status !== "cancelled" && (
-                    <button style={s.assignBtn} onClick={() => openAssignModal(role)}>
-                      Assign Staff
-                    </button>
+                    <>
+                      <button style={s.assignBtn} onClick={() => openAssignModal(role)}>
+                        Assign Staff
+                      </button>
+                      {!isFull && (
+                        <button
+                          style={{ ...s.assignBtn, background: "#F0FDF4", color: "#16A34A", border: "1px solid #BBF7D0", display: "flex", alignItems: "center", gap: "6px" }}
+                          disabled={autoAssigning === role.role_id}
+                          onClick={() => handleAutoAssign(role)}
+                        >
+                          {autoAssigning === role.role_id ? "Finding…" : "⚡ Auto-assign Casual"}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -940,6 +974,26 @@ export default function ShiftDetail() {
               {filled === 0 && (
                 <div style={s.emptyRole}>No staff assigned yet.</div>
               )}
+
+              {/* Auto-assign result banner */}
+              {autoAssignResults[role.role_id] && (() => {
+                const r = autoAssignResults[role.role_id];
+                if (r.success) return (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "10px", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "8px", padding: "10px 14px" }}>
+                    <Check size={15} color="#16A34A" />
+                    <p style={{ fontSize: "13px", color: "#15803D", fontWeight: "600" }}>Auto-assigned {r.name}</p>
+                    <button onClick={() => setAutoAssignResults(p => { const n={...p}; delete n[role.role_id]; return n; })} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: 0 }}><X size={13} /></button>
+                  </div>
+                );
+                if (r.flagged) return (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginTop: "10px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "8px", padding: "10px 14px" }}>
+                    <AlertTriangle size={15} color="#D97706" style={{ flexShrink: 0, marginTop: "1px" }} />
+                    <p style={{ fontSize: "13px", color: "#92400E" }}><strong>Cannot auto-assign:</strong> {r.reason}</p>
+                    <button onClick={() => setAutoAssignResults(p => { const n={...p}; delete n[role.role_id]; return n; })} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: 0 }}><X size={13} /></button>
+                  </div>
+                );
+                return null;
+              })()}
             </div>
           );
         })

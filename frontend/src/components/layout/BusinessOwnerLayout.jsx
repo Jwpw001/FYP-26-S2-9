@@ -3,14 +3,13 @@ import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
-import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings, Briefcase } from "lucide-react";
+import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings } from "lucide-react";
 import ProfileModal from "../ProfileModal";
 
 const NAV = [
   { label: "Dashboard",   path: "/business-owner/dashboard",    Icon: LayoutDashboard },
   { label: "Branches",    path: "/business-owner/outlets",      Icon: Building2 },
   { label: "Workforce",   path: "/business-owner/staff",        Icon: Users },
-  { label: "Casual Pool", path: "/business-owner/casual-pool",  Icon: Briefcase },
   { label: "Invitations", path: "/business-owner/invitations",  Icon: UserPlus },
   { label: "Skill Tags",  path: "/business-owner/skills",       Icon: Tag },
   { label: "Reports",     path: "/business-owner/reports",      Icon: BarChart2 },
@@ -49,8 +48,9 @@ export default function BusinessOwnerLayout({ children, title }) {
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
         <div style={{ ...s.sidebarTop }}>
           <Link to="/business-owner/dashboard" style={s.logoRow}>
-            <div style={s.logoBox}>K</div>
-            <span style={{ ...s.logoText, opacity: expanded ? 1 : 0, maxWidth: expanded ? "120px" : "0px", transition: "opacity 0.25s, max-width 0.25s", overflow: "hidden", whiteSpace: "nowrap" }}>Krewby</span>
+            <div style={{ height: "34px", width: expanded ? "auto" : "34px", maxWidth: expanded ? "160px" : "34px", background: "#fff", borderRadius: "9px", overflow: "hidden", display: "flex", alignItems: "center", transition: "max-width 0.25s ease, width 0.25s ease", flexShrink: 0, padding: expanded ? "0 8px" : "0" }}>
+              <img src="/krewby-logo.png" alt="Krewby" style={{ height: expanded ? "22px" : "34px", width: expanded ? "auto" : "34px", objectFit: expanded ? "contain" : "cover", objectPosition: "left center", display: "block" }} />
+            </div>
           </Link>
           <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "30px" : "0px", transition: "opacity 0.25s, max-height 0.25s", overflow: "hidden", marginTop: "8px" }}>
             <span style={s.badge}>Business Owner</span>
@@ -121,16 +121,16 @@ const s = {
   sidebar: { height: "100vh", background: "#0F172A", display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, zIndex: 300, transition: "width 0.25s ease", overflow: "hidden", flexShrink: 0 },
   sidebarTop: { padding: "20px 14px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)" },
   logoRow: { display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" },
-  logoBox: { width: "34px", height: "34px", borderRadius: "9px", background: "#F59E0B", color: "#1C1917", fontSize: "16px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  logoBox: { width: "34px", height: "34px", borderRadius: "9px", background: "#3B82F6", color: "#FFF", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   logoText: { fontSize: "17px", fontWeight: "800", color: "#FFFFFF", letterSpacing: "-0.01em" },
-  badge: { display: "inline-block", background: "rgba(245,158,11,0.2)", color: "#FCD34D", fontSize: "10px", fontWeight: "700", padding: "3px 10px", borderRadius: "100px", letterSpacing: "0.05em", textTransform: "uppercase", border: "1px solid rgba(245,158,11,0.3)", whiteSpace: "nowrap" },
+  badge: { display: "inline-block", background: "rgba(59,130,246,0.2)", color: "#93C5FD", fontSize: "10px", fontWeight: "700", padding: "3px 10px", borderRadius: "100px", letterSpacing: "0.05em", textTransform: "uppercase", border: "1px solid rgba(59,130,246,0.3)", whiteSpace: "nowrap" },
   nav: { flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "2px" },
   navItem: { display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "9px", fontSize: "14px", fontWeight: "500", color: "rgba(255,255,255,0.6)", textDecoration: "none", transition: "background 0.15s, color 0.15s" },
-  navItemActive: { background: "rgba(245,158,11,0.15)", color: "#FCD34D" },
+  navItemActive: { background: "rgba(59,130,246,0.15)", color: "#93C5FD" },
   navIcon: { width: "20px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   sidebarBottom: { padding: "12px", borderTop: "1px solid rgba(255,255,255,0.08)" },
   userRow: { display: "flex", alignItems: "center", gap: "10px" },
-  avatar: { width: "34px", height: "34px", borderRadius: "50%", background: "#F59E0B", color: "#1C1917", fontSize: "14px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  avatar: { width: "34px", height: "34px", borderRadius: "50%", background: "#3B82F6", color: "#FFF", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   userName: { fontSize: "13px", fontWeight: "600", color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   userRole: { fontSize: "11px", color: "rgba(255,255,255,0.45)", marginTop: "1px" },
   main: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0, marginLeft: "64px" },

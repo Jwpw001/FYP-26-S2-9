@@ -672,7 +672,7 @@ const deleteBusinessSkill = async (req, res) => {
 
 const getBusinessSettings = async (req, res) => {
   try {
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    const biz = await resolveBusinessId(req.user);
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const [{ data: settings }, { data: prefs }] = await Promise.all([
@@ -719,7 +719,7 @@ const updateBusinessSettings = async (req, res) => {
 
 const updateAllocationPrefs = async (req, res) => {
   try {
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    const biz = await resolveBusinessId(req.user);
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const { weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload } = req.body;

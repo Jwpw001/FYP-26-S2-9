@@ -52,11 +52,10 @@ export default function StaffList() {
         const oid = myStaff?.[0]?.outlet_id;
         if (!oid || cancelled) return;
 
-        const [{ data: staffData }, { data: skillData }, { data: tagData }] = await Promise.all([
+        const [{ data: staffData }, { data: tagData }] = await Promise.all([
           supabase.from("staff")
             .select("staff_id, outlet_id, staff_type, is_active, users(user_id, full_name, email, role)")
             .eq("outlet_id", oid),
-          supabase.from("skills").select("skill_id, name"),
           supabase.from("user_skill_tags").select("user_id, skill_id, skills(name)"),
         ]);
 
@@ -69,8 +68,16 @@ export default function StaffList() {
             .map(t => ({ id: t.skill_id, name: t.skills?.name })),
         }));
 
+        // Derive unique skills only from what's actually assigned to this outlet's staff
+        const seenIds = new Set();
+        const uniqueSkills = [];
+        enriched.forEach(s => s.skillTags.forEach(t => {
+          if (!seenIds.has(t.id)) { seenIds.add(t.id); uniqueSkills.push({ skill_id: t.id, name: t.name }); }
+        }));
+        uniqueSkills.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
         setStaff(enriched);
-        setSkills(skillData || []);
+        setSkills(uniqueSkills);
       } catch (err) {
         console.error(err);
       } finally {
@@ -202,31 +209,37 @@ function StaffCard({ member: m, index, onNav }) {
       style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${index * 0.05}s both`, cursor: "pointer" }}>
 
       {/* Avatar + name */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
         <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: bgColor, color: "#FFF", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {initials}
         </div>
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
           <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
         </div>
+        <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "10px", fontWeight: "700", flexShrink: 0, background: m.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: m.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
+          {m.staff_type === "regular" ? "Regular" : "Casual"}
+        </span>
       </div>
 
-      {/* Type + skill tags */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px" }}>
-        <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: m.users?.role === "outlet_manager" ? "#EDE9FE" : m.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: m.users?.role === "outlet_manager" ? "#7C3AED" : m.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
-          {m.users?.role === "outlet_manager" ? "Manager" : m.staff_type === "regular" ? "Regular" : "Casual"}
-        </span>
-        {m.skillTags?.slice(0, 2).map(t => (
-          <span key={t.id} style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "500", background: "#F1F5F9", color: "#475569" }}>{t.name}</span>
-        ))}
-        {m.skillTags?.length > 2 && (
-          <span style={{ padding: "3px 8px", borderRadius: "100px", fontSize: "11px", background: "#E2E8F0", color: "#64748B" }}>+{m.skillTags.length - 2}</span>
+      {/* Skill tags */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px", minHeight: "24px" }}>
+        {m.skillTags?.length === 0 ? (
+          <span style={{ fontSize: "12px", color: "#CBD5E1" }}>No skills assigned</span>
+        ) : (
+          <>
+            {m.skillTags.slice(0, 3).map(t => (
+              <span key={t.id} style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "500", background: "#F1F5F9", color: "#475569" }}>{t.name}</span>
+            ))}
+            {m.skillTags.length > 3 && (
+              <span style={{ padding: "3px 8px", borderRadius: "100px", fontSize: "11px", background: "#E2E8F0", color: "#64748B" }}>+{m.skillTags.length - 3}</span>
+            )}
+          </>
         )}
       </div>
 
-      {/* Footer: status only */}
-      <div style={{ paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
+      {/* Footer: status */}
+      <div style={{ paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
         <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "600", color: m.is_active ? "#16A34A" : "#94A3B8" }}>
           <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: m.is_active ? "#22C55E" : "#D1D5DB", display: "inline-block" }} />
           {m.is_active ? "Active" : "Inactive"}

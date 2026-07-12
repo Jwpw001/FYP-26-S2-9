@@ -977,17 +977,13 @@ function fmtTime(t) {
   return `${hour % 12 || 12}:${m} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function CasualAvailCard({ entry }) {
   const name = entry.staffInfo?.users?.full_name || entry.staffInfo?.users?.email || "Casual Staff";
   const initial = name[0]?.toUpperCase() || "?";
-  const sortedDays = [...entry.days].sort((a, b) => {
-    // Sort by day_of_week: Mon=1...Sun=0, treat 0 as 7
-    const da = a.day_of_week === 0 ? 7 : a.day_of_week;
-    const db = b.day_of_week === 0 ? 7 : b.day_of_week;
-    return da - db;
-  });
+  // day_of_week: 0=Mon … 6=Sun — sort numerically
+  const sortedDays = [...entry.days].sort((a, b) => a.day_of_week - b.day_of_week);
 
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px", animation: "fadeSlideUp 0.3s ease both" }}>

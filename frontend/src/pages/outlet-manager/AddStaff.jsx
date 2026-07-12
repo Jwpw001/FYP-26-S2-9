@@ -22,7 +22,7 @@ export default function AddStaff() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     full_name: "", username: "", email: "", password: "", staff_type: "regular",
-    default_work_days: "1111100", hired_at: "",
+    default_work_days: "1111100", hired_at: new Date().toISOString().slice(0, 10),
   });
 
   useEffect(() => {
@@ -169,7 +169,7 @@ export default function AddStaff() {
               <select style={s.input} value={form.staff_type}
                 onChange={e => setForm(p => ({ ...p, staff_type: e.target.value }))}>
                 <option value="regular">Regular Staff</option>
-                <option value="casual">Outlet Casual Staff</option>
+                <option value="casual">Casual Staff</option>
               </select>
             </div>
             {form.staff_type === "regular" && (

@@ -273,8 +273,7 @@ export default function Home() {
       <div style={s.navSpacer}/>
       <nav style={s.navbar}>
         <div style={s.navLeft}>
-          <div style={s.logoMark}>K</div>
-          <span style={s.logoText}>Krewby</span>
+          <img src="/krewby-logo.png" alt="Krewby" style={{ height: "30px", objectFit: "contain" }} />
         </div>
         <NavHeader
           items={["Features", "Who it's for", "How it works", "FAQ"]}

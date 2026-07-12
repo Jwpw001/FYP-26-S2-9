@@ -23,8 +23,10 @@ import AvailabilityLeave  from "./pages/outlet-manager/AvailabilityLeave";
 import Attendance         from "./pages/outlet-manager/Attendance";
 import Reports            from "./pages/outlet-manager/Reports";
 import ManagerNotifications from "./pages/outlet-manager/Notifications";
-import ManpowerRequests    from "./pages/outlet-manager/ManpowerRequests";
 import SkillSettings       from "./pages/outlet-manager/SkillSettings";
+import ManagerSettings     from "./pages/outlet-manager/Settings";
+import ManagerCasualPool   from "./pages/outlet-manager/CasualPool";
+import TaskBoard           from "./pages/outlet-manager/TaskBoard";
 
 // System Admin
 import AdminDashboard      from "./pages/system-admin/Dashboard";
@@ -44,8 +46,9 @@ import SwapRequests   from "./pages/regular-staff/SwapRequests";
 
 // Outlet Casual Staff
 import CasualDashboard    from "./pages/outlet-casual-staff/Dashboard";
-import BrowseRequests     from "./pages/outlet-casual-staff/BrowseRequests";
-import MyApplications     from "./pages/outlet-casual-staff/MyApplications";
+import CasualBranches      from "./pages/outlet-casual-staff/Branches";
+import CasualAvailability  from "./pages/outlet-casual-staff/Availability";
+import CasualTasks         from "./pages/outlet-casual-staff/Tasks";
 import RegisterCasual     from "./pages/RegisterCasual";
 
 // Business Owner
@@ -59,13 +62,10 @@ import BOInvitations from "./pages/business-owner/Invitations";
 import BOSkills      from "./pages/business-owner/Skills";
 import BOReports     from "./pages/business-owner/Reports";
 import BOSettings    from "./pages/business-owner/Settings";
-import BOCasualPool  from "./pages/business-owner/CasualPool";
 import BusinessOwnerLayout from "./components/layout/BusinessOwnerLayout";
 import AcceptInvite  from "./pages/AcceptInvite";
 import JoinByCode    from "./pages/JoinByCode";
 import OMInvitations      from "./pages/outlet-manager/Invitations";
-import CasualRequests     from "./pages/outlet-manager/CasualRequests";
-import CasualRequestDetail from "./pages/outlet-manager/CasualRequestDetail";
 
 // System Admin — Krewby operations
 import AdminApplications  from "./pages/system-admin/Applications";
@@ -109,7 +109,6 @@ function App() {
         <Route path="/business-owner/skills"      element={<PR roles={["business_owner"]}><BOSkills /></PR>} />
         <Route path="/business-owner/reports"     element={<PR roles={["business_owner"]}><BOReports /></PR>} />
         <Route path="/business-owner/settings"     element={<PR roles={["business_owner"]}><BOSettings /></PR>} />
-        <Route path="/business-owner/casual-pool" element={<PR roles={["business_owner"]}><BOCasualPool /></PR>} />
         <Route path="/business-owner/notifications" element={<PR roles={["business_owner"]}>
           <NotificationsPage Layout={BusinessOwnerLayout} />
         </PR>} />
@@ -138,11 +137,11 @@ function App() {
         <Route path="/outlet-manager/attendance"   element={<PR roles={["outlet_manager"]}><Attendance /></PR>} />
         <Route path="/outlet-manager/reports"        element={<PR roles={["outlet_manager"]}><Reports /></PR>} />
         <Route path="/outlet-manager/notifications" element={<PR roles={["outlet_manager"]}><ManagerNotifications /></PR>} />
-        <Route path="/outlet-manager/manpower"       element={<PR roles={["outlet_manager"]}><ManpowerRequests /></PR>} />
         <Route path="/outlet-manager/skills"        element={<PR roles={["outlet_manager"]}><SkillSettings /></PR>} />
         <Route path="/outlet-manager/invitations"           element={<PR roles={["outlet_manager"]}><OMInvitations /></PR>} />
-        <Route path="/outlet-manager/casual-requests"       element={<PR roles={["outlet_manager"]}><CasualRequests /></PR>} />
-        <Route path="/outlet-manager/casual-requests/:id"   element={<PR roles={["outlet_manager"]}><CasualRequestDetail /></PR>} />
+        <Route path="/outlet-manager/settings"            element={<PR roles={["outlet_manager"]}><ManagerSettings /></PR>} />
+        <Route path="/outlet-manager/casual"              element={<PR roles={["outlet_manager"]}><ManagerCasualPool /></PR>} />
+        <Route path="/outlet-manager/task-board"          element={<PR roles={["outlet_manager"]}><TaskBoard /></PR>} />
 
         {/* ── Regular Staff ────────────────────────────── */}
         <Route path="/regular-staff/dashboard"     element={<PR roles={["regular_staff"]}><StaffDashboard /></PR>} />
@@ -155,8 +154,9 @@ function App() {
 
         {/* ── Outlet Casual Staff ──────────────────────── */}
         <Route path="/outlet-casual-staff/dashboard"        element={<PR roles={["outlet_casual_staff"]}><CasualDashboard /></PR>} />
-        <Route path="/outlet-casual-staff/requests"         element={<PR roles={["outlet_casual_staff"]}><BrowseRequests /></PR>} />
-        <Route path="/outlet-casual-staff/my-applications"  element={<PR roles={["outlet_casual_staff"]}><MyApplications /></PR>} />
+        <Route path="/outlet-casual-staff/availability"      element={<PR roles={["outlet_casual_staff"]}><CasualAvailability /></PR>} />
+        <Route path="/outlet-casual-staff/branches"          element={<PR roles={["outlet_casual_staff"]}><CasualBranches /></PR>} />
+        <Route path="/outlet-casual-staff/tasks"             element={<PR roles={["outlet_casual_staff"]}><CasualTasks /></PR>} />
         <Route path="/outlet-casual-staff/notifications"    element={<PR roles={["outlet_casual_staff"]}>
           <NotificationsPage Layout={CasualLayout} />
         </PR>} />

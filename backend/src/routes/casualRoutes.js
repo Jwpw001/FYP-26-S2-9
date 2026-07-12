@@ -4,16 +4,14 @@ const protect = require("../middleware/authMiddleware");
 const {
   registerCasualWorker,
   getCasualWorkerStatus,
-  browseRequests,
-  applyToRequest,
-  withdrawApplication,
-  getMyApplications,
-  createRequest,
-  listManagerRequests,
-  getRequestDetail,
-  confirmApplicant,
-  cancelRequest,
-  aiRecommend,
+  getMyOutlets,
+  getPreferences,
+  setPreferences,
+  getMyAvailability,
+  setMyAvailability,
+  submitWeeklyAvailability,
+  getManagerPool,
+  autoAssignCasual,
   getPool,
   approveWorker,
   rejectWorker,
@@ -21,29 +19,29 @@ const {
   regenerateJoinCode,
 } = require("../controllers/casualController");
 
-// ── Public ──────────────────────────────────────────────────────────────────
+// Public
 router.post("/register", registerCasualWorker);
 
-// ── Casual Worker ────────────────────────────────────────────────────────────
-router.get("/me",                        protect, getCasualWorkerStatus);
-router.get("/requests",                  protect, browseRequests);
-router.post("/requests/:id/apply",       protect, applyToRequest);
-router.delete("/requests/:id/apply",     protect, withdrawApplication);
-router.get("/my-applications",           protect, getMyApplications);
+router.use(protect);
 
-// ── Manager ──────────────────────────────────────────────────────────────────
-router.post("/manager/requests",                            protect, createRequest);
-router.get("/manager/requests",                             protect, listManagerRequests);
-router.get("/manager/requests/:id",                         protect, getRequestDetail);
-router.post("/manager/requests/:id/confirm/:application_id", protect, confirmApplicant);
-router.post("/manager/requests/:id/cancel",                 protect, cancelRequest);
-router.post("/manager/requests/:id/ai-recommend",           protect, aiRecommend);
+// Casual worker
+router.get("/me",              getCasualWorkerStatus);
+router.get("/my-outlets",      getMyOutlets);
+router.get("/preferences",     getPreferences);
+router.put("/preferences",     setPreferences);
+router.get("/availability",        getMyAvailability);
+router.put("/availability",        setMyAvailability);
+router.post("/availability/submit", submitWeeklyAvailability);
 
-// ── Business Owner ────────────────────────────────────────────────────────────
-router.get("/pool",                    protect, getPool);
-router.post("/pool/:id/approve",       protect, approveWorker);
-router.post("/pool/:id/reject",        protect, rejectWorker);
-router.get("/join-code",               protect, getJoinCode);
-router.post("/join-code/regenerate",   protect, regenerateJoinCode);
+// Manager
+router.get("/manager/pool",        getManagerPool);
+router.post("/manager/auto-assign", autoAssignCasual);
+
+// Business Owner
+router.get("/pool",                      getPool);
+router.post("/pool/:id/approve",         approveWorker);
+router.post("/pool/:id/reject",          rejectWorker);
+router.get("/join-code",                 getJoinCode);
+router.post("/join-code/regenerate",     regenerateJoinCode);
 
 module.exports = router;

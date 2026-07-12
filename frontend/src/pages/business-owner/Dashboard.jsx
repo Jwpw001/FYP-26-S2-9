@@ -3,7 +3,7 @@ import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
 import {
-  Building2, Users, Briefcase, UserPlus, Tag, BarChart2,
+  Building2, Users, UserPlus, Tag, BarChart2,
   Settings, Mail, Phone, MapPin, FileText, ChevronRight, Calendar,
 } from "lucide-react";
 
@@ -91,7 +91,6 @@ function ActionCard({ Icon, label, sub, color, bg, onClick, delay }) {
 const ACTIONS = [
   { Icon: Building2, label: "Branches",    sub: "Manage your locations",   color: "#D97706", bg: "#FEF3C7", link: "/business-owner/outlets" },
   { Icon: Users,     label: "Workforce",   sub: "View all staff members",  color: "#2563EB", bg: "#EFF6FF", link: "/business-owner/staff" },
-  { Icon: Briefcase, label: "Casual Pool", sub: "Browse flexible workers", color: "#7C3AED", bg: "#F5F3FF", link: "/business-owner/casual-pool" },
   { Icon: UserPlus,  label: "Invitations", sub: "Pending join requests",   color: "#0891B2", bg: "#ECFEFF", link: "/business-owner/invitations" },
   { Icon: Tag,       label: "Skill Tags",  sub: "Categorise staff skills", color: "#059669", bg: "#ECFDF5", link: "/business-owner/skills" },
   { Icon: BarChart2, label: "Reports",     sub: "Analytics & insights",    color: "#DC2626", bg: "#FEF2F2", link: "/business-owner/reports" },

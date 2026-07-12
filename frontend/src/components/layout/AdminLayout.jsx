@@ -28,8 +28,9 @@ export default function AdminLayout({ children, title }) {
         style={{ ...s.sidebar, width: expanded ? "224px" : "64px" }}>
         <div style={{ ...s.sidebarTop, padding: "20px 14px 16px" }}>
           <Link to="/system-admin/dashboard" style={s.logoRow}>
-            <div style={s.logoBox}>K</div>
-            <span style={{ ...s.logoText, opacity: expanded ? 1 : 0, maxWidth: expanded ? "120px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>Krewby</span>
+            <div style={{ height: "34px", width: expanded ? "auto" : "34px", maxWidth: expanded ? "160px" : "34px", background: "#fff", borderRadius: "9px", overflow: "hidden", display: "flex", alignItems: "center", transition: "max-width 0.25s ease, width 0.25s ease", flexShrink: 0, padding: expanded ? "0 8px" : "0" }}>
+              <img src="/krewby-logo.png" alt="Krewby" style={{ height: expanded ? "22px" : "34px", width: expanded ? "auto" : "34px", objectFit: expanded ? "contain" : "cover", objectPosition: "left center", display: "block" }} />
+            </div>
           </Link>
           <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "30px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden", marginTop: "8px" }}>
             <span style={s.adminBadge}>Admin</span>

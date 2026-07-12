@@ -65,6 +65,8 @@ export default function Attendance() {
   const [loadingAssign, setLoadingAssign] = useState(false);
   const [saving, setSaving]               = useState(null);
   const [toast, setToast]                 = useState(null);
+  const [outletId, setOutletId]           = useState(null);
+  const [activeTab, setActiveTab]         = useState("timesheet");
 
   const today = new Date().toISOString().split("T")[0];
   const [dateFilter, setDateFilter] = useState(today);
@@ -84,6 +86,7 @@ export default function Attendance() {
           .eq("user_id", userId).eq("is_active", true).limit(1);
         const oid = myStaff?.[0]?.outlet_id;
         if (!oid || cancelled) return;
+        setOutletId(oid);
 
         const { data } = await supabase
           .from("shifts")
@@ -291,26 +294,45 @@ export default function Attendance() {
   }
 
   return (
-    <ManagerLayout title="Attendance">
+    <ManagerLayout title="Timesheet">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Attendance</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>Mark attendance for published shifts</p>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Timesheet</h2>
+            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+              {activeTab === "timesheet" ? "Mark timesheet for published shifts" : "Track working hours per staff member"}
+            </p>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <svg width="16" height="16" fill="none" stroke="#64748B" strokeWidth="2" viewBox="0 0 24 24">
-              <rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/>
-            </svg>
-            <input
-              style={{ padding: "9px 13px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "14px", background: "#FFFFFF", color: "#1E293B", outline: "none" }}
-              type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)}
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "3px", background: "#F1F5F9", borderRadius: "10px", padding: "3px" }}>
+              {[["timesheet","Timesheet"],["hours","Working Hours"]].map(([id, label]) => (
+                <button key={id} onClick={() => setActiveTab(id)}
+                  style={{ padding: "7px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontSize: "13px", fontWeight: "600", transition: "all 0.15s",
+                    background: activeTab === id ? "#FFF" : "transparent",
+                    color: activeTab === id ? "#1E293B" : "#64748B",
+                    boxShadow: activeTab === id ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                  }}>{label}</button>
+              ))}
+            </div>
+            {activeTab === "timesheet" && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <svg width="16" height="16" fill="none" stroke="#64748B" strokeWidth="2" viewBox="0 0 24 24">
+                  <rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/>
+                </svg>
+                <input
+                  style={{ padding: "9px 13px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "14px", background: "#FFFFFF", color: "#1E293B", outline: "none" }}
+                  type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </div>
 
+        {activeTab === "hours" ? (
+          <WorkingHours outletId={outletId} />
+        ) : (
         <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "20px" }}>
 
           {/* Shift list */}
@@ -353,7 +375,7 @@ export default function Attendance() {
                   <rect x="9" y="3" width="6" height="4" rx="1"/>
                   <path d="M9 12h6M9 16h4"/>
                 </svg>
-                Select a shift to mark attendance
+                Select a shift to mark timesheet
               </div>
             ) : loadingAssign ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -380,7 +402,7 @@ export default function Attendance() {
               </div>
             ) : (
               <>
-                <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "16px" }}>Mark Attendance</h3>
+                <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "16px" }}>Mark Timesheet</h3>
                 {assignments.map(a => (
                   <AttendanceRow
                     key={a.assignment_id}
@@ -400,6 +422,7 @@ export default function Attendance() {
           </div>
 
         </div>
+        )}
       </div>
 
       {/* Toast */}
@@ -548,4 +571,284 @@ function AttendanceRow({ assignment: a, saving, shiftDate, getAttendanceStyle, g
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", { weekday: "long", month: "long", day: "numeric" });
+}
+
+function fmtDateShort(d) {
+  if (!d) return "—";
+  return new Date(d + "T00:00:00").toLocaleDateString("en-SG", { day: "numeric", month: "short" });
+}
+
+function toLocalDateStr(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function fmtHours(h) {
+  if (!h || h <= 0) return "0h";
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return mm > 0 ? `${hh}h ${mm}m` : `${hh}h`;
+}
+
+function KPICard({ label, value, color }) {
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "16px 20px" }}>
+      <p style={{ fontSize: "22px", fontWeight: "800", color }}>{value}</p>
+      <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", marginTop: "4px" }}>{label}</p>
+    </div>
+  );
+}
+
+function StaffHoursCard({ staff, rank, expanded, onToggle, fmtHrs }) {
+  const name = staff.name;
+  const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  const attendedShifts = staff.present + staff.late;
+
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "12px", overflow: "hidden" }}>
+      <div onClick={onToggle} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 18px", cursor: "pointer" }}>
+        <span style={{ fontSize: "11px", fontWeight: "700", color: "#CBD5E1", minWidth: "20px" }}>#{rank}</span>
+        <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: avatarColor(name), color: "#FFF",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", fontWeight: "700", flexShrink: 0 }}>
+          {initials}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{name}</p>
+          <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>
+            {attendedShifts} of {staff.shiftsAssigned} shift{staff.shiftsAssigned !== 1 ? "s" : ""} attended
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+          {staff.present > 0 && <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px", background: "#DCFCE7", color: "#166534" }}>{staff.present}P</span>}
+          {staff.late   > 0 && <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px", background: "#FFFBEB", color: "#D97706" }}>{staff.late}L</span>}
+          {staff.absent > 0 && <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px", background: "#FEE2E2", color: "#991B1B" }}>{staff.absent}A</span>}
+        </div>
+        <div style={{ textAlign: "right", minWidth: "80px" }}>
+          <p style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>{fmtHrs(staff.totalHours)}</p>
+          <p style={{ fontSize: "11px", color: "#94A3B8" }}>total hours</p>
+        </div>
+        <svg width="16" height="16" fill="none" stroke="#94A3B8" strokeWidth="2" viewBox="0 0 24 24"
+          style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+      {expanded && staff.records.length > 0 && (
+        <div style={{ borderTop: "1px solid #F1F5F9", padding: "0 18px 14px" }}>
+          {[...staff.records]
+            .filter(r => r.shift)
+            .sort((a, b) => (a.shift?.shift_date || "").localeCompare(b.shift?.shift_date || ""))
+            .map((r, i, arr) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "9px 0",
+                borderBottom: i < arr.length - 1 ? "1px solid #F8FAFC" : "none" }}>
+                <div style={{ width: "38px", height: "38px", borderRadius: "9px", background: "#F1F5F9",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontSize: "9px", fontWeight: "700", color: "#94A3B8", lineHeight: 1 }}>
+                    {new Date(r.shift.shift_date + "T00:00:00").toLocaleDateString("en-SG", { month: "short" }).toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: "14px", fontWeight: "800", color: "#475569", lineHeight: 1 }}>
+                    {new Date(r.shift.shift_date + "T00:00:00").getDate()}
+                  </span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: "12px", fontWeight: "600", color: "#1E293B" }}>{r.shift.title || "Shift"}</p>
+                  <p style={{ fontSize: "11px", color: "#94A3B8" }}>
+                    {r.shift.start_time?.slice(0, 5)} – {r.shift.end_time?.slice(0, 5)}
+                  </p>
+                </div>
+                {r.att && (
+                  <div style={{ textAlign: "right", fontSize: "11px", color: "#64748B" }}>
+                    {r.att.clock_in && <span>{isoToTimeInput(r.att.clock_in)}</span>}
+                    {r.att.clock_in && r.att.clock_out && <span style={{ color: "#CBD5E1" }}> → </span>}
+                    {r.att.clock_out && <span>{isoToTimeInput(r.att.clock_out)}</span>}
+                  </div>
+                )}
+                <div style={{ minWidth: "60px", textAlign: "right" }}>
+                  {r.hours != null ? (
+                    <span style={{ fontSize: "13px", fontWeight: "700", color: "#059669" }}>{fmtHrs(r.hours)}</span>
+                  ) : r.att?.status === "absent" ? (
+                    <span style={{ fontSize: "11px", fontWeight: "600", color: "#EF4444" }}>Absent</span>
+                  ) : (
+                    <span style={{ fontSize: "11px", color: "#CBD5E1" }}>—</span>
+                  )}
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WorkingHours({ outletId }) {
+  const [period, setPeriod] = useState("week");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const [staffHours, setStaffHours] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState({});
+
+  function getRangeForPeriod(p) {
+    const today = new Date();
+    if (p === "week") {
+      const dow = today.getDay();
+      const diff = dow === 0 ? -6 : 1 - dow;
+      const start = new Date(today);
+      start.setDate(today.getDate() + diff);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return [toLocalDateStr(start), toLocalDateStr(end)];
+    }
+    if (p === "month") {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return [toLocalDateStr(start), toLocalDateStr(end)];
+    }
+    return [customStart, customEnd];
+  }
+
+  useEffect(() => {
+    if (!outletId) return;
+    if (period === "custom" && (!customStart || !customEnd)) return;
+    const [startDate, endDate] = getRangeForPeriod(period);
+    if (!startDate || !endDate) return;
+
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const { data: shifts } = await supabase
+          .from("shifts")
+          .select("shift_id, shift_date, title, start_time, end_time")
+          .eq("outlet_id", outletId)
+          .gte("shift_date", startDate)
+          .lte("shift_date", endDate);
+
+        if (!shifts?.length) {
+          if (!cancelled) { setStaffHours([]); setLoading(false); }
+          return;
+        }
+
+        const shiftIds = shifts.map(s => s.shift_id);
+        const shiftMap = Object.fromEntries(shifts.map(s => [s.shift_id, s]));
+
+        const { data: asgns } = await supabase
+          .from("shift_assignments")
+          .select(`
+            assignment_id, staff_id, shift_id,
+            staff ( users ( full_name ) ),
+            attendance ( attendance_id, clock_in, clock_out, status )
+          `)
+          .in("shift_id", shiftIds);
+
+        const staffMap = {};
+        for (const asgn of (asgns || [])) {
+          const att = asgn.attendance?.[0];
+          const staffId = asgn.staff_id;
+          const name = asgn.staff?.users?.full_name || "Unknown";
+
+          if (!staffMap[staffId]) {
+            staffMap[staffId] = { staffId, name, totalHours: 0, shiftsAssigned: 0, present: 0, late: 0, absent: 0, noRecord: 0, records: [] };
+          }
+
+          staffMap[staffId].shiftsAssigned++;
+          const shift = shiftMap[asgn.shift_id];
+
+          if (!att) {
+            staffMap[staffId].noRecord++;
+            staffMap[staffId].records.push({ shift, att: null, hours: null });
+          } else if (att.status === "absent") {
+            staffMap[staffId].absent++;
+            staffMap[staffId].records.push({ shift, att, hours: null });
+          } else {
+            if (att.status === "present") staffMap[staffId].present++;
+            else if (att.status === "late") staffMap[staffId].late++;
+            const hours = (att.clock_in && att.clock_out)
+              ? (new Date(att.clock_out) - new Date(att.clock_in)) / 3600000
+              : null;
+            if (hours != null) staffMap[staffId].totalHours += hours;
+            staffMap[staffId].records.push({ shift, att, hours });
+          }
+        }
+
+        if (!cancelled) {
+          setStaffHours(Object.values(staffMap).sort((a, b) => b.totalHours - a.totalHours));
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [outletId, period, customStart, customEnd]);
+
+  if (!outletId) return <div style={{ textAlign: "center", padding: "64px 0", color: "#94A3B8", fontSize: "14px" }}>Loading…</div>;
+
+  const [startDate, endDate] = getRangeForPeriod(period);
+  const totalHours = staffHours.reduce((s, x) => s + x.totalHours, 0);
+
+  return (
+    <div>
+      {/* Period selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "3px", background: "#F1F5F9", borderRadius: "10px", padding: "3px" }}>
+          {[["week","This Week"],["month","This Month"],["custom","Custom"]].map(([id, label]) => (
+            <button key={id} onClick={() => setPeriod(id)}
+              style={{ padding: "6px 14px", borderRadius: "7px", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: "600", transition: "all 0.15s",
+                background: period === id ? "#FFF" : "transparent",
+                color: period === id ? "#1E293B" : "#64748B",
+                boxShadow: period === id ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+              }}>{label}</button>
+          ))}
+        </div>
+        {period === "custom" && (
+          <>
+            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+              style={{ padding: "6px 10px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "13px", color: "#1E293B", outline: "none" }} />
+            <span style={{ color: "#94A3B8", fontSize: "13px" }}>to</span>
+            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+              style={{ padding: "6px 10px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "13px", color: "#1E293B", outline: "none" }} />
+          </>
+        )}
+        {period !== "custom" && startDate && (
+          <span style={{ fontSize: "12px", color: "#94A3B8" }}>
+            {fmtDateShort(startDate)} – {fmtDateShort(endDate)}
+          </span>
+        )}
+      </div>
+
+      {/* KPI summary */}
+      {!loading && staffHours.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "20px" }}>
+          <KPICard label="Staff Tracked" value={staffHours.length} color="#2563EB" />
+          <KPICard label="Total Hours" value={fmtHours(totalHours)} color="#059669" />
+          <KPICard label="Avg per Staff" value={fmtHours(staffHours.length ? totalHours / staffHours.length : 0)} color="#7C3AED" />
+        </div>
+      )}
+
+      {/* Staff list */}
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} h="72px" r="12px" />)}
+        </div>
+      ) : staffHours.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "64px 0", color: "#64748B", fontSize: "14px" }}>
+          No attendance records found for this period.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {staffHours.map((s, i) => (
+            <StaffHoursCard
+              key={s.staffId}
+              staff={s}
+              rank={i + 1}
+              expanded={!!expanded[s.staffId]}
+              onToggle={() => setExpanded(prev => ({ ...prev, [s.staffId]: !prev[s.staffId] }))}
+              fmtHrs={fmtHours}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

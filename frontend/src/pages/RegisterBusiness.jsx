@@ -127,8 +127,9 @@ export default function RegisterBusiness() {
       <div style={{ flex: "0 0 38%", minWidth: "360px", background: "linear-gradient(160deg,#1E3A8A 0%,#1E40AF 45%,#2563EB 100%)", color: "#fff", padding: "56px 48px", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "sticky", top: 0, height: "100vh", boxSizing: "border-box" }}>
         <div>
           <button onClick={() => goTo("/")} style={{ display: "flex", alignItems: "center", gap: "10px", background: "none", border: "none", cursor: "pointer", marginBottom: "64px" }}>
-            <div style={{ width: "32px", height: "32px", borderRadius: "9px", background: "#fff", color: "#1E3A8A", fontSize: "15px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center" }}>K</div>
-            <span style={{ fontSize: "18px", fontWeight: "800", letterSpacing: "-0.02em", color: "#fff" }}>Krewby</span>
+            <div style={{ background: "#fff", borderRadius: "9px", padding: "5px 10px", display: "inline-flex", alignItems: "center" }}>
+              <img src="/krewby-logo.png" alt="Krewby" style={{ height: "22px", objectFit: "contain", display: "block" }} />
+            </div>
           </button>
 
           <h1 style={{ fontSize: "32px", fontWeight: "800", lineHeight: 1.25, letterSpacing: "-0.02em", marginBottom: "16px" }}>

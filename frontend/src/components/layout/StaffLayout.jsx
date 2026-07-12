@@ -9,7 +9,7 @@ import ProfileModal from "../ProfileModal";
 
 const NAV = [
   { label: "Dashboard",     path: "/regular-staff/dashboard", Icon: LayoutDashboard },
-  { label: "My Shifts",     path: "/regular-staff/shifts",    Icon: CalendarDays },
+  { label: "Tasks",          path: "/regular-staff/shifts",    Icon: CalendarDays },
   { label: "Leave",         path: "/regular-staff/leave",     Icon: UmbrellaOff },
   { label: "Swap Requests", path: "/regular-staff/swaps",     Icon: ArrowLeftRight },
 ];
@@ -42,8 +42,9 @@ export default function StaffLayout({ children, title }) {
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
         <div style={{ ...s.sidebarTop, padding: "20px 14px 16px" }}>
           <Link to="/regular-staff/dashboard" style={s.logoRow}>
-            <div style={s.logoBox}>K</div>
-            <span style={{ ...s.logoText, opacity: expanded ? 1 : 0, maxWidth: expanded ? "120px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>Krewby</span>
+            <div style={{ height: "34px", width: expanded ? "auto" : "34px", maxWidth: expanded ? "160px" : "34px", background: "#fff", borderRadius: "9px", overflow: "hidden", display: "flex", alignItems: "center", transition: "max-width 0.25s ease, width 0.25s ease", flexShrink: 0, padding: expanded ? "0 8px" : "0" }}>
+              <img src="/krewby-logo.png" alt="Krewby" style={{ height: expanded ? "22px" : "34px", width: expanded ? "auto" : "34px", objectFit: expanded ? "contain" : "cover", objectPosition: "left center", display: "block" }} />
+            </div>
           </Link>
         </div>
         <nav style={s.nav}>

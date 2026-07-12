@@ -4,7 +4,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, UserPlus, Mail, Tag, Briefcase } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, ClipboardList, BarChart2, Mail, Tag, Settings } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 
@@ -12,13 +12,13 @@ const NAV = [
   { label: "Dashboard",    path: "/outlet-manager/dashboard",       Icon: LayoutDashboard },
   { label: "Workforce",    path: "/outlet-manager/staff",           Icon: Users },
   { label: "Tasks",        path: "/outlet-manager/shifts",          Icon: CalendarDays },
-  { label: "Casual",       path: "/outlet-manager/casual-requests", Icon: Briefcase },
+  { label: "Task Board",   path: "/outlet-manager/task-board",      Icon: ClipboardList },
   { label: "Availability", path: "/outlet-manager/availability",    Icon: CalendarClock },
-  { label: "Attendance",   path: "/outlet-manager/attendance",      Icon: ClipboardCheck },
+  { label: "Timesheet",   path: "/outlet-manager/attendance",      Icon: ClipboardCheck },
   { label: "Reports",      path: "/outlet-manager/reports",         Icon: BarChart2 },
-  { label: "Manpower",     path: "/outlet-manager/manpower",        Icon: UserPlus },
   { label: "Skills",       path: "/outlet-manager/skills",          Icon: Tag },
   { label: "Invitations",  path: "/outlet-manager/invitations",     Icon: Mail },
+  { label: "Settings",    path: "/outlet-manager/settings",        Icon: Settings },
 ];
 
 export default function ManagerLayout({ children, title }) {
@@ -49,8 +49,9 @@ export default function ManagerLayout({ children, title }) {
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
         <div style={{ ...s.sidebarTop, padding: "20px 14px 16px" }}>
           <Link to="/outlet-manager/dashboard" style={s.logoRow}>
-            <div style={s.logoBox}>K</div>
-            <span style={{ ...s.logoText, opacity: expanded ? 1 : 0, maxWidth: expanded ? "120px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>Krewby</span>
+            <div style={{ height: "34px", width: expanded ? "auto" : "34px", maxWidth: expanded ? "160px" : "34px", background: "#fff", borderRadius: "9px", overflow: "hidden", display: "flex", alignItems: "center", transition: "max-width 0.25s ease, width 0.25s ease", flexShrink: 0, padding: expanded ? "0 8px" : "0" }}>
+              <img src="/krewby-logo.png" alt="Krewby" style={{ height: expanded ? "22px" : "34px", width: expanded ? "auto" : "34px", objectFit: expanded ? "contain" : "cover", objectPosition: "left center", display: "block" }} />
+            </div>
           </Link>
         </div>
 
