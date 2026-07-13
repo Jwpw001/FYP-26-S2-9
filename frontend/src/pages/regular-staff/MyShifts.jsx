@@ -184,7 +184,7 @@ export default function MyTasks({ Layout = StaffLayout }) {
       setShifts(prev => prev.map(s =>
         s.assignment_id === a.assignment_id ? { ...s, acknowledged: true } : s
       ));
-    } catch { showToast("Failed to acknowledge.", false); }
+    } catch (err) { console.error("Acknowledge failed:", err); showToast("Failed to acknowledge.", false); }
   }
 
   async function submitReport(a) {

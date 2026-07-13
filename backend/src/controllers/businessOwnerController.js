@@ -280,8 +280,11 @@ const deleteManagerDetail = async (req, res) => {
 const updateOutlet = async (req, res) => {
   try {
     const outlet_id = Number(req.params.outlet_id);
-    const { name, address, open_time, close_time } = req.body;
+    const { name, address, open_time, close_time, working_days } = req.body;
     if (!name) return res.status(400).json({ success: false, message: "Outlet name is required." });
+    if (working_days !== undefined && ![5, 6, 7].includes(Number(working_days))) {
+      return res.status(400).json({ success: false, message: "working_days must be 5, 6, or 7." });
+    }
 
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.status(404).json({ success: false, message: "Business not found for this owner." });
@@ -293,7 +296,7 @@ const updateOutlet = async (req, res) => {
 
     const { data: updated, error } = await supabaseAdmin
       .from("outlets")
-      .update({ name, address: address || null, open_time: open_time || outlet.open_time, close_time: close_time || outlet.close_time })
+      .update({ name, address: address || null, open_time: open_time || outlet.open_time, close_time: close_time || outlet.close_time, ...(working_days !== undefined && { working_days: Number(working_days) }) })
       .eq("outlet_id", outlet_id)
       .select()
       .single();
@@ -383,6 +386,48 @@ async function getOwnedStaffOrNull(req, staff_id) {
   if (!staff || staff.outlets.business_id !== biz.business_id) return null;
   return staff;
 }
+
+// GET /api/business/staff/:staff_id/kpi
+const getStaffKpi = async (req, res) => {
+  try {
+    const staff_id = Number(req.params.staff_id);
+    const staff = await getOwnedStaffOrNull(req, staff_id);
+    if (!staff) return res.status(404).json({ success: false, message: "Staff member not found." });
+
+    const assignments = await prisma.shift_assignments.findMany({
+      where: { staff_id },
+      include: {
+        attendance: true,
+        shifts: { select: { shift_date: true, start_time: true } },
+      },
+    });
+
+    const totalAssigned = assignments.length;
+    let present = 0, absent = 0, late = 0, totalMinutes = 0;
+
+    for (const a of assignments) {
+      const att = a.attendance[0];
+      if (!att) continue;
+      const status = (att.status || "").toLowerCase();
+      if (status === "present" || status === "attended") present++;
+      else if (status === "absent") absent++;
+      if (status === "late") late++;
+      if (att.clock_in && att.clock_out) {
+        totalMinutes += (new Date(att.clock_out) - new Date(att.clock_in)) / 60000;
+      }
+    }
+
+    const attendanceRate = totalAssigned > 0 ? Math.round((present / totalAssigned) * 100) : null;
+    const totalHours = Math.round(totalMinutes / 6) / 10;
+
+    return res.json({
+      success: true,
+      kpi: { totalAssigned, present, absent, late, attendanceRate, totalHours },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 // GET /api/business/staff/:staff_id
 const getStaffDetail = async (req, res) => {
@@ -670,6 +715,90 @@ const deleteBusinessSkill = async (req, res) => {
 
 // ── Business settings & allocation preferences ──────────
 
+const getOutletSettings = async (req, res) => {
+  try {
+    const biz = await resolveBusinessId(req.user);
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const outlet_id = req.params.outlet_id;
+    const { data: outlet } = await supabaseAdmin.from("outlets").select("outlet_id").eq("outlet_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
+    if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found." });
+
+    const [{ data: settings }, { data: alloc }] = await Promise.all([
+      supabaseAdmin.from("outlet_settings").select("*").eq("outlet_id", outlet_id).maybeSingle(),
+      supabaseAdmin.from("outlet_allocation_preferences").select("*").eq("outlet_id", outlet_id).maybeSingle(),
+    ]);
+
+    return res.json({ success: true, settings: settings || null, allocation: alloc || null });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const updateOutletSettings = async (req, res) => {
+  try {
+    const biz = await resolveBusinessId(req.user);
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const outlet_id = req.params.outlet_id;
+    const { data: outlet } = await supabaseAdmin.from("outlets").select("outlet_id").eq("outlet_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
+    if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found." });
+
+    const { operating_days, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment } = req.body;
+
+    if (operating_days && !/^[01]{7}$/.test(operating_days)) {
+      return res.status(400).json({ success: false, message: "operating_days must be a 7-character string of 0s and 1s." });
+    }
+
+    const upsertData = {
+      outlet_id: Number(outlet_id),
+      ...(operating_days !== undefined && { operating_days }),
+      ...(holidays !== undefined && { holidays }),
+      ...(work_hours_day !== undefined && { work_hours_day }),
+      ...(max_work_hours_day !== undefined && { max_work_hours_day }),
+      ...(max_consecutive_days !== undefined && { max_consecutive_days }),
+      ...(allow_overtime !== undefined && { allow_overtime }),
+      ...(min_workers_per_assignment !== undefined && { min_workers_per_assignment }),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabaseAdmin.from("outlet_settings").upsert(upsertData, { onConflict: "outlet_id" }).select("*").single();
+    if (error) throw new Error(error.message);
+
+    return res.json({ success: true, settings: data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const updateOutletAllocationPrefs = async (req, res) => {
+  try {
+    const biz = await resolveBusinessId(req.user);
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const outlet_id = req.params.outlet_id;
+    const { data: outlet } = await supabaseAdmin.from("outlets").select("outlet_id").eq("outlet_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
+    if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found." });
+
+    const { weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload } = req.body;
+    const total = (weight_availability || 0) + (weight_skills || 0) + (weight_attendance || 0) + (weight_performance || 0) + (weight_workload || 0);
+    if (total !== 100) return res.status(400).json({ success: false, message: "Allocation weights must sum to 100." });
+
+    const upsertData = {
+      outlet_id: Number(outlet_id),
+      weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabaseAdmin.from("outlet_allocation_preferences").upsert(upsertData, { onConflict: "outlet_id" }).select("*").single();
+    if (error) throw new Error(error.message);
+
+    return res.json({ success: true, allocation: data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 const getBusinessSettings = async (req, res) => {
   try {
     const biz = await resolveBusinessId(req.user);
@@ -736,4 +865,4 @@ const updateAllocationPrefs = async (req, res) => {
   }
 };
 
-module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs };
+module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getOutletSettings, updateOutletSettings, updateOutletAllocationPrefs };

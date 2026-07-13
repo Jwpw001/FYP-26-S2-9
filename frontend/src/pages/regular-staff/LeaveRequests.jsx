@@ -93,6 +93,9 @@ export default function LeaveRequests() {
   const user   = getUser();
   const userId = user?.user_id;
 
+  const [activeTab, setActiveTab] = useState("leave");
+
+  // Leave state
   const [requests,  setRequests]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [filter,    setFilter]    = useState("all");
@@ -103,6 +106,15 @@ export default function LeaveRequests() {
   const [staffId,   setStaffId]   = useState(null);
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [form, setForm] = useState({ leave_type: "annual", start_date: "", end_date: "", reason: "" });
+
+  // Off day state
+  const [offDayRequests,  setOffDayRequests]  = useState([]);
+  const [loadingOffDay,   setLoadingOffDay]   = useState(true);
+  const [showOffDayForm,  setShowOffDayForm]  = useState(false);
+  const [offDaySaving,    setOffDaySaving]    = useState(false);
+  const [offDayError,     setOffDayError]     = useState("");
+  const [offDayForm,      setOffDayForm]      = useState({ requested_date: "", reason: "" });
+  const [workingDays,     setWorkingDays]     = useState(7);
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
@@ -116,15 +128,53 @@ export default function LeaveRequests() {
       const sid = myStaff?.[0]?.staff_id;
       if (cancelled) return;
       setStaffId(sid || null);
-      if (!sid) { setRequests([]); setLoading(false); return; }
-      const { data } = await supabase.from("availability")
-        .select("request_id, leave_type, start_date, end_date, reason, status, reviewed_at")
-        .eq("staff_id", sid).order("start_date", { ascending: false });
-      if (!cancelled) { setRequests(data || []); setLoading(false); }
+      if (!sid) { setRequests([]); setLoading(false); setLoadingOffDay(false); return; }
+
+      const { data: staffRow } = await supabase.from("staff").select("outlet_id").eq("staff_id", sid).single();
+      const oid = staffRow?.outlet_id;
+
+      const [{ data: leaveData }, { data: offData }, { data: outletRow }] = await Promise.all([
+        supabase.from("availability")
+          .select("request_id, leave_type, start_date, end_date, reason, status, reviewed_at")
+          .eq("staff_id", sid).order("start_date", { ascending: false }),
+        supabase.from("off_day_requests")
+          .select("id, requested_date, reason, status, created_at, reviewed_at")
+          .eq("staff_id", sid).order("created_at", { ascending: false }),
+        oid
+          ? supabase.from("outlets").select("working_days").eq("outlet_id", oid).single()
+          : Promise.resolve({ data: null }),
+      ]);
+      if (!cancelled) {
+        setRequests(leaveData || []);
+        setOffDayRequests(offData || []);
+        const wd = outletRow?.working_days ?? 7;
+        setWorkingDays(wd);
+        if (wd < 6) setActiveTab("leave");
+        setLoading(false);
+        setLoadingOffDay(false);
+      }
     }
     load();
     return () => { cancelled = true; };
   }, [userId]);
+
+  async function handleOffDaySubmit() {
+    if (!offDayForm.requested_date) { setOffDayError("Please pick a date."); return; }
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (offDayForm.requested_date <= todayStr) { setOffDayError("Requested date must be in the future."); return; }
+    const overlap = offDayRequests.find(r => r.status !== "rejected" && r.requested_date === offDayForm.requested_date);
+    if (overlap) { setOffDayError("You already have a request for that date."); return; }
+    setOffDaySaving(true); setOffDayError("");
+    const { data, error: err } = await supabase.from("off_day_requests")
+      .insert({ staff_id: staffId, requested_date: offDayForm.requested_date, reason: offDayForm.reason.trim() || null, status: "pending" })
+      .select().single();
+    setOffDaySaving(false);
+    if (err) { setOffDayError(err.message || "Failed to submit."); return; }
+    setOffDayRequests(prev => [data, ...prev]);
+    setOffDayForm({ requested_date: "", reason: "" });
+    setShowOffDayForm(false);
+    showToast("Off day request submitted.");
+  }
 
   async function handleSubmit() {
     if (!form.start_date || !form.end_date) { setError("Start and end dates are required."); return; }
@@ -158,9 +208,30 @@ export default function LeaveRequests() {
   const filtered     = filter === "all" ? requests : requests.filter(r => r.status === filter);
   const pendingCount = requests.filter(r => r.status === "pending").length;
 
+  const pendingOffDayCount = offDayRequests.filter(r => r.status === "pending").length;
+
   return (
-    <StaffLayout title="Leave Requests">
+    <StaffLayout title="Leave & Off Day">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
+
+
+        {/* Top tab bar */}
+        <div style={{ display: "flex", gap: "0", marginBottom: "28px", borderBottom: "2px solid #E2E8F0" }}>
+          {[
+            { key: "leave",  label: "Leave Requests",  badge: pendingCount },
+            ...(workingDays >= 6 ? [{ key: "offday", label: "Off Day Requests", badge: pendingOffDayCount }] : []),
+          ].map(tab => (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+              style={{ padding: "10px 20px", background: "none", border: "none", borderBottom: activeTab === tab.key ? "2px solid #2563EB" : "2px solid transparent", marginBottom: "-2px", fontSize: "14px", fontWeight: activeTab === tab.key ? "700" : "500", color: activeTab === tab.key ? "#2563EB" : "#64748B", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", transition: "all 0.15s" }}>
+              {tab.label}
+              {tab.badge > 0 && <span style={{ background: "#F59E0B", color: "#FFF", fontSize: "10px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>{tab.badge}</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* ── LEAVE TAB ── */}
+        {activeTab === "leave" && (
+        <div>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
@@ -296,6 +367,88 @@ export default function LeaveRequests() {
             })}
           </div>
         )}
+
+        </div>
+        )}
+
+        {/* ── OFF DAY TAB ── */}
+        {activeTab === "offday" && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+            <div>
+              <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Off Day Requests</h2>
+              <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>Request a day off each week — your manager will review it.</p>
+            </div>
+            <button onClick={() => { setShowOffDayForm(!showOffDayForm); setOffDayError(""); }}
+              style={{ background: "#7C3AED", color: "#FFF", border: "none", padding: "10px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}>
+              {showOffDayForm ? "Cancel" : "+ Request Off Day"}
+            </button>
+          </div>
+
+          {/* Form */}
+          {showOffDayForm && (
+            <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "26px", marginBottom: "24px", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", animation: "popIn 0.2s ease both" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B", marginBottom: "20px" }}>New Off Day Request</h3>
+              {offDayError && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "9px", fontSize: "13px", marginBottom: "16px" }}>{offDayError}</div>}
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "22px" }}>
+                <div>
+                  <label style={lbl}>Date you want off *</label>
+                  <input style={inp} type="date" min={(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })()} value={offDayForm.requested_date} onChange={e => setOffDayForm(p => ({ ...p, requested_date: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={lbl}>Reason (optional)</label>
+                  <textarea style={{ ...inp, minHeight: "72px", resize: "vertical" }} value={offDayForm.reason} onChange={e => setOffDayForm(p => ({ ...p, reason: e.target.value }))} placeholder="e.g. Family event, personal appointment…" />
+                </div>
+              </div>
+              <button onClick={handleOffDaySubmit} disabled={offDaySaving}
+                style={{ background: offDaySaving ? "#C4B5FD" : "#7C3AED", color: "#FFF", border: "none", padding: "11px 24px", borderRadius: "10px", fontSize: "14px", fontWeight: "700", cursor: offDaySaving ? "default" : "pointer" }}>
+                {offDaySaving ? "Submitting…" : "Submit Request"}
+              </button>
+            </div>
+          )}
+
+          {/* Off day list */}
+          {loadingOffDay ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="80px" r="14px" />)}
+            </div>
+          ) : offDayRequests.length === 0 ? (
+            <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "48px", textAlign: "center" }}>
+              <p style={{ fontSize: "32px", marginBottom: "10px" }}>🌴</p>
+              <p style={{ fontSize: "15px", fontWeight: "600", color: "#64748B" }}>No off day requests yet</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {offDayRequests.map((r, i) => {
+                const date    = new Date(r.requested_date + "T00:00:00");
+                const dayName = date.toLocaleDateString("en-SG", { weekday: "long" });
+                const dateFmt = date.toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" });
+                const badge   = leaveBadge(r.status);
+                return (
+                  <div key={r.id} style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both` }}>
+                    <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: "10px", padding: "10px 16px", textAlign: "center", flexShrink: 0 }}>
+                      <p style={{ fontSize: "11px", fontWeight: "700", color: "#6D28D9", textTransform: "uppercase", letterSpacing: "0.05em" }}>Off Day</p>
+                      <p style={{ fontSize: "16px", fontWeight: "800", color: "#4C1D95", marginTop: "2px" }}>{dayName}</p>
+                      <p style={{ fontSize: "11px", color: "#6D28D9", marginTop: "1px" }}>{dateFmt}</p>
+                    </div>
+                    <div style={{ flex: 1, minWidth: "120px" }}>
+                      {r.reason
+                        ? <p style={{ fontSize: "13px", color: "#475569", fontStyle: "italic" }}>"{r.reason}"</p>
+                        : <p style={{ fontSize: "13px", color: "#CBD5E1" }}>No reason provided</p>
+                      }
+                      <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "4px" }}>Submitted {new Date(r.created_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}</p>
+                    </div>
+                    <span style={{ padding: "5px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", ...badge, flexShrink: 0 }}>
+                      {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        )}
+
       </div>
 
       {toast && (

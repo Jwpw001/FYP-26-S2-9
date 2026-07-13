@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
+import { supabase } from "../../lib/supabaseClient";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { Trash2, X, Plus, Check, Pencil } from "lucide-react";
@@ -266,6 +267,350 @@ function SkillSetsSection({ staffId }) {
   );
 }
 
+// ── KPI Modal ────────────────────────────────────────────────────────────────
+const KPI_PERIODS = [
+  { label: "7D",  days: 7  },
+  { label: "30D", days: 30 },
+  { label: "90D", days: 90 },
+];
+
+function KpiModal({ staffId, staffName, staffType, onClose }) {
+  const [period,  setPeriod]  = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [kpi,     setKpi]     = useState(null);
+
+  useEffect(() => {
+    if (!staffId) return;
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const now      = new Date();
+        const today    = now.toISOString().slice(0, 10);
+        const start    = new Date(now); start.setDate(now.getDate() - KPI_PERIODS[period].days);
+        const startStr = start.toISOString().slice(0, 10);
+
+        const [{ data: assigns }, { data: tsheets }, { data: leave }] = await Promise.all([
+          supabase.from("shift_assignments")
+            .select("assignment_id, shifts!inner(shift_date, title, start_time, end_time)")
+            .eq("staff_id", staffId)
+            .gte("shifts.shift_date", startStr)
+            .lte("shifts.shift_date", today)
+            .order("shifts(shift_date)", { ascending: false }),
+          supabase.from("timesheets")
+            .select("timesheet_id, status, hours_worked, log_date, description")
+            .eq("staff_id", staffId)
+            .gte("log_date", startStr)
+            .lte("log_date", today)
+            .order("log_date", { ascending: false }),
+          supabase.from("availability")
+            .select("request_id, status, start_date, end_date, reason")
+            .eq("staff_id", staffId)
+            .gte("start_date", startStr)
+            .lte("start_date", today)
+            .order("start_date", { ascending: false }),
+        ]);
+
+        if (cancelled) return;
+
+        const ts         = tsheets || [];
+        const tsApproved = ts.filter(t => t.status === "approved");
+        const tsPending  = ts.filter(t => t.status === "pending").length;
+        const tsRejected = ts.filter(t => t.status === "rejected").length;
+        const hoursLogged = tsApproved.reduce((s, t) => s + parseFloat(t.hours_worked || 0), 0);
+        const tsTotal    = ts.length;
+        const approvalRate = tsTotal > 0 ? Math.round((tsApproved.length / tsTotal) * 100) : null;
+        const shifts     = (assigns  || []).length;
+        const leaveCount = (leave    || []).length;
+
+        const shiftScore  = Math.min(shifts * 8, 25);
+        const hoursScore  = Math.min(hoursLogged / 2, 25);
+        const tsScore     = approvalRate != null ? (approvalRate / 100) * 35 : 17;
+        const leaveScore  = Math.max(0, 15 - leaveCount * 3);
+        const score       = Math.round(shiftScore + hoursScore + tsScore + leaveScore);
+
+        setKpi({
+          shifts, hoursLogged, tsApproved: tsApproved.length, tsPending, tsRejected,
+          tsTotal, approvalRate, leaveCount, score,
+          shiftList:     assigns  || [],
+          timesheetList: ts,
+          leaveList:     leave    || [],
+          periodStart:   startStr,
+          periodEnd:     today,
+        });
+      } catch (err) {
+        console.error("KPI load error:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [staffId, period]);
+
+  const scoreColor = !kpi ? "#64748B" : kpi.score >= 80 ? "#16A34A" : kpi.score >= 55 ? "#D97706" : "#DC2626";
+  const scoreBg    = !kpi ? "#F8FAFC" : kpi.score >= 80 ? "#F0FDF4"  : kpi.score >= 55 ? "#FFFBEB" : "#FEF2F2";
+
+  function fmtDate(d) {
+    if (!d) return "—";
+    return new Date(d + "T00:00:00").toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function downloadPDF() {
+    if (!kpi) return;
+    const periodLabel = KPI_PERIODS[period].label;
+    const scoreLabel  = kpi.score >= 80 ? "Excellent" : kpi.score >= 55 ? "Average" : "Needs Improvement";
+    const barApproved = kpi.tsTotal > 0 ? Math.round((kpi.tsApproved / kpi.tsTotal) * 100) : 0;
+    const barPending  = kpi.tsTotal > 0 ? Math.round((kpi.tsPending  / kpi.tsTotal) * 100) : 0;
+    const barRejected = kpi.tsTotal > 0 ? Math.round((kpi.tsRejected / kpi.tsTotal) * 100) : 0;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>KPI Report — ${staffName}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; color:#1E293B; background:#fff; padding:40px; }
+  h1 { font-size:22px; font-weight:800; color:#0F172A; margin-bottom:4px; }
+  .sub { font-size:13px; color:#64748B; margin-bottom:28px; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+  .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+  .card { border:1px solid #E2E8F0; border-radius:10px; padding:14px 16px; }
+  .card-lbl { font-size:10px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  .card-val { font-size:24px; font-weight:800; color:#0F172A; }
+  .card-unit { font-size:13px; font-weight:600; color:#94A3B8; }
+  .section { margin-bottom:24px; }
+  .section-title { font-size:13px; font-weight:700; color:#0F172A; margin-bottom:10px; border-bottom:1.5px solid #F1F5F9; padding-bottom:6px; }
+  .score-box { border-radius:12px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; background:${scoreBg}; border:1px solid ${scoreColor}40; }
+  .score-val { font-size:36px; font-weight:800; color:${scoreColor}; }
+  .score-lbl { font-size:14px; font-weight:700; color:${scoreColor}; }
+  .score-sub { font-size:11px; color:#64748B; margin-top:3px; }
+  .bar-wrap { height:10px; border-radius:100px; overflow:hidden; background:#F1F5F9; margin-bottom:6px; display:flex; }
+  .bar-g { background:#22C55E; } .bar-a { background:#F59E0B; } .bar-r { background:#EF4444; }
+  .bar-labels { display:flex; gap:14px; font-size:11px; font-weight:600; margin-bottom:16px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:4px; }
+  th { padding:8px 10px; text-align:left; font-size:10px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:.05em; border-bottom:1.5px solid #F1F5F9; }
+  td { padding:8px 10px; border-bottom:1px solid #F8FAFC; color:#374151; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:700; }
+  .tag-approved { background:#F0FDF4; color:#16A34A; } .tag-pending { background:#FFFBEB; color:#D97706; } .tag-rejected { background:#FEF2F2; color:#DC2626; }
+  .footer { margin-top:32px; font-size:11px; color:#CBD5E1; text-align:right; }
+  @media print { body { padding:24px; } }
+</style></head><body>
+  <h1>${staffName}</h1>
+  <p class="sub">
+    <span class="badge" style="background:${staffType==="regular"?"#DBEAFE":"#EDE9FE"};color:${staffType==="regular"?"#1E40AF":"#5B21B6"}">${staffType==="regular"?"Regular Staff":"Casual Staff"}</span>
+    &nbsp;·&nbsp; KPI Report — Last ${periodLabel} &nbsp;·&nbsp; ${fmtDate(kpi.periodStart)} to ${fmtDate(kpi.periodEnd)}
+  </p>
+  <div class="score-box">
+    <div><p class="score-lbl">${scoreLabel}</p><p class="score-sub">Shifts · Hours Logged · Timesheets · Leave Taken</p></div>
+    <div class="score-val">${kpi.score}<span style="font-size:18px;font-weight:600;color:#94A3B8">/100</span></div>
+  </div>
+  <div class="grid4">
+    <div class="card"><p class="card-lbl">Shifts Assigned</p><p class="card-val">${kpi.shifts}</p></div>
+    <div class="card"><p class="card-lbl">Hours Logged</p><p class="card-val">${kpi.hoursLogged.toFixed(1)}<span class="card-unit">h</span></p></div>
+    <div class="card"><p class="card-lbl">Timesheets</p><p class="card-val">${kpi.tsTotal}</p></div>
+    <div class="card"><p class="card-lbl">Leave Requests</p><p class="card-val">${kpi.leaveCount}</p></div>
+  </div>
+  ${kpi.tsTotal > 0 ? `<div class="section"><p class="section-title">Timesheet Status Breakdown</p>
+    <div class="bar-wrap"><div class="bar-g" style="flex:${kpi.tsApproved}"></div><div class="bar-a" style="flex:${kpi.tsPending}"></div><div class="bar-r" style="flex:${kpi.tsRejected}"></div></div>
+    <div class="bar-labels">
+      ${kpi.tsApproved > 0 ? `<span style="color:#16A34A">✓ ${kpi.tsApproved} Approved (${barApproved}%)</span>` : ""}
+      ${kpi.tsPending  > 0 ? `<span style="color:#D97706">⏳ ${kpi.tsPending} Pending (${barPending}%)</span>` : ""}
+      ${kpi.tsRejected > 0 ? `<span style="color:#DC2626">✗ ${kpi.tsRejected} Rejected (${barRejected}%)</span>` : ""}
+    </div></div>` : ""}
+  ${kpi.timesheetList.length > 0 ? `<div class="section"><p class="section-title">Timesheet History</p>
+    <table><thead><tr><th>Date</th><th>Hours</th><th>Status</th><th>Description</th></tr></thead><tbody>
+      ${kpi.timesheetList.slice(0,15).map(t => `<tr><td>${fmtDate(t.log_date)}</td><td>${parseFloat(t.hours_worked||0).toFixed(1)}h</td><td><span class="tag tag-${t.status}">${t.status}</span></td><td>${t.description||"—"}</td></tr>`).join("")}
+    </tbody></table></div>` : ""}
+  ${kpi.leaveList.length > 0 ? `<div class="section"><p class="section-title">Leave Requests</p>
+    <table><thead><tr><th>Start</th><th>End</th><th>Status</th><th>Reason</th></tr></thead><tbody>
+      ${kpi.leaveList.map(l => `<tr><td>${fmtDate(l.start_date)}</td><td>${fmtDate(l.end_date)}</td><td><span class="tag tag-${l.status}">${l.status}</span></td><td>${l.reason||"—"}</td></tr>`).join("")}
+    </tbody></table></div>` : ""}
+  <p class="footer">Generated ${new Date().toLocaleString("en-SG")} · Krewby</p>
+</body></html>`;
+
+    const w = window.open("", "_blank", "width=900,height=700");
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 400);
+  }
+
+  return (
+    <div style={ms.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={ms.modal}>
+        <div style={ms.header}>
+          <div>
+            <h2 style={ms.title}>Performance KPI</h2>
+            <p style={ms.sub}>{staffName} · {staffType === "regular" ? "Regular Staff" : "Casual Staff"}</p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ display: "flex", background: "#F1F5F9", borderRadius: "8px", padding: "3px", gap: "2px" }}>
+              {KPI_PERIODS.map((p, i) => (
+                <button key={p.label} onClick={() => setPeriod(i)}
+                  style={{ padding: "5px 14px", borderRadius: "6px", border: "none", fontSize: "12px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s",
+                    background: period === i ? "#FFF" : "transparent",
+                    color: period === i ? "#1E293B" : "#64748B",
+                    boxShadow: period === i ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={onClose} style={{ background: "#F1F5F9", border: "none", borderRadius: "8px", padding: "7px 9px", cursor: "pointer", display: "flex", alignItems: "center" }}>
+              <X size={16} color="#64748B" />
+            </button>
+          </div>
+        </div>
+
+        <div style={ms.body}>
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} style={{ height: "64px", borderRadius: "10px", background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
+              ))}
+            </div>
+          ) : !kpi ? (
+            <p style={{ textAlign: "center", color: "#94A3B8", padding: "40px 0" }}>Failed to load KPI data.</p>
+          ) : (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: scoreBg, border: `1px solid ${scoreColor}30`, borderRadius: "12px", padding: "16px 20px", marginBottom: "20px" }}>
+                <div>
+                  <p style={{ fontSize: "13px", fontWeight: "700", color: scoreColor, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    {kpi.score >= 80 ? "Excellent" : kpi.score >= 55 ? "Average" : "Needs Improvement"}
+                  </p>
+                  <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "3px" }}>{kpi.periodStart} → {kpi.periodEnd}</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: "36px", fontWeight: "800", color: scoreColor, lineHeight: 1 }}>{kpi.score}</span>
+                  <span style={{ fontSize: "14px", fontWeight: "600", color: "#94A3B8" }}>/100</span>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "20px" }}>
+                {[
+                  { label: "Shifts Assigned", value: kpi.shifts,                 unit: "",  color: "#2563EB", bg: "#EFF6FF" },
+                  { label: "Hours Logged",    value: kpi.hoursLogged.toFixed(1), unit: "h", color: "#059669", bg: "#ECFDF5" },
+                  { label: "Timesheets",      value: kpi.tsTotal,                unit: "",  color: "#7C3AED", bg: "#F5F3FF" },
+                  { label: "Leave Requests",  value: kpi.leaveCount,             unit: "",  color: "#D97706", bg: "#FFFBEB" },
+                ].map(m => (
+                  <div key={m.label} style={{ background: m.bg, border: `1px solid ${m.color}20`, borderRadius: "10px", padding: "14px 16px" }}>
+                    <p style={{ fontSize: "10px", fontWeight: "700", color: m.color, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px", opacity: 0.8 }}>{m.label}</p>
+                    <p style={{ fontSize: "26px", fontWeight: "800", color: "#0F172A", lineHeight: 1 }}>
+                      {m.value}<span style={{ fontSize: "13px", fontWeight: "600", color: "#94A3B8", marginLeft: "2px" }}>{m.unit}</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {kpi.tsTotal > 0 && (
+                <div style={{ marginBottom: "20px" }}>
+                  <p style={{ fontSize: "12px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Timesheet Status</p>
+                  <div style={{ display: "flex", height: "10px", borderRadius: "100px", overflow: "hidden", background: "#F1F5F9", marginBottom: "8px" }}>
+                    {kpi.tsApproved > 0 && <div style={{ flex: kpi.tsApproved, background: "#22C55E" }} />}
+                    {kpi.tsPending  > 0 && <div style={{ flex: kpi.tsPending,  background: "#F59E0B" }} />}
+                    {kpi.tsRejected > 0 && <div style={{ flex: kpi.tsRejected, background: "#EF4444" }} />}
+                  </div>
+                  <div style={{ display: "flex", gap: "16px" }}>
+                    {kpi.tsApproved > 0 && <span style={{ fontSize: "12px", color: "#16A34A", fontWeight: "600" }}>✓ {kpi.tsApproved} approved</span>}
+                    {kpi.tsPending  > 0 && <span style={{ fontSize: "12px", color: "#D97706", fontWeight: "600" }}>⏳ {kpi.tsPending} pending</span>}
+                    {kpi.tsRejected > 0 && <span style={{ fontSize: "12px", color: "#DC2626", fontWeight: "600" }}>✗ {kpi.tsRejected} rejected</span>}
+                  </div>
+                </div>
+              )}
+
+              {kpi.timesheetList.length > 0 && (
+                <div style={{ marginBottom: "20px" }}>
+                  <p style={{ fontSize: "12px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Timesheet History</p>
+                  <div style={{ border: "1px solid #F1F5F9", borderRadius: "10px", overflow: "hidden" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                      <thead>
+                        <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #F1F5F9" }}>
+                          {["Date","Hours","Status","Description"].map(h => (
+                            <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {kpi.timesheetList.slice(0, 8).map((t, i) => (
+                          <tr key={t.timesheet_id} style={{ borderBottom: i < Math.min(kpi.timesheetList.length, 8) - 1 ? "1px solid #F8FAFC" : "none" }}>
+                            <td style={{ padding: "9px 12px", color: "#374151" }}>{fmtDate(t.log_date)}</td>
+                            <td style={{ padding: "9px 12px", fontWeight: "700", color: "#0F172A" }}>{parseFloat(t.hours_worked || 0).toFixed(1)}h</td>
+                            <td style={{ padding: "9px 12px" }}>
+                              <span style={{ fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px",
+                                background: t.status==="approved" ? "#F0FDF4" : t.status==="pending" ? "#FFFBEB" : "#FEF2F2",
+                                color:      t.status==="approved" ? "#16A34A" : t.status==="pending" ? "#D97706" : "#DC2626" }}>
+                                {t.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: "9px 12px", color: "#64748B", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.description || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {kpi.leaveList.length > 0 && (
+                <div>
+                  <p style={{ fontSize: "12px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Leave Requests</p>
+                  <div style={{ border: "1px solid #F1F5F9", borderRadius: "10px", overflow: "hidden" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                      <thead>
+                        <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #F1F5F9" }}>
+                          {["Start","End","Status","Reason"].map(h => (
+                            <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {kpi.leaveList.map((l, i) => (
+                          <tr key={l.request_id} style={{ borderBottom: i < kpi.leaveList.length - 1 ? "1px solid #F8FAFC" : "none" }}>
+                            <td style={{ padding: "9px 12px", color: "#374151" }}>{fmtDate(l.start_date)}</td>
+                            <td style={{ padding: "9px 12px", color: "#374151" }}>{fmtDate(l.end_date)}</td>
+                            <td style={{ padding: "9px 12px" }}>
+                              <span style={{ fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px",
+                                background: l.status==="approved" ? "#F0FDF4" : l.status==="pending" ? "#FFFBEB" : "#FEF2F2",
+                                color:      l.status==="approved" ? "#16A34A" : l.status==="pending" ? "#D97706" : "#DC2626" }}>
+                                {l.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: "9px 12px", color: "#64748B" }}>{l.reason || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {kpi.shifts === 0 && kpi.tsTotal === 0 && kpi.leaveCount === 0 && (
+                <p style={{ textAlign: "center", color: "#94A3B8", fontSize: "13px", padding: "20px 0" }}>No activity recorded for this period.</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div style={ms.footer}>
+          <p style={{ fontSize: "11px", color: "#94A3B8" }}>Score = Shifts (25) + Hours (25) + Timesheets (35) + Leave (15)</p>
+          <button onClick={downloadPDF} disabled={loading || !kpi}
+            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "9px 18px", borderRadius: "9px", background: "#2563EB", color: "#FFF", border: "none", fontSize: "13px", fontWeight: "700", cursor: loading || !kpi ? "not-allowed" : "pointer", opacity: loading || !kpi ? 0.5 : 1 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ms = {
+  overlay: { position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" },
+  modal:   { background: "#FFF", borderRadius: "18px", width: "100%", maxWidth: "760px", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 80px rgba(0,0,0,0.2)" },
+  header:  { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid #F1F5F9", flexShrink: 0 },
+  title:   { fontSize: "17px", fontWeight: "800", color: "#0F172A" },
+  sub:     { fontSize: "12px", color: "#94A3B8", marginTop: "2px" },
+  body:    { flex: 1, overflowY: "auto", padding: "20px 24px" },
+  footer:  { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 24px", borderTop: "1px solid #F1F5F9", flexShrink: 0 },
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function BOStaffDetail() {
   const { id } = useParams();
@@ -284,6 +629,8 @@ export default function BOStaffDetail() {
     full_name: "", staff_type: "regular",
     default_work_days: "1111100", is_active: true,
   });
+
+  const [showKpiModal, setShowKpiModal] = useState(false);
 
   useEffect(() => { fetchProfile(); }, [id]);
 
@@ -421,6 +768,14 @@ export default function BOStaffDetail() {
             </button>
 
             <button
+              style={{ ...s.actionBtn, marginTop: "8px", background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+              onClick={() => setShowKpiModal(true)}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              View KPI
+            </button>
+
+            <button
               style={{ ...s.actionBtn, marginTop: "8px",
                 background: "#FEF2F2", color: "#991B1B",
                 border: "1px solid #FECACA",
@@ -526,8 +881,18 @@ export default function BOStaffDetail() {
             <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", marginBottom: "16px" }}>Skill Sets</h4>
             <SkillSetsSection staffId={id} />
           </div>
+
         </div>
       </div>
+
+      {showKpiModal && (
+        <KpiModal
+          staffId={member?.staff_id}
+          staffName={member?.users?.full_name || "Staff"}
+          staffType={member?.staff_type || "regular"}
+          onClose={() => setShowKpiModal(false)}
+        />
+      )}
 
       {/* ── Delete Confirmation Modal ── */}
       {showDeleteConfirm && (

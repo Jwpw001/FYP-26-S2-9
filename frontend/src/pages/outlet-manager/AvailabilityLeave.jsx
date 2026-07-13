@@ -94,6 +94,12 @@ export default function AvailabilityLeave() {
   const [loadingCasual, setLoadingCasual]   = useState(false);
   const [casualWeekFilter, setCasualWeekFilter] = useState("all");
 
+  // Off day requests state
+  const [offDays, setOffDays]               = useState([]);
+  const [loadingOffDay, setLoadingOffDay]   = useState(true);
+  const [offDayFilter, setOffDayFilter]     = useState("pending");
+  const [workingDays, setWorkingDays]       = useState(7);
+
   const [processing, setProcessing]     = useState(null);
   const [toast, setToast]               = useState(null);
 
@@ -117,8 +123,11 @@ export default function AvailabilityLeave() {
       if (!oid || cancelled) return;
       setOutletId(oid);
 
-      const { data: staffRows } = await supabase
-        .from("staff").select("staff_id, user_id").eq("outlet_id", oid);
+      const [{ data: staffRows }, { data: outletRow }] = await Promise.all([
+        supabase.from("staff").select("staff_id, user_id").eq("outlet_id", oid),
+        supabase.from("outlets").select("working_days").eq("outlet_id", oid).single(),
+      ]);
+      if (!cancelled) setWorkingDays(outletRow?.working_days ?? 7);
       const map = {};
       (staffRows || []).forEach(s => { map[s.staff_id] = s.user_id; });
       if (!cancelled) setStaffUserMap(map);
@@ -237,6 +246,47 @@ export default function AvailabilityLeave() {
     load();
     return () => { cancelled = true; };
   }, [outletId, staffUserMap]);
+
+  // ── Load off day requests ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!outletId) return;
+    let cancelled = false;
+    async function load() {
+      setLoadingOffDay(true);
+      try {
+        const staffIds = Object.keys(staffUserMap).map(Number);
+        if (staffIds.length === 0) { if (!cancelled) setLoadingOffDay(false); return; }
+        const { data, error } = await supabase
+          .from("off_day_requests")
+          .select("id, staff_id, requested_date, reason, status, created_at, reviewed_at, staff:staff_id(staff_id, user_id, staff_type, users:user_id(full_name, email))")
+          .in("staff_id", staffIds)
+          .order("created_at", { ascending: false });
+        if (error) console.error("off_day_requests fetch:", error);
+        // Only show regular staff off day requests
+        const regular = (data || []).filter(r => r.staff?.staff_type === "regular");
+        if (!cancelled) setOffDays(regular);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoadingOffDay(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [outletId, staffUserMap]);
+
+  async function handleOffDay(id, action) {
+    setProcessing(id);
+    const myStaff = await supabase.from("staff").select("staff_id").eq("user_id", userId).limit(1);
+    const mgrId = myStaff.data?.[0]?.staff_id;
+    const { error } = await supabase.from("off_day_requests")
+      .update({ status: action, reviewed_at: new Date().toISOString(), reviewed_by: mgrId })
+      .eq("id", id);
+    setProcessing(null);
+    if (error) { showToast("Failed to update.", "error"); return; }
+    setOffDays(prev => prev.map(r => r.id === id ? { ...r, status: action, reviewed_at: new Date().toISOString() } : r));
+    showToast(action === "approved" ? "Off day approved." : "Off day rejected.");
+  }
 
   // ── Load casual availability ───────────────────────────────────────────────
   useEffect(() => {
@@ -475,10 +525,12 @@ export default function AvailabilityLeave() {
     }
   }
 
-  const filteredLeave = requests.filter(r => leaveFilter === "all" ? true : r.status === leaveFilter);
-  const pendingLeave  = requests.filter(r => r.status === "pending").length;
-  const filteredSwap  = swaps.filter(s => swapFilter === "all" ? true : s.status === swapFilter);
-  const pendingSwap   = swaps.filter(s => s.status === "pending").length;
+  const filteredLeave   = requests.filter(r => leaveFilter === "all" ? true : r.status === leaveFilter);
+  const pendingLeave    = requests.filter(r => r.status === "pending").length;
+  const filteredSwap    = swaps.filter(s => swapFilter === "all" ? true : s.status === swapFilter);
+  const pendingSwap     = swaps.filter(s => s.status === "pending").length;
+  const filteredOffDays = offDays.filter(r => offDayFilter === "all" ? true : r.status === offDayFilter);
+  const pendingOffDay   = offDays.filter(r => r.status === "pending").length;
 
   const LEAVE_TYPE_BAR = {
     annual:    { bg: "#DBEAFE", color: "#1D4ED8", border: "#BFDBFE" },
@@ -571,9 +623,10 @@ export default function AvailabilityLeave() {
         {/* ── Main tabs ─────────────────────────────────────── */}
         <div style={{ display: "flex", gap: "0", marginBottom: "24px", borderBottom: "2px solid #E2E8F0" }}>
           {[
-            { key: "leave",   label: "Leave Requests", badge: pendingLeave },
+            { key: "leave",   label: "Leave Requests",    badge: pendingLeave },
             { key: "swap",    label: "Swap & Replacement", badge: pendingSwap },
             { key: "casual",  label: "Casual Availability", badge: null },
+            ...(workingDays >= 6 ? [{ key: "offday", label: "Off Day Requests", badge: pendingOffDay }] : []),
           ].map(tab => (
             <button
               key={tab.key}
@@ -753,6 +806,101 @@ export default function AvailabilityLeave() {
                 </div>
               );
             })()}
+          </>
+        )}
+
+        {/* ── OFF DAY TAB ──────────────────────────────────────── */}
+        {mainTab === "offday" && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+              <div>
+                <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Off Day Requests</h2>
+                <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+                  {pendingOffDay > 0 ? `${pendingOffDay} pending approval` : "No pending requests"}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "6px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content", marginBottom: "20px" }}>
+              {[
+                { value: "pending",  label: "Pending" },
+                { value: "approved", label: "Approved" },
+                { value: "rejected", label: "Rejected" },
+                { value: "all",      label: "All" },
+              ].map(tab => (
+                <FilterTab
+                  key={tab.value}
+                  label={tab.label}
+                  active={offDayFilter === tab.value}
+                  badge={tab.value === "pending" && pendingOffDay > 0 ? pendingOffDay : null}
+                  onClick={() => setOffDayFilter(tab.value)}
+                />
+              ))}
+            </div>
+
+            {loadingOffDay ? (
+              <ShimmerCards />
+            ) : filteredOffDays.length === 0 ? (
+              <EmptyState label={`No ${offDayFilter === "all" ? "" : offDayFilter} off day requests`} />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {filteredOffDays.map(r => {
+                  const name  = r.staff?.users?.full_name || "Unknown";
+                  const email = r.staff?.users?.email || "";
+                  const date  = new Date(r.requested_date + "T00:00:00");
+                  const dayName = date.toLocaleDateString("en-SG", { weekday: "long" });
+                  const dateFmt = date.toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" });
+                  const isPending = r.status === "pending";
+                  return (
+                    <div key={r.id} style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", animation: "fadeSlideUp 0.25s ease both" }}>
+                      {/* Avatar */}
+                      <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: avatarColor(name), color: "#FFF", fontSize: "15px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {name[0]?.toUpperCase()}
+                      </div>
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: "160px" }}>
+                        <p style={{ fontWeight: "700", fontSize: "14px", color: "#0F172A" }}>{name}</p>
+                        <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{email}</p>
+                      </div>
+                      {/* Requested date */}
+                      <div style={{ background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: "10px", padding: "10px 16px", textAlign: "center", flexShrink: 0 }}>
+                        <p style={{ fontSize: "11px", fontWeight: "700", color: "#0369A1", textTransform: "uppercase", letterSpacing: "0.05em" }}>Requested Off</p>
+                        <p style={{ fontSize: "15px", fontWeight: "800", color: "#0C4A6E", marginTop: "2px" }}>{dayName}</p>
+                        <p style={{ fontSize: "11px", color: "#0369A1", marginTop: "1px" }}>{dateFmt}</p>
+                      </div>
+                      {/* Reason */}
+                      {r.reason && (
+                        <div style={{ background: "#FAFAFA", border: "1px solid #F1F5F9", borderRadius: "8px", padding: "8px 12px", maxWidth: "220px", flexShrink: 0 }}>
+                          <p style={{ fontSize: "10px", fontWeight: "600", color: "#94A3B8", marginBottom: "2px", textTransform: "uppercase" }}>Reason</p>
+                          <p style={{ fontSize: "12px", color: "#475569" }}>{r.reason}</p>
+                        </div>
+                      )}
+                      {/* Status / Actions */}
+                      {isPending ? (
+                        <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                          <button
+                            disabled={processing === r.id}
+                            onClick={() => handleOffDay(r.id, "approved")}
+                            style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: "#16A34A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: "pointer", opacity: processing === r.id ? 0.6 : 1 }}>
+                            Approve
+                          </button>
+                          <button
+                            disabled={processing === r.id}
+                            onClick={() => handleOffDay(r.id, "rejected")}
+                            style={{ padding: "8px 16px", borderRadius: "8px", border: "1.5px solid #FCA5A5", background: "#FFF", color: "#DC2626", fontSize: "13px", fontWeight: "600", cursor: "pointer", opacity: processing === r.id ? 0.6 : 1 }}>
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ padding: "5px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", ...statusStyle(r.status), flexShrink: 0 }}>
+                          {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
 

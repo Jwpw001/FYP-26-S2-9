@@ -1,7 +1,7 @@
 ﻿const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/authMiddleware");
-const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs } = require("../controllers/businessOwnerController");
+const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getOutletSettings, updateOutletSettings, updateOutletAllocationPrefs } = require("../controllers/businessOwnerController");
 
 router.use(protect);
 
@@ -19,6 +19,7 @@ router.get("/managers/:user_id",                 getManagerDetail);
 router.patch("/managers/:user_id",               updateManagerDetail);
 router.delete("/managers/:user_id",              deleteManagerDetail);
 router.get("/staff/:staff_id",                   getStaffDetail);
+router.get("/staff/:staff_id/kpi",               getStaffKpi);
 router.patch("/staff/:staff_id",                 updateStaffDetail);
 router.delete("/staff/:staff_id",                deleteStaffDetail);
 router.get("/settings",                                getBusinessSettings);
@@ -34,6 +35,9 @@ router.patch("/outlets/:outlet_id/skills/:skill_id",  updateOutletSkill);
 router.delete("/outlets/:outlet_id/skills/:skill_id", deleteOutletSkill);
 router.get("/outlets/:outlet_id/role-templates",      getRoleTemplates);
 router.put("/outlets/:outlet_id/role-templates",      upsertRoleTemplates);
+router.get("/outlets/:outlet_id/settings",            getOutletSettings);
+router.put("/outlets/:outlet_id/settings",            updateOutletSettings);
+router.put("/outlets/:outlet_id/settings/allocation", updateOutletAllocationPrefs);
 
 module.exports = router;
 

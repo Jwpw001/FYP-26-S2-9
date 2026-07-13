@@ -38,8 +38,9 @@ export default function StaffList() {
   const [skills,      setSkills]      = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [search,      setSearch]      = useState("");
-  const [filterType,  setFilterType]  = useState("all");
-  const [filterSkill, setFilterSkill] = useState("all");
+  const [filterType,   setFilterType]   = useState("all");
+  const [filterSkill,  setFilterSkill]  = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -91,9 +92,10 @@ export default function StaffList() {
   const filtered = staff.filter(s => {
     const q = search.toLowerCase();
     const matchSearch = (s.users?.full_name?.toLowerCase() || "").includes(q) || (s.users?.email?.toLowerCase() || "").includes(q);
-    const matchType   = filterType  === "all" || s.staff_type === filterType;
-    const matchSkill  = filterSkill === "all" || s.skillTags?.some(t => String(t.id) === filterSkill);
-    return matchSearch && matchType && matchSkill;
+    const matchType   = filterType   === "all" || s.staff_type === filterType;
+    const matchSkill  = filterSkill  === "all" || s.skillTags?.some(t => String(t.id) === filterSkill);
+    const matchStatus = filterStatus === "all" || (filterStatus === "active" ? s.is_active : !s.is_active);
+    return matchSearch && matchType && matchSkill && matchStatus;
   });
 
   const activeCount   = staff.filter(s => s.is_active).length;
@@ -124,13 +126,33 @@ export default function StaffList() {
         </div>
 
         {/* Filter tabs */}
-        <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", marginBottom: "16px", width: "fit-content" }}>
-          {TABS.map(t => (
-            <button key={t.value} onClick={() => setFilterType(t.value)}
-              style={{ padding: "7px 16px", background: filterType === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: filterType === t.value ? "600" : "500", color: filterType === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filterType === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
-              {t.label}
-            </button>
-          ))}
+        <div style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+            {TABS.map(t => (
+              <button key={t.value} onClick={() => setFilterType(t.value)}
+                style={{ padding: "7px 16px", background: filterType === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: filterType === t.value ? "600" : "500", color: filterType === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filterType === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+            {[
+              { value: "all",      label: "All status" },
+              { value: "active",   label: `Active (${activeCount})` },
+              { value: "inactive", label: `Inactive (${inactiveCount})` },
+            ].map(t => (
+              <button key={t.value} onClick={() => setFilterStatus(t.value)}
+                style={{
+                  padding: "7px 14px", border: "none", borderRadius: "7px", fontSize: "13px", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
+                  background: filterStatus === t.value ? (t.value === "active" ? "#DCFCE7" : t.value === "inactive" ? "#FEE2E2" : "#FFF") : "transparent",
+                  color: filterStatus === t.value ? (t.value === "active" ? "#16A34A" : t.value === "inactive" ? "#DC2626" : "#1E293B") : "#64748B",
+                  fontWeight: filterStatus === t.value ? "600" : "500",
+                  boxShadow: filterStatus === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Search + skill filter */}

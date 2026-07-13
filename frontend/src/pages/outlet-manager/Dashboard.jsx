@@ -353,34 +353,77 @@ export default function ManagerDashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "20px", marginBottom: "20px" }}>
           {/* Bar chart */}
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px" }}>
-            <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "20px" }}>
-              Tasks This Week by Day
-            </h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+              <div>
+                <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Tasks This Week by Day</h3>
+                {!loading && <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>{weekBarData.reduce((s,v)=>s+v,0)} shifts scheduled this week</p>}
+              </div>
+              {!loading && <span style={{ fontSize: "11px", color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "6px", padding: "3px 9px", fontWeight: "500" }}>
+                Week of {(() => { const d = new Date(); d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1)); return d.toLocaleDateString("en-SG",{day:"numeric",month:"short"}); })()}
+              </span>}
+            </div>
             {loading ? (
-              <div style={{ display: "flex", gap: "10px", alignItems: "flex-end", height: "100px" }}>
+              <div style={{ display: "flex", gap: "10px", alignItems: "flex-end", height: "130px" }}>
                 {Array.from({ length: 7 }).map((_, i) => (
-                  <Shimmer key={i} w="100%" h={`${40 + i * 8}px`} r="6px" style={{ flex: 1 }} />
+                  <Shimmer key={i} w="100%" h={`${30 + i * 12}px`} r="8px" />
                 ))}
               </div>
             ) : (
-              <div style={{ display: "flex", gap: "8px", alignItems: "flex-end", height: "110px" }}>
-                {weekBarData.map((count, i) => {
-                  const pct = count === 0 ? 6 : Math.max(10, (count / maxBar) * 100);
-                  return (
-                    <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
-                      <span style={{ fontSize: "11px", fontWeight: "700", color: count > 0 ? "#2563EB" : "#CBD5E1" }}>
-                        {count > 0 ? count : ""}
-                      </span>
-                      <div style={{
-                        width: "100%", height: `${pct}%`, borderRadius: "6px 6px 3px 3px",
-                        background: count > 0 ? "linear-gradient(180deg,#3B82F6,#2563EB)" : "#F1F5F9",
-                        transition: "height 0.6s ease",
-                        minHeight: "6px",
-                      }} />
-                      <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: "500" }}>{DAYS_SHORT[i]}</span>
-                    </div>
-                  );
-                })}
+              <div style={{ position: "relative" }}>
+                {/* Grid lines */}
+                {[...Array(4)].map((_, gi) => (
+                  <div key={gi} style={{
+                    position: "absolute", left: 0, right: 0,
+                    bottom: `${28 + gi * (130 / 4)}px`,
+                    borderTop: "1px dashed #F1F5F9",
+                    zIndex: 0,
+                  }} />
+                ))}
+                <div style={{ display: "flex", gap: "8px", alignItems: "flex-end", height: "130px", position: "relative", zIndex: 1 }}>
+                  {weekBarData.map((count, i) => {
+                    const todayDow = (new Date().getDay() + 6) % 7;
+                    const isToday = i === todayDow;
+                    const pct = count === 0 ? 0 : Math.max(8, (count / maxBar) * 100);
+                    return (
+                      <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", height: "100%" }}>
+                        {/* Count badge */}
+                        <div style={{ flex: 1, display: "flex", alignItems: "flex-end", width: "100%" }}>
+                          <div style={{ width: "100%", position: "relative" }}>
+                            {count > 0 && (
+                              <div style={{
+                                position: "absolute", bottom: `calc(${pct}% + 6px)`, left: "50%", transform: "translateX(-50%)",
+                                fontSize: "11px", fontWeight: "700",
+                                color: isToday ? "#1D4ED8" : "#2563EB",
+                                background: isToday ? "#DBEAFE" : "#EFF6FF",
+                                borderRadius: "5px", padding: "1px 5px",
+                                whiteSpace: "nowrap",
+                              }}>{count}</div>
+                            )}
+                            <div style={{
+                              width: "100%", height: `${pct}%`, minHeight: count > 0 ? "8px" : "3px",
+                              borderRadius: "7px 7px 4px 4px",
+                              background: isToday
+                                ? "linear-gradient(180deg,#60A5FA,#1D4ED8)"
+                                : count > 0
+                                  ? "linear-gradient(180deg,#93C5FD,#3B82F6)"
+                                  : "#F1F5F9",
+                              boxShadow: isToday && count > 0 ? "0 4px 12px rgba(37,99,235,0.3)" : "none",
+                              transition: "height 0.7s cubic-bezier(0.34,1.56,0.64,1)",
+                            }} />
+                          </div>
+                        </div>
+                        {/* Day label */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                          <span style={{
+                            fontSize: "11px", fontWeight: isToday ? "700" : "500",
+                            color: isToday ? "#1D4ED8" : "#94A3B8",
+                          }}>{DAYS_SHORT[i]}</span>
+                          {isToday && <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#2563EB" }} />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
