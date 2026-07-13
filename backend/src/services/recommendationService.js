@@ -3,6 +3,19 @@ const Groq = require("groq-sdk");
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+function toMinutes(t) {
+  if (!t) return null;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function fullyCovers(availFrom, availTo, shiftStart, shiftEnd) {
+  const af = toMinutes(availFrom), at = toMinutes(availTo);
+  const ss = toMinutes(shiftStart), se = toMinutes(shiftEnd);
+  if (af == null || at == null || ss == null || se == null) return null;
+  return af <= ss && at >= se;
+}
+
 async function getShiftRecommendations(shiftId) {
   // 1. Load shift + roles
   const { data: shift } = await supabaseAdmin
@@ -29,7 +42,7 @@ async function getShiftRecommendations(shiftId) {
   // 2. Load all active non-manager staff for the outlet
   const { data: staffRows } = await supabaseAdmin
     .from("staff")
-    .select("staff_id, user_id, staff_type, default_work_days")
+    .select("staff_id, user_id, staff_type, default_work_days, experience_level, years_of_experience")
     .eq("outlet_id", shift.outlet_id)
     .eq("is_active", true);
 
@@ -45,13 +58,13 @@ async function getShiftRecommendations(shiftId) {
   // 3. Load skill tags for all staff
   const { data: skillTagRows } = await supabaseAdmin
     .from("user_skill_tags")
-    .select("user_id, skill_id, skills(name)")
+    .select("user_id, skill_id, proficiency_level, skills(name)")
     .in("user_id", userIds);
 
   const skillMap = {};
   (skillTagRows || []).forEach(t => {
     if (!skillMap[t.user_id]) skillMap[t.user_id] = [];
-    skillMap[t.user_id].push({ skill_id: t.skill_id, name: t.skills?.name });
+    skillMap[t.user_id].push({ skill_id: t.skill_id, name: t.skills?.name, proficiency: t.proficiency_level });
   });
 
   // 4. Load approved leave on shift date
@@ -81,22 +94,24 @@ async function getShiftRecommendations(shiftId) {
   const shiftDay = new Date(shift.shift_date);
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const shiftDayName = dayNames[shiftDay.getDay()];
-  // Week start (Monday) for the shift date
+  // Week start (Monday) for the shift date, and Monday-indexed day_of_week (Mon=0…Sun=6)
   const dayOfWeek = shiftDay.getDay();
   const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const weekStart = new Date(shiftDay);
   weekStart.setDate(shiftDay.getDate() - daysToMonday);
   const weekStartStr = weekStart.toISOString().split("T")[0];
+  const mondayIndexedDay = daysToMonday; // Mon=0…Sun=6, matches casualController's auto-assign convention
 
   const casualStaffIds = staffRows.filter(s => s.staff_type === "casual").map(s => s.staff_id);
   let casualAvailMap = {};
   if (casualStaffIds.length > 0) {
-    const { data: availRows } = await supabaseAdmin
+    const { data: availRows, error: availErr } = await supabaseAdmin
       .from("casual_availability")
       .select("staff_id, available_from, available_to")
       .in("staff_id", casualStaffIds)
       .eq("week_start_date", weekStartStr)
-      .eq("day_of_week", shiftDayName);
+      .eq("day_of_week", mondayIndexedDay);
+    if (availErr) console.error("casual_availability query failed:", availErr.message);
     (availRows || []).forEach(a => { casualAvailMap[a.staff_id] = a; });
   }
 
@@ -107,7 +122,9 @@ async function getShiftRecommendations(shiftId) {
       if (user.role === "outlet_manager") return null;
       if (alreadyAssignedStaffIds.has(s.staff_id)) return null;
 
-      const skills = (skillMap[s.user_id] || []).map(sk => sk.name).join(", ") || "none";
+      const skills = (skillMap[s.user_id] || [])
+        .map(sk => sk.proficiency ? `${sk.name} (${sk.proficiency})` : sk.name)
+        .join(", ") || "none";
       const onLeave = onLeaveStaffIds.has(s.staff_id);
       const doubleBooked = doubleBookedIds.has(s.staff_id);
 
@@ -116,8 +133,15 @@ async function getShiftRecommendations(shiftId) {
       else if (doubleBooked) availability = "already assigned to another shift this day";
       else if (s.staff_type === "casual") {
         const av = casualAvailMap[s.staff_id];
-        if (av) availability = `available ${av.available_from?.slice(0,5)}–${av.available_to?.slice(0,5)}`;
-        else availability = "no availability submitted for this day";
+        if (av) {
+          const covers = fullyCovers(av.available_from, av.available_to, shift.start_time, shift.end_time);
+          const window = `${av.available_from?.slice(0,5)}–${av.available_to?.slice(0,5)}`;
+          availability = covers
+            ? `available ${window} (covers full shift)`
+            : `available ${window} — DOES NOT fully cover the shift time (${shift.start_time?.slice(0,5)}–${shift.end_time?.slice(0,5)})`;
+        } else {
+          availability = "no availability submitted for this day";
+        }
       } else {
         // Regular staff: check default_work_days bitmask (Mon=0...Sun=6)
         const bitmask = s.default_work_days || "1111100";
@@ -130,6 +154,8 @@ async function getShiftRecommendations(shiftId) {
         name: user.full_name || user.email,
         type: s.staff_type,
         skills,
+        experience_level: s.experience_level || "unspecified",
+        years_of_experience: s.years_of_experience ?? "unspecified",
         availability,
       };
     })
@@ -159,12 +185,13 @@ ROLES NEEDING STAFF:
 ${rolesContext.map(r => `- ${r.role_name} (requires skill: ${r.required_skill || "any"}, need ${r.slots_remaining} more staff)`).join("\n")}
 
 AVAILABLE STAFF:
-${staffContext.map(s => `- [ID:${s.staff_id}] ${s.name} | Type: ${s.type} | Skills: ${s.skills} | Status: ${s.availability}`).join("\n")}
+${staffContext.map(s => `- [ID:${s.staff_id}] ${s.name} | Type: ${s.type} | Skills: ${s.skills} | Experience: ${s.experience_level}, ${s.years_of_experience} yrs | Status: ${s.availability}`).join("\n")}
 
-For each role, recommend the best staff to fill the remaining slots. Prioritise:
-1. Staff with the required skill
-2. Staff who are available (not on leave, not double-booked, availability matches shift time)
-3. Regular staff over casual for critical roles
+For each role, recommend the best staff to fill the remaining slots. Prioritise, in order:
+1. Staff who are available (not on leave, not double-booked). Treat "DOES NOT fully cover the shift time" as a hard warning — only suggest that person at "low" confidence and say so in the reason, even if their skills are a good match.
+2. Staff with the required skill, favouring higher proficiency in that skill
+3. Staff with more years of experience and a higher experience level
+4. Regular staff over casual for critical roles
 
 Respond ONLY with valid JSON in this exact format:
 {

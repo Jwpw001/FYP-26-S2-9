@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
@@ -96,6 +96,7 @@ async function fetchEnrichedAssignments(shiftId) {
 
 export default function ShiftDetail() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const goTo = useGoTo();
   const user = getUser();
 
@@ -306,6 +307,7 @@ export default function ShiftDetail() {
       } finally {
         if (!cancelled) setLoading(false);
       }
+      if (!cancelled && searchParams.get("assign") === "1") runAiRecommend();
     }
     load();
     return () => { cancelled = true; };

@@ -19,7 +19,7 @@ export default function CreateShift() {
   const [error, setError]             = useState("");
 
   const [form, setForm] = useState({ title: "", shift_date: searchParams.get("date") || "", start_time: "", end_time: "", deadline: "" });
-  const [roles, setRoles] = useState([{ role_name: "", skill_id: "", headcount: 1 }]);
+  const [roles, setRoles] = useState([{ skill_id: "", headcount: 1 }]);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +39,7 @@ export default function CreateShift() {
     return () => { cancelled = true; };
   }, [userId]);
 
-  function addRole() { setRoles(p => [...p, { role_name: "", skill_id: "", headcount: 1 }]); }
+  function addRole() { setRoles(p => [...p, { skill_id: "", headcount: 1 }]); }
   function removeRole(i) { setRoles(p => p.filter((_, j) => j !== i)); }
   function updateRole(i, f, v) { setRoles(p => p.map((r, j) => j === i ? { ...r, [f]: v } : r)); }
 
@@ -63,11 +63,19 @@ export default function CreateShift() {
       if (!shift?.shift_id) throw new Error("Shift was created but no ID returned.");
       if (roles.length > 0) {
         const { error: roleErr } = await supabase.from("shift_roles").insert(
-          roles.map(r => ({ shift_id: shift.shift_id, role_name: "", skill_id: r.skill_id ? Number(r.skill_id) : null, headcount: Number(r.headcount) || 1 }))
+          roles.map((r, i) => {
+            const skillName = skills.find(sk => String(sk.skill_id) === String(r.skill_id))?.name;
+            return {
+              shift_id: shift.shift_id,
+              role_name: skillName || `Role ${i + 1}`,
+              skill_id: r.skill_id ? Number(r.skill_id) : null,
+              headcount: Number(r.headcount) || 1,
+            };
+          })
         );
         if (roleErr) throw new Error(roleErr.message || JSON.stringify(roleErr));
       }
-      navigate(`/outlet-manager/shifts/${shift.shift_id}`);
+      navigate(`/outlet-manager/shifts/${shift.shift_id}?assign=1`);
     } catch (err) {
       setError(err.message || "Failed to save. Please try again.");
       console.error(err);
