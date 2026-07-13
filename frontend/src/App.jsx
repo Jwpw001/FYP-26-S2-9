@@ -47,6 +47,7 @@ import SwapRequests   from "./pages/regular-staff/SwapRequests";
 import CasualDashboard    from "./pages/outlet-casual-staff/Dashboard";
 import CasualBranches      from "./pages/outlet-casual-staff/Branches";
 import CasualAvailability  from "./pages/outlet-casual-staff/Availability";
+import CasualMyShifts     from "./pages/outlet-casual-staff/MyShifts";
 import RegisterCasual     from "./pages/RegisterCasual";
 
 // Business Owner
@@ -151,6 +152,7 @@ function App() {
 
         {/* ── Outlet Casual Staff ──────────────────────── */}
         <Route path="/outlet-casual-staff/dashboard"        element={<PR roles={["outlet_casual_staff"]}><CasualDashboard /></PR>} />
+        <Route path="/outlet-casual-staff/shifts"           element={<PR roles={["outlet_casual_staff"]}><CasualMyShifts /></PR>} />
         <Route path="/outlet-casual-staff/availability"      element={<PR roles={["outlet_casual_staff"]}><CasualAvailability /></PR>} />
         <Route path="/outlet-casual-staff/branches"          element={<PR roles={["outlet_casual_staff"]}><CasualBranches /></PR>} />
         <Route path="/outlet-casual-staff/notifications"    element={<PR roles={["outlet_casual_staff"]}>

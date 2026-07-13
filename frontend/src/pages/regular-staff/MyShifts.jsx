@@ -87,7 +87,7 @@ function DateBlock({ date, highlight = false }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function MyTasks() {
+export default function MyTasks({ Layout = StaffLayout }) {
   const user   = getUser();
   const userId = user?.user_id;
 
@@ -241,7 +241,7 @@ export default function MyTasks() {
   }).length;
 
   return (
-    <StaffLayout title="My Tasks">
+    <Layout title="My Tasks">
       <div style={{ animation:"pageIn 0.4s ease both" }}>
 
         {/* Page header */}
@@ -306,7 +306,7 @@ export default function MyTasks() {
           {toast.msg}
         </div>
       )}
-    </StaffLayout>
+    </Layout>
   );
 }
 

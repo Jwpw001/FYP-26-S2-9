@@ -144,7 +144,7 @@ export default function LeaveRequests() {
       .insert({ staff_id: staffId, leave_type: form.leave_type, start_date: form.start_date, end_date: form.end_date, reason: form.reason.trim() || null, status: "pending" })
       .select().single();
     setSaving(false);
-    if (err) { setError("Failed to submit. Please try again."); return; }
+    if (err) { setError(err.message || "Failed to submit. Please try again."); return; }
     setRequests(prev => [data, ...prev]);
     setForm({ leave_type: "annual", start_date: "", end_date: "", reason: "" });
     setShowing(false);

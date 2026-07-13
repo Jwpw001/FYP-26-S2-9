@@ -176,7 +176,7 @@ export default function SwapRequests() {
       setShowing(false);
       showToast("Request submitted successfully.");
     } catch (err) {
-      setError("Failed to submit request.");
+      setError(err.message || "Failed to submit request.");
       console.error(err);
     } finally {
       setSaving(false);
