@@ -14,7 +14,3 @@ export function setUser(profile) {
 export function clearUser() {
   localStorage.removeItem("user");
 }
-
-export function isAuthenticated() {
-  return getUser() !== null;
-}

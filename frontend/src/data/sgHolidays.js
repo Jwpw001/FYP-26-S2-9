@@ -11,9 +11,3 @@ export const SG_HOLIDAYS = [
   { date: "2026-10-20", name: "Deepavali", enabled: true },
   { date: "2026-12-25", name: "Christmas Day", enabled: true },
 ];
-
-export const SUGGESTED_ROLES = [
-  "Cashier", "Barista", "Server", "Floor Manager", "Kitchen Staff",
-  "Cleaner", "Security", "Host", "Bartender", "Supervisor",
-  "Delivery Rider", "Packer", "Cook", "Dishwasher", "Receptionist",
-];
