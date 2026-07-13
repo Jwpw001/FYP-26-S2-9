@@ -135,7 +135,7 @@ export default function SwapRequests() {
             .eq("staff_id", sid).gte("shifts.shift_date", today).eq("shifts.status", "published"),
           supabase.from("swap_requests")
             .select(`
-              swap_id, request_type, reason, status, responded_at,
+              swap_id, request_type, reason, status, responded_at, requester_assign,
               shift_assignments_swap_requests_requester_assignToshift_assignments (
                 shifts ( title, shift_date, start_time, end_time )
               )
@@ -160,6 +160,11 @@ export default function SwapRequests() {
   async function handleSubmit() {
     if (!form.requester_assign) { setError("Please select a shift."); return; }
     if (!staffId) { setError("No staff record found for your account."); return; }
+    const duplicate = requests.find(r =>
+      r.status !== "rejected" && r.status !== "cancelled" &&
+      String(r.requester_assign) === String(form.requester_assign)
+    );
+    if (duplicate) { setError("You already have an active request for this shift."); return; }
     setSaving(true); setError("");
     try {
       const { data, error: err } = await supabase.from("swap_requests")

@@ -128,8 +128,17 @@ export default function LeaveRequests() {
 
   async function handleSubmit() {
     if (!form.start_date || !form.end_date) { setError("Start and end dates are required."); return; }
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (form.start_date < todayStr) { setError("Start date cannot be in the past."); return; }
     if (new Date(form.end_date) < new Date(form.start_date)) { setError("End date cannot be before start date."); return; }
     if (!staffId) { setError("No staff record found for your account."); return; }
+    const overlap = requests.find(r =>
+      r.status !== "rejected" && form.start_date <= r.end_date && form.end_date >= r.start_date
+    );
+    if (overlap) {
+      setError(`This overlaps your ${overlap.status} ${overlap.leave_type} leave (${fmtDate(overlap.start_date)} → ${fmtDate(overlap.end_date)}).`);
+      return;
+    }
     setSaving(true); setError("");
     const { data, error: err } = await supabase.from("availability")
       .insert({ staff_id: staffId, leave_type: form.leave_type, start_date: form.start_date, end_date: form.end_date, reason: form.reason.trim() || null, status: "pending" })
@@ -182,11 +191,11 @@ export default function LeaveRequests() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                 <div>
                   <label style={lbl}>Start Date *</label>
-                  <input style={inp} type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} />
+                  <input style={inp} type="date" min={new Date().toISOString().slice(0, 10)} value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} />
                 </div>
                 <div>
                   <label style={lbl}>End Date *</label>
-                  <input style={inp} type="date" value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} />
+                  <input style={inp} type="date" min={form.start_date || new Date().toISOString().slice(0, 10)} value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} />
                 </div>
               </div>
               <div>

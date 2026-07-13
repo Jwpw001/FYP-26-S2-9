@@ -104,6 +104,7 @@ export default function CasualAvailability() {
   const [history, setHistory]               = useState([]); // [[weekStr, days[]], ...]
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [loadingWeek, setLoadingWeek]       = useState(false);
+  const [overwriteConfirm, setOverwriteConfirm] = useState(null); // { existingDays } | null
 
   const weekStartStr = toDateStr(weekStart);
 
@@ -192,11 +193,25 @@ export default function CasualAvailability() {
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
-  async function submit() {
+  function submit() {
     if (setCount === 0) {
       showToast("Click the day cards above to set your hours first.", false);
       return;
     }
+    if (weekStartStr < toDateStr(getWeekStart(new Date()))) {
+      showToast("Cannot submit availability for a past week.", false);
+      return;
+    }
+    const existing = history.find(([weekStr]) => weekStr === weekStartStr);
+    if (existing) {
+      setOverwriteConfirm({ existingDays: existing[1] });
+      return;
+    }
+    doSubmit();
+  }
+
+  async function doSubmit() {
+    setOverwriteConfirm(null);
     setSaving(true);
     try {
       const availability = Object.entries(schedule).map(([dv, times]) => ({
@@ -247,7 +262,8 @@ export default function CasualAvailability() {
         {/* ── Week selector ─────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", marginBottom: "20px" }}>
           <button onClick={() => { setWeekStart(w => addWeeks(w, -1)); setSaved(false); }}
-            style={{ width: "34px", height: "34px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            disabled={weekStartStr <= toDateStr(getWeekStart(new Date()))}
+            style={{ width: "34px", height: "34px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: weekStartStr <= toDateStr(getWeekStart(new Date())) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: weekStartStr <= toDateStr(getWeekStart(new Date())) ? 0.4 : 1 }}>
             <ChevronLeft size={16} color="#64748B" />
           </button>
           <div style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", minWidth: "260px", textAlign: "center" }}>
@@ -448,6 +464,40 @@ export default function CasualAvailability() {
               <button onClick={confirmModal}
                 style={{ flex: 2, padding: "11px", background: modalAvailable ? "#2563EB" : "#EF4444", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", color: "#FFF", cursor: "pointer" }}>
                 {modalAvailable ? "Set Available" : "Mark Not Available"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Overwrite confirmation modal ─────────────────────────────── */}
+      {overwriteConfirm && (
+        <div
+          onClick={e => e.target === e.currentTarget && setOverwriteConfirm(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.15s ease both" }}>
+          <div style={{ background: "#FFF", borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "400px", boxShadow: "0 24px 60px rgba(0,0,0,0.2)", animation: "popIn 0.2s ease both" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>Already submitted for this week</h3>
+            <p style={{ fontSize: "13px", color: "#64748B", lineHeight: 1.6, marginBottom: "16px" }}>
+              You already submitted availability for <strong>Week of {fmtWeekLabel(weekStart)}</strong>:
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
+              {[...overwriteConfirm.existingDays].sort((a, b) => a.day_of_week - b.day_of_week).map(d => (
+                <span key={d.day_of_week} style={{ fontSize: "11px", fontWeight: "600", color: "#1E40AF", background: "#DBEAFE", borderRadius: "6px", padding: "3px 8px", whiteSpace: "nowrap" }}>
+                  {DAY_SHORT[d.day_of_week]} {d.available_from?.slice(0, 5)}–{d.available_to?.slice(0, 5)}
+                </span>
+              ))}
+            </div>
+            <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "22px" }}>
+              Submitting now will overwrite that with what you've set above. Continue?
+            </p>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={() => setOverwriteConfirm(null)}
+                style={{ flex: 1, padding: "11px", background: "#F1F5F9", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={doSubmit}
+                style={{ flex: 1, padding: "11px", background: "#2563EB", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", color: "#FFF", cursor: "pointer" }}>
+                Overwrite & Submit
               </button>
             </div>
           </div>
