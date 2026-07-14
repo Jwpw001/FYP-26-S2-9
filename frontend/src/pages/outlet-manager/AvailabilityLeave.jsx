@@ -119,7 +119,11 @@ export default function AvailabilityLeave() {
     async function loadBase() {
       const { data: myStaff } = await supabase
         .from("staff").select("outlet_id").eq("user_id", userId).eq("is_active", true).limit(1);
-      const oid = myStaff?.[0]?.outlet_id;
+      let oid = myStaff?.[0]?.outlet_id;
+      if (!oid) {
+        const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
+        oid = omRow?.[0]?.outlet_id;
+      }
       if (!oid || cancelled) return;
       setOutletId(oid);
 

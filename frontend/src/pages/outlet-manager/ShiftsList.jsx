@@ -76,6 +76,7 @@ export default function ShiftsList() {
   const [shifts, setShifts]         = useState([]);
   const [krewbyAssigned, setKrewbyAssigned] = useState([]); // [{ shift_id, role_id, status }]
   const [outletInfo, setOutletInfo] = useState({ outlet_id: null });
+  const [operatingDays, setOperatingDays] = useState(null); // null = not loaded yet
   const [loading, setLoading]       = useState(true);
   const [view, setView]             = useState("calendar");
   const [filterStatus, setFilter]   = useState("all");
@@ -94,10 +95,21 @@ export default function ShiftsList() {
       try {
         const { data: myStaff } = await supabase
           .from("staff").select("outlet_id").eq("user_id", userId).eq("is_active", true).limit(1);
-        const oid = myStaff?.[0]?.outlet_id;
+        let oid = myStaff?.[0]?.outlet_id;
+        if (!oid) {
+          const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
+          oid = omRow?.[0]?.outlet_id;
+        }
         if (!oid || cancelled) return;
 
         if (!cancelled) setOutletInfo({ outlet_id: oid });
+
+        // Fetch outlet settings for operating days
+        api.get(`/api/business/outlets/${oid}/settings`).then(r => {
+          if (!cancelled && r?.settings?.operating_days) {
+            setOperatingDays(r.settings.operating_days.split("").map(Number));
+          }
+        }).catch(() => {});
 
         const { data: shiftRows } = await supabase
           .from("shifts")
@@ -328,20 +340,22 @@ export default function ShiftsList() {
               {weekDates.map((date, i) => {
                 const dayShifts = getShiftsForDate(date);
                 const isToday = date.toDateString() === new Date().toDateString();
+                const isOff = operatingDays !== null && !operatingDays[i];
                 return (
-                  <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", padding: "10px", minHeight: "140px", background: isToday ? "#F0F7FF" : "transparent" }}>
+                  <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", padding: "10px", minHeight: "140px", background: isOff ? "#F8F9FA" : isToday ? "#F0F7FF" : "transparent" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "8px" }}>
-                      <span style={{ fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", marginBottom: "3px" }}>{DAYS[i]}</span>
-                      <div style={{ width: "26px", height: "26px", borderRadius: "50%", background: isToday ? "#2563EB" : "transparent", color: isToday ? "#fff" : "#1E293B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "700" }}>
+                      <span style={{ fontSize: "10px", fontWeight: "700", color: isOff ? "#D1D5DB" : "#94A3B8", textTransform: "uppercase", marginBottom: "3px" }}>{DAYS[i]}</span>
+                      <div style={{ width: "26px", height: "26px", borderRadius: "50%", background: isToday && !isOff ? "#2563EB" : "transparent", color: isOff ? "#D1D5DB" : isToday ? "#fff" : "#1E293B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "700" }}>
                         {date.getDate()}
                       </div>
+                      {isOff && <span style={{ fontSize: "9px", fontWeight: "600", color: "#D1D5DB", marginTop: "2px", letterSpacing: "0.3px" }}>OFF</span>}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
                       {dayShifts.map(shift => {
                         const isSelected = selected.has(shift.shift_id);
                         return (
                           <div key={shift.shift_id}
-                            style={{ padding: "4px 6px", borderRadius: "6px", cursor: "pointer", fontSize: "11px", display: "flex", alignItems: "flex-start", gap: "5px", outline: isSelected ? "2px solid #6366F1" : "none", ...STATUS_STYLES[shift.status] }}
+                            style={{ padding: "4px 6px", borderRadius: "6px", cursor: "pointer", fontSize: "11px", display: "flex", alignItems: "flex-start", gap: "5px", outline: isSelected ? "2px solid #6366F1" : "none", opacity: isOff ? 0.55 : 1, ...STATUS_STYLES[shift.status] }}
                             onClick={() => selectMode ? toggleSelect(shift.shift_id) : goTo(`/outlet-manager/shifts/${shift.shift_id}`)}>
                             {selectMode && (
                               <div style={{ width: "13px", height: "13px", borderRadius: "3px", border: `2px solid ${isSelected ? "#6366F1" : "rgba(0,0,0,0.25)"}`, background: isSelected ? "#6366F1" : "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}>
@@ -355,11 +369,13 @@ export default function ShiftsList() {
                           </div>
                         );
                       })}
-                      <div
-                        style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", cursor: "pointer", padding: "3px", borderRadius: "6px", border: "1px dashed #E2E8F0", marginTop: dayShifts.length > 0 ? "2px" : 0 }}
-                        onClick={() => goTo(`/outlet-manager/shifts/new?date=${date.toISOString().split("T")[0]}`)}>
-                        +
-                      </div>
+                      {!isOff && (
+                        <div
+                          style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", cursor: "pointer", padding: "3px", borderRadius: "6px", border: "1px dashed #E2E8F0", marginTop: dayShifts.length > 0 ? "2px" : 0 }}
+                          onClick={() => goTo(`/outlet-manager/shifts/new?date=${date.toISOString().split("T")[0]}`)}>
+                          +
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

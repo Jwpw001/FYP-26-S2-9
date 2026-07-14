@@ -148,7 +148,13 @@ export default function ManagerDashboard() {
           .from("staff").select("outlet_id")
           .eq("user_id", userId).eq("is_active", true).limit(1);
 
-        const outletId = myStaff?.[0]?.outlet_id;
+        let outletId = myStaff?.[0]?.outlet_id;
+        if (!outletId) {
+          const { data: myMgr } = await supabase
+            .from("outlet_managers").select("outlet_id")
+            .eq("user_id", userId).limit(1);
+          outletId = myMgr?.[0]?.outlet_id;
+        }
         if (!outletId || cancelled) return;
 
         // Get outlet staff IDs first so we can scope leave/swap counts correctly

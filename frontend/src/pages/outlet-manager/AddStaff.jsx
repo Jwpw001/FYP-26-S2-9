@@ -33,8 +33,13 @@ export default function AddStaff() {
           .eq("user_id", userId).eq("is_active", true).limit(1),
         api.get("/api/business/skills/assignable").catch(() => ({ skills: [] })),
       ]);
+      let oid = myStaff?.[0]?.outlet_id || null;
+      if (!oid) {
+        const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
+        oid = omRow?.[0]?.outlet_id || null;
+      }
       if (!cancelled) {
-        setOutletId(myStaff?.[0]?.outlet_id || null);
+        setOutletId(oid);
         setSkills(skillRes.skills || []);
       }
     }

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
+import { supabase } from "../../lib/supabaseClient";
+import { getUser } from "../../utils/auth";
 import { SG_HOLIDAYS } from "../../data/sgHolidays";
 import {
   Clock, Calendar, Check, Minus, Plus,
@@ -64,6 +66,7 @@ function parseSettings(s) {
 }
 
 export default function ManagerSettings() {
+  const user = getUser();
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState("");
@@ -72,14 +75,35 @@ export default function ManagerSettings() {
   const [alloc, setAlloc]           = useState(null);
   const [savedAlloc, setSavedAlloc] = useState(null);
   const [editingAlloc, setEditingAlloc] = useState(false);
+  const [outletId, setOutletId]     = useState(null);
 
   useEffect(() => { load(); }, []);
+
+  async function resolveOutletId() {
+    const { data: staffRow } = await supabase.from("staff").select("outlet_id").eq("user_id", user?.user_id).eq("is_active", true).limit(1);
+    if (staffRow?.[0]?.outlet_id) return staffRow[0].outlet_id;
+    const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", user?.user_id).limit(1);
+    return omRow?.[0]?.outlet_id || null;
+  }
 
   async function load() {
     setLoading(true);
     try {
-      const r = await api.get("/api/business/settings");
-      setSettings(r.settings ? parseSettings(r.settings) : null);
+      const oid = outletId || await resolveOutletId();
+      if (oid) setOutletId(oid);
+
+      const [r, { data: outletRow }] = await Promise.all([
+        oid ? api.get(`/api/business/outlets/${oid}/settings`) : api.get("/api/business/settings"),
+        oid ? supabase.from("outlets").select("open_time, close_time").eq("outlet_id", oid).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+
+      // Merge outlet-level open/close times into settings (they live on outlets table, not outlet_settings)
+      const merged = {
+        ...(r.settings || {}),
+        open_time:  outletRow?.open_time?.slice(0, 5)  || r.settings?.open_time  || "09:00",
+        close_time: outletRow?.close_time?.slice(0, 5) || r.settings?.close_time || "18:00",
+      };
+      setSettings(parseSettings(merged));
       const a = r.allocation ? { ...ALLOC_DEFAULTS, ...r.allocation } : { ...ALLOC_DEFAULTS };
       setAlloc(a);
       setSavedAlloc({ ...a });
@@ -118,7 +142,7 @@ export default function ManagerSettings() {
     if (total !== 100) { setError("Weights must sum to 100%."); return; }
     setSaving(true); setError(""); setSuccess("");
     try {
-      await api.put("/api/business/settings/allocation", alloc);
+      await api.put(outletId ? `/api/business/outlets/${outletId}/settings/allocation` : "/api/business/settings/allocation", alloc);
       setSavedAlloc({ ...alloc });
       setEditingAlloc(false);
       setSuccess("Smart allocation saved.");

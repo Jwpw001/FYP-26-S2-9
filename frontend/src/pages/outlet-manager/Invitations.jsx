@@ -63,6 +63,14 @@ export default function OMInvitations() {
         if (staffRow) {
           setOutletId(staffRow.outlet_id);
           setOutletName(staffRow.outlets?.name || "");
+        } else {
+          const { data: omRow } = await supabase
+            .from("outlet_managers").select("outlet_id, outlets(name)")
+            .eq("user_id", user.user_id).limit(1);
+          if (omRow?.[0]) {
+            setOutletId(omRow[0].outlet_id);
+            setOutletName(omRow[0].outlets?.name || "");
+          }
         }
       }
       const inv = await api.get("/api/invitations");

@@ -63,7 +63,11 @@ export default function Attendance() {
   useEffect(() => {
     if (!userId) return;
     supabase.from("staff").select("outlet_id").eq("user_id", userId).eq("is_active", true).limit(1)
-      .then(({ data }) => { if (data?.[0]) setOutletId(data[0].outlet_id); });
+      .then(async ({ data }) => {
+        if (data?.[0]) { setOutletId(data[0].outlet_id); return; }
+        const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
+        if (omRow?.[0]) setOutletId(omRow[0].outlet_id);
+      });
   }, [userId]);
 
   return (
