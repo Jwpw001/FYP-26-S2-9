@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 
 const router = express.Router();
 
@@ -14,6 +14,16 @@ const {
     confirmWeeklySchedule,
 } = require("../controllers/shiftController");
 
+const {
+    getShiftTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    assignStaff,
+    unassignStaff,
+    getMyTasks,
+} = require("../controllers/taskController");
+
 const validate = require("../middleware/validateMiddleware");
 const verifyToken = require("../middleware/authMiddleware");
 const allowRoles = require("../middleware/roleMiddleware");
@@ -23,65 +33,37 @@ const {
     updateShiftSchema
 } = require("../validators/shiftValidator");
 
-router.get(
-    "/",
-    verifyToken,
-    allowRoles(
-        ROLES.OUTLET_MANAGER,
-        ROLES.SYSTEM_ADMIN,
-        ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.KREWBY_CASUAL_WORKER
-    ),
-    getShifts
-);
+const ALL_SHIFT_ROLES = [
+    ROLES.OUTLET_MANAGER,
+    ROLES.SYSTEM_ADMIN,
+    ROLES.REGULAR_STAFF,
+    ROLES.OUTLET_CASUAL_STAFF,
+    ROLES.KREWBY_CASUAL_WORKER,
+];
 
-router.get(
-    "/:id",
-    verifyToken,
-    allowRoles(
-        ROLES.OUTLET_MANAGER,
-        ROLES.SYSTEM_ADMIN,
-        ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.KREWBY_CASUAL_WORKER
-    ),
-    getShiftById
-);
+const MANAGER_ONLY = [ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN];
 
-router.post(
-    "/",
-    verifyToken,
-    allowRoles(
-        ROLES.OUTLET_MANAGER,
-        ROLES.SYSTEM_ADMIN
-    ),
-    validate(createShiftSchema),
-    createShift
-);
+// ── Static routes first (must come before any /:param routes) ─────────────────
 
-router.patch(
-    "/:id",
-    verifyToken,
-    allowRoles(
-        ROLES.OUTLET_MANAGER,
-        ROLES.SYSTEM_ADMIN
-    ),
-    validate(updateShiftSchema),
-    updateShift
-);
+router.get("/me/tasks",     verifyToken, allowRoles(...ALL_SHIFT_ROLES), getMyTasks);
+router.post("/generate-week", verifyToken, allowRoles(...MANAGER_ONLY), generateWeeklySchedule);
+router.post("/confirm-week",  verifyToken, allowRoles(...MANAGER_ONLY), confirmWeeklySchedule);
 
-router.delete(
-    "/:id",
-    verifyToken,
-    allowRoles(
-        ROLES.OUTLET_MANAGER,
-        ROLES.SYSTEM_ADMIN
-    ),
-    deleteShift
-);
+// ── Shifts ─────────────────────────────────────────────────────────────────────
 
-router.post("/generate-week", verifyToken, allowRoles(ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN), generateWeeklySchedule);
-router.post("/confirm-week",  verifyToken, allowRoles(ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN), confirmWeeklySchedule);
+router.get("/",    verifyToken, allowRoles(...ALL_SHIFT_ROLES), getShifts);
+router.post("/",   verifyToken, allowRoles(...MANAGER_ONLY), validate(createShiftSchema), createShift);
+router.get("/:id", verifyToken, allowRoles(...ALL_SHIFT_ROLES), getShiftById);
+router.patch("/:id", verifyToken, allowRoles(...MANAGER_ONLY), validate(updateShiftSchema), updateShift);
+router.delete("/:id", verifyToken, allowRoles(...MANAGER_ONLY), deleteShift);
+
+// ── Tasks (manager CRUD) ───────────────────────────────────────────────────────
+
+router.patch("/tasks/:taskId",         verifyToken, allowRoles(...MANAGER_ONLY),    updateTask);
+router.delete("/tasks/:taskId",        verifyToken, allowRoles(...MANAGER_ONLY),    deleteTask);
+router.post("/tasks/:taskId/assign",   verifyToken, allowRoles(...MANAGER_ONLY),    assignStaff);
+router.delete("/tasks/:taskId/assign", verifyToken, allowRoles(...MANAGER_ONLY),    unassignStaff);
+router.get("/:shiftId/tasks",          verifyToken, allowRoles(...ALL_SHIFT_ROLES), getShiftTasks);
+router.post("/:shiftId/tasks",         verifyToken, allowRoles(...MANAGER_ONLY),    createTask);
 
 module.exports = router;

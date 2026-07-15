@@ -565,6 +565,8 @@ const updateOutletSkill = async (req, res) => {
 const deleteOutletSkill = async (req, res) => {
   try {
     const skill_id = Number(req.params.skill_id);
+    // Cascade: remove all staff assignments for this skill before deleting the skill itself
+    await supabaseAdmin.from("user_skill_tags").delete().eq("skill_id", skill_id);
     await prisma.skills.delete({ where: { skill_id } });
     return res.json({ success: true, message: "Skill deleted." });
   } catch (error) {

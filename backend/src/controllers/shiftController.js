@@ -15,8 +15,16 @@ const getShifts = async (req, res) => {
       include: {
         outlets: true,
         users: { select: { user_id: true, full_name: true, email: true, role: true } },
-        shift_roles: true,
-        shift_assignments: true,
+        shift_tasks: {
+          include: {
+            skills: { select: { skill_id: true, name: true } },
+            task_assignments: {
+              include: {
+                staff: { include: { users: { select: { user_id: true, full_name: true, email: true } } } },
+              },
+            },
+          },
+        },
       },
       orderBy: { shift_date: "asc" },
     });
@@ -36,8 +44,16 @@ const getShiftById = async (req, res) => {
       include: {
         outlets: true,
         users: { select: { user_id: true, full_name: true, email: true, role: true } },
-        shift_roles: true,
-        shift_assignments: true,
+        shift_tasks: {
+          include: {
+            skills: { select: { skill_id: true, name: true } },
+            task_assignments: {
+              include: {
+                staff: { include: { users: { select: { user_id: true, full_name: true, email: true } } } },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -54,7 +70,7 @@ const getShiftById = async (req, res) => {
 const createShift = async (req, res) => {
   try {
     const callerOutletId = await getCallerOutletId(req.user.user_id);
-    const { outlet_id, title, shift_date, start_time, end_time, status } = req.body;
+    const { outlet_id, title, shift_date, start_time, end_time, deadline, status } = req.body;
 
     // Ensure manager can only create shifts for their own outlet
     if (callerOutletId && outlet_id && outlet_id !== callerOutletId)
@@ -63,10 +79,11 @@ const createShift = async (req, res) => {
     const shift = await prisma.shifts.create({
       data: {
         outlet_id: outlet_id || callerOutletId,
-        title,
+        title: title || null,
         shift_date: new Date(shift_date),
-        start_time: new Date(`1970-01-01T${start_time}`),
-        end_time: new Date(`1970-01-01T${end_time}`),
+        start_time: new Date(`1970-01-01T${start_time}:00Z`),
+        end_time: new Date(`1970-01-01T${end_time}:00Z`),
+        deadline: deadline ? new Date(deadline) : null,
         status,
         created_by: req.user.user_id,
       },
@@ -94,8 +111,8 @@ const updateShift = async (req, res) => {
         outlet_id,
         title,
         shift_date: shift_date ? new Date(shift_date) : undefined,
-        start_time: start_time ? new Date(`1970-01-01T${start_time}`) : undefined,
-        end_time: end_time ? new Date(`1970-01-01T${end_time}`) : undefined,
+        start_time: start_time ? new Date(`1970-01-01T${start_time}:00Z`) : undefined,
+        end_time: end_time ? new Date(`1970-01-01T${end_time}:00Z`) : undefined,
         status,
       },
     });
@@ -310,25 +327,36 @@ const confirmWeeklySchedule = async (req, res) => {
           outlet_id: outletId,
           title: s.title || "Shift",
           shift_date: new Date(s.date),
-          start_time: new Date(`1970-01-01T${s.start_time}:00`),
-          end_time:   new Date(`1970-01-01T${s.end_time}:00`),
+          start_time: new Date(`1970-01-01T${s.start_time}:00Z`),
+          end_time:   new Date(`1970-01-01T${s.end_time}:00Z`),
           status: "draft",
           created_by: null,
         },
       });
 
-      // Create roles + assignments
+      // Create tasks + assignments (one task per staff member or per role slot)
       for (const role of (s.roles || [])) {
-        const shiftRole = await prisma.shift_roles.create({
-          data: { shift_id: shift.shift_id, role_name: role.role_name, headcount: role.headcount || 1 },
-        });
+        const assignedNames = role.assigned_staff || [];
+        const slots = Math.max(role.headcount || 1, assignedNames.length);
 
-        for (const staffName of (role.assigned_staff || [])) {
-          const staffId = nameToStaffId[staffName.toLowerCase()];
-          if (staffId) {
-            await prisma.shift_assignments.create({
-              data: { shift_id: shift.shift_id, role_id: shiftRole.role_id, staff_id: staffId, status: "pending" },
-            }).catch(() => {});
+        for (let i = 0; i < slots; i++) {
+          const task = await prisma.shift_tasks.create({
+            data: {
+              shift_id: shift.shift_id,
+              title: role.role_name,
+              status: "open",
+            },
+          });
+
+          const staffName = assignedNames[i];
+          if (staffName) {
+            const staffId = nameToStaffId[staffName.toLowerCase()];
+            if (staffId) {
+              await prisma.task_assignments.create({
+                data: { task_id: task.task_id, shift_id: shift.shift_id, staff_id: staffId, status: "assigned" },
+              }).catch(() => {});
+              await prisma.shift_tasks.update({ where: { task_id: task.task_id }, data: { status: "assigned" } });
+            }
           }
         }
       }

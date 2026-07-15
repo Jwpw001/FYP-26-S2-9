@@ -113,7 +113,7 @@ export default function ShiftsList() {
 
         const { data: shiftRows } = await supabase
           .from("shifts")
-          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id, shift_roles ( role_id, headcount ), shift_assignments ( assignment_id )")
+          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id, shift_tasks ( task_id, status )")
           .eq("outlet_id", oid)
           .order("shift_date", { ascending: false });
 
@@ -204,7 +204,7 @@ export default function ShiftsList() {
       const oid = outletInfo.outlet_id;
       if (oid) {
         const { data } = await supabase.from("shifts")
-          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id, shift_roles ( role_id, headcount ), shift_assignments ( assignment_id )")
+          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id, shift_tasks ( task_id, status )")
           .eq("outlet_id", oid).order("shift_date", { ascending: false });
         if (data) setShifts(data.map(s => ({ ...s, shift_date: s.shift_date?.split("T")[0] ?? s.shift_date })));
       }
@@ -219,18 +219,16 @@ export default function ShiftsList() {
   const filtered = shifts.filter(s => filterStatus === "all" || s.status === filterStatus);
 
   function getFillStatus(shift) {
-    const roles = shift.shift_roles || [];
-    const totalNeeded = roles.reduce((sum, r) => sum + (r.headcount || 1), 0);
-    if (totalNeeded === 0) return null;
-    const krewbyCount = krewbyAssigned.filter(k => k.shift_id === shift.shift_id).length;
-    const totalAssigned = (shift.shift_assignments?.length || 0) + krewbyCount;
-    if (totalAssigned >= totalNeeded) return "full";
+    const tasks = shift.shift_tasks || [];
+    if (tasks.length === 0) return null;
+    const assigned = tasks.filter(t => t.status === "assigned" || t.status === "done").length;
+    if (assigned >= tasks.length) return "full";
     return "partial";
   }
 
   function getShiftsForDate(date) {
-    const dateStr = date.toISOString().split("T")[0];
-    return shifts.filter(s => s.shift_date === dateStr && s.status !== "cancelled");
+    const dateStr = localDateStr(date);
+    return shifts.filter(s => s.shift_date?.slice(0, 10) === dateStr && s.status !== "cancelled");
   }
 
   const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -364,7 +362,7 @@ export default function ShiftsList() {
                             )}
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "1px" }}>{shift.title || "Task"}</p>
-                              <p style={{ opacity: 0.75 }}>{shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}</p>
+                              <p style={{ opacity: 0.75 }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</p>
                             </div>
                           </div>
                         );
@@ -527,9 +525,9 @@ function ShiftRow({ shift, fill, onNav }) {
       }}>
       <span style={{ fontWeight: "600" }}>{fmtDate(shift.shift_date)}</span>
       <span style={{ fontWeight: "500" }}>{shift.title || "Untitled Task"}</span>
-      <span style={{ color: "#64748B" }}>{shift.start_time?.slice(0,5)} – {shift.end_time?.slice(0,5)}</span>
+      <span style={{ color: "#64748B" }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</span>
       <span style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-        <span style={{ color: "#64748B" }}>{shift.shift_roles?.length || 0} role{shift.shift_roles?.length !== 1 ? "s" : ""}</span>
+        <span style={{ color: "#64748B" }}>{shift.shift_tasks?.length || 0} task{shift.shift_tasks?.length !== 1 ? "s" : ""}</span>
         {fill === "full" && (
           <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22C55E", flexShrink: 0, display: "inline-block" }} />
         )}
@@ -867,6 +865,20 @@ function WeekNavBtn({ label, onClick }) {
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-SG", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function toHHMM(t) {
+  if (!t) return "";
+  const s = String(t);
+  if (s.includes("T")) return s.slice(11, 16);
+  return s.slice(0, 5);
+}
+
+function localDateStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function fmtDateShort(d) {

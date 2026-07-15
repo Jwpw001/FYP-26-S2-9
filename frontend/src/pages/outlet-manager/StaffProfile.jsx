@@ -60,6 +60,11 @@ function SkillSetsTab({ staffId }) {
   const [editSaving,   setEditSaving]   = useState(false);
   const [editError,    setEditError]    = useState("");
 
+  // Remove confirmation
+  const [confirmSkill, setConfirmSkill] = useState(null); // { skill_id, name }
+  const [removing,     setRemoving]     = useState(false);
+  const [removeError,  setRemoveError]  = useState("");
+
   useEffect(() => {
     setLoading(true);
     Promise.all([
@@ -93,11 +98,18 @@ function SkillSetsTab({ staffId }) {
     } finally { setSaving(false); }
   }
 
-  async function handleRemove(skill_id) {
+  async function confirmRemove() {
+    if (!confirmSkill) return;
+    setRemoving(true); setRemoveError("");
     try {
-      await api.delete(`/api/skills/staff/${staffId}/${skill_id}`);
-      setAssigned(prev => prev.filter(s => s.skill_id !== skill_id));
-    } catch (e) { console.error(e); }
+      await api.delete(`/api/skills/staff/${staffId}/${confirmSkill.skill_id}`);
+      setAssigned(prev => prev.filter(s => s.skill_id !== confirmSkill.skill_id));
+      setConfirmSkill(null);
+    } catch (e) {
+      setRemoveError(e.message || "Failed to remove skill. Please try again.");
+    } finally {
+      setRemoving(false);
+    }
   }
 
   function startEdit(sk) {
@@ -178,7 +190,7 @@ function SkillSetsTab({ staffId }) {
                     style={{ background: isEditing ? "#EEF2FF" : "#F1F5F9", border:`1px solid ${isEditing ? "#C7D2FE" : "#E2E8F0"}`, borderRadius:"7px", padding:"5px 7px", cursor:"pointer", display:"flex", alignItems:"center", flexShrink:0 }}>
                     <Pencil size={12} color={isEditing ? "#4338CA" : "#64748B"} />
                   </button>
-                  <button onClick={() => handleRemove(sk.skill_id)} style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:"7px", padding:"5px 7px", cursor:"pointer", display:"flex", alignItems:"center", flexShrink:0 }}>
+                  <button onClick={() => { setConfirmSkill({ skill_id: sk.skill_id, name: sk.name }); setRemoveError(""); }} style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:"7px", padding:"5px 7px", cursor:"pointer", display:"flex", alignItems:"center", flexShrink:0 }}>
                     <X size={12} color="#DC2626" />
                   </button>
                 </div>
@@ -218,6 +230,38 @@ function SkillSetsTab({ staffId }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Remove confirmation modal ── */}
+      {confirmSkill && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(2,6,23,0.5)", backdropFilter:"blur(4px)", zIndex:10000, display:"flex", alignItems:"center", justifyContent:"center", padding:"24px" }}
+          onClick={() => !removing && setConfirmSkill(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:"16px", padding:"28px 24px", width:"340px", maxWidth:"100%", boxShadow:"0 24px 60px rgba(0,0,0,0.2)", textAlign:"center" }}>
+            <div style={{ width:52, height:52, borderRadius:"50%", background:"#FEF2F2", border:"2px solid #FECACA", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
+              <X size={22} color="#DC2626" />
+            </div>
+            <h3 style={{ fontSize:"16px", fontWeight:"800", color:"#0F172A", marginBottom:"8px" }}>Remove Skill?</h3>
+            <p style={{ fontSize:"13px", color:"#64748B", lineHeight:1.6, marginBottom:"6px" }}>
+              This will remove <strong style={{ color:"#0F172A" }}>{confirmSkill.name}</strong> from this staff member's profile.
+            </p>
+            <p style={{ fontSize:"12px", color:"#94A3B8", marginBottom:"22px" }}>
+              The staff member will no longer see this skill in their profile.
+            </p>
+            {removeError && (
+              <p style={{ fontSize:"12px", color:"#DC2626", fontWeight:"600", background:"#FEF2F2", padding:"8px 12px", borderRadius:"8px", marginBottom:"14px" }}>{removeError}</p>
+            )}
+            <div style={{ display:"flex", gap:"10px" }}>
+              <button onClick={() => setConfirmSkill(null)} disabled={removing}
+                style={{ flex:1, padding:"10px", borderRadius:"10px", border:"1.5px solid #E2E8F0", background:"#F8FAFC", color:"#64748B", fontSize:"13px", fontWeight:"600", cursor:"pointer" }}>
+                Cancel
+              </button>
+              <button onClick={confirmRemove} disabled={removing}
+                style={{ flex:1, padding:"10px", borderRadius:"10px", border:"none", background: removing ? "#FCA5A5" : "#EF4444", color:"#fff", fontSize:"13px", fontWeight:"700", cursor: removing ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px" }}>
+                {removing ? "Removing…" : "Yes, Remove"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

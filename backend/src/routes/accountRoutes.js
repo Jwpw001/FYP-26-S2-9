@@ -5,7 +5,8 @@ const router = express.Router();
 const {
     getAccount,
     updateAccount,
-    deleteAccount
+    deleteAccount,
+    getAccountSkills,
 } = require("../controllers/accountController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -22,10 +23,10 @@ router.get(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
+        ROLES.BUSINESS_OWNER,
         ROLES.OUTLET_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getAccount
@@ -36,14 +37,27 @@ router.patch(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
+        ROLES.BUSINESS_OWNER,
         ROLES.OUTLET_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.OUTLET_CASUAL_STAFF,
-        ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     validate(updateAccountSchema),
     updateAccount
+);
+
+router.get(
+    "/skills",
+    verifyToken,
+    allowRoles(
+        ROLES.SYSTEM_ADMIN,
+        ROLES.OUTLET_MANAGER,
+        ROLES.REGULAR_STAFF,
+        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.KREWBY_CASUAL_WORKER
+    ),
+    getAccountSkills
 );
 
 router.delete(
