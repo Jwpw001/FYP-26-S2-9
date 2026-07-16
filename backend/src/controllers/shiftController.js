@@ -5,6 +5,30 @@ async function getCallerOutletId(userId) {
   return s?.outlet_id || null;
 }
 
+// Prisma serializes date/time columns as full ISO strings (e.g. "1970-01-01T09:00:00.000Z" for a
+// `time` column). Frontend formatters expect Supabase-direct's plain "HH:MM:SS" / "YYYY-MM-DD" —
+// normalize here so nothing downstream has to special-case the two formats.
+function toHHMMSS(t) {
+  if (!t) return null;
+  const s = t instanceof Date ? t.toISOString() : String(t);
+  return s.includes("T") ? s.slice(11, 19) : s;
+}
+function toDateOnly(d) {
+  if (!d) return null;
+  const s = d instanceof Date ? d.toISOString() : String(d);
+  return s.includes("T") ? s.slice(0, 10) : s;
+}
+function normalizeShift(shift) {
+  if (!shift) return shift;
+  return {
+    ...shift,
+    shift_date: toDateOnly(shift.shift_date),
+    start_time: toHHMMSS(shift.start_time),
+    end_time: toHHMMSS(shift.end_time),
+    shift_tasks: (shift.shift_tasks || []).map(t => ({ ...t, start_time: toHHMMSS(t.start_time), end_time: toHHMMSS(t.end_time) })),
+  };
+}
+
 const getShifts = async (req, res) => {
   try {
     const outletId = await getCallerOutletId(req.user.user_id);
@@ -61,7 +85,7 @@ const getShiftById = async (req, res) => {
     if (outletId && shift.outlet_id !== outletId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
-    res.json({ success: true, shift });
+    res.json({ success: true, shift: normalizeShift(shift) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

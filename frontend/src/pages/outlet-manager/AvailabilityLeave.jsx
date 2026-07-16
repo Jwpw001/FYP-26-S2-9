@@ -222,7 +222,7 @@ export default function AvailabilityLeave() {
         let assignMap = {};
         if (assignIds.length > 0) {
           const { data: assignRows } = await supabase
-            .from("shift_assignments")
+            .from("task_assignments")
             .select(`assignment_id, shifts!inner(shift_date, title)`)
             .in("assignment_id", assignIds);
           (assignRows || []).forEach(a => { assignMap[a.assignment_id] = a.shifts; });
@@ -370,7 +370,7 @@ export default function AvailabilityLeave() {
         if (shiftsInRange && shiftsInRange.length > 0) {
           const shiftIds = shiftsInRange.map(s => s.shift_id);
           // Step 2: delete assignments for this staff in those shifts
-          await supabase.from("shift_assignments")
+          await supabase.from("task_assignments")
             .delete()
             .eq("staff_id", req.staff_id)
             .in("shift_id", shiftIds);
@@ -454,27 +454,28 @@ export default function AvailabilityLeave() {
     const { sw } = swapApproveModal;
     setApproving(true);
     try {
-      // Get the requester's shift_assignment to find shift_id and role_id
+      // Get the requester's task_assignment to find shift_id and task_id
       const { data: assignRow } = await supabase
-        .from("shift_assignments")
-        .select("assignment_id, shift_id, role_id")
+        .from("task_assignments")
+        .select("assignment_id, shift_id, task_id")
         .eq("assignment_id", sw.requester_assign)
         .single();
 
       if (!assignRow) throw new Error("Original assignment not found");
 
-      // 1. Create new assignment for the cover staff
-      const { error: insertErr } = await supabase.from("shift_assignments").insert({
+      // 1. Delete requester's original assignment first — one task = one person, so the slot
+      // must be freed before the cover staff can take it.
+      await supabase.from("task_assignments")
+        .delete().eq("assignment_id", sw.requester_assign);
+
+      // 2. Create new assignment for the cover staff
+      const { error: insertErr } = await supabase.from("task_assignments").insert({
         shift_id: assignRow.shift_id,
+        task_id: assignRow.task_id,
         staff_id: Number(pickedStaffId),
-        role_id: assignRow.role_id,
         status: "assigned",
       });
       if (insertErr) throw insertErr;
-
-      // 2. Delete requester's original assignment
-      await supabase.from("shift_assignments")
-        .delete().eq("assignment_id", sw.requester_assign);
 
       // 3. Update swap request status
       await supabase.from("swap_requests").update({
@@ -509,7 +510,7 @@ export default function AvailabilityLeave() {
           type: "shift_assigned",
           title: "New Shift Assignment",
           message: `You have been assigned to cover a shift as part of a swap approval.`,
-          related_entity: "shift_assignments",
+          related_entity: "task_assignments",
           related_id: String(assignRow.shift_id),
           is_read: false,
           created_at: new Date().toISOString(),

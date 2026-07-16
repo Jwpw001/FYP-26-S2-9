@@ -23,6 +23,7 @@ const LEVEL_META = {
   lead:         { label:"Lead",         bg:"#EDE9FE", color:"#5B21B6", border:"#C4B5FD" },
 };
 
+
 function avatarColor(name = "") {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -352,7 +353,7 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
         const startStr = start.toISOString().slice(0, 10);
 
         const [{ data: assigns }, { data: tsheets }, { data: leave }] = await Promise.all([
-          supabase.from("shift_assignments")
+          supabase.from("task_assignments")
             .select("assignment_id, shifts!inner(shift_date, title, start_time, end_time)")
             .eq("staff_id", staffId)
             .gte("shifts.shift_date", startStr)

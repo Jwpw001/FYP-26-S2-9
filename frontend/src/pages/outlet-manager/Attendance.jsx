@@ -147,7 +147,7 @@ function Submissions({ outletId, managerId, showToast }) {
         if (cancelled) return;
 
         const { data: assignments } = await supabase
-          .from("shift_assignments")
+          .from("task_assignments")
           .select("staff_id, shifts(title, shift_date)")
           .in("staff_id", staffIds);
 
@@ -559,7 +559,7 @@ function WorkingHours({ outletId }) {
 
         // Fetch shift titles for context
         const { data: assignments } = await supabase
-          .from("shift_assignments")
+          .from("task_assignments")
           .select("staff_id, shifts(title, shift_date)")
           .in("staff_id", staffIds);
 

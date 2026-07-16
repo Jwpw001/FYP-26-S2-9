@@ -291,7 +291,7 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
         const startStr = start.toISOString().slice(0, 10);
 
         const [{ data: assigns }, { data: tsheets }, { data: leave }] = await Promise.all([
-          supabase.from("shift_assignments")
+          supabase.from("task_assignments")
             .select("assignment_id, shifts!inner(shift_date, title, start_time, end_time)")
             .eq("staff_id", staffId)
             .gte("shifts.shift_date", startStr)

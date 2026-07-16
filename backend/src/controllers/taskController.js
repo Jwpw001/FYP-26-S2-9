@@ -1,4 +1,29 @@
-const prisma = require("../config/prisma");
+const prisma        = require("../config/prisma");
+const supabaseAdmin = require("../config/supabaseAdmin");
+
+// Prisma returns date/time columns as JS Date objects, which Express serializes to full ISO
+// strings (e.g. "1970-01-01T09:00:00.000Z" for a `time` column, "2026-07-18T00:00:00.000Z" for
+// a `date` column). Frontend code was written against Supabase-direct's plain "HH:MM:SS" /
+// "YYYY-MM-DD" strings, so responses built from Prisma must be normalized to match or every date
+// formatter downstream breaks ("Invalid Date", "1970", NaN durations, etc).
+function toHHMMSS(t) {
+  if (!t) return null;
+  const s = t instanceof Date ? t.toISOString() : String(t);
+  return s.includes("T") ? s.slice(11, 19) : s;
+}
+function toDateOnly(d) {
+  if (!d) return null;
+  const s = d instanceof Date ? d.toISOString() : String(d);
+  return s.includes("T") ? s.slice(0, 10) : s;
+}
+function normalizeShift(shift) {
+  if (!shift) return shift;
+  return { ...shift, shift_date: toDateOnly(shift.shift_date), start_time: toHHMMSS(shift.start_time), end_time: toHHMMSS(shift.end_time) };
+}
+function normalizeTask(task) {
+  if (!task) return task;
+  return { ...task, start_time: toHHMMSS(task.start_time), end_time: toHHMMSS(task.end_time) };
+}
 
 async function getCallerOutletId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { outlet_id: true } });
@@ -42,12 +67,14 @@ const createTask = async (req, res) => {
     const shift = await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { shift_id: true } });
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found." });
 
+    const { difficulty } = req.body;
     const task = await prisma.shift_tasks.create({
       data: {
         shift_id: shiftId,
         title: title.trim(),
         description: description || null,
         skill_id: skill_id || null,
+        difficulty: difficulty || null,
         start_time: start_time ? new Date(`1970-01-01T${start_time}:00Z`) : null,
         end_time: end_time ? new Date(`1970-01-01T${end_time}:00Z`) : null,
         status: "open",
@@ -63,7 +90,7 @@ const createTask = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const taskId = Number(req.params.taskId);
-    const { title, description, skill_id, start_time, end_time, status } = req.body;
+    const { title, description, skill_id, difficulty, start_time, end_time, status } = req.body;
 
     const existing = await prisma.shift_tasks.findUnique({ where: { task_id: taskId } });
     if (!existing) return res.status(404).json({ success: false, message: "Task not found." });
@@ -74,6 +101,7 @@ const updateTask = async (req, res) => {
         title: title?.trim() || existing.title,
         description: description !== undefined ? description : existing.description,
         skill_id: skill_id !== undefined ? (skill_id || null) : existing.skill_id,
+        difficulty: difficulty !== undefined ? (difficulty || null) : existing.difficulty,
         start_time: start_time ? new Date(`1970-01-01T${start_time}:00Z`) : existing.start_time,
         end_time: end_time ? new Date(`1970-01-01T${end_time}:00Z`) : existing.end_time,
         status: status || existing.status,
@@ -170,7 +198,13 @@ const getMyTasks = async (req, res) => {
       orderBy: { shifts: { shift_date: "asc" } },
     });
 
-    res.json({ success: true, assignments });
+    const normalized = assignments.map(a => ({
+      ...a,
+      shifts: normalizeShift(a.shifts),
+      shift_tasks: normalizeTask(a.shift_tasks),
+    }));
+
+    res.json({ success: true, assignments: normalized });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -197,18 +231,39 @@ const getStaffRoster = async (req, res) => {
     });
 
     const filtered = staffList.filter(s => s.users?.role !== "outlet_manager");
+
+    // staff.experience_level isn't declared in schema.prisma (only the legacy, never-populated
+    // exp_level is), so Prisma silently omits it — fetch it directly via supabaseAdmin instead.
+    const { data: expLevelRows } = await supabaseAdmin
+      .from("staff")
+      .select("staff_id, experience_level")
+      .in("staff_id", filtered.map(s => s.staff_id));
+    const expLevelByStaffId = Object.fromEntries((expLevelRows || []).map(r => [r.staff_id, r.experience_level]));
+
+    const EXP_RANK = { junior: 1, mid: 2, senior: 3, expert: 4 };
+    // staff.experience_level uses a 3-tier scale (beginner/intermediate/expert); map onto the
+    // 4-tier task-difficulty scale used above.
+    const EXP_LEVEL_MAP = { beginner: "junior", intermediate: "mid", expert: "expert" };
+    const mapExpLevel = s => EXP_LEVEL_MAP[expLevelByStaffId[s.staff_id]] || null;
     const staffIds = filtered.map(s => s.staff_id);
     const userIds  = filtered.map(s => s.user_id).filter(Boolean);
 
-    // Skills
-    const skillTags = await prisma.user_skill_tags.findMany({
-      where: { user_id: { in: userIds } },
-      include: { skills: { select: { skill_id: true, name: true } } },
-    });
+    // Skills — use supabaseAdmin to get experience_level per skill
+    const { data: skillTagRows } = await supabaseAdmin
+      .from("user_skill_tags")
+      .select("user_id, skill_id, experience_level")
+      .in("user_id", userIds);
+    const skillIds = [...new Set((skillTagRows || []).map(r => r.skill_id))];
+    const skillRecords = skillIds.length > 0
+      ? await prisma.skills.findMany({ where: { skill_id: { in: skillIds } }, select: { skill_id: true, name: true } })
+      : [];
+    const skillNameMap = Object.fromEntries(skillRecords.map(s => [s.skill_id, s.name]));
     const skillMap = {};
-    skillTags.forEach(st => {
+    (skillTagRows || []).forEach(st => {
+      const name = skillNameMap[st.skill_id];
+      if (!name) return;
       if (!skillMap[st.user_id]) skillMap[st.user_id] = [];
-      skillMap[st.user_id].push({ skill_id: st.skill_id, name: st.skills?.name });
+      skillMap[st.user_id].push({ skill_id: st.skill_id, name, experience_level: st.experience_level || null });
     });
 
     // Leave
@@ -255,30 +310,54 @@ const getStaffRoster = async (req, res) => {
       hoursMap[a.staff_id] = (hoursMap[a.staff_id] || 0) + h;
     });
 
-    // Casual availability for shift day
-    const shiftDow = shiftDate.getUTCDay();
-    const casualIds = filtered.filter(s => s.staff_type === "casual").map(s => s.staff_id);
-    let casualAvailSet = new Set();
+    // Casual availability for shift day — day_of_week in this table is Monday-indexed (Mon=0…Sun=6),
+    // not JS's native Sunday=0, so convert before querying. Must also match the specific week the
+    // shift falls in — a worker may have submitted different hours for different weeks.
+    const shiftDow        = (shiftDate.getUTCDay() + 6) % 7;
+    const shiftWeekStart  = new Date(shiftDate);
+    shiftWeekStart.setUTCDate(shiftWeekStart.getUTCDate() - shiftDow);
+    const casualIds  = filtered.filter(s => s.staff_type === "casual").map(s => s.staff_id);
+    const casualAvailMap = {}; // staff_id -> { from: "HH:MM"|null, to: "HH:MM"|null }
     if (casualIds.length > 0) {
       const avail = await prisma.casual_availability.findMany({
-        where: { staff_id: { in: casualIds }, day_of_week: shiftDow },
-        select: { staff_id: true },
+        where: { staff_id: { in: casualIds }, day_of_week: shiftDow, week_start_date: shiftWeekStart },
+        select: { staff_id: true, available_from: true, available_to: true },
       });
-      avail.forEach(a => casualAvailSet.add(a.staff_id));
+      avail.forEach(a => {
+        casualAvailMap[a.staff_id] = {
+          from: a.available_from ? new Date(a.available_from).toISOString().slice(11, 16) : null,
+          to:   a.available_to   ? new Date(a.available_to).toISOString().slice(11, 16)   : null,
+        };
+      });
     }
+
+    const shiftStartHH = new Date(shift.start_time).toISOString().slice(11, 16);
+    const shiftEndHH   = new Date(shift.end_time).toISOString().slice(11, 16);
 
     const roster = filtered.map(s => ({
       staff_id:              s.staff_id,
       full_name:             s.users?.full_name || "Unknown",
       email:                 s.users?.email || "",
       staff_type:            s.staff_type,
+      exp_level:             mapExpLevel(s),
+      hired_at:              s.hired_at || null,
       skills:                skillMap[s.user_id] || [],
       is_on_leave:           onLeaveIds.has(s.staff_id),
       is_double_booked:      doubleBookedIds.has(s.staff_id),
       already_assigned:      assignedIds.has(s.staff_id),
       assigned_task_id:      assignedTaskMap[s.staff_id] || null,
       hours_this_week:       Math.round((hoursMap[s.staff_id] || 0) * 10) / 10,
-      casual_available_today: s.staff_type === "casual" ? casualAvailSet.has(s.staff_id) : null,
+      casual_available_today: (() => {
+        if (s.staff_type !== "casual") return null;
+        const avail = casualAvailMap[s.staff_id];
+        if (!avail) return false; // no declaration for this week/day
+        const { from, to } = avail;
+        if (!from && !to) return true; // declared with no specific times = available all day
+        // Declared window must cover the entire shift (start at or before shift start, end at or after shift end)
+        return !!from && !!to && from <= shiftStartHH && to >= shiftEndHH;
+      })(),
+      casual_avail_from:      s.staff_type === "casual" ? (casualAvailMap[s.staff_id]?.from ?? null) : null,
+      casual_avail_to:        s.staff_type === "casual" ? (casualAvailMap[s.staff_id]?.to ?? null) : null,
     }));
 
     res.json({ success: true, roster });
@@ -300,7 +379,6 @@ const validateAssignment = async (req, res) => {
       where: { task_id: taskId },
       include: {
         skills: { select: { skill_id: true, name: true } },
-        shifts: { select: { start_time: true, end_time: true } },
       },
     });
     if (!task) return res.status(404).json({ success: false, message: "Task not found" });
@@ -308,18 +386,58 @@ const validateAssignment = async (req, res) => {
     const selected = (roster || []).find(r => r.staff_id === Number(staff_id));
     if (!selected) return res.json({ success: true, suitable: true, message: "Assignment saved." });
 
+    const EXP_RANK  = { junior: 1, mid: 2, senior: 3, expert: 4 };
     const taskSkill = task.skills?.name || null;
     const hasSkill  = !task.skill_id || selected.skills.some(s => s.skill_id === task.skill_id);
-    const toHHMM    = t => { const s = String(t || ""); return s.includes("T") ? s.slice(11,16) : s.slice(0,5); };
+    const taskDiffRank  = EXP_RANK[task.difficulty] || 0;
+    const staffExpRank  = EXP_RANK[selected.exp_level] || 0;
+    const underQualified = task.difficulty && selected.exp_level && staffExpRank < taskDiffRank;
+    const toHHMM    = t => { if (!t) return ""; const s = t instanceof Date ? t.toISOString() : String(t); return s.includes("T") ? s.slice(11,16) : s.slice(0,5); };
+    const yearsOfService = selected.hired_at
+      ? Math.max(0, Math.floor((Date.now() - new Date(selected.hired_at).getTime()) / (365.25 * 24 * 3600 * 1000)))
+      : null;
+
+    const toMins = hhmm => { if (!hhmm) return null; const [h,m] = hhmm.split(":").map(Number); return h*60+m; };
+    function casualCoversTask(r) {
+      if (r.staff_type !== "casual") return true;
+      if (!r.casual_available_today) return false;
+      const taskStart = toMins(toHHMM(task.start_time));
+      const taskEnd   = toMins(toHHMM(task.end_time));
+      if (taskStart == null || taskEnd == null) return true;
+      const availFrom = toMins(r.casual_avail_from);
+      const availTo   = toMins(r.casual_avail_to);
+      if (availFrom == null || availTo == null) return true;
+      return availFrom <= taskStart && availTo >= taskEnd;
+    }
+    function availLabel(r) {
+      if (r.staff_type !== "casual") return null;
+      if (!r.casual_available_today) return "no availability declared for this day";
+      const covers = casualCoversTask(r);
+      return `declared ${r.casual_avail_from||"?"}–${r.casual_avail_to||"?"}${covers ? " (covers task)" : " (does NOT cover task hours)"}`;
+    }
+    const selectedCoversTask = casualCoversTask(selected);
 
     const alternatives = (roster || [])
       .filter(r =>
         r.staff_id !== Number(staff_id) &&
         !r.already_assigned && !r.is_on_leave && !r.is_double_booked &&
-        (!task.skill_id || r.skills.some(s => s.skill_id === task.skill_id))
+        (!task.skill_id || r.skills.some(s => s.skill_id === task.skill_id)) &&
+        casualCoversTask(r)
       )
       .sort((a, b) => a.hours_this_week - b.hours_this_week)
       .slice(0, 2);
+
+    // Deterministic hard-fail: a casual whose declared hours don't cover the task is a clear-cut
+    // problem — don't leave catching it up to the LLM's instruction-following.
+    if (selected.staff_type === "casual" && !selectedCoversTask) {
+      const best = alternatives[0];
+      return res.json({
+        success: true,
+        suitable: false,
+        message: `${selected.full_name}'s declared availability (${availLabel(selected)}) does not cover this task's hours (${toHHMM(task.start_time)}–${toHHMM(task.end_time)}).`,
+        alternative: best ? { name: best.full_name, reason: `Available and covers the task hours, with ${best.hours_this_week}h already worked this week.` } : null,
+      });
+    }
 
     const Groq = require("groq-sdk");
     const groq  = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -327,18 +445,24 @@ const validateAssignment = async (req, res) => {
     const prompt = `You are a smart F&B workforce scheduling AI. Evaluate this staff assignment and respond in JSON only.
 
 Task: "${task.title}"${taskSkill ? ` (requires: ${taskSkill})` : " (no specific skill required)"}
-Shift hours: ${toHHMM(task.shifts?.start_time)}–${toHHMM(task.shifts?.end_time)}
+Task difficulty: ${task.difficulty ? task.difficulty.charAt(0).toUpperCase() + task.difficulty.slice(1) : "Not set"}
+Task hours: ${toHHMM(task.start_time)}–${toHHMM(task.end_time)}
 
 Assigned: ${selected.full_name} (${selected.staff_type})
+- Experience level: ${selected.exp_level ? selected.exp_level.charAt(0).toUpperCase() + selected.exp_level.slice(1) : "Not set"}
+- Years of service: ${yearsOfService !== null ? `${yearsOfService} yr${yearsOfService !== 1 ? "s" : ""}` : "Unknown"}
+- Meets difficulty requirement: ${underQualified ? "No (under-qualified)" : "Yes"}
 - Skills: ${selected.skills.map(s => s.name).join(", ") || "None"}
 - Has required skill: ${hasSkill ? "Yes" : "No"}
 - Hours this week: ${selected.hours_this_week}h
 - On leave today: ${selected.is_on_leave ? "Yes" : "No"}
-${selected.staff_type === "casual" ? `- Declared available today: ${selected.casual_available_today ? "Yes" : "No"}` : ""}
+${selected.staff_type === "casual" ? `- Availability: ${availLabel(selected)}` : ""}
 
 ${alternatives.length > 0
-  ? `Available alternatives (have skill, no conflicts):\n${alternatives.map(a => `- ${a.full_name}: ${a.hours_this_week}h this week, skills: ${a.skills.map(s=>s.name).join(", ")||"none"}`).join("\n")}`
+  ? `Available alternatives (have skill, no conflicts, and if casual their availability covers the task hours):\n${alternatives.map(a => `- ${a.full_name}: ${a.hours_this_week}h this week, skills: ${a.skills.map(s=>s.name).join(", ")||"none"}${a.staff_type==="casual" ? `, availability: ${availLabel(a)}` : ""}`).join("\n")}`
   : "No better alternatives available."}
+
+IMPORTANT: Never suggest a casual staff member as an alternative unless their availability window fully covers the task's hours (${toHHMM(task.start_time)}–${toHHMM(task.end_time)}). If the assigned person's availability does NOT cover the task hours, that is a serious problem worth flagging even if their skills/experience are otherwise fine.
 
 Respond ONLY with this JSON (no other text):
 { "suitable": true or false, "message": "1-2 sentence assessment", "alternative": null or { "name": "Name", "reason": "why they are a better fit in one sentence" } }`;

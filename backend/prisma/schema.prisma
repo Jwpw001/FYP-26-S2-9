@@ -155,6 +155,7 @@ model shift_tasks {
   title            String             @db.VarChar(100)
   description      String?
   skill_id         Int?
+  difficulty       String?            @db.VarChar(20)
   start_time       DateTime?          @db.Time(6)
   end_time         DateTime?          @db.Time(6)
   status           String             @default("open") @db.VarChar(20)
@@ -209,6 +210,7 @@ model staff {
   staff_type       String             @db.VarChar(20)
   default_work_days String?           @db.VarChar(7)
   hired_at         DateTime?          @db.Date
+  exp_level        String?            @db.VarChar(20)
   is_active        Boolean?           @default(true)
   availability     availability[]
   task_assignments task_assignments[]

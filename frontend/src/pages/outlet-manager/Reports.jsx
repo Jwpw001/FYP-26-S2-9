@@ -211,12 +211,12 @@ export default function Reports() {
           .select("shift_id, status, shift_date")
           .eq("outlet_id", outletId)
           .order("shift_date"),
-        supabase.from("shift_assignments")
+        supabase.from("task_assignments")
           .select("assignment_id, staff_id, staff:staff_id(users:user_id(full_name)), shifts!inner(shift_date, outlet_id)")
           .eq("shifts.outlet_id", outletId)
           .gte("shifts.shift_date", periodStartStr)
           .lte("shifts.shift_date", todayStr),
-        supabase.from("shift_assignments")
+        supabase.from("task_assignments")
           .select("assignment_id, shifts!inner(shift_date, outlet_id)")
           .eq("shifts.outlet_id", outletId)
           .gte("shifts.shift_date", prevStartStr)

@@ -204,7 +204,7 @@ export default function ManagerDashboard() {
         if (!cancelled && pubShifts?.length) {
           const shiftIds = pubShifts.map(s => s.shift_id);
           const { data: unackedRows } = await supabase
-            .from("shift_assignments")
+            .from("task_assignments")
             .select("shift_id, staff:staff_id(user_id, users:user_id(full_name))")
             .in("shift_id", shiftIds)
             .eq("acknowledged", false);

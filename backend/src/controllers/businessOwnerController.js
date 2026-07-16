@@ -394,7 +394,7 @@ const getStaffKpi = async (req, res) => {
     const staff = await getOwnedStaffOrNull(req, staff_id);
     if (!staff) return res.status(404).json({ success: false, message: "Staff member not found." });
 
-    const assignments = await prisma.shift_assignments.findMany({
+    const assignments = await prisma.task_assignments.findMany({
       where: { staff_id },
       include: {
         attendance: true,

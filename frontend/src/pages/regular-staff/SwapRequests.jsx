@@ -53,7 +53,7 @@ function WeekCalendar({ weekStart, requests }) {
 
   // Build events: one per request, keyed by shift_date
   const events = requests.map(r => {
-    const shift = r.shift_assignments_swap_requests_requester_assignToshift_assignments?.shifts;
+    const shift = r.task_assignments_swap_requests_requester_assignTotask_assignments?.shifts;
     return { id: r.swap_id, date: shift?.shift_date, title: shift?.title || (r.request_type === "swap" ? "Swap" : "Replace"), status: r.status, type: r.request_type };
   }).filter(e => e.date);
 
@@ -130,13 +130,13 @@ export default function SwapRequests() {
         if (!sid) { setMyShifts([]); setRequests([]); setLoading(false); return; }
 
         const [{ data: assignments }, { data: reqs }] = await Promise.all([
-          supabase.from("shift_assignments")
+          supabase.from("task_assignments")
             .select(`assignment_id, shifts!inner ( shift_id, title, shift_date, start_time, end_time, status )`)
             .eq("staff_id", sid).gte("shifts.shift_date", today).eq("shifts.status", "published"),
           supabase.from("swap_requests")
             .select(`
               swap_id, request_type, reason, status, responded_at, requester_assign,
-              shift_assignments_swap_requests_requester_assignToshift_assignments (
+              task_assignments_swap_requests_requester_assignTotask_assignments (
                 shifts ( title, shift_date, start_time, end_time )
               )
             `)
@@ -308,7 +308,7 @@ export default function SwapRequests() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {filtered.map((r, i) => {
-              const shift = r.shift_assignments_swap_requests_requester_assignToshift_assignments?.shifts;
+              const shift = r.task_assignments_swap_requests_requester_assignTotask_assignments?.shifts;
               const typeColor = r.request_type === "swap" ? { bg: "#EFF6FF", color: "#1D4ED8" } : { bg: "#F5F3FF", color: "#6D28D9" };
               return (
                 <div key={r.swap_id}

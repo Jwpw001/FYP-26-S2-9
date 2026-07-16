@@ -8,6 +8,12 @@ import { Plus, Trash2, Clock, Calendar, Tag, Search, ChevronDown, X, AlertTriang
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_FULL  = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const DIFF_LEVELS = [
+  { value: "junior", label: "Junior",  color: "#166534", bg: "#DCFCE7" },
+  { value: "mid",    label: "Mid",     color: "#1D4ED8", bg: "#DBEAFE" },
+  { value: "senior", label: "Senior",  color: "#92400E", bg: "#FEF3C7" },
+  { value: "expert", label: "Expert",  color: "#5B21B6", bg: "#EDE9FE" },
+];
 
 function parseOperatingDays(str) {
   if (!str || str.length !== 7) return [1,1,1,1,1,0,0];
@@ -54,7 +60,7 @@ export default function CreateShift() {
   });
 
   // Step 2 state
-  const [tasks, setTasks]       = useState([{ title: "", skill_id: "", start_time: "", end_time: "" }]);
+  const [tasks, setTasks]       = useState([{ title: "", skill_id: "", difficulty: "", start_time: "", end_time: "" }]);
   const [savingTasks, setSavingTasks] = useState(false);
   const [taskError, setTaskError]     = useState("");
 
@@ -143,7 +149,7 @@ export default function CreateShift() {
       });
       if (!res.success) throw new Error(res.message || "Failed to create shift.");
       setCreatedShift(res.shift);
-      setTasks([{ title: "", skill_id: "", start_time: form.start_time, end_time: form.end_time }]);
+      setTasks([{ title: "", skill_id: "", difficulty: "", start_time: form.start_time, end_time: form.end_time }]);
       setStep(2);
     } catch (err) {
       setError(err.message || "Failed to save. Please try again.");
@@ -152,7 +158,7 @@ export default function CreateShift() {
 
   // ── Step 2: task builder ───────────────────────────────────────────────────
 
-  function addTask()            { setTasks(p => [...p, { title: "", skill_id: "", start_time: form.start_time, end_time: form.end_time }]); }
+  function addTask()            { setTasks(p => [...p, { title: "", skill_id: "", difficulty: "", start_time: form.start_time, end_time: form.end_time }]); }
   function removeTask(i)        { setTasks(p => p.filter((_, j) => j !== i)); }
   function updateTask(i, f, v)  { setTasks(p => p.map((t, j) => j === i ? { ...t, [f]: v } : t)); }
 
@@ -169,6 +175,7 @@ export default function CreateShift() {
         await api.post(`/api/shifts/${createdShift.shift_id}/tasks`, {
           title: t.title.trim(),
           skill_id: t.skill_id ? Number(t.skill_id) : null,
+          difficulty: t.difficulty || null,
           start_time: t.start_time || null,
           end_time: t.end_time || null,
         });
@@ -336,7 +343,7 @@ export default function CreateShift() {
               {tasks.map((task, idx) => (
                 <div key={idx} style={s.taskRow}>
                   <div style={s.taskNum}>{idx + 1}</div>
-                  <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 160px 100px 100px", gap: "10px", alignItems: "center" }}>
+                  <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 150px 130px 95px 95px", gap: "10px", alignItems: "center" }}>
                     <div>
                       <label style={s.miniLabel}>Task Name *</label>
                       <input style={s.input} placeholder="e.g. Cashier, Barista, Kitchen…"
@@ -347,6 +354,17 @@ export default function CreateShift() {
                       <label style={s.miniLabel}>Required Skill</label>
                       <SkillSelect skills={skills} value={task.skill_id}
                         onChange={v => updateTask(idx, "skill_id", v)} />
+                    </div>
+                    <div>
+                      <label style={s.miniLabel}>Difficulty</label>
+                      <select style={{ ...s.input, color: task.difficulty ? DIFF_LEVELS.find(d => d.value === task.difficulty)?.color : "#94A3B8", fontWeight: task.difficulty ? "700" : "400" }}
+                        value={task.difficulty}
+                        onChange={e => updateTask(idx, "difficulty", e.target.value)}>
+                        <option value="">Any level</option>
+                        {DIFF_LEVELS.map(d => (
+                          <option key={d.value} value={d.value}>{d.label}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label style={s.miniLabel}>Start (opt.)</label>

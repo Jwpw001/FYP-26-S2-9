@@ -17,13 +17,13 @@ const getAttendance = async (req, res) => {
     });
     const staffIds = outletStaff.map(s => s.staff_id);
 
-    // Attendance links to shift_assignments; scope via shift_assignments.staff_id
+    // Attendance links to task_assignments; scope via task_assignments.staff_id
     const attendance = await prisma.attendance.findMany({
       where: {
-        shift_assignments: { staff_id: { in: staffIds } },
+        task_assignments: { staff_id: { in: staffIds } },
       },
       include: {
-        shift_assignments: {
+        task_assignments: {
           include: {
             staff: { include: { users: { select: { full_name: true, email: true } } } },
             shifts: { select: { shift_date: true, title: true } },
@@ -47,12 +47,12 @@ const getAttendanceById = async (req, res) => {
     const attendance = await prisma.attendance.findUnique({
       where: { attendance_id: attendanceId },
       include: {
-        shift_assignments: { include: { shifts: { select: { outlet_id: true } } } },
+        task_assignments: { include: { shifts: { select: { outlet_id: true } } } },
       },
     });
 
     if (!attendance) return res.status(404).json({ success: false, message: "Attendance record not found" });
-    if (outletId && attendance.shift_assignments?.shifts?.outlet_id !== outletId)
+    if (outletId && attendance.task_assignments?.shifts?.outlet_id !== outletId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
     res.json({ success: true, attendance });

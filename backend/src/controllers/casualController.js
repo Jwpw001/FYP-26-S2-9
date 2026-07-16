@@ -513,12 +513,12 @@ async function getJoinCode(req, res) {
 // MANAGER — auto-assign casual to a shift role
 // ─────────────────────────────────────────────────────────────────────────────
 
-// POST /api/casual/manager/auto-assign  body: { shift_id, role_id }
+// POST /api/casual/manager/auto-assign  body: { shift_id, task_id }
 async function autoAssignCasual(req, res) {
   try {
-    const { shift_id, role_id } = req.body;
-    if (!shift_id || !role_id) {
-      return res.status(400).json({ success: false, message: "shift_id and role_id are required." });
+    const { shift_id, task_id } = req.body;
+    if (!shift_id || !task_id) {
+      return res.status(400).json({ success: false, message: "shift_id and task_id are required." });
     }
 
     const outlet = await resolveManagerOutlet(req.user.user_id);
@@ -532,23 +532,23 @@ async function autoAssignCasual(req, res) {
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found." });
     if (shift.outlet_id !== outlet.outlet_id) return res.status(403).json({ success: false, message: "Access denied." });
 
-    // Count how many casuals are already assigned to this role
-    const existingAssignments = await prisma.shift_assignments.count({
-      where: { role_id: Number(role_id), krewby_worker_id: { not: null }, status: { not: "cancelled" } },
-    });
-    const role = await prisma.shift_roles.findUnique({ where: { role_id: Number(role_id) }, select: { headcount: true, role_name: true } });
-    if (role && existingAssignments >= role.headcount) {
-      return res.status(400).json({ success: false, message: "This role is already fully staffed." });
+    // One task = one person: reject if already assigned
+    const existingAssignment = await prisma.task_assignments.findFirst({ where: { task_id: Number(task_id) } });
+    const task = await prisma.shift_tasks.findUnique({ where: { task_id: Number(task_id) }, select: { title: true, start_time: true, end_time: true } });
+    if (existingAssignment) {
+      return res.status(400).json({ success: false, message: "This task is already assigned." });
     }
 
     // shift_date day of week: Mon=0 … Sun=6
     const shiftDate = new Date(shift.shift_date);
     const dayOfWeek = (shiftDate.getDay() + 6) % 7;
 
-    // Time helpers (HH:MM string → minutes)
-    const toMins = (t) => { const [h, m] = String(t).split(":"); return Number(h) * 60 + Number(m); };
-    const shiftStart = toMins(shift.start_time);
-    const shiftEnd   = toMins(shift.end_time);
+    // Time helpers — handles both Prisma Date objects and "HH:MM:SS" strings
+    const toHHMM = (t) => { if (!t) return null; const s = t instanceof Date ? t.toISOString() : String(t); return s.includes("T") ? s.slice(11, 16) : s.slice(0, 5); };
+    const toMins = (t) => { const hhmm = toHHMM(t); if (!hhmm) return null; const [h, m] = hhmm.split(":"); return Number(h) * 60 + Number(m); };
+    // Use the task's own time window (falls back to the shift's overall span if unset)
+    const shiftStart = toMins(task?.start_time || shift.start_time);
+    const shiftEnd   = toMins(task?.end_time || shift.end_time);
     const shiftDateStr = shiftDate.toISOString().slice(0, 10);
 
     // All approved casual workers for this business
@@ -584,7 +584,7 @@ async function autoAssignCasual(req, res) {
       if (!kw) { failReasons.unavailable++; continue; }
 
       // Hard filter 2: not double-booked on same date with overlapping times
-      const conflictingShifts = await prisma.shift_assignments.findMany({
+      const conflictingShifts = await prisma.task_assignments.findMany({
         where: { krewby_worker_id: kw.krewby_worker_id, status: { not: "cancelled" } },
         select: { shifts: { select: { shift_date: true, start_time: true, end_time: true } } },
       });
@@ -606,7 +606,7 @@ async function autoAssignCasual(req, res) {
         .eq("user_id", cw.user_id)
         .eq("outlet_id", outlet.outlet_id);
 
-      const pastAssignments = await prisma.shift_assignments.count({
+      const pastAssignments = await prisma.task_assignments.count({
         where: { krewby_worker_id: kw.krewby_worker_id, status: { not: "cancelled" } },
       });
 
@@ -631,10 +631,10 @@ async function autoAssignCasual(req, res) {
     const winner = candidates[0];
 
     // Create assignment
-    const assignment = await prisma.shift_assignments.create({
+    const assignment = await prisma.task_assignments.create({
       data: {
         shift_id: Number(shift_id),
-        role_id: Number(role_id),
+        task_id: Number(task_id),
         krewby_worker_id: winner.kw.krewby_worker_id,
         status: "assigned",
         acknowledged: false,
@@ -647,7 +647,7 @@ async function autoAssignCasual(req, res) {
       recipient_id: winner.cw.user_id,
       type: "casual_assigned",
       title: "You've been assigned to a shift!",
-      message: `You've been assigned to ${role?.role_name || "a role"} on ${shiftDateStr} at ${outlet.name}. Please check your schedule.`,
+      message: `You've been assigned to ${task?.title || "a task"} on ${shiftDateStr} at ${outlet.name}. Please check your schedule.`,
       related_entity: "shift",
       related_id: Number(shift_id),
     });

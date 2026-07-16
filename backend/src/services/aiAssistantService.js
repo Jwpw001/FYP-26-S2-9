@@ -28,8 +28,8 @@ async function fetchWorkforceContext(userId, role) {
         const shifts = await prisma.shifts.findMany({
           where: { outlet_id: outletId, shift_date: { gte: today, lte: weekFromNow } },
           include: {
-            shift_roles: { select: { headcount: true } },
-            shift_assignments: {
+            shift_tasks: { select: { task_id: true } },
+            task_assignments: {
               include: {
                 staff: { include: { users: { select: { full_name: true } } } },
                 krewby_workers: { include: { users: { select: { full_name: true } } } },
@@ -39,8 +39,9 @@ async function fetchWorkforceContext(userId, role) {
           orderBy: { shift_date: "asc" },
         });
         context.upcomingShifts = shifts.map((s) => {
-          const totalNeeded = (s.shift_roles || []).reduce((sum, r) => sum + (r.headcount || 1), 0);
-          const totalAssigned = s.shift_assignments.length;
+          // One person per task — total positions needed is just the task count
+          const totalNeeded = (s.shift_tasks || []).length;
+          const totalAssigned = s.task_assignments.length;
           return {
             shift_id: s.shift_id,
             title: s.title,
@@ -51,7 +52,7 @@ async function fetchWorkforceContext(userId, role) {
             status: s.status,
             assigned_count: totalAssigned,
             is_understaffed: totalAssigned < totalNeeded,
-            assigned_staff: s.shift_assignments.map(
+            assigned_staff: s.task_assignments.map(
               (a) => a.staff?.users?.full_name || a.krewby_workers?.users?.full_name || "Unknown"
             ),
           };

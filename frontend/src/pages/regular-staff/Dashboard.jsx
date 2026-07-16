@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import StaffLayout from "../../components/layout/StaffLayout";
 import { CalendarDays, Palmtree, RefreshCw, Bell, SmilePlus, Hand, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
@@ -69,7 +70,8 @@ export default function StaffDashboard() {
   const [todayShift,  setTodayShift]  = useState(null);   // null=loading, false=none, obj
   const [todayTs,     setTodayTs]     = useState(null);   // timesheet for today if exists
 
-  const today = new Date().toISOString().split("T")[0];
+  const _now = new Date();
+  const today = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,"0")}-${String(_now.getDate()).padStart(2,"0")}`;
 
   function getGreeting() {
     const h = new Date().getHours();
@@ -81,7 +83,8 @@ export default function StaffDashboard() {
     let cancelled = false;
     async function load() {
       try {
-        const in14 = new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0];
+        const _in14d = new Date(Date.now() + 14 * 86400000);
+        const in14 = `${_in14d.getFullYear()}-${String(_in14d.getMonth()+1).padStart(2,"0")}-${String(_in14d.getDate()).padStart(2,"0")}`;
 
         const { data: myStaff } = await supabase.from("staff").select("staff_id").eq("user_id", userId).limit(1);
         const sid = myStaff?.[0]?.staff_id;
@@ -89,16 +92,13 @@ export default function StaffDashboard() {
         if (!cancelled) setStaffId(sid);
 
         const [
-          { data: assignments },
+          apiResult,
           { data: leave },
           { data: swaps },
           { count: unread },
           { data: tsList },
         ] = await Promise.all([
-          supabase.from("shift_assignments")
-            .select(`assignment_id, status, acknowledged,
-              shifts ( shift_id, title, shift_date, start_time, end_time, status, outlets ( name ) )`)
-            .eq("staff_id", sid),
+          api.get("/api/shifts/me/tasks"),
           supabase.from("availability").select("request_id").eq("staff_id", sid).eq("status", "pending"),
           supabase.from("swap_requests").select("swap_id").eq("requester_id", sid).eq("status", "pending"),
           supabase.from("notifications").select("*", { count:"exact", head:true }).eq("recipient_id", userId).eq("is_read", false),
@@ -107,7 +107,7 @@ export default function StaffDashboard() {
 
         if (cancelled) return;
 
-        const all = assignments || [];
+        const all = apiResult?.assignments || [];
 
         // Today's shift
         const todayA = all.find(a => a.shifts?.shift_date === today && a.shifts?.status === "published");

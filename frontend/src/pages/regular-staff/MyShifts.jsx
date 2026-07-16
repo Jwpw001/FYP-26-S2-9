@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import StaffLayout from "../../components/layout/StaffLayout";
 import {
   Calendar, Clock, ChevronDown, ChevronUp, FileText,
-  CheckCircle, AlertCircle, ChevronLeft, ChevronRight, SmilePlus
+  CheckCircle, AlertCircle, ChevronLeft, ChevronRight, SmilePlus, X, Tag, User
 } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-tasks-styles")) {
@@ -22,7 +24,15 @@ if (typeof document !== "undefined" && !document.getElementById("staff-tasks-sty
 function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
   return <div style={{ width:w, height:h, borderRadius:r, background:"linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize:"600px 100%", animation:"shimmer 1.4s infinite linear" }} />;
 }
+function toLocalDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 function fmtTime(t) { return t?.slice(0, 5) || "—"; }
+// API returns Prisma DateTime ISO strings for time fields ("1970-01-01T09:00:00.000Z")
+function fmtApiTime(t) {
+  if (!t) return "—";
+  return t.includes("T") ? t.slice(11, 16) : t.slice(0, 5);
+}
 function fmtHours(h) {
   if (!h || h <= 0) return "0h";
   const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
@@ -55,6 +65,20 @@ function nextMonth(ym) {
   const [y, m] = ym.split("-").map(Number);
   const d = new Date(y, m, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function getWeekStart(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const dow = (d.getDay() + 6) % 7; // Mon=0 … Sun=6
+  d.setDate(d.getDate() - dow);
+  return d.toISOString().slice(0, 10);
+}
+function getWeekEnd(weekStart) {
+  const d = new Date(weekStart + "T00:00:00");
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().slice(0, 10);
+}
+function fmtShortDate(dateStr) {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-SG", { day:"numeric", month:"short" });
 }
 
 const REPORT_STATUS = {
@@ -111,7 +135,7 @@ export default function MyTasks({ Layout = StaffLayout }) {
     return () => clearInterval(t);
   }, []);
 
-  const today = now.toISOString().split("T")[0];
+  const today = toLocalDateStr(now);
 
   function showToast(msg, ok = true) {
     setToast({ msg, ok });
@@ -130,21 +154,16 @@ export default function MyTasks({ Layout = StaffLayout }) {
         if (!sid || cancelled) return;
         setStaffId(sid);
 
-        const { data: assignments } = await supabase
-          .from("shift_assignments")
-          .select(`assignment_id, status, acknowledged,
-            shifts ( shift_id, title, shift_date, start_time, end_time, status ),
-            shift_roles ( role_name )`)
-          .eq("staff_id", sid)
-          .order("shift_id", { ascending: false });
+        const { assignments } = await api.get("/api/shifts/me/tasks");
 
         if (cancelled) return;
         setShifts((assignments || []).map(a => ({
           assignment_id: a.assignment_id,
+          source:        "task_assignments",
           status:        a.status,
           acknowledged:  a.acknowledged,
           shift:         a.shifts,
-          role_name:     a.shift_roles?.role_name || null,
+          role_name:     a.shift_tasks?.title || null,
         })));
 
         const { data: tsRows } = await supabase
@@ -169,6 +188,10 @@ export default function MyTasks({ Layout = StaffLayout }) {
     return () => { cancelled = true; };
   }, [userId]);
 
+  function formKey(a) {
+    return `${a.source}_${a.assignment_id}`;
+  }
+
   function tsKey(a) {
     const sid = a.shift?.shift_id;
     return sid != null ? `shift_${sid}` : `date_${a.shift?.shift_date}`;
@@ -177,7 +200,7 @@ export default function MyTasks({ Layout = StaffLayout }) {
   async function acknowledge(a) {
     try {
       const { error } = await supabase
-        .from("shift_assignments")
+        .from("task_assignments")
         .update({ acknowledged: true })
         .eq("assignment_id", a.assignment_id);
       if (error) throw error;
@@ -188,13 +211,13 @@ export default function MyTasks({ Layout = StaffLayout }) {
   }
 
   async function submitReport(a) {
-    const d     = formData[a.assignment_id] || {};
+    const d     = formData[formKey(a)] || {};
     const hours = parseFloat(d.hours || "0");
     const desc  = (d.desc || "").trim();
     if (!hours || hours <= 0) { showToast("Please enter valid hours.", false); return; }
     if (!desc)                { showToast("Please describe what you did.", false); return; }
 
-    setSubmitting(a.assignment_id);
+    setSubmitting(formKey(a));
     try {
       const { data: inserted, error } = await supabase
         .from("timesheets")
@@ -204,8 +227,8 @@ export default function MyTasks({ Layout = StaffLayout }) {
       if (error) throw error;
 
       setTimesheets(prev => ({ ...prev, [tsKey(a)]: inserted }));
-      setOpenForm(prev => ({ ...prev, [a.assignment_id]: false }));
-      setFormData(prev => ({ ...prev, [a.assignment_id]: { hours: "", desc: "" } }));
+      setOpenForm(prev => ({ ...prev, [formKey(a)]: false }));
+      setFormData(prev => ({ ...prev, [formKey(a)]: { hours: "", desc: "" } }));
       showToast("Report submitted!");
     } catch { showToast("Failed to submit.", false); }
     finally { setSubmitting(null); }
@@ -255,15 +278,15 @@ export default function MyTasks({ Layout = StaffLayout }) {
 
           {/* Tabs */}
           <div style={{ display:"flex", gap:"3px", background:"#F1F5F9", padding:"3px", borderRadius:"10px" }}>
-            {[["schedule","📅  Schedule"],["reports","📋  Reports"]].map(([t, label]) => (
+            {[["schedule","Schedule",Calendar],["reports","Reports",FileText]].map(([t, label, Icon]) => (
               <button key={t} onClick={() => setTab(t)}
-                style={{ padding:"8px 20px", borderRadius:"8px", border:"none", cursor:"pointer", fontSize:"13px",
+                style={{ display:"flex", alignItems:"center", gap:"6px", padding:"8px 18px", borderRadius:"8px", border:"none", cursor:"pointer", fontSize:"13px",
                   fontWeight: tab===t ? "700" : "500",
                   background: tab===t ? "#FFF" : "transparent",
                   color:      tab===t ? "#1E293B" : "#64748B",
                   boxShadow:  tab===t ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
                   transition:"all 0.15s" }}>
-                {label}
+                <Icon size={14} />{label}
               </button>
             ))}
           </div>
@@ -271,7 +294,7 @@ export default function MyTasks({ Layout = StaffLayout }) {
 
         {/* ── SCHEDULE TAB ── */}
         {tab === "schedule" && (
-          <ScheduleTab shifts={scheduleShifts} loading={loading} today={today} acknowledge={acknowledge} />
+          <ScheduleTab shifts={shifts} loading={loading} today={today} acknowledge={acknowledge} />
         )}
 
         {/* ── REPORTS TAB ── */}
@@ -282,6 +305,7 @@ export default function MyTasks({ Layout = StaffLayout }) {
             loading={loading}
             timesheets={timesheets}
             tsKey={tsKey}
+            formKey={formKey}
             openForm={openForm}
             setOpenForm={setOpenForm}
             formData={formData}
@@ -311,72 +335,68 @@ export default function MyTasks({ Layout = StaffLayout }) {
 }
 
 // ── Schedule Tab ──────────────────────────────────────────────────────────────
-function ScheduleTab({ shifts, loading, today, acknowledge }) {
-  if (loading) return <LoadingCards />;
-  if (shifts.length === 0) return (
-    <EmptyState icon={<Calendar size={40} color="#CBD5E1" />}
-      title="No upcoming shifts" sub="Your manager will assign shifts when scheduled." />
-  );
+const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
-  // Group by date
-  const groups = {};
-  for (const a of shifts) {
-    const d = a.shift.shift_date;
-    if (!groups[d]) groups[d] = [];
-    groups[d].push(a);
-  }
+function getWeekStartDate(d) {
+  const date = new Date(d);
+  const dow  = date.getDay(); // 0=Sun
+  date.setDate(date.getDate() - (dow === 0 ? 6 : dow - 1));
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function fmtWeekRange(start) {
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  const s = start.toLocaleDateString("en-SG", { month:"short", day:"numeric" });
+  const e = end.toLocaleDateString("en-SG",   { month:"short", day:"numeric", year:"numeric" });
+  return `${s} – ${e}`;
+}
+
+function ShiftWeekCalendar({ weekStart, shifts, onChipClick }) {
+  const todayStr = toLocalDateStr(new Date());
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart); d.setDate(weekStart.getDate() + i); return d;
+  });
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:"20px" }}>
-      {Object.entries(groups).map(([date, items], gi) => {
-        const isToday = date === today;
-        const d = new Date(date + "T00:00:00");
-        const dayLabel = isToday ? "Today" : d.toLocaleDateString("en-SG", { weekday:"long", day:"numeric", month:"long" });
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", border:"1px solid #F1F5F9", borderRadius:"12px", overflow:"hidden" }}>
+      {days.map((d, i) => {
+        const dayStr    = toLocalDateStr(d);
+        const isToday   = dayStr === todayStr;
+        const isWeekend = i >= 5;
+        const dayShifts = (shifts || []).filter(a => a.shift?.shift_date === dayStr);
         return (
-          <div key={date} style={{ animation:`fadeUp 0.3s ease ${gi*0.06}s both` }}>
-            {/* Date heading */}
-            <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"10px" }}>
-              <span style={{ fontSize:"13px", fontWeight:"700",
-                color: isToday ? "#2563EB" : "#475569" }}>{dayLabel}</span>
-              {isToday && <span style={{ padding:"2px 8px", borderRadius:"100px", fontSize:"10px", fontWeight:"700", background:"#DBEAFE", color:"#1D4ED8" }}>Today</span>}
-              <div style={{ flex:1, height:"1px", background:"#F1F5F9" }} />
+          <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", background: isToday ? "#EFF6FF" : isWeekend ? "#FAFAFA" : "#FFF" }}>
+            {/* Header */}
+            <div style={{ padding:"10px 6px 8px", textAlign:"center", borderBottom:"1px solid #F1F5F9" }}>
+              <p style={{ fontSize:"9px", fontWeight:"700", color: isWeekend ? "#CBD5E1" : "#94A3B8", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"5px" }}>
+                {DAY_LABELS[i]}
+              </p>
+              <div style={{ width:"28px", height:"28px", borderRadius:"50%", margin:"0 auto", background: isToday ? "#2563EB" : "transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <p style={{ fontSize:"13px", fontWeight: isToday ? "800" : "600", color: isToday ? "#FFF" : isWeekend ? "#94A3B8" : "#1E293B" }}>
+                  {d.getDate()}
+                </p>
+              </div>
             </div>
-            {/* Shift cards */}
-            <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
-              {items.map(a => {
-                const s = a.shift;
-                const duration = shiftDuration(s.start_time, s.end_time);
-                return (
-                  <div key={a.assignment_id} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"16px 20px",
-                    display:"flex", alignItems:"center", gap:"16px" }}>
-                    <DateBlock date={s.shift_date} highlight={isToday} />
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <p style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B" }}>{s.title || "Shift"}</p>
-                      <div style={{ display:"flex", alignItems:"center", gap:"5px", marginTop:"3px" }}>
-                        <Clock size={12} color="#94A3B8" />
-                        <span style={{ fontSize:"12px", color:"#64748B" }}>
-                          {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
-                          {duration > 0 && <span style={{ color:"#CBD5E1" }}> · {fmtHours(duration)}</span>}
-                        </span>
-                      </div>
-                      {a.role_name && <p style={{ fontSize:"11px", color:"#94A3B8", marginTop:"2px" }}>{a.role_name}</p>}
-                    </div>
-                    <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"4px", flexShrink:0 }}>
-                      <span style={{ padding:"3px 9px", borderRadius:"100px", fontSize:"10px", fontWeight:"700",
-                        background: s.status==="published" ? "#DCFCE7" : "#F3F4F6",
-                        color:      s.status==="published" ? "#166534" : "#6B7280" }}>
-                        {s.status}
-                      </span>
-                      {!a.acknowledged && s.status==="published" && (
-                        <button onClick={() => acknowledge(a)}
-                          style={{ fontSize:"11px", fontWeight:"700", color:"#D97706", background:"#FFFBEB", border:"1.5px solid #FDE68A", padding:"3px 10px", borderRadius:"100px", cursor:"pointer" }}>
-                          Acknowledge
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Task chips */}
+            <div style={{ padding:"5px 3px", minHeight:"60px", display:"flex", flexDirection:"column", gap:"3px" }}>
+              {dayShifts.map(a => (
+                <div key={a.assignment_id}
+                  onClick={() => onChipClick && onChipClick(a)}
+                  title={`${a.role_name || a.shift?.title || "Task"} · ${fmtTime(a.shift?.start_time)}–${fmtTime(a.shift?.end_time)}`}
+                  style={{ borderLeft:"3px solid #7C3AED", background:"#EDE9FE", borderRadius:"0 5px 5px 0",
+                    padding:"4px 6px", cursor:"pointer", transition:"background 0.1s", overflow:"hidden" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#DDD6FE"}
+                  onMouseLeave={e => e.currentTarget.style.background="#EDE9FE"}>
+                  <p style={{ fontSize:"10px", fontWeight:"700", color:"#4C1D95", whiteSpace:"nowrap",
+                    overflow:"hidden", textOverflow:"ellipsis", lineHeight:"1.3" }}>
+                    {a.role_name || a.shift?.title || "Task"}
+                  </p>
+                  <p style={{ fontSize:"9px", color:"#7C3AED", marginTop:"1px", opacity:0.85 }}>
+                    {fmtTime(a.shift?.start_time)}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         );
@@ -385,8 +405,296 @@ function ScheduleTab({ shifts, loading, today, acknowledge }) {
   );
 }
 
+function ScheduleTab({ shifts, loading, today, acknowledge }) {
+  const [weekStart,     setWeekStart]     = useState(() => getWeekStartDate(new Date()));
+  const [selectedShift, setSelectedShift] = useState(null); // { shiftId, shiftMeta } for modal
+  const [shiftTasks,    setShiftTasks]    = useState([]);
+  const [loadingTasks,  setLoadingTasks]  = useState(false);
+
+  async function handleChipClick(a) {
+    const shiftId = a.shift?.shift_id;
+    if (!shiftId) return;
+    setSelectedShift(a.shift);
+    setShiftTasks([]);
+    setLoadingTasks(true);
+    try {
+      const { tasks } = await api.get(`/api/shifts/${shiftId}/tasks`);
+      setShiftTasks(tasks || []);
+    } catch (err) {
+      console.error("Failed to load shift tasks:", err);
+      setShiftTasks([]);
+    } finally {
+      setLoadingTasks(false);
+    }
+  }
+
+  const weekStartStr = toLocalDateStr(weekStart);
+  const weekEnd      = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+  const weekEndStr   = toLocalDateStr(weekEnd);
+
+  const weekShifts = (shifts || [])
+    .filter(a => { const d = a.shift?.shift_date; return d && d >= weekStartStr && d <= weekEndStr; })
+    .sort((a,b) => (a.shift.shift_date).localeCompare(b.shift.shift_date) || (a.shift.start_time||"").localeCompare(b.shift.start_time||""));
+
+  const weekGroups = {};
+  for (const a of weekShifts) {
+    const d = a.shift.shift_date;
+    if (!weekGroups[d]) weekGroups[d] = [];
+    weekGroups[d].push(a);
+  }
+
+  const navBtn = { background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:"8px", padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", color:"#475569" };
+
+  if (loading) return <LoadingCards />;
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:"20px" }}>
+
+      {/* ── Week strip calendar ── */}
+      <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"16px 20px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
+          <button style={navBtn} onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate()-7); setWeekStart(d); }}>
+            <ChevronLeft size={16}/>
+          </button>
+          <span style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B" }}>{fmtWeekRange(weekStart)}</span>
+          <button style={navBtn} onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate()+7); setWeekStart(d); }}>
+            <ChevronRight size={16}/>
+          </button>
+        </div>
+        {loading ? <div style={{ height:"120px", background:"#F8FAFC", borderRadius:"12px" }}/> : <ShiftWeekCalendar weekStart={weekStart} shifts={shifts} onChipClick={handleChipClick} />}
+      </div>
+
+      {/* ── Task list for the week ── */}
+      <div>
+        <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"14px" }}>
+          <span style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>Tasks this week</span>
+          <span style={{ fontSize:"12px", color:"#94A3B8" }}>· {weekShifts.length} task{weekShifts.length!==1?"s":""}</span>
+        </div>
+
+        {weekShifts.length === 0 ? (
+          <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"40px", textAlign:"center" }}>
+            <Calendar size={28} color="#CBD5E1" style={{ margin:"0 auto 10px" }}/>
+            <p style={{ fontSize:"14px", fontWeight:"600", color:"#64748B" }}>No tasks this week</p>
+            <p style={{ fontSize:"12px", color:"#94A3B8", marginTop:"4px" }}>Use the arrows to navigate to other weeks.</p>
+          </div>
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:"20px" }}>
+            {Object.entries(weekGroups).map(([date, items], gi) => {
+              const isTodayGroup = date === today;
+              const d = new Date(date + "T00:00:00");
+              const dayLabel = isTodayGroup ? "Today" : d.toLocaleDateString("en-SG", { weekday:"long", day:"numeric", month:"long" });
+              return (
+                <div key={date} style={{ animation:`fadeUp 0.25s ease ${gi*0.05}s both` }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"10px" }}>
+                    <span style={{ fontSize:"13px", fontWeight:"700", color: isTodayGroup ? "#2563EB" : "#475569" }}>{dayLabel}</span>
+                    {isTodayGroup && <span style={{ padding:"2px 8px", borderRadius:"100px", fontSize:"10px", fontWeight:"700", background:"#DBEAFE", color:"#1D4ED8" }}>Today</span>}
+                    <div style={{ flex:1, height:"1px", background:"#F1F5F9" }}/>
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+                    {items.map(a => {
+                      const s = a.shift;
+                      const duration = shiftDuration(s.start_time, s.end_time);
+                      const ended = shiftEnded(s.shift_date, s.end_time);
+                      return (
+                        <div key={`${a.source}_${a.assignment_id}`}
+                          style={{ background:"#FFF", border:`1px solid ${isTodayGroup ? "#BFDBFE" : "#E2E8F0"}`,
+                            borderRadius:"14px", padding:"16px 20px", display:"flex", alignItems:"center", gap:"16px",
+                            opacity: ended ? 0.6 : 1 }}>
+                          <DateBlock date={s.shift_date} highlight={isTodayGroup}/>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <p style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B" }}>{a.role_name || s.title || "Task"}</p>
+                            {a.role_name && s.title && (
+                              <p style={{ fontSize:"11px", color:"#94A3B8", fontWeight:"500", marginTop:"1px" }}>{s.title}</p>
+                            )}
+                            <div style={{ display:"flex", alignItems:"center", gap:"5px", marginTop:"4px" }}>
+                              <Clock size={11} color="#CBD5E1"/>
+                              <span style={{ fontSize:"12px", color:"#94A3B8" }}>
+                                {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
+                                {duration > 0 && <span> · {fmtHours(duration)}</span>}
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"8px", flexShrink:0 }}>
+                            <span style={{ padding:"3px 9px", borderRadius:"100px", fontSize:"10px", fontWeight:"700",
+                              background: s.status==="published" ? "#DCFCE7" : "#F3F4F6",
+                              color:      s.status==="published" ? "#166534" : "#6B7280" }}>
+                              {s.status}
+                            </span>
+                            {!a.acknowledged && s.status==="published" && !ended && (
+                              <button onClick={() => acknowledge(a)}
+                                style={{ display:"flex", alignItems:"center", gap:"5px", padding:"7px 14px", borderRadius:"8px",
+                                  background:"#F59E0B", color:"#FFF", border:"none", fontSize:"12px", fontWeight:"700", cursor:"pointer" }}>
+                                <CheckCircle size={13}/>
+                                Acknowledge
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selectedShift && (
+        <ShiftTasksModal
+          shift={selectedShift}
+          tasks={shiftTasks}
+          loading={loadingTasks}
+          onClose={() => setSelectedShift(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Shift Tasks Modal ─────────────────────────────────────────────────────────
+const DIFF_STYLES = {
+  junior: { color:"#166534", bg:"#DCFCE7" },
+  mid:    { color:"#1D4ED8", bg:"#DBEAFE" },
+  senior: { color:"#92400E", bg:"#FEF3C7" },
+  expert: { color:"#5B21B6", bg:"#EDE9FE" },
+};
+
+function ShiftTasksModal({ shift, tasks, loading, onClose }) {
+  return createPortal(
+    <>
+      {/* Backdrop */}
+      <div onClick={onClose}
+        style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", zIndex:1000 }} />
+
+      {/* Panel */}
+      <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:1001,
+        background:"#FFF", borderRadius:"20px", width:"min(540px,92vw)", maxHeight:"82vh",
+        overflow:"hidden", boxShadow:"0 24px 64px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column" }}>
+
+        {/* Header */}
+        <div style={{ padding:"20px 24px 16px", borderBottom:"1px solid #F1F5F9", flexShrink:0 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"12px" }}>
+            <div style={{ minWidth:0 }}>
+              <p style={{ fontSize:"18px", fontWeight:"800", color:"#1E293B", marginBottom:"4px" }}>
+                {shift.title || "Shift"}
+              </p>
+              <div style={{ display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap" }}>
+                <span style={{ fontSize:"13px", color:"#64748B", display:"flex", alignItems:"center", gap:"4px" }}>
+                  <Calendar size={12} color="#94A3B8" />
+                  {fmtFullDate(shift.shift_date)}
+                </span>
+                <span style={{ fontSize:"13px", color:"#64748B", display:"flex", alignItems:"center", gap:"4px" }}>
+                  <Clock size={12} color="#94A3B8" />
+                  {fmtTime(shift.start_time)} – {fmtTime(shift.end_time)}
+                </span>
+              </div>
+            </div>
+            <button onClick={onClose}
+              style={{ background:"#F1F5F9", border:"none", borderRadius:"8px", width:"32px", height:"32px",
+                cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                color:"#64748B", flexShrink:0 }}>
+              <X size={15} />
+            </button>
+          </div>
+          <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", textTransform:"uppercase",
+            letterSpacing:"0.07em", marginTop:"14px" }}>
+            All Tasks · {loading ? "…" : tasks.length}
+          </p>
+        </div>
+
+        {/* Task list */}
+        <div style={{ overflowY:"auto", padding:"14px 24px 20px", flex:1 }}>
+          {loading ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
+              {[1,2,3].map(i => <Shimmer key={i} h="68px" r="12px" />)}
+            </div>
+          ) : tasks.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"40px 0" }}>
+              <Tag size={28} color="#CBD5E1" style={{ margin:"0 auto 10px" }} />
+              <p style={{ fontSize:"14px", fontWeight:"600", color:"#64748B" }}>No tasks found</p>
+            </div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+              {tasks.map((t, idx) => {
+                const diff      = DIFF_STYLES[t.difficulty];
+                const assignees = (t.task_assignments || [])
+                  .map(ta => ta.staff?.users?.full_name)
+                  .filter(Boolean);
+                const timeStr = (t.start_time && t.end_time)
+                  ? `${fmtApiTime(t.start_time)} – ${fmtApiTime(t.end_time)}`
+                  : null;
+                const initials = assignees[0]
+                  ? assignees[0].split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()
+                  : null;
+                return (
+                  <div key={t.task_id}
+                    style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"12px",
+                      padding:"13px 16px", display:"flex", flexDirection:"column", gap:"8px" }}>
+
+                    {/* Title */}
+                    <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", lineHeight:"1.35" }}>
+                      {t.title}
+                    </p>
+
+                    {/* Meta row */}
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"8px" }}>
+                      {/* Left: badges + time */}
+                      <div style={{ display:"flex", alignItems:"center", gap:"5px", flexWrap:"wrap", minWidth:0 }}>
+                        {t.skills?.name && (
+                          <span style={{ fontSize:"10px", fontWeight:"600", color:"#64748B",
+                            background:"#F1F5F9", padding:"2px 8px", borderRadius:"100px", whiteSpace:"nowrap" }}>
+                            {t.skills.name}
+                          </span>
+                        )}
+                        {diff && (
+                          <span style={{ fontSize:"10px", fontWeight:"700", color:diff.color,
+                            background:diff.bg, padding:"2px 8px", borderRadius:"100px", textTransform:"capitalize", whiteSpace:"nowrap" }}>
+                            {t.difficulty}
+                          </span>
+                        )}
+                        {timeStr && (
+                          <span style={{ fontSize:"10px", color:"#94A3B8", display:"flex", alignItems:"center",
+                            gap:"3px", whiteSpace:"nowrap" }}>
+                            <Clock size={10} color="#CBD5E1"/>
+                            {timeStr}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Right: assignee */}
+                      {assignees.length > 0 ? (
+                        <div style={{ display:"flex", alignItems:"center", gap:"6px", flexShrink:0 }}>
+                          <div style={{ width:"22px", height:"22px", borderRadius:"50%", background:"#EEF2FF",
+                            display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                            <span style={{ fontSize:"8px", fontWeight:"800", color:"#4338CA" }}>{initials}</span>
+                          </div>
+                          <span style={{ fontSize:"12px", fontWeight:"600", color:"#334155", whiteSpace:"nowrap" }}>
+                            {assignees[0]}
+                            {assignees.length > 1 && <span style={{ color:"#94A3B8", fontWeight:"500" }}> +{assignees.length-1}</span>}
+                          </span>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize:"11px", color:"#CBD5E1", fontWeight:"500",
+                          border:"1px dashed #E2E8F0", padding:"2px 10px", borderRadius:"100px", flexShrink:0 }}>
+                          Unassigned
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+}
+
 // ── Reports Tab ───────────────────────────────────────────────────────────────
-function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, openForm, setOpenForm, formData, setFormData, submitting, submitReport, reportFilter, setReportFilter, month, setMonth }) {
+function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey, openForm, setOpenForm, formData, setFormData, submitting, submitReport, reportFilter, setReportFilter, month, setMonth }) {
 
   const STATUS_FILTERS = [
     ["all",      "All",           null,       null      ],
@@ -445,27 +753,29 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, openForm
             const ts      = timesheets[tsKey(a)];
             const tsMeta  = ts ? REPORT_STATUS[ts.status] : null;
             const duration = shiftDuration(s.start_time, s.end_time);
-            const formOpen = !!openForm[a.assignment_id];
-            const form     = formData[a.assignment_id] || { hours: duration > 0 ? String(duration) : "", desc: "" };
-            const isSub    = submitting === a.assignment_id;
+            const formOpen = !!openForm[formKey(a)];
+            const form     = formData[formKey(a)] || { hours: duration > 0 ? String(duration) : "", desc: "" };
+            const isSub    = submitting === formKey(a);
 
             return (
-              <div key={a.assignment_id} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", overflow:"hidden",
+              <div key={`${a.source}_${a.assignment_id}`} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", overflow:"hidden",
                 animation:`fadeUp 0.25s ease ${i*0.04}s both` }}>
 
                 {/* Card body */}
                 <div style={{ padding:"16px 20px", display:"flex", alignItems:"center", gap:"14px" }}>
                   <DateBlock date={s.shift_date} />
                   <div style={{ flex:1, minWidth:0 }}>
-                    <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>{s.title || "Shift"}</p>
-                    <div style={{ display:"flex", alignItems:"center", gap:"5px", marginTop:"2px" }}>
-                      <Clock size={11} color="#94A3B8" />
-                      <span style={{ fontSize:"12px", color:"#64748B" }}>
+                    <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>{a.role_name || s.title || "Task"}</p>
+                    {a.role_name && s.title && (
+                      <p style={{ fontSize:"11px", color:"#94A3B8", fontWeight:"500", marginTop:"1px" }}>{s.title}</p>
+                    )}
+                    <div style={{ display:"flex", alignItems:"center", gap:"5px", marginTop:"4px" }}>
+                      <Clock size={11} color="#CBD5E1" />
+                      <span style={{ fontSize:"12px", color:"#94A3B8" }}>
                         {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
-                        {duration > 0 && <span style={{ color:"#CBD5E1" }}> · {fmtHours(duration)}</span>}
+                        {duration > 0 && <span> · {fmtHours(duration)}</span>}
                       </span>
                     </div>
-                    {a.role_name && <p style={{ fontSize:"11px", color:"#94A3B8", marginTop:"1px" }}>{a.role_name}</p>}
                   </div>
 
                   {/* Right side */}
@@ -478,7 +788,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, openForm
                       </span>
                     ) : (
                       /* Not submitted */
-                      <button onClick={() => setOpenForm(p => ({ ...p, [a.assignment_id]: !formOpen }))}
+                      <button onClick={() => setOpenForm(p => ({ ...p, [formKey(a)]: !formOpen }))}
                         style={{ display:"flex", alignItems:"center", gap:"6px", padding:"7px 16px", borderRadius:"9px",
                           border:"none", background:"#2563EB", color:"#FFF",
                           fontSize:"12px", fontWeight:"700", cursor:"pointer", transition:"all 0.15s" }}>
@@ -502,7 +812,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, openForm
                       )}
                     </div>
                     {ts.status === "rejected" && (
-                      <button onClick={() => setOpenForm(p => ({ ...p, [a.assignment_id]: !formOpen }))}
+                      <button onClick={() => setOpenForm(p => ({ ...p, [formKey(a)]: !formOpen }))}
                         style={{ padding:"5px 14px", borderRadius:"7px", border:"1.5px solid #FECACA",
                           background:"#FFF5F5", fontSize:"12px", fontWeight:"700", color:"#EF4444", cursor:"pointer", flexShrink:0 }}>
                         {formOpen ? "Cancel" : "Resubmit"}
@@ -522,7 +832,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, openForm
                         <label style={{ display:"block", fontSize:"10px", fontWeight:"700", color:"#94A3B8", marginBottom:"4px", letterSpacing:"0.05em" }}>HOURS WORKED</label>
                         <input type="number" min="0.5" max="24" step="0.5" placeholder="e.g. 6"
                           value={form.hours}
-                          onChange={e => setFormData(p => ({ ...p, [a.assignment_id]: { ...form, hours: e.target.value } }))}
+                          onChange={e => setFormData(p => ({ ...p, [formKey(a)]: { ...form, hours: e.target.value } }))}
                           style={{ padding:"8px 10px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"13px",
                             color:"#1E293B", outline:"none", background:"#FFF", width:"90px", boxSizing:"border-box" }} />
                       </div>
@@ -530,7 +840,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, openForm
                         <label style={{ display:"block", fontSize:"10px", fontWeight:"700", color:"#94A3B8", marginBottom:"4px", letterSpacing:"0.05em" }}>WHAT DID YOU WORK ON?</label>
                         <input type="text" placeholder="Describe what you did…"
                           value={form.desc}
-                          onChange={e => setFormData(p => ({ ...p, [a.assignment_id]: { ...form, desc: e.target.value } }))}
+                          onChange={e => setFormData(p => ({ ...p, [formKey(a)]: { ...form, desc: e.target.value } }))}
                           style={{ padding:"8px 10px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"13px",
                             color:"#1E293B", outline:"none", background:"#FFF", width:"100%", boxSizing:"border-box" }} />
                       </div>
@@ -540,7 +850,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, openForm
                             fontSize:"13px", fontWeight:"700", cursor: isSub ? "not-allowed":"pointer", opacity: isSub ? 0.7:1 }}>
                           {isSub ? "Submitting…" : "Submit"}
                         </button>
-                        <button onClick={() => setOpenForm(p => ({ ...p, [a.assignment_id]: false }))}
+                        <button onClick={() => setOpenForm(p => ({ ...p, [formKey(a)]: false }))}
                           style={{ padding:"8px 12px", borderRadius:"8px", background:"#F1F5F9", color:"#64748B",
                             border:"none", fontSize:"13px", fontWeight:"600", cursor:"pointer" }}>
                           Cancel

@@ -57,7 +57,7 @@ export default function CasualDashboard() {
       // Fetch upcoming shifts once we have staff_id
       if (staffData?.staff_id) {
         const { data: shifts } = await supabase
-          .from("shift_assignments")
+          .from("task_assignments")
           .select(`
             assignment_id, acknowledged,
             shifts!inner ( shift_id, title, shift_date, start_time, end_time,
