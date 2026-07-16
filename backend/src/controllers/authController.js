@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 
 const login = async (req, res) => {
     try {
-        const { email } = req.body;
+        const email = req.body.email?.trim().toLowerCase();
 
         const user = await prisma.users.findUnique({
             where: { email }
@@ -53,7 +53,8 @@ function isValidEmail(email) {
 
 const register = async (req, res) => {
     try {
-        const { full_name, username: rawUsername, email, password, role } = req.body;
+        const { full_name, username: rawUsername, email: rawEmail, password, role } = req.body;
+        const email = rawEmail?.trim().toLowerCase();
 
         if (!rawUsername || rawUsername.trim().length < 2) {
             return res.status(400).json({ success: false, message: "Username is required (min 2 characters)." });
@@ -109,9 +110,10 @@ const register = async (req, res) => {
 const registerBusiness = async (req, res) => {
     try {
         const {
-            business_name, description, owner_name, email, phone, address, password,
+            business_name, description, owner_name, email: rawEmail, phone, address, password,
             plan, business_settings, business_roles, allocation_preferences,
         } = req.body;
+        const email = rawEmail?.trim().toLowerCase();
         const validPlans = ["free", "premium", "enterprise"];
         const selectedPlan = validPlans.includes(plan) ? plan : "free";
 
@@ -234,7 +236,8 @@ const resetPassword = async (req, res) => {
 // Used by managers to create staff accounts (bypasses email domain restrictions)
 const createStaffAccount = async (req, res) => {
     try {
-        const { full_name, username, email, password, role, outlet_id, staff_type, default_work_days, hired_at, skill_ids, skill_assignments } = req.body;
+        const { full_name, username, email: rawEmail, password, role, outlet_id, staff_type, default_work_days, hired_at, skill_ids, skill_assignments } = req.body;
+        const email = rawEmail?.trim().toLowerCase();
 
         if (!email || !password || !full_name || !username) {
             return res.status(400).json({ success: false, message: "Missing required fields." });
@@ -336,7 +339,8 @@ const getKrewbyWorkers = async (req, res) => {
 // Used by coordinators to create krewby worker accounts
 const createWorkerAccount = async (req, res) => {
     try {
-        const { full_name, username, email, password, preferred_location } = req.body;
+        const { full_name, username, email: rawEmail, password, preferred_location } = req.body;
+        const email = rawEmail?.trim().toLowerCase();
 
         if (!email || !password || !full_name || !username) {
             return res.status(400).json({ success: false, message: "Missing required fields." });
@@ -397,7 +401,8 @@ const createWorkerAccount = async (req, res) => {
 // Used by system admin to create outlet manager accounts
 const createManagerAccount = async (req, res) => {
     try {
-        const { full_name, username, email, password, outlet_id } = req.body;
+        const { full_name, username, email: rawEmail, password, outlet_id } = req.body;
+        const email = rawEmail?.trim().toLowerCase();
 
         if (!email || !password || !full_name || !username) {
             return res.status(400).json({ success: false, message: "Missing required fields." });
