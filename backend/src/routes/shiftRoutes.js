@@ -22,6 +22,8 @@ const {
     assignStaff,
     unassignStaff,
     getMyTasks,
+    getStaffRoster,
+    validateAssignment,
 } = require("../controllers/taskController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -65,5 +67,7 @@ router.post("/tasks/:taskId/assign",   verifyToken, allowRoles(...MANAGER_ONLY),
 router.delete("/tasks/:taskId/assign", verifyToken, allowRoles(...MANAGER_ONLY),    unassignStaff);
 router.get("/:shiftId/tasks",          verifyToken, allowRoles(...ALL_SHIFT_ROLES), getShiftTasks);
 router.post("/:shiftId/tasks",         verifyToken, allowRoles(...MANAGER_ONLY),    createTask);
+router.get("/:shiftId/staff-roster",   verifyToken, allowRoles(...MANAGER_ONLY),    getStaffRoster);
+router.post("/tasks/:taskId/validate-assignment", verifyToken, allowRoles(...MANAGER_ONLY), validateAssignment);
 
 module.exports = router;
