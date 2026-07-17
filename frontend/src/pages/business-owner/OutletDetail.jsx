@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star, Settings2, Calendar, Zap, Pencil, X, Save, Loader2, Check, Minus, Scale, Award, TrendingUp, BarChart3, RotateCcw } from "lucide-react";
+import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star, Settings2, Calendar, Zap, Pencil, X, Save, Loader2, Check, Minus, Scale, Award, TrendingUp, BarChart3, RotateCcw, ChevronDown } from "lucide-react";
 import { SG_HOLIDAYS } from "../../data/sgHolidays";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-outletdetail-styles")) {
@@ -155,7 +155,7 @@ export default function OutletDetail() {
     setLoading(true);
     try {
       const data = await api.get("/api/business/outlets");
-      const found = (data.outlets || []).find(o => String(o.outlet_id) === String(id));
+      const found = (data.outlets || []).find(o => String(o.branch_id) === String(id));
       if (!found) { goTo("/business-owner/outlets"); return; }
       setOutlet(found);
     } catch (err) {
@@ -553,12 +553,23 @@ export default function OutletDetail() {
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}>
               {rolesDraft.map((row, i) => (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 80px 32px", gap: "8px", alignItems: "center" }}>
-                  <select style={s.input} value={row.role_name || ""} onChange={e => {
-                    updateRoleDraft(i, "role_name", e.target.value);
-                  }}>
-                    <option value="">— Select skill —</option>
-                    {skills.map(sk => <option key={sk.skill_id} value={sk.name}>{sk.name}</option>)}
-                  </select>
+                  <div style={{ position: "relative" }}>
+                    <select
+                      style={{ ...s.input, appearance: "none", WebkitAppearance: "none", paddingRight: "32px", cursor: "pointer" }}
+                      value={row.skill_id || ""}
+                      onChange={e => {
+                        const sk = skills.find(s => s.skill_id === Number(e.target.value));
+                        setRolesDraft(prev => {
+                          const r = [...prev];
+                          r[i] = { ...r[i], skill_id: e.target.value, role_name: sk?.name || "" };
+                          return r;
+                        });
+                      }}>
+                      <option value="">— Select skill —</option>
+                      {skills.map(sk => <option key={sk.skill_id} value={sk.skill_id}>{sk.name}</option>)}
+                    </select>
+                    <ChevronDown size={14} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }} />
+                  </div>
                   <input type="number" min="1" max="99" style={{ ...s.input, textAlign: "center" }} value={row.headcount} onChange={e => updateRoleDraft(i, "headcount", e.target.value)} />
                   <button onClick={() => setRolesDraft(p => p.filter((_, idx) => idx !== i))} style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "7px", color: "#EF4444", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>

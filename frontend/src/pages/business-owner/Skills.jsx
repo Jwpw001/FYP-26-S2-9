@@ -1,307 +1,195 @@
 import { useState, useEffect } from "react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { api } from "../../lib/api";
-import { Plus, X, Search, Check, Sparkles, PartyPopper } from "lucide-react";
+import { Tag, Search, Building2, Layers, Sparkles } from "lucide-react";
 
-export default function BOSkills() {
-  const [skills,      setSkills]      = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
-  const [apiIndustry, setApiIndustry] = useState("");
-  const [loading,     setLoading]     = useState(true);
-  const [search,      setSearch]      = useState("");
-  const [suggestSearch, setSuggestSearch] = useState("");
-  const [newSkill,    setNewSkill]    = useState("");
-  const [pendingName, setPendingName] = useState("");
-  const [newDesc,     setNewDesc]     = useState("");
-  const [adding,      setAdding]      = useState(false);
-  const [deleting,    setDeleting]    = useState(null);
-  const [error,       setError]       = useState("");
-  const [success,     setSuccess]     = useState("");
+const CHIP_PALETTES = [
+  { bg: "#EFF6FF", border: "#BFDBFE", dot: "#3B82F6", text: "#1D4ED8" },
+  { bg: "#F0FDF4", border: "#BBF7D0", dot: "#22C55E", text: "#15803D" },
+  { bg: "#FDF4FF", border: "#E9D5FF", dot: "#A855F7", text: "#7E22CE" },
+  { bg: "#FFF7ED", border: "#FED7AA", dot: "#F97316", text: "#C2410C" },
+  { bg: "#FFF1F2", border: "#FECDD3", dot: "#F43F5E", text: "#BE123C" },
+  { bg: "#F0FDFA", border: "#99F6E4", dot: "#14B8A6", text: "#0F766E" },
+];
+function chipPalette(name = "") {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return CHIP_PALETTES[Math.abs(h) % CHIP_PALETTES.length];
+}
 
-  const skillLabel = "Skill Tags";
+function StatCard({ icon, label, value, sub }) {
+  return (
+    <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px 22px", display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: 0 }}>
+      <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {icon}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", lineHeight: 1.1 }}>{value}</p>
+        <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", marginTop: "2px" }}>{label}</p>
+        {sub && <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px" }}>{sub}</p>}
+      </div>
+    </div>
+  );
+}
 
-  useEffect(() => { load(); }, []);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const r = await api.get("/api/business/skills");
-      setSkills(r.skills || []);
-      setSuggestions(r.suggestions || []);
-      setApiIndustry(r.industry || "");
-    } catch { } finally { setLoading(false); }
-  }
-
-  async function addSkill(name, description = "") {
-    const n = name.trim();
-    if (!n) return;
-    if (skills.some(s => s.name.toLowerCase() === n.toLowerCase())) { setError(`"${n}" already exists.`); return; }
-    setAdding(true); setError("");
-    try {
-      await api.post("/api/business/skills", { name: n, description: description || "" });
-      setNewSkill("");
-      setSuccess(`"${n}" added!`);
-      setTimeout(() => setSuccess(""), 2500);
-      await load();
-    } catch (err) { setError(err.message); }
-    finally { setAdding(false); }
-  }
-
-  async function removeSkill(skill_id) {
-    setDeleting(skill_id);
-    try {
-      await api.delete(`/api/business/skills/${skill_id}`);
-      setSkills(prev => prev.filter(s => s.skill_id !== skill_id));
-      setSuggestions(prev => prev); // will refresh on next load
-    } catch { } finally { setDeleting(null); }
-  }
-
-  const filtered = skills.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
-  const filteredSuggestions = suggestions.filter(s => s.name.toLowerCase().includes(suggestSearch.toLowerCase()));
-  const industryLabel = apiIndustry === "f&b" ? "F&B" : apiIndustry ? apiIndustry.charAt(0).toUpperCase() + apiIndustry.slice(1) : "";
+function BranchCard({ branch, q }) {
+  const [open, setOpen] = useState(true);
+  const skills = branch.skills;
+  const visibleSkills = q
+    ? skills.filter(s => s.name.toLowerCase().includes(q))
+    : skills;
 
   return (
-    <BusinessOwnerLayout title={skillLabel}>
-      <div style={{ display:"flex", height:"calc(100vh - 60px)", overflow:"hidden", animation:"pageSlideUp 0.25s ease both" }}>
+    <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column" }}>
+      {/* Header */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: "14px", padding: "18px 20px", background: "none", border: "none", borderBottom: open ? "1px solid #F1F5F9" : "none", cursor: "pointer", textAlign: "left" }}>
+        <div style={{ width: "40px", height: "40px", borderRadius: "11px", background: "#EFF6FF", border: "1px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Building2 size={17} color="#3B82F6" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{branch.name}</p>
+          <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px" }}>
+            {skills.length} skill{skills.length !== 1 ? "s" : ""} assigned
+          </p>
+        </div>
+        <span style={{ fontSize: "11px", fontWeight: "700", color: skills.length > 0 ? "#3B82F6" : "#94A3B8", background: skills.length > 0 ? "#EFF6FF" : "#F8FAFC", border: `1px solid ${skills.length > 0 ? "#BFDBFE" : "#E2E8F0"}`, padding: "3px 10px", borderRadius: "100px", flexShrink: 0 }}>
+          {open ? "Hide" : "Show"}
+        </span>
+      </button>
 
-        {/* ── LEFT: Your Skills ── */}
-        <div style={{ flex:1, display:"flex", flexDirection:"column", padding:"28px 32px", overflow:"hidden", borderRight:"1px solid #F1F5F9" }}>
-
-          {/* Header */}
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"20px", flexShrink:0 }}>
-            <div>
-              <h2 style={{ fontSize:"18px", fontWeight:"800", color:"#0F172A", marginBottom:"2px" }}>{skillLabel}</h2>
-              <p style={{ fontSize:"12px", color:"#94A3B8" }}>
-                {skills.length} skill{skills.length !== 1 ? "s" : ""} · powers AI scheduling and staff assignment
+      {/* Skills */}
+      {open && (
+        <div style={{ padding: "16px 20px 20px" }}>
+          {visibleSkills.length === 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0", gap: "8px" }}>
+              <Tag size={20} color="#CBD5E1" />
+              <p style={{ fontSize: "12px", color: "#CBD5E1", fontStyle: "italic" }}>
+                {q ? "No matching skills." : "No skills assigned yet."}
               </p>
             </div>
-            {skills.length > 0 && (
-              <span style={{ fontSize:"13px", fontWeight:"800", color:"#3B82F6", background:"#EFF6FF", padding:"4px 12px", borderRadius:"100px" }}>
-                {skills.length}
-              </span>
-            )}
-          </div>
-
-          {/* Step 1: Skill name input */}
-          {!pendingName && (
-            <div style={{ display:"flex", gap:"8px", marginBottom:"16px", flexShrink:0 }}>
-              <input
-                value={newSkill}
-                onChange={e => { setNewSkill(e.target.value); setError(""); }}
-                onKeyDown={e => {
-                  if (e.key === "Enter" && newSkill.trim()) {
-                    if (skills.some(s => s.name.toLowerCase() === newSkill.trim().toLowerCase())) {
-                      setError(`"${newSkill.trim()}" already exists.`); return;
-                    }
-                    setPendingName(newSkill.trim());
-                    setNewSkill("");
-                    setError("");
-                  }
-                }}
-                placeholder="Type a skill name and press Enter…"
-                style={{ flex:1, padding:"10px 14px", borderRadius:"10px", border:"1.5px solid #E2E8F0", fontSize:"13px", color:"#1E293B", outline:"none", fontFamily:"inherit", background:"#fff" }}/>
-              <button onClick={() => {
-                  if (!newSkill.trim()) return;
-                  if (skills.some(s => s.name.toLowerCase() === newSkill.trim().toLowerCase())) { setError(`"${newSkill.trim()}" already exists.`); return; }
-                  setPendingName(newSkill.trim()); setNewSkill(""); setError("");
-                }}
-                disabled={!newSkill.trim()}
-                style={{ padding:"10px 18px", borderRadius:"10px", border:"none", background: newSkill.trim() ? "#3B82F6" : "#F1F5F9", color: newSkill.trim() ? "#fff" : "#94A3B8", fontSize:"13px", fontWeight:"700", cursor: newSkill.trim() ? "pointer" : "not-allowed", whiteSpace:"nowrap", flexShrink:0 }}>
-                Next →
-              </button>
-            </div>
-          )}
-
-          {/* Step 2: Description prompt */}
-          {pendingName && (
-            <div style={{ marginBottom:"16px", flexShrink:0, background:"#EFF6FF", border:"1.5px solid #BFDBFE", borderRadius:"12px", padding:"16px", animation:"pageSlideUp 0.2s ease" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"10px" }}>
-                <div style={{ width:"30px", height:"30px", borderRadius:"50%", background:"#3B82F6", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"13px", fontWeight:"800", color:"#fff", flexShrink:0 }}>
-                  {pendingName[0]?.toUpperCase()}
-                </div>
-                <div>
-                  <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E40AF" }}>{pendingName}</p>
-                  <p style={{ fontSize:"11px", color:"#60A5FA" }}>Add a short description (optional)</p>
-                </div>
-              </div>
-              <textarea
-                autoFocus
-                value={newDesc}
-                onChange={e => setNewDesc(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addSkill(pendingName, newDesc); setPendingName(""); setNewDesc(""); } }}
-                placeholder="e.g. Designs user interfaces and experiences for web and mobile products…"
-                rows={2}
-                style={{ width:"100%", padding:"9px 12px", borderRadius:"9px", border:"1.5px solid #BFDBFE", fontSize:"12px", color:"#1E293B", outline:"none", fontFamily:"inherit", background:"#fff", resize:"none", boxSizing:"border-box", lineHeight:1.5 }}/>
-              <div style={{ display:"flex", gap:"8px", marginTop:"10px" }}>
-                <button onClick={() => { setPendingName(""); setNewDesc(""); }}
-                  style={{ padding:"7px 14px", borderRadius:"8px", border:"1px solid #BFDBFE", background:"#fff", fontSize:"12px", fontWeight:"600", color:"#64748B", cursor:"pointer" }}>
-                  Cancel
-                </button>
-                <button onClick={() => { addSkill(pendingName, newDesc); setPendingName(""); setNewDesc(""); }}
-                  disabled={adding}
-                  style={{ flex:1, padding:"7px 14px", borderRadius:"8px", border:"none", background:"#3B82F6", color:"#fff", fontSize:"12px", fontWeight:"700", cursor:"pointer", boxShadow:"0 2px 8px rgba(59,130,246,0.3)" }}>
-                  {adding ? "Saving…" : "Save Skill →"}
-                </button>
-                <button onClick={() => { addSkill(pendingName, ""); setPendingName(""); setNewDesc(""); }}
-                  disabled={adding}
-                  style={{ padding:"7px 14px", borderRadius:"8px", border:"1px solid #BFDBFE", background:"#fff", fontSize:"12px", fontWeight:"600", color:"#60A5FA", cursor:"pointer" }}>
-                  Skip
-                </button>
-              </div>
-            </div>
-          )}
-
-          {(error || success) && (
-            <p style={{ fontSize:"12px", color: error ? "#DC2626" : "#059669", marginBottom:"12px", flexShrink:0, display:"flex", alignItems:"center", gap:"4px" }}>
-              {error ? error : <><Check size={13} color="#059669" /> {success}</>}
-            </p>
-          )}
-
-          {/* Search (only when skills exist) */}
-          {skills.length > 3 && (
-            <div style={{ display:"flex", alignItems:"center", gap:"8px", background:"#F8FAFC", borderRadius:"9px", padding:"8px 12px", border:"1px solid #E8EDF5", marginBottom:"14px", flexShrink:0 }}>
-              <Search size={13} color="#94A3B8" strokeWidth={2}/>
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search skills…"
-                style={{ border:"none", outline:"none", fontSize:"12px", color:"#1E293B", background:"transparent", flex:1, fontFamily:"inherit" }}/>
-              {search && <button onClick={() => setSearch("")} style={{ background:"none", border:"none", color:"#94A3B8", cursor:"pointer", fontSize:"15px", lineHeight:1, padding:"0" }}>×</button>}
-            </div>
-          )}
-
-          {/* Skills grid */}
-          <div style={{ flex:1, overflowY:"auto" }}>
-            {loading ? (
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:"12px" }}>
-                {Array.from({length:6}).map((_,i) => (
-                  <div key={i} style={{ height:"100px", borderRadius:"16px", background:"linear-gradient(90deg,#F1F5F9 25%,#E8EDF5 50%,#F1F5F9 75%)", backgroundSize:"400px 100%", animation:"shimmer 1.4s infinite linear" }}/>
-                ))}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"60%", textAlign:"center", gap:"12px" }}>
-                <div style={{ width:"52px", height:"52px", borderRadius:"50%", background:"#F1F5F9", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  {search ? <Search size={22} color="#94A3B8" /> : <Sparkles size={22} color="#94A3B8" />}
-                </div>
-                <div>
-                  <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>
-                    {search ? "No skills match" : "No skills added yet"}
-                  </p>
-                  <p style={{ fontSize:"12px", color:"#94A3B8", lineHeight:1.6 }}>
-                    {search ? "Try a different keyword." : "Pick from the suggestions on the right →"}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:"12px" }}>
-                {filtered.map((sk, i) => (
-                  <div key={sk.skill_id}
-                    style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"18px 16px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", animation:`pageSlideUp 0.2s ease ${i*0.04}s both`, position:"relative" }}>
-
-                    {/* Avatar */}
-                    <div style={{ width:"42px", height:"42px", borderRadius:"50%", background:"#3B82F6", color:"#fff", fontSize:"16px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"12px" }}>
-                      {sk.name[0]?.toUpperCase()}
-                    </div>
-
-                    {/* Name */}
-                    <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", marginBottom:"6px", lineHeight:1.3 }}>{sk.name}</p>
-
-                    {/* Description */}
-                    <p style={{ fontSize:"11px", color:"#64748B", lineHeight:1.5, minHeight:"30px" }}>
-                      {sk.description || "—"}
-                    </p>
-
-                    {/* Remove button — top right */}
-                    <button onClick={() => removeSkill(sk.skill_id)}
-                      disabled={deleting === sk.skill_id}
-                      style={{ position:"absolute", top:"12px", right:"12px", width:"26px", height:"26px", borderRadius:"7px", border:"none", background:"transparent", color:"#CBD5E1", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.12s", opacity: deleting === sk.skill_id ? 0.4 : 1 }}
-                      onMouseEnter={e => { e.currentTarget.style.background="#FEE2E2"; e.currentTarget.style.color="#EF4444"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#CBD5E1"; }}>
-                      <X size={12} strokeWidth={2.5}/>
-                    </button>
-
-                    {/* Footer line */}
-                    <div style={{ marginTop:"12px", paddingTop:"10px", borderTop:"1px solid #F1F5F9", display:"flex", alignItems:"center", gap:"5px" }}>
-                      <span style={{ width:"6px", height:"6px", borderRadius:"50%", background:"#22C55E", display:"inline-block" }}/>
-                      <span style={{ fontSize:"11px", fontWeight:"600", color:"#16A34A" }}>Active</span>
-                    </div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {visibleSkills.map(skill => {
+                const p = chipPalette(skill.name);
+                return (
+                  <div key={skill.skill_id}
+                    title={skill.description || undefined}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "5px 13px", borderRadius: "100px", background: p.bg, border: `1px solid ${p.border}`, fontSize: "12px", fontWeight: "700", color: p.text, cursor: skill.description ? "help" : "default" }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: p.dot, display: "inline-block", flexShrink: 0 }} />
+                    {skill.name}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function BOSkills() {
+  const [branches, setBranches] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [search,   setSearch]   = useState("");
+
+  useEffect(() => {
+    api.get("/api/business/branch-skills-summary")
+      .then(r => setBranches(r.branches || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const q = search.toLowerCase();
+  const filtered = branches
+    .map(b => ({ ...b, skills: b.skills.filter(s => !q || s.name.toLowerCase().includes(q)) }))
+    .filter(b => !q || b.name.toLowerCase().includes(q) || b.skills.length > 0);
+
+  const totalSkills = branches.reduce((sum, b) => sum + b.skills.length, 0);
+  const uniqueNames = new Set(branches.flatMap(b => b.skills.map(s => s.name))).size;
+
+  return (
+    <BusinessOwnerLayout title="Skill Tags">
+      <div style={{ animation: "pageIn 0.3s ease both" }}>
+
+        {/* Page header */}
+        <div style={{ marginBottom: "24px" }}>
+          <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>Skill Tags</h2>
+          <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px" }}>
+            Skills assigned to each branch across your business
+          </p>
         </div>
 
-        {/* ── RIGHT: Suggestions ── */}
-        <div style={{ width:"340px", flexShrink:0, display:"flex", flexDirection:"column", background:"#FAFBFE", overflow:"hidden" }}>
-          <div style={{ padding:"28px 24px 16px", flexShrink:0, borderBottom:"1px solid #F1F5F9" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"3px" }}>
-              <h3 style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>Suggested Skills</h3>
-              {industryLabel && (
-                <span style={{ fontSize:"10px", fontWeight:"700", padding:"2px 8px", borderRadius:"100px", background:"#EEF2FF", color:"#4F46E5", border:"1px solid #C7D2FE" }}>
-                  {industryLabel}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize:"11px", color:"#94A3B8", marginBottom:"12px" }}>Click any skill to add it to your list</p>
-            <div style={{ display:"flex", alignItems:"center", gap:"8px", background:"#F8FAFC", borderRadius:"9px", padding:"7px 12px", border:"1px solid #E8EDF5" }}>
-              <Search size={13} color="#94A3B8" strokeWidth={2}/>
-              <input value={suggestSearch} onChange={e => setSuggestSearch(e.target.value)}
-                placeholder="Search suggestions…"
-                style={{ border:"none", outline:"none", fontSize:"12px", color:"#1E293B", background:"transparent", flex:1, fontFamily:"inherit" }}/>
-              {suggestSearch && <button onClick={() => setSuggestSearch("")} style={{ background:"none", border:"none", color:"#94A3B8", cursor:"pointer", fontSize:"15px", lineHeight:1, padding:"0" }}>×</button>}
-            </div>
+        {/* Stat cards */}
+        {!loading && (
+          <div style={{ display: "flex", gap: "14px", marginBottom: "28px", flexWrap: "wrap" }}>
+            <StatCard
+              icon={<Building2 size={20} color="#3B82F6" />}
+              label="Branches"
+              value={branches.length}
+              sub="with skill assignments"
+            />
+            <StatCard
+              icon={<Layers size={20} color="#8B5CF6" />}
+              label="Total Assignments"
+              value={totalSkills}
+              sub="across all branches"
+            />
+            <StatCard
+              icon={<Sparkles size={20} color="#F59E0B" />}
+              label="Unique Skills"
+              value={uniqueNames}
+              sub="distinct skill types"
+            />
           </div>
+        )}
 
-          <div style={{ flex:1, overflowY:"auto", padding:"12px 16px" }}>
-            {suggestions.length === 0 ? (
-              <div style={{ textAlign:"center", padding:"40px 16px" }}>
-                <p style={{ marginBottom:"8px" }}><PartyPopper size={22} color="#F59E0B" /></p>
-                <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>All suggestions added!</p>
-                <p style={{ fontSize:"11px", color:"#94A3B8" }}>You can still type custom skills in the input.</p>
-              </div>
-            ) : filteredSuggestions.length === 0 ? (
-              <div style={{ textAlign:"center", padding:"40px 16px" }}>
-                <Search size={22} color="#94A3B8" style={{ marginBottom:"8px" }} />
-                <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>No matches</p>
-                <p style={{ fontSize:"11px", color:"#94A3B8" }}>Try a different keyword.</p>
-              </div>
-            ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
-                {filteredSuggestions.map((s, i) => (
-                  <div key={s.skill_id} onClick={() => addSkill(s.name, s.description)}
-                    className="card-hover"
-                    style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"16px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", cursor:"pointer", animation:`pageSlideUp 0.2s ease ${i*0.03}s both` }}>
-
-                    {/* Avatar + name row */}
-                    <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"10px" }}>
-                      <div style={{ width:"38px", height:"38px", borderRadius:"50%", background:"#F1F5F9", color:"#64748B", fontSize:"14px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                        {s.name[0]?.toUpperCase()}
-                      </div>
-                      <div style={{ minWidth:0 }}>
-                        <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.name}</p>
-                        {s.description && <p style={{ fontSize:"11px", color:"#64748B", marginTop:"1px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.description}</p>}
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div style={{ paddingTop:"10px", borderTop:"1px solid #F1F5F9", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                      <span style={{ fontSize:"11px", fontWeight:"600", padding:"2px 8px", borderRadius:"100px", background:"#F1F5F9", color:"#64748B" }}>Suggested</span>
-                      <div style={{ display:"flex", alignItems:"center", gap:"4px", fontSize:"11px", fontWeight:"600", color:"#3B82F6" }}>
-                        <Plus size={11} strokeWidth={2.5} color="#3B82F6"/>
-                        Add
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* Search */}
+        {!loading && branches.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: "9px", background: "#F8FAFC", borderRadius: "11px", padding: "10px 15px", border: "1.5px solid #E2E8F0", marginBottom: "20px", maxWidth: "400px" }}>
+            <Search size={14} color="#94A3B8" strokeWidth={2} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search branches or skills…"
+              style={{ border: "none", outline: "none", fontSize: "13px", color: "#1E293B", background: "transparent", flex: 1, fontFamily: "inherit" }}
+            />
+            {search && (
+              <button onClick={() => setSearch("")} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", fontSize: "17px", lineHeight: 1, padding: 0 }}>×</button>
             )}
           </div>
+        )}
 
-          <div style={{ padding:"14px 20px", borderTop:"1px solid #F1F5F9", flexShrink:0 }}>
-            <p style={{ fontSize:"10px", color:"#CBD5E1", textAlign:"center", lineHeight:1.5 }}>
-              Skills are shared across all locations and used by AI to assign the right staff.
+        {/* Content */}
+        {loading ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "14px" }}>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} style={{ height: "140px", borderRadius: "16px", background: "linear-gradient(90deg,#F1F5F9 25%,#E8EDF5 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "80px 40px", textAlign: "center" }}>
+            <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              <Tag size={24} color="#CBD5E1" />
+            </div>
+            <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>
+              {search ? "No results found" : "No skill data yet"}
+            </p>
+            <p style={{ fontSize: "13px", color: "#94A3B8", maxWidth: "320px", margin: "0 auto", lineHeight: 1.6 }}>
+              {search
+                ? "Try a different keyword or clear the search."
+                : "Skills will appear here once they're assigned to your branches via the Outlets settings."}
             </p>
           </div>
-        </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "14px" }}>
+            {filtered.map(branch => (
+              <BranchCard key={branch.branch_id} branch={branch} q={q} />
+            ))}
+          </div>
+        )}
       </div>
     </BusinessOwnerLayout>
   );

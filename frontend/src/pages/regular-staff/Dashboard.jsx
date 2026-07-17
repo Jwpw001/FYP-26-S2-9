@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import StaffLayout from "../../components/layout/StaffLayout";
-import { CalendarDays, Palmtree, RefreshCw, Bell, SmilePlus, Hand, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { CalendarDays, Palmtree, RefreshCw, Bell, SmilePlus, Hand, FileText } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-dash-styles")) {
   const style = document.createElement("style");
@@ -42,12 +42,6 @@ function statusStyle(status) {
   return map[status] || map.draft;
 }
 
-const TS_META = {
-  pending:  { bg:"#FEF3C7", color:"#92400E", label:"Pending Review",  icon: Clock },
-  approved: { bg:"#DCFCE7", color:"#166534", label:"Approved",        icon: CheckCircle },
-  rejected: { bg:"#FEE2E2", color:"#991B1B", label:"Rejected — Resubmit", icon: AlertCircle },
-};
-
 function shiftEnded(shiftDate, endTime) {
   if (!shiftDate || !endTime) return false;
   const end = new Date(`${shiftDate}T${endTime.slice(0,5)}:00`);
@@ -60,15 +54,14 @@ export default function StaffDashboard() {
   const userId   = user?.user_id;
 
   const [staffId,        setStaffId]        = useState(null);
+  const [branchName,     setBranchName]     = useState(null);
   const [upcomingShifts, setUpcomingShifts] = useState([]);
   const [pendingLeave,   setPendingLeave]   = useState(0);
   const [pendingSwaps,   setPendingSwaps]   = useState(0);
   const [unreadCount,    setUnreadCount]    = useState(0);
-  const [pendingTs,      setPendingTs]      = useState(0);
   const [loading,        setLoading]        = useState(true);
 
-  const [todayShift,  setTodayShift]  = useState(null);   // null=loading, false=none, obj
-  const [todayTs,     setTodayTs]     = useState(null);   // timesheet for today if exists
+  const [todayShift,  setTodayShift]  = useState(false);  // false=none/loading, obj=has shift
 
   const _now = new Date();
   const today = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,"0")}-${String(_now.getDate()).padStart(2,"0")}`;
@@ -86,23 +79,24 @@ export default function StaffDashboard() {
         const _in14d = new Date(Date.now() + 14 * 86400000);
         const in14 = `${_in14d.getFullYear()}-${String(_in14d.getMonth()+1).padStart(2,"0")}-${String(_in14d.getDate()).padStart(2,"0")}`;
 
-        const { data: myStaff } = await supabase.from("staff").select("staff_id").eq("user_id", userId).limit(1);
+        const { data: myStaff } = await supabase.from("staff").select("staff_id, branches(name)").eq("user_id", userId).limit(1);
         const sid = myStaff?.[0]?.staff_id;
         if (!sid || cancelled) return;
-        if (!cancelled) setStaffId(sid);
+        if (!cancelled) {
+          setStaffId(sid);
+          setBranchName(myStaff[0]?.branches?.name || null);
+        }
 
         const [
           apiResult,
           { data: leave },
           { data: swaps },
           { count: unread },
-          { data: tsList },
         ] = await Promise.all([
           api.get("/api/shifts/me/tasks"),
           supabase.from("availability").select("request_id").eq("staff_id", sid).eq("status", "pending"),
           supabase.from("swap_requests").select("swap_id").eq("requester_id", sid).eq("status", "pending"),
           supabase.from("notifications").select("*", { count:"exact", head:true }).eq("recipient_id", userId).eq("is_read", false),
-          supabase.from("timesheets").select("timesheet_id, log_date, status").eq("staff_id", sid).is("task_id", null),
         ]);
 
         if (cancelled) return;
@@ -113,12 +107,6 @@ export default function StaffDashboard() {
         const todayA = all.find(a => a.shifts?.shift_date === today && a.shifts?.status === "published");
         setTodayShift(todayA || false);
 
-        // Timesheet for today
-        if (todayA) {
-          const ts = (tsList || []).find(t => t.log_date === today);
-          setTodayTs(ts || null);
-        }
-
         // Upcoming (future only)
         const upcoming = all
           .filter(a => a.shifts && a.shifts.shift_date > today && a.shifts.shift_date <= in14)
@@ -128,7 +116,6 @@ export default function StaffDashboard() {
         setPendingLeave((leave || []).length);
         setPendingSwaps((swaps || []).length);
         setUnreadCount(unread || 0);
-        setPendingTs((tsList || []).filter(t => t.status === "pending").length);
       } catch (err) {
         console.error(err);
       } finally {
@@ -140,10 +127,10 @@ export default function StaffDashboard() {
   }, [userId]);
 
   const statCards = [
-    { label:"Upcoming Shifts",      value: upcomingShifts.length, icon: CalendarDays, color:"#2563EB", bg:"#EFF6FF", link:"/regular-staff/shifts" },
-    { label:"Pending Leave",        value: pendingLeave,           icon: Palmtree,     color:"#D97706", bg:"#FFFBEB", link:"/regular-staff/leave" },
-    { label:"Pending Swaps",        value: pendingSwaps,           icon: RefreshCw,    color:"#7C3AED", bg:"#F5F3FF", link:"/regular-staff/swaps" },
-    { label:"Pending Submissions",  value: pendingTs,              icon: FileText,     color:"#0891B2", bg:"#ECFEFF", link:"/regular-staff/shifts" },
+    { label:"Upcoming Shifts",  value: upcomingShifts.length, icon: CalendarDays, color:"#2563EB", bg:"#EFF6FF", link:"/regular-staff/shifts" },
+    { label:"Pending Leave",   value: pendingLeave,          icon: Palmtree,     color:"#D97706", bg:"#FFFBEB", link:"/regular-staff/leave" },
+    { label:"Pending Swaps",   value: pendingSwaps,          icon: RefreshCw,    color:"#7C3AED", bg:"#F5F3FF", link:"/regular-staff/swaps" },
+    { label:"Notifications",   value: unreadCount,           icon: Bell,         color:"#0891B2", bg:"#ECFEFF", link:"/regular-staff/notifications" },
   ];
 
   const quickActions = [
@@ -154,7 +141,6 @@ export default function StaffDashboard() {
   ];
 
   const ended   = todayShift && shiftEnded(todayShift.shifts?.shift_date, todayShift.shifts?.end_time);
-  const tsStyle = todayTs ? TS_META[todayTs.status] : null;
 
   return (
     <StaffLayout title="Dashboard">
@@ -167,7 +153,10 @@ export default function StaffDashboard() {
               Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"} <Hand size={22} color="#F59E0B" />
             </span>
           </h2>
-          <p style={{ fontSize:"14px", color:"#64748B" }}>Here's your schedule and updates for the coming days.</p>
+          <p style={{ fontSize:"14px", color:"#64748B" }}>
+            Here's your schedule and updates for the coming days.
+            {branchName && <span style={{ marginLeft:"10px", fontSize:"13px", fontWeight:"600", color:"#2563EB", background:"#EFF6FF", border:"1px solid #BFDBFE", borderRadius:"99px", padding:"2px 10px" }}>{branchName}</span>}
+          </p>
         </div>
 
         {/* Stat cards */}
@@ -241,26 +230,17 @@ export default function StaffDashboard() {
                 </p>
               </div>
 
-              {/* Timesheet CTA */}
+              {/* Shift status CTA */}
               <div style={{ flexShrink:0 }}>
-                {todayTs ? (
-                  /* Already submitted */
-                  <div style={{ display:"flex", alignItems:"center", gap:"8px", padding:"10px 16px",
-                    borderRadius:"10px", background: tsStyle?.bg, border:`1.5px solid ${tsStyle?.color}22` }}>
-                    {tsStyle?.icon && <tsStyle.icon size={14} color={tsStyle.color} />}
-                    <span style={{ fontSize:"13px", fontWeight:"700", color: tsStyle?.color }}>{tsStyle?.label}</span>
-                  </div>
-                ) : ended ? (
-                  /* Shift ended — prompt to submit */
+                {ended ? (
                   <button onClick={() => navigate("/regular-staff/shifts")}
                     style={{ display:"flex", alignItems:"center", gap:"8px", padding:"11px 20px",
                       borderRadius:"10px", border:"none", background:"#2563EB", color:"#FFF",
                       fontSize:"14px", fontWeight:"700", cursor:"pointer" }}>
                     <FileText size={15} />
-                    Submit Report
+                    View Shift
                   </button>
                 ) : (
-                  /* Shift ongoing or upcoming today */
                   <div style={{ padding:"9px 16px", borderRadius:"10px", background:"#F1F5F9",
                     fontSize:"13px", fontWeight:"600", color:"#64748B" }}>
                     Shift in progress

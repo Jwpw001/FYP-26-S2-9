@@ -133,6 +133,18 @@ const getOutletStaffSkills = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
+// GET /api/skills/global — returns all global (non-branch-specific) skills as suggestions
+const getGlobalSkills = async (req, res) => {
+  try {
+    const skills = await prisma.skills.findMany({
+      where: { branch_id: null },
+      orderBy: { name: "asc" },
+      select: { skill_id: true, name: true, description: true },
+    });
+    return res.json({ success: true, skills });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
 module.exports = {
-  getStaffSkills, addStaffSkill, updateStaffSkill, removeStaffSkill, getOutletStaffSkills,
+  getStaffSkills, addStaffSkill, updateStaffSkill, removeStaffSkill, getOutletStaffSkills, getGlobalSkills,
 };

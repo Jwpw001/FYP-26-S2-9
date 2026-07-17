@@ -725,15 +725,16 @@ export default function StaffProfile() {
   const { id } = useParams();
   const goTo = useGoTo();
 
-  const [member, setMember]       = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [saving, setSaving]       = useState(false);
-  const [deleting, setDeleting]   = useState(false);
+  const [member, setMember]           = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [saving, setSaving]           = useState(false);
+  const [deleting, setDeleting]       = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showKpiModal,      setShowKpiModal]      = useState(false);
-  const [editing, setEditing]     = useState(false);
-  const [error, setError]         = useState("");
-  const [success, setSuccess]     = useState("");
+  const [editing, setEditing]         = useState(false);
+  const [error, setError]             = useState("");
+  const [success, setSuccess]         = useState("");
+  const [operatingDays, setOperatingDays] = useState(null);
   const [form, setForm] = useState({
     full_name: "", staff_type: "regular",
     default_work_days: "1111100", is_active: true,
@@ -746,7 +747,7 @@ export default function StaffProfile() {
     try {
       const { data: staffRow } = await supabase
         .from("staff")
-        .select("staff_id, staff_type, default_work_days, hired_at, is_active, outlet_id, users(user_id, full_name, email, role)")
+        .select("staff_id, staff_type, default_work_days, hired_at, is_active, branch_id, users(user_id, full_name, email, role)")
         .eq("staff_id", id)
         .single();
 
@@ -758,6 +759,22 @@ export default function StaffProfile() {
         default_work_days: staffRow.default_work_days || "1111100",
         is_active:         staffRow.is_active ?? true,
       });
+      if (staffRow.branch_id) {
+        const { data: settings } = await supabase
+          .from("branch_settings")
+          .select("operating_days")
+          .eq("branch_id", staffRow.branch_id)
+          .maybeSingle();
+        if (settings?.operating_days) {
+          setOperatingDays(settings.operating_days);
+          const sanitized = (staffRow.default_work_days || "1111100")
+            .padEnd(7, "0")
+            .split("")
+            .map((d, i) => settings.operating_days[i] === "1" ? d : "0")
+            .join("");
+          setForm(p => ({ ...p, default_work_days: sanitized }));
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -766,6 +783,8 @@ export default function StaffProfile() {
   }
 
   function toggleDay(idx) {
+    const allowed = !operatingDays || operatingDays[idx] === "1";
+    if (!allowed) return;
     const arr = form.default_work_days.padEnd(7, "0").split("");
     arr[idx] = arr[idx] === "1" ? "0" : "1";
     setForm(p => ({ ...p, default_work_days: arr.join("") }));
@@ -814,10 +833,12 @@ export default function StaffProfile() {
     }
   }
 
-  if (loading) {
+  if (loading || !member) {
     return (
       <ManagerLayout title="Staff Profile">
-        <div style={{ textAlign: "center", padding: "60px", color: "#64748B", fontSize: "14px" }}>Loading profile…</div>
+        <div style={{ textAlign: "center", padding: "60px", color: "#64748B", fontSize: "14px" }}>
+          {loading ? "Loading profile…" : "Staff member not found."}
+        </div>
       </ManagerLayout>
     );
   }
@@ -838,7 +859,7 @@ export default function StaffProfile() {
           <h2 style={s.profileName}>{member.users?.full_name}</h2>
           <p style={s.profileEmail}>{member.users?.email}</p>
           <span style={{ ...s.typeBadge, background: member.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: member.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
-            {member.staff_type === "regular" ? "Regular Staff" : "Outlet Casual"}
+            {member.staff_type === "regular" ? "Regular Staff" : "Casual Staff"}
           </span>
 
           <div style={s.metaRow}>
@@ -928,10 +949,13 @@ export default function StaffProfile() {
                 {editing ? (
                   <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
                     {DAYS.map((day, idx) => {
-                      const active = workDays[idx] === "1";
+                      const active  = workDays[idx] === "1";
+                      const allowed = !operatingDays || operatingDays[idx] === "1";
                       return (
-                        <button key={day} type="button" onClick={() => toggleDay(idx)}
-                          style={{ padding:"7px 11px", borderRadius:"8px", fontSize:"12px", fontWeight:"700", cursor:"pointer",
+                        <button key={day} type="button" disabled={!allowed} onClick={() => toggleDay(idx)}
+                          style={{ padding:"7px 11px", borderRadius:"8px", fontSize:"12px", fontWeight:"700",
+                            cursor: allowed ? "pointer" : "not-allowed",
+                            opacity: allowed ? 1 : 0.35,
                             background: active ? "#2563EB" : "#F1F5F9", color: active ? "#fff" : "#64748B",
                             border: active ? "1.5px solid #2563EB" : "1.5px solid #E2E8F0" }}>
                           {day}
@@ -942,7 +966,8 @@ export default function StaffProfile() {
                 ) : (
                   <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
                     {DAYS.map((day, idx) => {
-                      const active = (member.default_work_days || "0000000").padEnd(7,"0")[idx] === "1";
+                      const active = (member.default_work_days || "0000000").padEnd(7,"0")[idx] === "1"
+                        && (!operatingDays || operatingDays[idx] === "1");
                       return (
                         <span key={day} style={{ padding:"5px 10px", borderRadius:"8px", fontSize:"12px", fontWeight:"700",
                           background: active ? "#DBEAFE" : "#F1F5F9", color: active ? "#1E40AF" : "#94A3B8",

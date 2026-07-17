@@ -236,7 +236,8 @@ const resetPassword = async (req, res) => {
 // Used by managers to create staff accounts (bypasses email domain restrictions)
 const createStaffAccount = async (req, res) => {
     try {
-        const { full_name, username, email: rawEmail, password, role, outlet_id, staff_type, default_work_days, hired_at, skill_ids, skill_assignments } = req.body;
+        const { full_name, username, email: rawEmail, password, role, branch_id: branch_id_body, outlet_id, staff_type, default_work_days, hired_at, skill_ids, skill_assignments } = req.body;
+        const resolvedBranchId = branch_id_body ?? outlet_id;
         const email = rawEmail?.trim().toLowerCase();
 
         if (!email || !password || !full_name || !username) {
@@ -270,7 +271,7 @@ const createStaffAccount = async (req, res) => {
         await prisma.staff.create({
             data: {
                 user_id: newUser.user_id,
-                branch_id: Number(outlet_id),
+                branch_id: Number(resolvedBranchId),
                 staff_type,
                 default_work_days: staff_type === "regular" ? default_work_days : null,
                 hired_at: hired_at ? new Date(hired_at) : null,
@@ -278,26 +279,18 @@ const createStaffAccount = async (req, res) => {
             },
         });
 
-        // Assign skill tags — write to both tables
+        // Assign skill tags to the user
         const assignments = skill_assignments || (skill_ids ? skill_ids.map(id => ({ skill_id: id })) : []);
         if (assignments.length > 0) {
-            const newStaff = await prisma.staff.findFirst({ where: { user_id: newUser.user_id, branch_id: Number(outlet_id) } });
-            await prisma.user_skill_tags.createMany({
-                data: assignments.map(a => ({ user_id: newUser.user_id, skill_id: Number(a.skill_id) })),
-                skipDuplicates: true,
-            });
-            if (newStaff) {
-                const { error: ssErr } = await supabaseAdmin.from("staff_skills").upsert(
-                    assignments.map(a => ({
-                        staff_id: newStaff.staff_id,
-                        skill_id: Number(a.skill_id),
-                        experience_level: a.experience_level || null,
-                        years_of_experience: a.years_of_experience != null && a.years_of_experience !== "" ? Number(a.years_of_experience) : null,
-                    })),
-                    { onConflict: "staff_id,skill_id" }
-                );
-                if (ssErr) console.error("staff_skills insert error:", ssErr.message);
-            }
+            await supabaseAdmin.from("user_skill_tags").upsert(
+                assignments.map(a => ({
+                    user_id: newUser.user_id,
+                    skill_id: Number(a.skill_id),
+                    experience_level: a.experience_level || null,
+                    years_of_experience: a.years_of_experience != null && a.years_of_experience !== "" ? Number(a.years_of_experience) : null,
+                })),
+                { onConflict: "user_id,skill_id" }
+            );
         }
 
         return res.status(201).json({ success: true, message: "Staff account created successfully." });

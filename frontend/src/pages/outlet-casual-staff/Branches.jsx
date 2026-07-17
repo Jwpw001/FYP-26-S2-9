@@ -95,9 +95,9 @@ export default function CasualBranches() {
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
               {outlets.map(outlet => {
-                const isSelected = selected.has(outlet.outlet_id);
+                const isSelected = selected.has(outlet.branch_id);
                 return (
-                  <button key={outlet.outlet_id} onClick={() => toggle(outlet.outlet_id)}
+                  <button key={outlet.branch_id} onClick={() => toggle(outlet.branch_id)}
                     style={{
                       display: "flex", alignItems: "center", gap: "14px",
                       background: isSelected ? "#EFF6FF" : "#FFF",

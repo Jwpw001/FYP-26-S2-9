@@ -1,8 +1,11 @@
 const prisma = require("../config/prisma");
+const supabaseAdmin = require("../config/supabaseAdmin");
 
 async function getCallerOutletId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
-  return s?.branch_id || null;
+  if (s?.branch_id) return s.branch_id;
+  const { data: mgr } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1).maybeSingle();
+  return mgr?.branch_id || null;
 }
 
 // Prisma serializes date/time columns as full ISO strings (e.g. "1970-01-01T09:00:00.000Z" for a

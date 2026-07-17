@@ -1,7 +1,7 @@
 ﻿const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/authMiddleware");
-const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getOutletSettings, updateOutletSettings, updateOutletAllocationPrefs } = require("../controllers/businessOwnerController");
+const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getOutletSettings, updateOutletSettings, updateOutletAllocationPrefs } = require("../controllers/businessOwnerController");
 
 router.use(protect);
 
@@ -25,8 +25,9 @@ router.delete("/staff/:staff_id",                deleteStaffDetail);
 router.get("/settings",                                getBusinessSettings);
 router.put("/settings",                                updateBusinessSettings);
 router.put("/settings/allocation",                     updateAllocationPrefs);
-router.get("/skills/assignable",                       getBusinessSkillsForAssignment);
 router.get("/skills",                                  getBusinessSkills);
+router.get("/skills/assignable",                       getBusinessSkillsForAssignment);
+router.get("/branch-skills-summary",                   getBranchSkillsSummary);
 router.post("/skills",                                createBusinessSkill);
 router.delete("/skills/:skill_id",                    deleteBusinessSkill);
 router.get("/outlets/:outlet_id/skills",              getOutletSkills);

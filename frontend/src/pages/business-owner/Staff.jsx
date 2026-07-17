@@ -177,10 +177,10 @@ function OrgView({ people, goTo }) {
     if (p.type === "casual") {
       casuals.push(p);
     } else {
-      if (!outletMap.has(p.outlet_id)) {
-        outletMap.set(p.outlet_id, { id: p.outlet_id, name: p.outlet_name || "Unnamed Branch", managers: [], regular: [] });
+      if (!outletMap.has(p.branch_id)) {
+        outletMap.set(p.branch_id, { id: p.branch_id, name: p.outlet_name || "Unnamed Branch", managers: [], regular: [] });
       }
-      const b = outletMap.get(p.outlet_id);
+      const b = outletMap.get(p.branch_id);
       if (p.type === "manager") b.managers.push(p);
       else b.regular.push(p);
     }
@@ -244,12 +244,12 @@ export default function BOStaff() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const outlets = [...new Map(people.map(p => [p.outlet_id, p.outlet_name])).entries()];
+  const outlets = [...new Map(people.map(p => [p.branch_id, p.outlet_name])).entries()];
 
   const filtered = people.filter(p => {
     const q = search.toLowerCase();
     const matchSearch = p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q);
-    const matchOutlet = filterOutlet === "all" || String(p.outlet_id) === filterOutlet;
+    const matchOutlet = filterOutlet === "all" || String(p.branch_id) === filterOutlet;
     const matchType = filterType === "all" || p.type === filterType;
     const matchStatus = filterStatus === "all" || (filterStatus === "active" ? p.is_active : !p.is_active);
     return matchSearch && matchOutlet && matchType && matchStatus;

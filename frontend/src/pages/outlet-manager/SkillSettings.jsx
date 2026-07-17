@@ -4,71 +4,105 @@ import { api } from "../../lib/api";
 import { Plus, X, Search, CheckCircle2, Sparkles, PartyPopper } from "lucide-react";
 
 export default function SkillSettings() {
-  const [skills,      setSkills]      = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
-  const [apiIndustry, setApiIndustry] = useState("");
-  const [loading,     setLoading]     = useState(true);
-  const [search,      setSearch]      = useState("");
-  const [suggestSearch, setSuggestSearch] = useState("");
-  const [newSkill,    setNewSkill]    = useState("");
-  const [pendingName, setPendingName] = useState("");
-  const [newDesc,     setNewDesc]     = useState("");
-  const [adding,      setAdding]      = useState(false);
-  const [deleting,    setDeleting]    = useState(null);
-  const [error,       setError]       = useState("");
-  const [success,     setSuccess]     = useState("");
+  const [branchId,     setBranchId]     = useState(null);
+  const [noBranch,     setNoBranch]     = useState(false);
+  const [skills,       setSkills]       = useState([]);
+  const [suggestions,  setSuggestions]  = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [search,       setSearch]       = useState("");
+  const [suggestSearch,setSuggestSearch]= useState("");
+  const [newSkill,     setNewSkill]     = useState("");
+  const [pendingName,  setPendingName]  = useState("");
+  const [newDesc,      setNewDesc]      = useState("");
+  const [adding,       setAdding]       = useState(false);
+  const [deleting,     setDeleting]     = useState(null);
+  const [error,        setError]        = useState("");
+  const [success,      setSuccess]      = useState("");
 
-  const skillLabel = "Skill Tags";
+  useEffect(() => {
+    // Load global suggestions immediately regardless of branch assignment
+    api.get("/api/skills/global")
+      .then(r => setSuggestions(r.skills || []))
+      .catch(() => {});
 
-  useEffect(() => { load(); }, []);
+    // Then try to find this manager's branch
+    api.get("/api/account/branch").then(r => {
+      setBranchId(r.branch_id);
+      return loadSkills(r.branch_id);
+    }).catch(() => {
+      setNoBranch(true);
+      setLoading(false);
+    });
+  }, []);
 
-  async function load() {
+  async function loadSkills(bid) {
     setLoading(true);
     try {
-      const r = await api.get("/api/business/skills");
-      setSkills(r.skills || []);
-      setSuggestions(r.suggestions || []);
-      setApiIndustry(r.industry || "");
-    } catch { } finally { setLoading(false); }
+      // Fetch branch skills and global skills independently so one failure doesn't block the other
+      const [branchRes, globalRes] = await Promise.allSettled([
+        api.get(`/api/business/outlets/${bid}/skills`),
+        api.get("/api/skills/global"),
+      ]);
+      const branchSkills = branchRes.status === "fulfilled" ? (branchRes.value.skills || []) : [];
+      const globalSkills = globalRes.status === "fulfilled" ? (globalRes.value.skills || []) : [];
+      const linkedIds = new Set(branchSkills.map(s => s.skill_id));
+      setSkills(branchSkills);
+      if (globalSkills.length > 0) setSuggestions(globalSkills.filter(s => !linkedIds.has(s.skill_id)));
+    } catch { }
+    finally { setLoading(false); }
   }
 
-  async function addSkill(name, description = "") {
-    const n = name.trim();
-    if (!n) return;
-    if (skills.some(s => s.name.toLowerCase() === n.toLowerCase())) { setError(`"${n}" already exists.`); return; }
+  // Called when clicking a suggestion — sends existing skill_id as reference
+  async function addFromSuggestion(skill_id) {
+    if (!branchId) return;
     setAdding(true); setError("");
     try {
-      await api.post("/api/business/skills", { name: n, description: description || "" });
+      await api.post(`/api/business/outlets/${branchId}/skills`, { skill_id });
+      await loadSkills(branchId);
+    } catch (err) { setError(err.message); }
+    finally { setAdding(false); }
+  }
+
+  // Called when typing a custom skill name
+  async function addCustomSkill(name, description = "") {
+    const n = name.trim();
+    if (!n || !branchId) return;
+    if (skills.some(s => s.name.toLowerCase() === n.toLowerCase())) {
+      setError(`"${n}" already exists.`); return;
+    }
+    setAdding(true); setError("");
+    try {
+      await api.post(`/api/business/outlets/${branchId}/skills`, { name: n, description: description || "" });
       setNewSkill("");
       setSuccess(`"${n}" added!`);
       setTimeout(() => setSuccess(""), 2500);
-      await load();
+      await loadSkills(branchId);
     } catch (err) { setError(err.message); }
     finally { setAdding(false); }
   }
 
   async function removeSkill(skill_id) {
+    if (!branchId) return;
     setDeleting(skill_id);
     try {
-      await api.delete(`/api/business/skills/${skill_id}`);
-      setSkills(prev => prev.filter(s => s.skill_id !== skill_id));
+      await api.delete(`/api/business/outlets/${branchId}/skills/${skill_id}`);
+      await loadSkills(branchId);
     } catch { } finally { setDeleting(null); }
   }
 
   const filtered = skills.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
   const filteredSuggestions = suggestions.filter(s => s.name.toLowerCase().includes(suggestSearch.toLowerCase()));
-  const industryLabel = apiIndustry === "f&b" ? "F&B" : apiIndustry ? apiIndustry.charAt(0).toUpperCase() + apiIndustry.slice(1) : "";
 
   return (
-    <ManagerLayout title={skillLabel}>
+    <ManagerLayout title="Skill Tags">
       <div style={{ display:"flex", height:"calc(100vh - 60px)", overflow:"hidden", animation:"pageSlideUp 0.25s ease both" }}>
 
-        {/* ── LEFT: Your Skills ── */}
+        {/* ── LEFT: Branch Skills ── */}
         <div style={{ flex:1, display:"flex", flexDirection:"column", padding:"28px 32px", overflow:"hidden", borderRight:"1px solid #F1F5F9" }}>
 
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"20px", flexShrink:0 }}>
             <div>
-              <h2 style={{ fontSize:"18px", fontWeight:"800", color:"#0F172A", marginBottom:"2px" }}>{skillLabel}</h2>
+              <h2 style={{ fontSize:"18px", fontWeight:"800", color:"#0F172A", marginBottom:"2px" }}>Skill Tags</h2>
               <p style={{ fontSize:"12px", color:"#94A3B8" }}>
                 {skills.length} skill{skills.length !== 1 ? "s" : ""} · powers AI scheduling and staff assignment
               </p>
@@ -93,7 +127,8 @@ export default function SkillSettings() {
                 }}
                 placeholder="Type a skill name and press Enter…"
                 style={{ flex:1, padding:"10px 14px", borderRadius:"10px", border:"1.5px solid #E2E8F0", fontSize:"13px", color:"#1E293B", outline:"none", fontFamily:"inherit", background:"#fff" }}/>
-              <button onClick={() => {
+              <button
+                onClick={() => {
                   if (!newSkill.trim()) return;
                   if (skills.some(s => s.name.toLowerCase() === newSkill.trim().toLowerCase())) { setError(`"${newSkill.trim()}" already exists.`); return; }
                   setPendingName(newSkill.trim()); setNewSkill(""); setError("");
@@ -118,7 +153,7 @@ export default function SkillSettings() {
               </div>
               <textarea
                 autoFocus value={newDesc} onChange={e => setNewDesc(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addSkill(pendingName, newDesc); setPendingName(""); setNewDesc(""); } }}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addCustomSkill(pendingName, newDesc); setPendingName(""); setNewDesc(""); } }}
                 placeholder="e.g. Designs user interfaces and experiences for web and mobile products…"
                 rows={2}
                 style={{ width:"100%", padding:"9px 12px", borderRadius:"9px", border:"1.5px solid #BFDBFE", fontSize:"12px", color:"#1E293B", outline:"none", fontFamily:"inherit", background:"#fff", resize:"none", boxSizing:"border-box", lineHeight:1.5 }}/>
@@ -127,11 +162,11 @@ export default function SkillSettings() {
                   style={{ padding:"7px 14px", borderRadius:"8px", border:"1px solid #BFDBFE", background:"#fff", fontSize:"12px", fontWeight:"600", color:"#64748B", cursor:"pointer" }}>
                   Cancel
                 </button>
-                <button onClick={() => { addSkill(pendingName, newDesc); setPendingName(""); setNewDesc(""); }} disabled={adding}
+                <button onClick={() => { addCustomSkill(pendingName, newDesc); setPendingName(""); setNewDesc(""); }} disabled={adding}
                   style={{ flex:1, padding:"7px 14px", borderRadius:"8px", border:"none", background:"#3B82F6", color:"#fff", fontSize:"12px", fontWeight:"700", cursor:"pointer", boxShadow:"0 2px 8px rgba(59,130,246,0.3)" }}>
                   {adding ? "Saving…" : "Save Skill →"}
                 </button>
-                <button onClick={() => { addSkill(pendingName, ""); setPendingName(""); setNewDesc(""); }} disabled={adding}
+                <button onClick={() => { addCustomSkill(pendingName, ""); setPendingName(""); setNewDesc(""); }} disabled={adding}
                   style={{ padding:"7px 14px", borderRadius:"8px", border:"1px solid #BFDBFE", background:"#fff", fontSize:"12px", fontWeight:"600", color:"#60A5FA", cursor:"pointer" }}>
                   Skip
                 </button>
@@ -205,15 +240,8 @@ export default function SkillSettings() {
         {/* ── RIGHT: Suggestions ── */}
         <div style={{ width:"340px", flexShrink:0, display:"flex", flexDirection:"column", background:"#FAFBFE", overflow:"hidden" }}>
           <div style={{ padding:"28px 24px 16px", flexShrink:0, borderBottom:"1px solid #F1F5F9" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"3px" }}>
-              <h3 style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>Suggested Skills</h3>
-              {industryLabel && (
-                <span style={{ fontSize:"10px", fontWeight:"700", padding:"2px 8px", borderRadius:"100px", background:"#EEF2FF", color:"#4F46E5", border:"1px solid #C7D2FE" }}>
-                  {industryLabel}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize:"11px", color:"#94A3B8", marginBottom:"12px" }}>Click any skill to add it to your list</p>
+            <h3 style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", marginBottom:"3px" }}>Suggested Skills</h3>
+            <p style={{ fontSize:"11px", color:"#94A3B8", marginBottom:"12px" }}>Click any skill to add it to your branch</p>
             <div style={{ display:"flex", alignItems:"center", gap:"8px", background:"#F8FAFC", borderRadius:"9px", padding:"7px 12px", border:"1px solid #E8EDF5" }}>
               <Search size={13} color="#94A3B8" strokeWidth={2}/>
               <input value={suggestSearch} onChange={e => setSuggestSearch(e.target.value)}
@@ -222,8 +250,14 @@ export default function SkillSettings() {
               {suggestSearch && <button onClick={() => setSuggestSearch("")} style={{ background:"none", border:"none", color:"#94A3B8", cursor:"pointer", fontSize:"15px", lineHeight:1, padding:"0" }}>×</button>}
             </div>
           </div>
+          {noBranch && (
+            <div style={{ margin:"12px 16px 0", padding:"10px 14px", background:"#FFF7ED", border:"1px solid #FED7AA", borderRadius:"10px" }}>
+              <p style={{ fontSize:"11px", fontWeight:"600", color:"#92400E" }}>No branch assigned yet</p>
+              <p style={{ fontSize:"11px", color:"#B45309", marginTop:"2px" }}>Ask your business owner to assign you to a branch before you can add skills.</p>
+            </div>
+          )}
           <div style={{ flex:1, overflowY:"auto", padding:"12px 16px" }}>
-            {suggestions.length === 0 ? (
+            {suggestions.length === 0 && !noBranch ? (
               <div style={{ textAlign:"center", padding:"40px 16px" }}>
                 <div style={{ display:"flex", justifyContent:"center", marginBottom:"8px" }}><PartyPopper size={22} color="#3B82F6" /></div>
                 <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", marginBottom:"4px" }}>All suggestions added!</p>
@@ -238,9 +272,9 @@ export default function SkillSettings() {
             ) : (
               <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
                 {filteredSuggestions.map((s, i) => (
-                  <div key={s.skill_id} onClick={() => addSkill(s.name, s.description)}
-                    style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"16px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", cursor:"pointer", animation:`pageSlideUp 0.2s ease ${i*0.03}s both`, transition:"box-shadow 0.15s, transform 0.15s" }}
-                    onMouseEnter={e => { e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.1)"; e.currentTarget.style.transform="translateY(-1px)"; }}
+                  <div key={s.skill_id} onClick={() => !noBranch && addFromSuggestion(s.skill_id)}
+                    style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"16px", boxShadow:"0 1px 4px rgba(0,0,0,0.04)", cursor: noBranch ? "default" : "pointer", opacity: noBranch ? 0.6 : 1, animation:`pageSlideUp 0.2s ease ${i*0.03}s both`, transition:"box-shadow 0.15s, transform 0.15s" }}
+                    onMouseEnter={e => { if (!noBranch) { e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.1)"; e.currentTarget.style.transform="translateY(-1px)"; } }}
                     onMouseLeave={e => { e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform=""; }}>
                     <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"10px" }}>
                       <div style={{ width:"38px", height:"38px", borderRadius:"50%", background:"#F1F5F9", color:"#64748B", fontSize:"14px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
@@ -264,7 +298,7 @@ export default function SkillSettings() {
           </div>
           <div style={{ padding:"14px 20px", borderTop:"1px solid #F1F5F9", flexShrink:0 }}>
             <p style={{ fontSize:"10px", color:"#CBD5E1", textAlign:"center", lineHeight:1.5 }}>
-              Skills are shared across all locations and used by AI to assign the right staff.
+              Skills are scoped to this branch and used by AI to assign the right staff to tasks.
             </p>
           </div>
         </div>

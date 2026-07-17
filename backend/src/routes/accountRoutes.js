@@ -7,6 +7,7 @@ const {
     updateAccount,
     deleteAccount,
     getAccountSkills,
+    getMyBranch,
 } = require("../controllers/accountController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -58,6 +59,13 @@ router.get(
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getAccountSkills
+);
+
+router.get(
+    "/branch",
+    verifyToken,
+    allowRoles(ROLES.OUTLET_MANAGER, ROLES.REGULAR_STAFF, ROLES.OUTLET_CASUAL_STAFF, ROLES.SYSTEM_ADMIN),
+    getMyBranch
 );
 
 router.delete(

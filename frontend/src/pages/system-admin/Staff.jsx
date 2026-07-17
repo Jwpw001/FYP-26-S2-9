@@ -63,7 +63,7 @@ export default function AdminStaff() {
     if (filter === "manager" && s.users?.role !== "outlet_manager") return false;
     if (filter === "regular" && s.staff_type !== "regular") return false;
     if (filter === "casual"  && s.staff_type !== "casual")  return false;
-    if (outlet && String(s.outlet_id) !== outlet) return false;
+    if (outlet && String(s.branch_id) !== outlet) return false;
     return true;
   });
 
@@ -115,7 +115,7 @@ export default function AdminStaff() {
           <select value={outlet} onChange={e => setOutlet(e.target.value)}
             style={{ padding:"8px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"13px", color:"#1E293B", background:"#FFF", outline:"none", cursor:"pointer" }}>
             <option value="">All Outlets</option>
-            {outlets.map(o => <option key={o.outlet_id} value={String(o.outlet_id)}>{o.name}</option>)}
+            {outlets.map(o => <option key={o.branch_id} value={String(o.branch_id)}>{o.name}</option>)}
           </select>
 
           {/* Search */}

@@ -28,8 +28,8 @@ function normalizeTask(task) {
 async function getCallerOutletId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
   if (s?.branch_id) return s.branch_id;
-  const om = await prisma.branch_managers.findFirst({ where: { user_id: userId }, select: { branch_id: true } }).catch(() => null);
-  return om?.branch_id || null;
+  const { data: mgr } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1).maybeSingle();
+  return mgr?.branch_id || null;
 }
 
 // ── Tasks ──────────────────────────────────────────────────────────────────────

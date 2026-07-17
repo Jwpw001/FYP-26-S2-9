@@ -11,8 +11,9 @@ export default function AddStaff() {
   const user = getUser();
   const userId = user?.user_id;
 
-  const [outletId, setOutletId] = useState(null);
-  const [skills, setSkills]     = useState([]);
+  const [outletId, setOutletId]         = useState(null);
+  const [operatingDays, setOperatingDays] = useState(null); // "1111100" from branch_settings
+  const [skills, setSkills]             = useState([]);
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState("");
   const [success, setSuccess]   = useState("");
@@ -38,9 +39,20 @@ export default function AddStaff() {
         const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1);
         oid = omRow?.[0]?.branch_id || null;
       }
-      if (!cancelled) {
-        setOutletId(oid);
-        setSkills(skillRes.skills || []);
+      if (cancelled) return;
+      setOutletId(oid);
+      setSkills(skillRes.skills || []);
+
+      if (oid) {
+        const { data: settings } = await supabase
+          .from("branch_settings")
+          .select("operating_days")
+          .eq("branch_id", oid)
+          .maybeSingle();
+        if (!cancelled && settings?.operating_days) {
+          setOperatingDays(settings.operating_days);
+          setForm(p => ({ ...p, default_work_days: settings.operating_days }));
+        }
       }
     }
     load();
@@ -182,11 +194,18 @@ export default function AddStaff() {
                 <label style={s.label}>Default Work Days</label>
                 <div style={s.daysRow}>
                   {DAYS.map((day, idx) => {
-                    const active = form.default_work_days[idx] === "1";
+                    const active    = form.default_work_days[idx] === "1";
+                    const allowed   = !operatingDays || operatingDays[idx] === "1";
                     return (
                       <button key={day} type="button"
-                        style={{ ...s.dayBtn, ...(active ? s.dayBtnActive : {}) }}
+                        disabled={!allowed}
+                        style={{
+                          ...s.dayBtn,
+                          ...(active ? s.dayBtnActive : {}),
+                          ...(!allowed ? { opacity: 0.3, cursor: "not-allowed" } : {}),
+                        }}
                         onClick={() => {
+                          if (!allowed) return;
                           const arr = form.default_work_days.split("");
                           arr[idx] = active ? "0" : "1";
                           setForm(p => ({ ...p, default_work_days: arr.join("") }));

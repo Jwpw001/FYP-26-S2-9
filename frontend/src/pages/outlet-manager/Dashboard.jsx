@@ -126,6 +126,7 @@ export default function ManagerDashboard() {
   const [stats, setStats] = useState({ upcomingShifts: 0, pendingLeave: 0, pendingSwaps: 0, totalStaff: 0 });
   const [recentShifts, setRecentShifts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [branchName, setBranchName] = useState(null);
   const [toast, setToast] = useState(null);
   const [unackedShifts, setUnackedShifts] = useState([]);
   const [showUnackedPanel, setShowUnackedPanel] = useState(false);
@@ -145,16 +146,19 @@ export default function ManagerDashboard() {
         const future = new Date(now.getTime() + 7 * 86400000).toISOString().split("T")[0];
 
         const { data: myStaff } = await supabase
-          .from("staff").select("branch_id")
+          .from("staff").select("branch_id, branches(name)")
           .eq("user_id", userId).eq("is_active", true).limit(1);
 
         let outletId = myStaff?.[0]?.branch_id;
+        let resolvedBranchName = myStaff?.[0]?.branches?.name || null;
         if (!outletId) {
           const { data: myMgr } = await supabase
-            .from("branch_managers").select("branch_id")
+            .from("branch_managers").select("branch_id, branches(name)")
             .eq("user_id", userId).limit(1);
           outletId = myMgr?.[0]?.branch_id;
+          resolvedBranchName = myMgr?.[0]?.branches?.name || null;
         }
+        if (!cancelled) setBranchName(resolvedBranchName);
         if (!outletId || cancelled) return;
 
         // Get outlet staff IDs first so we can scope leave/swap counts correctly
@@ -269,7 +273,14 @@ export default function ManagerDashboard() {
           <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>
             Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "Manager"}
           </h2>
-          <p style={{ fontSize: "14px", color: "#64748B" }}>Here's what needs your attention today.</p>
+          <p style={{ fontSize: "14px", color: "#64748B" }}>
+            Here's what needs your attention today.
+            {branchName && (
+              <span style={{ marginLeft: "10px", fontSize: "13px", fontWeight: "600", color: "#2563EB", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "99px", padding: "2px 10px" }}>
+                {branchName}
+              </span>
+            )}
+          </p>
         </div>
 
         {/* Stat cards */}

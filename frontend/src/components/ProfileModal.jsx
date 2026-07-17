@@ -266,7 +266,9 @@ export default function ProfileModal({ onClose }) {
     api.get("/api/account").then(r => {
       setAccount(r.user);
       setForm({ full_name: r.user.full_name || "", email: r.user.email || "" });
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(err => {
+      console.error("[ProfileModal] /api/account failed:", err?.message || err);
+    }).finally(() => setLoading(false));
   }, []);
 
   async function handleSave() {

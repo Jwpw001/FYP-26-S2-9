@@ -83,7 +83,7 @@ export default function BOManagerDetail() {
     setDeleting(true);
     try {
       await api.delete(`/api/business/managers/${id}`);
-      goTo(`/business-owner/outlets/${outlet.outlet_id}`);
+      goTo(`/business-owner/outlets/${outlet.branch_id}`);
     } catch (err) {
       setError(err.message || "Failed to remove manager. Please try again.");
       setDeleting(false);
@@ -107,7 +107,7 @@ export default function BOManagerDetail() {
 
   return (
     <BusinessOwnerLayout title="Manager Profile">
-      <button style={s.back} onClick={() => goTo(`/business-owner/outlets/${outlet.outlet_id}`)}>← Back to Outlet</button>
+      <button style={s.back} onClick={() => goTo(`/business-owner/outlets/${outlet.branch_id}`)}>← Back to Outlet</button>
 
       <div style={s.layout}>
         {/* ── Left: profile card ── */}

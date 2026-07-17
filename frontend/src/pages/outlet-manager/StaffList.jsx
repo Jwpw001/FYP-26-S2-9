@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
@@ -57,20 +58,25 @@ export default function StaffList() {
         }
         if (!oid || cancelled) return;
 
-        const [{ data: staffData }, { data: tagData }] = await Promise.all([
+        const [{ data: staffData }, skillsRes] = await Promise.all([
           supabase.from("staff")
             .select("staff_id, branch_id, staff_type, is_active, users(user_id, full_name, email, role)")
             .eq("branch_id", oid),
-          supabase.from("user_skill_tags").select("user_id, skill_id, skills(name)"),
+          api.get(`/api/skills/outlet/${oid}`).catch(() => ({ skills: [] })),
         ]);
 
         if (cancelled) return;
 
+        // Build a map: staff_id → skill tags from the backend response
+        const tagsByStaffId = {};
+        for (const t of (skillsRes.skills || [])) {
+          if (!tagsByStaffId[t.staff_id]) tagsByStaffId[t.staff_id] = [];
+          tagsByStaffId[t.staff_id].push({ id: t.skill_id, name: t.name });
+        }
+
         const enriched = (staffData || []).filter(s => s.users?.role !== "outlet_manager").map(s => ({
           ...s,
-          skillTags: (tagData || [])
-            .filter(t => t.user_id === s.users?.user_id)
-            .map(t => ({ id: t.skill_id, name: t.skills?.name })),
+          skillTags: tagsByStaffId[s.staff_id] || [],
         }));
 
         // Derive unique skills only from what's actually assigned to this outlet's staff

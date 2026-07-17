@@ -80,10 +80,10 @@ async function sendInviteEmail({ to, inviterName, roleName, outletName, inviteLi
 const sendInvitation = async (req, res) => {
   try {
     const sender = req.user;
-    const { email, role, outlet_id, business_id } = req.body;
+    const { email, role, branch_id: outlet_id, business_id } = req.body;
 
     if (!email || !role) return res.status(400).json({ success: false, message: "Email and role are required." });
-    if (!outlet_id) return res.status(400).json({ success: false, message: "Outlet is required." });
+    if (!outlet_id) return res.status(400).json({ success: false, message: "Branch is required." });
 
     const senderLevel = ROLE_HIERARCHY[sender.role] || 0;
     const targetLevel = ROLE_HIERARCHY[role] || 0;
@@ -254,6 +254,10 @@ const acceptInvitation = async (req, res) => {
 
       // Create staff record if needed
       if (invite.branch_id && ["regular_staff", "outlet_casual_staff"].includes(invite.role)) {
+        // Update role from pending (or lower role) to the invited role
+        if (user.role === "pending" || user.role === "krewby_casual_worker") {
+          await prisma.users.update({ where: { user_id: user.user_id }, data: { role: invite.role } });
+        }
         const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, branch_id: invite.branch_id } });
         if (!alreadyStaff) {
           await prisma.staff.create({
@@ -264,12 +268,6 @@ const acceptInvitation = async (req, res) => {
         // Update user role if needed
         if (user.role !== "outlet_manager" && user.role !== "business_owner" && user.role !== "system_admin") {
           await prisma.users.update({ where: { user_id: user.user_id }, data: { role: "outlet_manager" } });
-        }
-        const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, branch_id: invite.branch_id } });
-        if (!alreadyStaff) {
-          await prisma.staff.create({
-            data: { user_id: user.user_id, branch_id: invite.branch_id, staff_type: "regular", is_active: true },
-          });
         }
         const { data: alreadyMgr } = await supabaseAdmin.from("branch_managers").select("id").eq("user_id", user.user_id).eq("branch_id", invite.branch_id).maybeSingle();
         if (!alreadyMgr) {
@@ -310,9 +308,6 @@ const acceptInvitation = async (req, res) => {
         data: { user_id: newUser.user_id, branch_id: invite.branch_id, staff_type: invite.role === "outlet_casual_staff" ? "casual" : "regular", is_active: true },
       });
     } else if (invite.branch_id && invite.role === "outlet_manager") {
-      await prisma.staff.create({
-        data: { user_id: newUser.user_id, branch_id: invite.branch_id, staff_type: "regular", is_active: true },
-      });
       const { data: alreadyMgr } = await supabaseAdmin.from("branch_managers").select("id").eq("user_id", newUser.user_id).eq("branch_id", invite.branch_id).maybeSingle();
       if (!alreadyMgr) {
         await supabaseAdmin.from("branch_managers").insert({ user_id: newUser.user_id, branch_id: invite.branch_id, is_primary: false });

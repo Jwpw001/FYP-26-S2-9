@@ -179,7 +179,7 @@ export default function BOReports() {
       setBusinessName(bizData.name);
 
       const outlets = outletResp.outlets || [];
-      const outletIds = outlets.map(o => o.outlet_id);
+      const outletIds = outlets.map(o => o.branch_id);
       if (outletIds.length === 0) { setLoading(false); return; }
 
       // Fetch staff for each outlet via Supabase
@@ -246,10 +246,10 @@ export default function BOReports() {
       // Outlets table
       setOutletRows(outlets.map(o => ({
         name: o.name,
-        totalStaff: allStaff.filter(s => s.outlet_id === o.outlet_id).length,
-        activeStaff: allStaff.filter(s => s.outlet_id === o.outlet_id && s.is_active).length,
-        shifts: shifts.filter(s => s.outlet_id === o.outlet_id).length,
-        published: shifts.filter(s => s.outlet_id === o.outlet_id && s.status === "published").length,
+        totalStaff: allStaff.filter(s => s.branch_id === o.branch_id).length,
+        activeStaff: allStaff.filter(s => s.branch_id === o.branch_id && s.is_active).length,
+        shifts: shifts.filter(s => s.branch_id === o.branch_id).length,
+        published: shifts.filter(s => s.branch_id === o.branch_id && s.status === "published").length,
       })));
 
       // Breakdowns

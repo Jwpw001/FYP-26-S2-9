@@ -39,7 +39,7 @@ const getMyOutlets = async (req, res) => {
 // POST /api/business/outlets
 const createOutlet = async (req, res) => {
   try {
-    const { name, address, open_time, close_time, role_templates } = req.body;
+    const { name, address, open_time, close_time, role_templates, operating_days, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment } = req.body;
     if (!name) return res.status(400).json({ success: false, message: "Outlet name is required." });
 
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, plan").eq("owner_id", req.user.user_id).maybeSingle();
@@ -66,6 +66,20 @@ const createOutlet = async (req, res) => {
       .select()
       .single();
     if (outletErr) throw new Error(outletErr.message);
+
+    // Create branch_settings row with business_id
+    const settingsRow = {
+      branch_id: outlet.branch_id,
+      business_id: biz.business_id,
+      ...(operating_days !== undefined && { operating_days }),
+      ...(holidays !== undefined && { holidays }),
+      ...(work_hours_day !== undefined && { work_hours_day }),
+      ...(max_work_hours_day !== undefined && { max_work_hours_day }),
+      ...(max_consecutive_days !== undefined && { max_consecutive_days }),
+      ...(allow_overtime !== undefined && { allow_overtime }),
+      ...(min_workers_per_assignment !== undefined && { min_workers_per_assignment }),
+    };
+    await supabaseAdmin.from("branch_settings").insert(settingsRow);
 
     if (Array.isArray(role_templates) && role_templates.length > 0) {
       const filtered = role_templates.filter(r => r.role_name?.trim());
@@ -524,7 +538,15 @@ const getMyBusiness = async (req, res) => {
 const getOutletSkills = async (req, res) => {
   try {
     const outlet_id = Number(req.params.outlet_id);
-    const skills = await prisma.skills.findMany({ where: { branch_id: outlet_id }, orderBy: { name: "asc" } });
+    const { data: rows, error } = await supabaseAdmin
+      .from("branch_skills")
+      .select("id, skill_id, skills(skill_id, name, description)")
+      .eq("branch_id", outlet_id);
+    if (error) throw new Error(error.message);
+    const skills = (rows || [])
+      .map(r => ({ branch_skill_id: r.id, skill_id: r.skills?.skill_id ?? r.skill_id, name: r.skills?.name, description: r.skills?.description }))
+      .filter(s => s.name)
+      .sort((a, b) => a.name.localeCompare(b.name));
     return res.json({ success: true, skills });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -532,43 +554,59 @@ const getOutletSkills = async (req, res) => {
 };
 
 // POST /api/business/outlets/:outlet_id/skills
+// Body: { skill_id } — link existing global skill
+//    OR { name, description } — create new skill then link
 const createOutletSkill = async (req, res) => {
   try {
     const outlet_id = Number(req.params.outlet_id);
-    const { name, description } = req.body;
-    if (!name) return res.status(400).json({ success: false, message: "Skill name is required." });
+    const { skill_id, name, description } = req.body;
 
-    const skill = await prisma.skills.create({ data: { name, description: description || null, branch_id: outlet_id, created_by: req.user.user_id } });
+    let skid;
+    if (skill_id) {
+      skid = Number(skill_id);
+    } else {
+      if (!name?.trim()) return res.status(400).json({ success: false, message: "Skill name is required." });
+      // Reuse an existing global skill with the same name, or create one
+      const existing = await prisma.skills.findFirst({ where: { name: { equals: name.trim(), mode: "insensitive" }, branch_id: null } });
+      skid = existing
+        ? existing.skill_id
+        : (await prisma.skills.create({ data: { name: name.trim(), description: description || null, created_by: req.user.user_id } })).skill_id;
+    }
+
+    const { data: already } = await supabaseAdmin.from("branch_skills").select("id").eq("branch_id", outlet_id).eq("skill_id", skid).maybeSingle();
+    if (already) return res.status(409).json({ success: false, message: "Skill already added to this branch." });
+
+    const { error } = await supabaseAdmin.from("branch_skills").insert({ branch_id: outlet_id, skill_id: skid });
+    if (error) throw new Error(error.message);
+
+    const skill = await prisma.skills.findUnique({ where: { skill_id: skid }, select: { skill_id: true, name: true, description: true } });
     return res.status(201).json({ success: true, skill });
   } catch (error) {
-    if (error.code === "P2002") return res.status(409).json({ success: false, message: "A skill with this name already exists for this outlet." });
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// PATCH /api/business/outlets/:outlet_id/skills/:skill_id
+// PATCH /api/business/outlets/:outlet_id/skills/:skill_id — update the global skill definition
 const updateOutletSkill = async (req, res) => {
   try {
     const skill_id = Number(req.params.skill_id);
     const { name, description } = req.body;
     if (!name) return res.status(400).json({ success: false, message: "Skill name is required." });
-
     const skill = await prisma.skills.update({ where: { skill_id }, data: { name, description: description || null } });
     return res.json({ success: true, skill });
   } catch (error) {
-    if (error.code === "P2002") return res.status(409).json({ success: false, message: "A skill with this name already exists for this outlet." });
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// DELETE /api/business/outlets/:outlet_id/skills/:skill_id
+// DELETE /api/business/outlets/:outlet_id/skills/:skill_id — unlink skill from branch only
 const deleteOutletSkill = async (req, res) => {
   try {
+    const outlet_id = Number(req.params.outlet_id);
     const skill_id = Number(req.params.skill_id);
-    // Cascade: remove all staff assignments for this skill before deleting the skill itself
-    await supabaseAdmin.from("user_skill_tags").delete().eq("skill_id", skill_id);
-    await prisma.skills.delete({ where: { skill_id } });
-    return res.json({ success: true, message: "Skill deleted." });
+    const { error } = await supabaseAdmin.from("branch_skills").delete().eq("branch_id", outlet_id).eq("skill_id", skill_id);
+    if (error) throw new Error(error.message);
+    return res.json({ success: true, message: "Skill removed from branch." });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -672,23 +710,39 @@ const createBusinessSkill = async (req, res) => {
 // GET /api/business/skills/assignable — returns skills table IDs filtered to this business's roles
 const getBusinessSkillsForAssignment = async (req, res) => {
   try {
-    const biz = await resolveBusinessId(req.user);
-    if (!biz) return res.json({ success: true, skills: [] });
+    let branchIds = [];
 
-    const { data: roles } = await supabaseAdmin
-      .from("business_roles")
-      .select("role_name")
-      .eq("business_id", biz.business_id)
-      .order("role_name", { ascending: true });
+    if (req.user.role === "outlet_manager") {
+      const { data: link } = await supabaseAdmin
+        .from("branch_managers")
+        .select("branch_id")
+        .eq("user_id", req.user.user_id)
+        .limit(1)
+        .maybeSingle();
+      if (!link) return res.json({ success: true, skills: [] });
+      branchIds = [link.branch_id];
+    } else {
+      const biz = await resolveBusinessId(req.user);
+      if (!biz) return res.json({ success: true, skills: [] });
+      const { data: branches } = await supabaseAdmin
+        .from("branches")
+        .select("branch_id")
+        .eq("business_id", biz.business_id);
+      branchIds = (branches || []).map(b => b.branch_id);
+    }
 
-    if (!roles || roles.length === 0) return res.json({ success: true, skills: [] });
+    if (branchIds.length === 0) return res.json({ success: true, skills: [] });
 
-    const roleNames = roles.map(r => r.role_name);
-    const skills = await prisma.skills.findMany({
-      where: { name: { in: roleNames } },
-      select: { skill_id: true, name: true },
-      orderBy: { name: "asc" },
-    });
+    const { data: rows } = await supabaseAdmin
+      .from("branch_skills")
+      .select("skill_id, skills(skill_id, name, description)")
+      .in("branch_id", branchIds);
+
+    const seen = new Set();
+    const skills = (rows || [])
+      .map(r => r.skills)
+      .filter(s => s && s.name && !seen.has(s.skill_id) && seen.add(s.skill_id))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     return res.json({ success: true, skills });
   } catch (error) {
@@ -723,7 +777,7 @@ const getOutletSettings = async (req, res) => {
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const outlet_id = req.params.outlet_id;
-    const { data: outlet } = await supabaseAdmin.from("branches").select("branch_id").eq("branch_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
+    const { data: outlet } = await supabaseAdmin.from("branches").select("branch_id, open_time, close_time").eq("branch_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
     if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found." });
 
     const [{ data: settings }, { data: alloc }] = await Promise.all([
@@ -731,7 +785,11 @@ const getOutletSettings = async (req, res) => {
       supabaseAdmin.from("branch_allocation_preferences").select("*").eq("branch_id", outlet_id).maybeSingle(),
     ]);
 
-    return res.json({ success: true, settings: settings || null, allocation: alloc || null });
+    const mergedSettings = settings
+      ? { ...settings, open_time: outlet.open_time || settings.open_time, close_time: outlet.close_time || settings.close_time }
+      : { open_time: outlet.open_time, close_time: outlet.close_time };
+
+    return res.json({ success: true, settings: mergedSettings, allocation: alloc || null });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -743,10 +801,10 @@ const updateOutletSettings = async (req, res) => {
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const outlet_id = req.params.outlet_id;
-    const { data: outlet } = await supabaseAdmin.from("branches").select("branch_id").eq("branch_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
+    const { data: outlet } = await supabaseAdmin.from("branches").select("branch_id, open_time, close_time").eq("branch_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
     if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found." });
 
-    const { operating_days, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment } = req.body;
+    const { operating_days, open_time, close_time, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment } = req.body;
 
     if (operating_days && !/^[01]{7}$/.test(operating_days)) {
       return res.status(400).json({ success: false, message: "operating_days must be a 7-character string of 0s and 1s." });
@@ -764,10 +822,20 @@ const updateOutletSettings = async (req, res) => {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabaseAdmin.from("branch_settings").upsert(upsertData, { onConflict: "branch_id" }).select("*").single();
+    const ops = [
+      supabaseAdmin.from("branch_settings").upsert(upsertData, { onConflict: "branch_id" }).select("*").single(),
+    ];
+    if (open_time !== undefined || close_time !== undefined) {
+      ops.push(supabaseAdmin.from("branches").update({
+        ...(open_time !== undefined && { open_time }),
+        ...(close_time !== undefined && { close_time }),
+      }).eq("branch_id", outlet_id));
+    }
+
+    const [{ data, error }] = await Promise.all(ops);
     if (error) throw new Error(error.message);
 
-    return res.json({ success: true, settings: data });
+    return res.json({ success: true, settings: { ...data, open_time: open_time ?? outlet.open_time, close_time: close_time ?? outlet.close_time } });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -867,4 +935,36 @@ const updateAllocationPrefs = async (req, res) => {
   }
 };
 
-module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getOutletSettings, updateOutletSettings, updateOutletAllocationPrefs };
+// GET /api/business/branch-skills-summary
+const getBranchSkillsSummary = async (req, res) => {
+  try {
+    const biz = await resolveBusinessId(req.user);
+    if (!biz) return res.json({ success: true, branches: [] });
+
+    const branches = await prisma.branches.findMany({
+      where: { business_id: biz.business_id },
+      orderBy: { name: "asc" },
+      select: { branch_id: true, name: true },
+    });
+
+    const result = await Promise.all(branches.map(async (b) => {
+      const { data: rows } = await supabaseAdmin
+        .from("branch_skills")
+        .select("skill_id, skills(skill_id, name, description)")
+        .eq("branch_id", b.branch_id);
+
+      const skills = (rows || [])
+        .map(r => ({ skill_id: r.skills?.skill_id ?? r.skill_id, name: r.skills?.name, description: r.skills?.description }))
+        .filter(s => s.name)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      return { branch_id: b.branch_id, name: b.name, skills };
+    }));
+
+    return res.json({ success: true, branches: result });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getOutletSettings, updateOutletSettings, updateOutletAllocationPrefs };

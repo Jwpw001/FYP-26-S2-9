@@ -3,29 +3,20 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 
 const getAccount = async (req, res) => {
     try {
-        const user = await prisma.users.findUnique({
-            where: {
-                user_id: req.user.user_id || req.user.id
-            },
-            select: {
-                user_id: true,
-                full_name: true,
-                email: true,
-                role: true,
-                created_at: true
-            }
-        });
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
+        const dbUser = req.dbUser;
+        if (!dbUser) {
+            return res.status(404).json({ success: false, message: "User not found" });
         }
 
         res.json({
             success: true,
-            user
+            user: {
+                user_id: dbUser.user_id,
+                full_name: dbUser.full_name,
+                email: dbUser.email,
+                role: dbUser.role,
+                created_at: dbUser.created_at,
+            }
         });
 
     } catch (error) {
@@ -124,9 +115,35 @@ const getAccountSkills = async (req, res) => {
     }
 };
 
+const getMyBranch = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+        const staffRow = await prisma.staff.findFirst({
+            where: { user_id: userId },
+            select: { branch_id: true, branches: { select: { name: true } } },
+        });
+        if (staffRow?.branch_id) {
+            return res.json({ success: true, branch_id: staffRow.branch_id, name: staffRow.branches?.name });
+        }
+        const { data: mgr } = await supabaseAdmin
+            .from("branch_managers")
+            .select("branch_id, branches(name)")
+            .eq("user_id", userId)
+            .limit(1)
+            .maybeSingle();
+        if (mgr?.branch_id) {
+            return res.json({ success: true, branch_id: mgr.branch_id, name: mgr.branches?.name });
+        }
+        return res.status(404).json({ success: false, message: "No branch assigned" });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getAccount,
     updateAccount,
     deleteAccount,
     getAccountSkills,
+    getMyBranch,
 };

@@ -4,12 +4,15 @@ import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
-import { Trash2, X, Plus, Check, Pencil } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-staffdetail-styles")) {
   const style = document.createElement("style");
   style.id = "bo-staffdetail-styles";
-  style.textContent = `@keyframes pageIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }`;
+  style.textContent = `
+    @keyframes pageIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes shimmer { from { background-position:-600px 0; } to { background-position:600px 0; } }
+  `;
   document.head.appendChild(style);
 }
 
@@ -23,245 +26,203 @@ const LEVEL_META = {
   lead:         { label:"Lead",         bg:"#EDE9FE", color:"#5B21B6", border:"#C4B5FD" },
 };
 
+
 function avatarColor(name = "") {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-// ── Skill Sets Component ──────────────────────────────────────────────────────
+
+
+const CHIP_PALETTES = [
+  { bg: "#EFF6FF", border: "#BFDBFE", dot: "#3B82F6", text: "#1D4ED8" },
+  { bg: "#F0FDF4", border: "#BBF7D0", dot: "#22C55E", text: "#15803D" },
+  { bg: "#FDF4FF", border: "#E9D5FF", dot: "#A855F7", text: "#7E22CE" },
+  { bg: "#FFF7ED", border: "#FED7AA", dot: "#F97316", text: "#C2410C" },
+  { bg: "#FFF1F2", border: "#FECDD3", dot: "#F43F5E", text: "#BE123C" },
+  { bg: "#F0FDFA", border: "#99F6E4", dot: "#14B8A6", text: "#0F766E" },
+];
+function chipPalette(name = "") {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return CHIP_PALETTES[Math.abs(h) % CHIP_PALETTES.length];
+}
+
 function SkillSetsSection({ staffId }) {
   const [assigned, setAssigned] = useState([]);
   const [library,  setLibrary]  = useState([]);
   const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState("");
-
-  const [selSkill, setSelSkill] = useState(null);
-  const [selLevel, setSelLevel] = useState("junior");
-  const [selYears, setSelYears] = useState("");
   const [adding,   setAdding]   = useState(false);
+  const [form,     setForm]     = useState({ skill_id: "", experience_level: "junior", years_of_experience: "" });
   const [saving,   setSaving]   = useState(false);
-
-  const [editingId,  setEditingId]  = useState(null);
-  const [editLevel,  setEditLevel]  = useState("junior");
-  const [editYears,  setEditYears]  = useState("");
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError,  setEditError]  = useState("");
+  const [confirmDel, setConfirmDel] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      api.get(`/api/skills/staff/${staffId}`).catch(() => ({ skills: [] })),
-      api.get("/api/business/skills/assignable").catch(() => ({ skills: [] })),
-    ]).then(([asg, lib]) => {
-      setAssigned(asg.skills || []);
-      setLibrary(lib.skills || []);
-    }).finally(() => setLoading(false));
+    if (!staffId) return;
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const [asgRes, libRes] = await Promise.all([
+          api.get(`/api/skills/staff/${staffId}`).catch(() => ({ skills: [] })),
+          api.get("/api/business/skills/assignable").catch(() => ({ skills: [] })),
+        ]);
+        if (!cancelled) { setAssigned(asgRes.skills || []); setLibrary(libRes.skills || []); }
+      } finally { if (!cancelled) setLoading(false); }
+    }
+    load();
+    return () => { cancelled = true; };
   }, [staffId]);
 
-  const assignedIds = assigned.map(s => s.skill_id);
-  const available   = library.filter(s => !assignedIds.includes(s.skill_id));
+  const assignedIds = new Set(assigned.map(a => a.skill_id));
+  const available   = library.filter(s => !assignedIds.has(s.skill_id));
 
   async function handleAdd() {
-    if (!selSkill) return;
-    setSaving(true); setError("");
+    if (!form.skill_id) return;
+    setSaving(true);
     try {
-      const r = await api.post(`/api/skills/staff/${staffId}`, {
-        skill_id: selSkill,
-        experience_level: selLevel,
-        years_of_experience: selYears,
+      const res = await api.post(`/api/skills/staff/${staffId}`, {
+        skill_id: Number(form.skill_id),
+        experience_level: form.experience_level || null,
+        years_of_experience: form.years_of_experience !== "" ? Number(form.years_of_experience) : null,
       });
-      if (!r.success) throw new Error(r.message || "Failed to save");
-      setAssigned(prev => [...prev, r.skill]);
-      setSelSkill(null); setSelLevel("junior"); setSelYears("");
+      setAssigned(prev => [...prev, res.skill]);
       setAdding(false);
-    } catch (e) {
-      setError(e.message || "Failed to save skill.");
-    } finally { setSaving(false); }
+      setForm({ skill_id: "", experience_level: "junior", years_of_experience: "" });
+    } catch (err) { console.error(err); }
+    finally { setSaving(false); }
   }
 
-  async function handleRemove(skill_id) {
+  async function handleDelete(skill_id) {
     try {
       await api.delete(`/api/skills/staff/${staffId}/${skill_id}`);
-      setAssigned(prev => prev.filter(s => s.skill_id !== skill_id));
-    } catch (e) { console.error(e); }
+      setAssigned(prev => prev.filter(a => a.skill_id !== skill_id));
+      setConfirmDel(null);
+    } catch (err) { console.error(err); }
   }
-
-  function startEdit(sk) {
-    setEditingId(sk.skill_id);
-    setEditLevel(sk.experience_level || "junior");
-    setEditYears(sk.years_of_experience ?? "");
-    setEditError("");
-  }
-
-  async function handleEditSave(skill_id) {
-    setEditSaving(true); setEditError("");
-    try {
-      await api.patch(`/api/skills/staff/${staffId}/${skill_id}`, {
-        experience_level: editLevel,
-        years_of_experience: editYears !== "" ? Number(editYears) : null,
-      });
-      setAssigned(prev => prev.map(s =>
-        s.skill_id === skill_id
-          ? { ...s, experience_level: editLevel, years_of_experience: editYears !== "" ? Number(editYears) : null }
-          : s
-      ));
-      setEditingId(null);
-    } catch (e) {
-      setEditError(e.message || "Failed to save.");
-    } finally { setEditSaving(false); }
-  }
-
-  if (loading) return <p style={{ color:"#94A3B8", fontSize:"13px" }}>Loading…</p>;
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" }}>
-        <span style={{ fontSize:"12px", fontWeight:"700", color:"#64748B", textTransform:"uppercase", letterSpacing:"0.05em" }}>
-          {assigned.length} skill{assigned.length !== 1 ? "s" : ""} assigned
-        </span>
+    <div style={{ marginTop: "28px", borderTop: "1px solid #F1F5F9", paddingTop: "20px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div>
+          <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Skill Sets</h3>
+          <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "2px" }}>
+            {assigned.length} SKILL{assigned.length !== 1 ? "S" : ""} ASSIGNED
+          </p>
+        </div>
         {!adding && (
-          <button onClick={() => setAdding(true)} style={{ display:"flex", alignItems:"center", gap:"5px", padding:"6px 14px", borderRadius:"8px", background:"#F1F5F9", border:"1px solid #E2E8F0", fontSize:"12px", fontWeight:"700", color:"#1E293B", cursor:"pointer" }}>
-            <Plus size={12} /> Add Skill Set
+          <button onClick={() => setAdding(true)}
+            style={{ display: "flex", alignItems: "center", gap: "5px", padding: "7px 13px", borderRadius: "8px", background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
+            + Add Skill Set
           </button>
         )}
       </div>
 
-      {/* Assigned list */}
-      {assigned.length === 0 && !adding ? (
-        <div style={{ padding:"30px 16px", textAlign:"center", background:"#F8FAFC", borderRadius:"10px", border:"1.5px dashed #CBD5E1" }}>
-          <p style={{ fontSize:"13px", color:"#94A3B8" }}>No skills assigned yet. Click "Add Skill Set" to get started.</p>
-        </div>
+      {loading ? (
+        <div style={{ height: "60px", borderRadius: "10px", background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
       ) : (
-        <div style={{ display:"flex", flexDirection:"column", gap:"8px", marginBottom: adding ? "16px" : "0" }}>
-          {assigned.map(sk => {
-            const m = LEVEL_META[sk.experience_level] || null;
-            const isEditing = editingId === sk.skill_id;
-            return (
-              <div key={sk.skill_id} style={{ background:"#F8FAFC", borderRadius:"10px", border:`1px solid ${isEditing ? "#6366F1" : "#E2E8F0"}`, overflow:"hidden" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:"12px", padding:"12px 16px" }}>
-                  <div style={{ flex:1 }}>
-                    <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", margin:"0 0 4px" }}>{sk.name}</p>
-                    <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-                      {m ? (
-                        <span style={{ fontSize:"11px", fontWeight:"700", padding:"2px 10px", borderRadius:"99px", background:m.bg, color:m.color, border:`1px solid ${m.border}` }}>
-                          {m.label}
+        <>
+          {assigned.length === 0 && !adding && (
+            <div style={{ border: "1.5px dashed #E2E8F0", borderRadius: "12px", padding: "32px", textAlign: "center" }}>
+              <p style={{ fontSize: "13px", color: "#94A3B8" }}>No skills assigned yet. Click "Add Skill Set" to get started.</p>
+            </div>
+          )}
+
+          {assigned.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: adding ? "16px" : 0 }}>
+              {assigned.map(sk => {
+                const p  = chipPalette(sk.name);
+                const lm = LEVEL_META[sk.experience_level] || {};
+                return (
+                  <div key={sk.skill_id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px", border: "1px solid #F1F5F9", borderRadius: "10px", background: "#FAFAFA" }}>
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 11px", borderRadius: "100px", background: p.bg, border: `1px solid ${p.border}`, fontSize: "12px", fontWeight: "700", color: p.text }}>
+                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: p.dot, display: "inline-block" }} />
+                        {sk.name}
+                      </span>
+                      {sk.experience_level && (
+                        <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: lm.bg || "#F1F5F9", color: lm.color || "#64748B", border: `1px solid ${lm.border || "#E2E8F0"}` }}>
+                          {lm.label || sk.experience_level}
                         </span>
-                      ) : (
-                        <span style={{ fontSize:"11px", color:"#CBD5E1" }}>No level set</span>
                       )}
                       {sk.years_of_experience != null && (
-                        <span style={{ fontSize:"12px", color:"#64748B", fontWeight:"600" }}>
-                          {sk.years_of_experience} yr{Number(sk.years_of_experience) !== 1 ? "s" : ""} experience
-                        </span>
+                        <span style={{ fontSize: "12px", color: "#94A3B8", fontWeight: "500" }}>{sk.years_of_experience}yr{sk.years_of_experience !== 1 ? "s" : ""}</span>
                       )}
                     </div>
+                    {confirmDel === sk.skill_id ? (
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <span style={{ fontSize: "11px", color: "#DC2626" }}>Remove?</span>
+                        <button onClick={() => handleDelete(sk.skill_id)} style={{ padding: "3px 10px", borderRadius: "6px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Yes</button>
+                        <button onClick={() => setConfirmDel(null)} style={{ padding: "3px 10px", borderRadius: "6px", background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#64748B", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>No</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmDel(sk.skill_id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#CBD5E1", fontSize: "18px", lineHeight: 1, padding: "2px 4px" }}>×</button>
+                    )}
                   </div>
-                  <button onClick={() => isEditing ? setEditingId(null) : startEdit(sk)}
-                    style={{ background: isEditing ? "#EEF2FF" : "#F1F5F9", border:`1px solid ${isEditing ? "#C7D2FE" : "#E2E8F0"}`, borderRadius:"7px", padding:"5px 7px", cursor:"pointer", display:"flex", alignItems:"center", flexShrink:0 }}>
-                    <Pencil size={12} color={isEditing ? "#4338CA" : "#64748B"} />
-                  </button>
-                  <button onClick={() => handleRemove(sk.skill_id)} style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:"7px", padding:"5px 7px", cursor:"pointer", display:"flex", alignItems:"center", flexShrink:0 }}>
-                    <X size={12} color="#DC2626" />
-                  </button>
-                </div>
-
-                {isEditing && (
-                  <div style={{ borderTop:"1px solid #E2E8F0", padding:"14px 16px", background:"#fff" }}>
-                    {editError && <p style={{ fontSize:"12px", color:"#DC2626", marginBottom:"10px" }}>{editError}</p>}
-                    <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"7px" }}>EXPERIENCE LEVEL</p>
-                    <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"14px" }}>
-                      {LEVELS.map(l => {
-                        const lm = LEVEL_META[l];
-                        const active = editLevel === l;
-                        return (
-                          <button key={l} onClick={() => setEditLevel(l)}
-                            style={{ padding:"5px 14px", borderRadius:"99px", border:`1.5px solid ${active ? lm.color : "#E2E8F0"}`, background: active ? lm.bg : "#fff", color: active ? lm.color : "#94A3B8", fontSize:"12px", fontWeight:"700", cursor:"pointer" }}>
-                            {lm.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"7px" }}>YEARS OF EXPERIENCE</p>
-                    <input type="number" min="0" step="0.5" value={editYears} onChange={e => setEditYears(e.target.value)} placeholder="e.g. 3"
-                      style={{ width:"110px", padding:"7px 10px", borderRadius:"8px", border:"1.5px solid #E2E8F0", fontSize:"13px", outline:"none", fontFamily:"inherit", color:"#1E293B", background:"#fff", marginBottom:"14px" }} />
-                    <div style={{ display:"flex", gap:"8px" }}>
-                      <button onClick={() => handleEditSave(sk.skill_id)} disabled={editSaving}
-                        style={{ padding:"7px 20px", borderRadius:"8px", background:"#6366F1", color:"#fff", border:"none", fontSize:"12px", fontWeight:"700", cursor:"pointer", opacity: editSaving ? 0.6 : 1 }}>
-                        {editSaving ? "Saving…" : "Save"}
-                      </button>
-                      <button onClick={() => setEditingId(null)}
-                        style={{ padding:"7px 14px", borderRadius:"8px", background:"#F1F5F9", color:"#64748B", border:"none", fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Add form */}
-      {adding && (
-        <div style={{ background:"#F8FAFC", border:"1.5px solid #E2E8F0", borderRadius:"12px", padding:"18px", marginTop:"4px" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
-            <p style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", margin:0 }}>New Skill Set</p>
-            <button onClick={() => { setAdding(false); setSelSkill(null); setSelLevel("junior"); setSelYears(""); setError(""); }}
-              style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8", fontSize:"12px", display:"inline-flex", alignItems:"center", gap:"3px" }}><X size={11} /> Cancel</button>
-          </div>
-
-          {error && <p style={{ fontSize:"12px", color:"#DC2626", marginBottom:"10px", background:"#FEF2F2", padding:"8px 10px", borderRadius:"7px" }}>{error}</p>}
-
-          <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"7px" }}>1 · SKILL</p>
-          {library.length === 0 ? (
-            <p style={{ fontSize:"12px", color:"#94A3B8", marginBottom:"14px" }}>No skills in library yet.</p>
-          ) : available.length === 0 ? (
-            <p style={{ fontSize:"12px", color:"#94A3B8", marginBottom:"14px" }}>All library skills are already assigned.</p>
-          ) : (
-            <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", marginBottom:"16px" }}>
-              {available.map(s => {
-                const active = selSkill === s.skill_id;
-                return (
-                  <button key={s.skill_id} onClick={() => setSelSkill(active ? null : s.skill_id)}
-                    style={{ padding:"5px 14px", borderRadius:"99px", border:`1.5px solid ${active ? "#6366F1" : "#E2E8F0"}`, background: active ? "#EEF2FF" : "#fff", color: active ? "#4338CA" : "#64748B", fontSize:"12px", fontWeight:"700", cursor:"pointer", display:"flex", alignItems:"center", gap:"4px" }}>
-                    {active && <Check size={9} />}{s.name}
-                  </button>
                 );
               })}
             </div>
           )}
 
-          <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"7px" }}>2 · EXPERIENCE LEVEL</p>
-          <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"16px" }}>
-            {LEVELS.map(l => {
-              const m = LEVEL_META[l];
-              const active = selLevel === l;
-              return (
-                <button key={l} onClick={() => setSelLevel(l)} style={{ padding:"6px 16px", borderRadius:"99px", border:`1.5px solid ${active ? m.color : "#E2E8F0"}`, background: active ? m.bg : "#fff", color: active ? m.color : "#94A3B8", fontSize:"12px", fontWeight:"700", cursor:"pointer" }}>
-                  {m.label}
+          {adding && (
+            <div style={{ border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "18px", background: "#FAFAFA" }}>
+              <p style={{ fontSize: "11px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "14px" }}>New Skill Set</p>
+
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>1 · Skill</label>
+                {available.length === 0 ? (
+                  <p style={{ fontSize: "12px", color: "#94A3B8" }}>
+                    {library.length === 0 ? "No skills in library yet — add some via Skill Settings." : "All library skills are already assigned."}
+                  </p>
+                ) : (
+                  <select value={form.skill_id} onChange={e => setForm(p => ({ ...p, skill_id: e.target.value }))}
+                    style={{ width: "100%", padding: "8px 10px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "13px", color: "#1E293B", background: "#FFF", boxSizing: "border-box" }}>
+                    <option value="">Select a skill…</option>
+                    {available.map(s => <option key={s.skill_id} value={s.skill_id}>{s.name}</option>)}
+                  </select>
+                )}
+              </div>
+
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>2 · Experience Level</label>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {LEVELS.map(lvl => {
+                    const lm  = LEVEL_META[lvl];
+                    const sel = form.experience_level === lvl;
+                    return (
+                      <button key={lvl} type="button" onClick={() => setForm(p => ({ ...p, experience_level: lvl }))}
+                        style={{ padding: "6px 13px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", cursor: "pointer",
+                          background: sel ? lm.bg : "#F1F5F9", color: sel ? lm.color : "#64748B",
+                          border: sel ? `1.5px solid ${lm.border}` : "1.5px solid #E2E8F0" }}>
+                        {lm.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>3 · Years of Experience</label>
+                <input type="number" min="0" max="50" value={form.years_of_experience}
+                  onChange={e => setForm(p => ({ ...p, years_of_experience: e.target.value }))}
+                  placeholder="e.g. 3"
+                  style={{ width: "120px", padding: "8px 10px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "13px", color: "#1E293B", background: "#FFF", boxSizing: "border-box" }} />
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={handleAdd} disabled={saving || !form.skill_id}
+                  style={{ padding: "8px 18px", borderRadius: "8px", background: "#2563EB", color: "#FFF", border: "none", fontSize: "13px", fontWeight: "700", cursor: saving || !form.skill_id ? "not-allowed" : "pointer", opacity: saving || !form.skill_id ? 0.6 : 1 }}>
+                  {saving ? "Saving…" : "Save"}
                 </button>
-              );
-            })}
-          </div>
-
-          <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"7px" }}>3 · YEARS OF EXPERIENCE</p>
-          <input type="number" min="0" step="0.5" value={selYears} onChange={e => setSelYears(e.target.value)} placeholder="e.g. 3"
-            style={{ width:"120px", padding:"7px 10px", borderRadius:"8px", border:"1.5px solid #E2E8F0", fontSize:"13px", outline:"none", fontFamily:"inherit", color:"#1E293B", background:"#fff", marginBottom:"16px" }} />
-
-          <div style={{ display:"flex", gap:"8px" }}>
-            <button onClick={handleAdd} disabled={!selSkill || saving}
-              style={{ padding:"8px 24px", borderRadius:"8px", background:"#6366F1", color:"#fff", border:"none", fontSize:"13px", fontWeight:"700", cursor: selSkill ? "pointer" : "not-allowed", opacity: (!selSkill || saving) ? 0.6 : 1 }}>
-              {saving ? "Saving…" : "Save"}
-            </button>
-            <button onClick={() => { setAdding(false); setSelSkill(null); setSelLevel("junior"); setSelYears(""); setError(""); }}
-              style={{ padding:"8px 16px", borderRadius:"8px", background:"#F1F5F9", color:"#64748B", border:"none", fontSize:"13px", fontWeight:"600", cursor:"pointer" }}>
-              Cancel
-            </button>
-          </div>
-        </div>
+                <button onClick={() => { setAdding(false); setForm({ skill_id: "", experience_level: "junior", years_of_experience: "" }); }}
+                  style={{ padding: "8px 14px", borderRadius: "8px", background: "#F1F5F9", color: "#64748B", border: "1px solid #E2E8F0", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -630,7 +591,8 @@ export default function BOStaffDetail() {
     default_work_days: "1111100", is_active: true,
   });
 
-  const [showKpiModal, setShowKpiModal] = useState(false);
+  const [showKpiModal,   setShowKpiModal]   = useState(false);
+  const [operatingDays,  setOperatingDays]  = useState(null);
 
   useEffect(() => { fetchProfile(); }, [id]);
 
@@ -640,21 +602,36 @@ export default function BOStaffDetail() {
       const data = await api.get(`/api/business/staff/${id}`);
       const staffRow = data.staff;
       setMember(staffRow);
+      let days = staffRow.default_work_days || "1111100";
+      if (staffRow.branch_id) {
+        const { data: settings } = await supabase
+          .from("branch_settings")
+          .select("operating_days")
+          .eq("branch_id", staffRow.branch_id)
+          .maybeSingle();
+        if (settings?.operating_days) {
+          setOperatingDays(settings.operating_days);
+          days = days.padEnd(7, "0").split("")
+            .map((d, i) => settings.operating_days[i] === "1" ? d : "0").join("");
+        }
+      }
       setForm({
         full_name: staffRow.users?.full_name || "",
         staff_type: staffRow.staff_type || "regular",
-        default_work_days: staffRow.default_work_days || "1111100",
+        default_work_days: days,
         is_active: staffRow.is_active ?? true,
       });
     } catch (err) {
       console.error(err);
-      goTo("/business-owner/outlets");
+      goTo("/business-owner/staff");
     } finally {
       setLoading(false);
     }
   }
 
   function toggleDay(idx) {
+    const allowed = !operatingDays || operatingDays[idx] === "1";
+    if (!allowed) return;
     const arr = form.default_work_days.padEnd(7, "0").split("");
     arr[idx] = arr[idx] === "1" ? "0" : "1";
     setForm(p => ({ ...p, default_work_days: arr.join("") }));
@@ -695,7 +672,7 @@ export default function BOStaffDetail() {
     setDeleting(true);
     try {
       await api.delete(`/api/business/staff/${id}`);
-      goTo(`/business-owner/outlets/${member.outlet_id}`);
+      goTo(`/business-owner/outlets/${member.branch_id}`);
     } catch (err) {
       setError(err.message || "Failed to delete staff. Please try again.");
       setDeleting(false);
@@ -720,7 +697,7 @@ export default function BOStaffDetail() {
 
   return (
     <BusinessOwnerLayout title="Staff Profile">
-      <button style={s.back} onClick={() => goTo(`/business-owner/outlets/${member.outlet_id}`)}>← Back to Outlet</button>
+      <button style={s.back} onClick={() => goTo("/business-owner/staff")}>← Back to Staff</button>
 
       <div style={s.layout}>
         {/* ── Left: profile card ── */}
@@ -840,15 +817,18 @@ export default function BOStaffDetail() {
                 {editing ? (
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                     {DAYS.map((day, idx) => {
-                      const active = workDays[idx] === "1";
+                      const active  = workDays[idx] === "1";
+                      const allowed = !operatingDays || operatingDays[idx] === "1";
                       return (
-                        <button key={day} type="button" onClick={() => toggleDay(idx)}
+                        <button key={day} type="button" disabled={!allowed} onClick={() => toggleDay(idx)}
                           style={{
                             padding: "7px 11px", borderRadius: "8px", fontSize: "12px",
-                            fontWeight: "700", cursor: "pointer", transition: "all 0.12s",
-                            background: active ? "#F59E0B" : "#F1F5F9",
-                            color: active ? "#1C1917" : "#64748B",
-                            border: active ? "1.5px solid #F59E0B" : "1.5px solid #E2E8F0",
+                            fontWeight: "700", transition: "all 0.12s",
+                            cursor: allowed ? "pointer" : "not-allowed",
+                            opacity: allowed ? 1 : 0.35,
+                            background: active ? "#2563EB" : "#F1F5F9",
+                            color: active ? "#fff" : "#64748B",
+                            border: active ? "1.5px solid #2563EB" : "1.5px solid #E2E8F0",
                           }}>
                           {day}
                         </button>
@@ -858,13 +838,14 @@ export default function BOStaffDetail() {
                 ) : (
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                     {DAYS.map((day, idx) => {
-                      const active = (member.default_work_days || "0000000").padEnd(7,"0")[idx] === "1";
+                      const active = (member.default_work_days || "0000000").padEnd(7,"0")[idx] === "1"
+                        && (!operatingDays || operatingDays[idx] === "1");
                       return (
                         <span key={day} style={{
                           padding: "5px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: "700",
-                          background: active ? "#FEF3C7" : "#F1F5F9",
-                          color: active ? "#92400E" : "#94A3B8",
-                          border: `1.5px solid ${active ? "#FDE68A" : "#E2E8F0"}`,
+                          background: active ? "#DBEAFE" : "#F1F5F9",
+                          color: active ? "#1E40AF" : "#94A3B8",
+                          border: `1.5px solid ${active ? "#BFDBFE" : "#E2E8F0"}`,
                         }}>
                           {day}
                         </span>
@@ -876,12 +857,7 @@ export default function BOStaffDetail() {
             )}
           </div>
 
-          {/* ── Skill Sets ── */}
-          <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: "20px" }}>
-            <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", marginBottom: "16px" }}>Skill Sets</h4>
-            <SkillSetsSection staffId={id} />
-          </div>
-
+          <SkillSetsSection staffId={member?.staff_id} />
         </div>
       </div>
 
