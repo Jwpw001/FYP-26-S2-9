@@ -1,7 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 
-async function getCallerOutletId(userId) {
+async function getCallerBranchId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
   if (s?.branch_id) return s.branch_id;
   const { data: mgr } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1).maybeSingle();
@@ -10,15 +10,15 @@ async function getCallerOutletId(userId) {
 
 const getAttendance = async (req, res) => {
   try {
-    const outletId = await getCallerOutletId(req.user.user_id);
-    if (!outletId) return res.status(403).json({ success: false, message: "No outlet found for your account." });
+    const branchId = await getCallerBranchId(req.user.user_id);
+    if (!branchId) return res.status(403).json({ success: false, message: "No branch found for your account." });
 
-    // Get all staff in this outlet, then filter attendance by their assignment ids
-    const outletStaff = await prisma.staff.findMany({
-      where: { branch_id: outletId },
+    // Get all staff in this branch, then filter attendance by their assignment ids
+    const branchStaff = await prisma.staff.findMany({
+      where: { branch_id: branchId },
       select: { staff_id: true },
     });
-    const staffIds = outletStaff.map(s => s.staff_id);
+    const staffIds = branchStaff.map(s => s.staff_id);
 
     // Attendance links to task_assignments; scope via task_assignments.staff_id
     const attendance = await prisma.attendance.findMany({
@@ -45,7 +45,7 @@ const getAttendance = async (req, res) => {
 const getAttendanceById = async (req, res) => {
   try {
     const attendanceId = Number(req.params.id);
-    const outletId = await getCallerOutletId(req.user.user_id);
+    const branchId = await getCallerBranchId(req.user.user_id);
 
     const attendance = await prisma.attendance.findUnique({
       where: { attendance_id: attendanceId },
@@ -55,7 +55,7 @@ const getAttendanceById = async (req, res) => {
     });
 
     if (!attendance) return res.status(404).json({ success: false, message: "Attendance record not found" });
-    if (outletId && attendance.task_assignments?.shifts?.branch_id !== outletId)
+    if (branchId && attendance.task_assignments?.shifts?.branch_id !== branchId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
     res.json({ success: true, attendance });

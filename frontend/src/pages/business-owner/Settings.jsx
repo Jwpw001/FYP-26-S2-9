@@ -77,7 +77,7 @@ function parseSettings(s) {
 }
 
 export default function BOSettings() {
-  const [outlets, setOutlets] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
@@ -94,9 +94,9 @@ export default function BOSettings() {
   const [editingAlloc, setEditingAlloc] = useState(false);
 
   useEffect(() => {
-    api.get("/api/business/outlets").then(r => {
-      const list = r.outlets || [];
-      setOutlets(list);
+    api.get("/api/business/branches").then(r => {
+      const list = r.branches || [];
+      setBranches(list);
       if (list.length > 0) setSelectedId(list[0].branch_id);
     });
   }, []);
@@ -113,7 +113,7 @@ export default function BOSettings() {
     setError("");
     setSuccess("");
     try {
-      const r = await api.get(`/api/business/outlets/${branchId}/settings`);
+      const r = await api.get(`/api/business/branches/${branchId}/settings`);
       const s = r.settings ? parseSettings(r.settings) : { ...DEFAULT_SETTINGS };
       const a = r.allocation ? { ...ALLOC_DEFAULTS, ...r.allocation } : { ...ALLOC_DEFAULTS };
       setSettings(s);
@@ -178,7 +178,7 @@ export default function BOSettings() {
   async function saveSettings() {
     setSaving("settings"); setError(""); setSuccess("");
     try {
-      await api.put(`/api/business/outlets/${selectedId}/settings`, {
+      await api.put(`/api/business/branches/${selectedId}/settings`, {
         ...settings,
         operating_days: settings.operating_days.join(""),
       });
@@ -195,7 +195,7 @@ export default function BOSettings() {
     const total = WEIGHTS.reduce((s, w) => s + (alloc[w.key] || 0), 0);
     if (total !== 100) { setError("Weights must sum to 100%."); setSaving(null); return; }
     try {
-      await api.put(`/api/business/outlets/${selectedId}/settings/allocation`, alloc);
+      await api.put(`/api/business/branches/${selectedId}/settings/allocation`, alloc);
       setSavedAlloc({ ...alloc });
       setEditingAlloc(false);
       setSuccess("Allocation preferences saved.");
@@ -222,18 +222,18 @@ export default function BOSettings() {
               value={selectedId || ""}
               onChange={e => setSelectedId(Number(e.target.value))}
               style={{ padding: "8px 36px 8px 14px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#1E293B", background: "#fff", appearance: "none", WebkitAppearance: "none", cursor: "pointer", outline: "none", minWidth: "200px" }}>
-              {outlets.map(o => <option key={o.branch_id} value={o.branch_id}>{o.name}</option>)}
+              {branches.map(o => <option key={o.branch_id} value={o.branch_id}>{o.name}</option>)}
             </select>
             <ChevronDown size={14} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }} />
           </div>
-          {outlets.length === 0 && <span style={{ fontSize: "13px", color: "#94A3B8" }}>No branches yet</span>}
+          {branches.length === 0 && <span style={{ fontSize: "13px", color: "#94A3B8" }}>No branches yet</span>}
         </div>
 
         {loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1 }}>
             <Loader2 size={28} color="#94A3B8" style={{ animation: "spin 1s linear infinite" }} />
           </div>
-        ) : !selectedId || outlets.length === 0 ? (
+        ) : !selectedId || branches.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, color: "#94A3B8" }}>
             <Building2 size={40} style={{ marginBottom: "12px" }} />
             <p style={{ fontSize: "14px" }}>No branches available. Create a branch first.</p>

@@ -407,7 +407,7 @@ export default function ShiftDetail() {
   function handleDelete() {
     setConfirmModal({ title:"Delete this shift?", body:<span>Permanently delete <strong>{shift?.title||"this shift"}</strong> and all its tasks.</span>, confirmLabel:"Delete Shift", danger:true, onConfirm: async () => {
       await supabase.from("shifts").delete().eq("shift_id", id);
-      goTo("/outlet-manager/shifts");
+      goTo("/manager/shifts");
     }});
   }
 
@@ -466,7 +466,7 @@ export default function ShiftDetail() {
       {/* Main content — shifts right when roster panel opens */}
       <div style={{ paddingRight: rosterOpen ? "376px" : "0", transition:"padding-right 0.25s ease", minHeight:"100%" }}>
 
-        <button style={s.back} onClick={() => goTo("/outlet-manager/shifts")}>← Back to Shifts</button>
+        <button style={s.back} onClick={() => goTo("/manager/shifts")}>← Back to Shifts</button>
 
         {/* Shift header card */}
         <div style={s.shiftCard}>
@@ -913,7 +913,7 @@ export default function ShiftDetail() {
               </div>
             ) : filteredRoster.length===0 ? (
               <div style={{textAlign:"center",padding:"32px 0",color:"#94A3B8",fontSize:"13px"}}>
-                {roster.length===0 ? "No staff found for this outlet." : "No staff match this filter."}
+                {roster.length===0 ? "No staff found for this branch." : "No staff match this filter."}
               </div>
             ) : filteredRoster.map((staff,idx) => {
               const isUnavailable   = staff.is_on_leave || staff.is_double_booked;

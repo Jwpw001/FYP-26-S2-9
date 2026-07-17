@@ -60,8 +60,8 @@ export default function CoordinatorRequests() {
             .from("krewby_requests")
             .select(`
               request_id, role_name, shift_date, start_time, end_time,
-              headcount, status, outlet_address, override_note, created_at,
-              outlets ( name ),
+              headcount, status, branch_address, override_note, created_at,
+              branches ( name ),
               skills ( name ),
               assigned_worker:assigned_worker_id ( krewby_worker_id, user_id )
             `)
@@ -148,7 +148,7 @@ export default function CoordinatorRequests() {
         <div style={{ marginBottom: "24px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Krewby Requests</h2>
           <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-            Shift requests from outlets that need Krewby workers Â· {pendingCnt} pending review
+            Shift requests from branches that need Krewby workers Â· {pendingCnt} pending review
           </p>
         </div>
 
@@ -203,8 +203,8 @@ export default function CoordinatorRequests() {
                         {req.skills?.name && <span style={{ marginLeft: "8px", fontSize: "12px", fontWeight: "500", color: "#64748B" }}>Â· {req.skills.name}</span>}
                       </p>
                       <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-                        {req.branches?.name || "Unknown outlet"}
-                        {req.outlet_address && ` Â· ${req.outlet_address}`}
+                        {req.branches?.name || "Unknown branch"}
+                        {req.branch_address && ` Â· ${req.branch_address}`}
                       </p>
                     </div>
                     <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", background: st.bg, color: st.color, flexShrink: 0 }}>

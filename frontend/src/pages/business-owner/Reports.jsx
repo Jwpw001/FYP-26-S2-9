@@ -158,7 +158,7 @@ export default function BOReports() {
   const [kpis, setKpis] = useState({ staff: 0, staffPrev: 0, shifts: 0, shiftsPrev: 0, leave: 0, leavePrev: 0 });
   const [chartLabels, setChartLabels] = useState([]);
   const [chartSeries, setChartSeries] = useState([]);
-  const [outletRows, setOutletRows] = useState([]);
+  const [branchRows, setBranchRows] = useState([]);
   const [shiftsByStatus, setShiftsByStatus] = useState([]);
   const [leaveByStatus, setLeaveByStatus] = useState([]);
   const [staffByType, setStaffByType] = useState([]);
@@ -169,28 +169,28 @@ export default function BOReports() {
     setLoading(true);
     try {
       // Get business via authenticated backend API
-      const [bizResp, outletResp] = await Promise.all([
+      const [bizResp, branchResp] = await Promise.all([
         api.get("/api/business/info"),
-        api.get("/api/business/outlets"),
+        api.get("/api/business/branches"),
       ]);
 
       const bizData = bizResp.business;
       if (!bizData) { setLoading(false); return; }
       setBusinessName(bizData.name);
 
-      const outlets = outletResp.outlets || [];
-      const outletIds = outlets.map(o => o.branch_id);
-      if (outletIds.length === 0) { setLoading(false); return; }
+      const branches = branchResp.branches || [];
+      const branchIds = branches.map(o => o.branch_id);
+      if (branchIds.length === 0) { setLoading(false); return; }
 
-      // Fetch staff for each outlet via Supabase
+      // Fetch staff for each branch via Supabase
       const { data: staffData } = await supabase
         .from("staff")
         .select("staff_id, staff_type, is_active, branch_id")
-        .in("branch_id", outletIds);
+        .in("branch_id", branchIds);
 
       const allStaff = (staffData || []).map(s => ({
         ...s,
-        outlet_name: outlets.find(o => o.branch_id === s.branch_id)?.name || "",
+        branch_name: branches.find(o => o.branch_id === s.branch_id)?.name || "",
       }));
       const staffIds = allStaff.map(s => s.staff_id);
 
@@ -198,10 +198,10 @@ export default function BOReports() {
       const periodStart = new Date(now); periodStart.setDate(now.getDate() - days);
       const prevStart   = new Date(now); prevStart.setDate(now.getDate() - days * 2);
 
-      // Fetch shifts, leave requests for these outlets
+      // Fetch shifts, leave requests for these branches
       const [{ data: shiftsAll }, { data: leaveAll }] = await Promise.all([
-        outletIds.length > 0
-          ? supabase.from("shifts").select("shift_id, status, shift_date, branch_id").in("branch_id", outletIds)
+        branchIds.length > 0
+          ? supabase.from("shifts").select("shift_id, status, shift_date, branch_id").in("branch_id", branchIds)
           : Promise.resolve({ data: [] }),
         staffIds.length > 0
           ? supabase.from("availability").select("request_id, status, start_date, staff_id").in("staff_id", staffIds)
@@ -243,8 +243,8 @@ export default function BOReports() {
         { label: "Leave Requests",  data: dailyCount(leave,  l => l.start_date), color: "#D97706" },
       ]);
 
-      // Outlets table
-      setOutletRows(outlets.map(o => ({
+      // Branches table
+      setBranchRows(branches.map(o => ({
         name: o.name,
         totalStaff: allStaff.filter(s => s.branch_id === o.branch_id).length,
         activeStaff: allStaff.filter(s => s.branch_id === o.branch_id && s.is_active).length,
@@ -283,9 +283,9 @@ export default function BOReports() {
     lines.push(`Shifts (period),${kpis.shifts}`);
     lines.push(`Leave Requests (period),${kpis.leave}`);
     lines.push("");
-    lines.push("OUTLETS");
-    lines.push("Outlet,Total Staff,Active Staff,Total Shifts,Published");
-    outletRows.forEach(o => lines.push(`"${o.name}",${o.totalStaff},${o.activeStaff},${o.shifts},${o.published}`));
+    lines.push("BRANCHES");
+    lines.push("Branch,Total Staff,Active Staff,Total Shifts,Published");
+    branchRows.forEach(o => lines.push(`"${o.name}",${o.totalStaff},${o.activeStaff},${o.shifts},${o.published}`));
     lines.push("");
     lines.push("SHIFTS BY STATUS");
     lines.push("Status,Count");
@@ -338,11 +338,11 @@ export default function BOReports() {
     });
     y = doc.lastAutoTable.finalY + 8;
 
-    doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text("Outlets Overview", 14, y); y += 3;
+    doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text("Branches Overview", 14, y); y += 3;
     autoTable(doc, {
       startY: y,
-      head: [["Outlet", "Total Staff", "Active Staff", "Total Shifts", "Published"]],
-      body: outletRows.map(o => [o.name, o.totalStaff, o.activeStaff, o.shifts, o.published]),
+      head: [["Branch", "Total Staff", "Active Staff", "Total Shifts", "Published"]],
+      body: branchRows.map(o => [o.name, o.totalStaff, o.activeStaff, o.shifts, o.published]),
       headStyles: { fillColor: [37, 99, 235], textColor: 255, fontSize: 8 },
       bodyStyles: { fontSize: 8 },
       columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
@@ -374,7 +374,7 @@ export default function BOReports() {
     doc.save(`${businessName.toLowerCase().replace(/\s+/g, "-")}-report-${PERIODS[period].label}-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
-  const maxOutletStaff = Math.max(...outletRows.map(o => o.totalStaff), 1);
+  const maxBranchStaff = Math.max(...branchRows.map(o => o.totalStaff), 1);
 
   return (
     <BusinessOwnerLayout title="Reports">
@@ -385,7 +385,7 @@ export default function BOReports() {
           <div>
             <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>Reports</h2>
             <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {businessName ? `${businessName} — ` : ""}Consolidated across all outlets
+              {businessName ? `${businessName} — ` : ""}Consolidated across all branches
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -410,7 +410,7 @@ export default function BOReports() {
 
         {/* KPI Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: "14px", marginBottom: "20px" }}>
-          <KpiCard loading={loading} Icon={Users}         label="Active Staff"      value={kpis.staff}   pct={null}                                          sub="across all outlets"                 color="#2563EB" bg="#EFF6FF" />
+          <KpiCard loading={loading} Icon={Users}         label="Active Staff"      value={kpis.staff}   pct={null}                                          sub="across all branches"                 color="#2563EB" bg="#EFF6FF" />
           <KpiCard loading={loading} Icon={CalendarDays}  label="Shifts"            value={kpis.shifts}  pct={delta(kpis.shifts,  kpis.shiftsPrev)}          sub={`vs prev ${PERIODS[period].label}`} color="#059669" bg="#ECFDF5" />
           <KpiCard loading={loading} Icon={CalendarClock} label="Leave Requests"    value={kpis.leave}   pct={delta(kpis.leave,   kpis.leavePrev)}           sub={`vs prev ${PERIODS[period].label}`} color="#D97706" bg="#FFFBEB" />
         </div>
@@ -436,19 +436,19 @@ export default function BOReports() {
           ) : <LineChart series={chartSeries} labels={chartLabels} height={180} />}
         </div>
 
-        {/* Outlets Table */}
+        {/* Branches Table */}
         <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Outlets Overview</h3>
-          <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>Staffing and shift coverage per outlet</p>
+          <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Branches Overview</h3>
+          <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>Staffing and shift coverage per branch</p>
           {loading ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="52px" />)}
             </div>
-          ) : outletRows.length === 0 ? (
-            <p style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", padding: "24px 0" }}>No outlets found.</p>
+          ) : branchRows.length === 0 ? (
+            <p style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", padding: "24px 0" }}>No branches found.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {outletRows.map((o, i) => (
+              {branchRows.map((o, i) => (
                 <div key={o.name} style={{ animation: `fadeUp 0.3s ease ${i * 0.07}s both` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                     <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{o.name}</span>
@@ -458,7 +458,7 @@ export default function BOReports() {
                     </div>
                   </div>
                   <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: "100px", background: "#2563EB", width: `${(o.totalStaff / maxOutletStaff) * 100}%`, transition: "width 0.8s ease" }} />
+                    <div style={{ height: "100%", borderRadius: "100px", background: "#2563EB", width: `${(o.totalStaff / maxBranchStaff) * 100}%`, transition: "width 0.8s ease" }} />
                   </div>
                 </div>
               ))}

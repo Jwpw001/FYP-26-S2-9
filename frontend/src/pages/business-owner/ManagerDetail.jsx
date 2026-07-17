@@ -24,7 +24,7 @@ export default function BOManagerDetail() {
   const goTo = useGoTo();
 
   const [manager, setManager] = useState(null);
-  const [outlet, setOutlet]   = useState(null);
+  const [branch, setBranch]   = useState(null);
   const [isPrimary, setIsPrimary] = useState(false);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
@@ -43,12 +43,12 @@ export default function BOManagerDetail() {
     try {
       const data = await api.get(`/api/business/managers/${id}`);
       setManager(data.manager);
-      setOutlet(data.outlet);
+      setBranch(data.branch);
       setIsPrimary(data.is_primary);
       setForm({ full_name: data.manager.full_name || "" });
     } catch (err) {
       console.error(err);
-      goTo("/business-owner/outlets");
+      goTo("/business-owner/branches");
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export default function BOManagerDetail() {
     setDeleting(true);
     try {
       await api.delete(`/api/business/managers/${id}`);
-      goTo(`/business-owner/outlets/${outlet.branch_id}`);
+      goTo(`/business-owner/branches/${branch.branch_id}`);
     } catch (err) {
       setError(err.message || "Failed to remove manager. Please try again.");
       setDeleting(false);
@@ -107,7 +107,7 @@ export default function BOManagerDetail() {
 
   return (
     <BusinessOwnerLayout title="Manager Profile">
-      <button style={s.back} onClick={() => goTo(`/business-owner/outlets/${outlet.branch_id}`)}>← Back to Outlet</button>
+      <button style={s.back} onClick={() => goTo(`/business-owner/branches/${branch.branch_id}`)}>← Back to Branch</button>
 
       <div style={s.layout}>
         {/* ── Left: profile card ── */}
@@ -115,11 +115,11 @@ export default function BOManagerDetail() {
           <div style={{ ...s.avatarLg, background: color }}>{initials}</div>
           <h2 style={s.profileName}>{manager.full_name}</h2>
           <p style={s.profileEmail}>{manager.email}</p>
-          <span style={s.typeBadge}>Outlet Manager</span>
+          <span style={s.typeBadge}>Manager</span>
 
           <div style={s.metaRow}>
-            <span style={s.metaLabel}>Outlet</span>
-            <span style={s.metaVal}><Building2 size={12} style={{ marginRight: "4px", verticalAlign: "-1px" }} />{outlet.name}</span>
+            <span style={s.metaLabel}>Branch</span>
+            <span style={s.metaVal}><Building2 size={12} style={{ marginRight: "4px", verticalAlign: "-1px" }} />{branch.name}</span>
           </div>
 
           <div style={s.metaRow}>
@@ -200,8 +200,8 @@ export default function BOManagerDetail() {
             </div>
 
             <div style={s.field}>
-              <label style={s.label}>Assigned Outlet</label>
-              <p style={s.value}>{outlet.name}{isPrimary ? " (Primary)" : ""}</p>
+              <label style={s.label}>Assigned Branch</label>
+              <p style={s.value}>{branch.name}{isPrimary ? " (Primary)" : ""}</p>
             </div>
           </div>
         </div>

@@ -145,8 +145,8 @@ export default function Reports() {
 
   const [period,     setPeriod]     = useState(1);
   const [loading,    setLoading]    = useState(true);
-  const [outletId,   setOutletId]   = useState(null);
-  const [outletName, setOutletName] = useState("");
+  const [branchId,   setBranchId]   = useState(null);
+  const [branchName, setBranchName] = useState("");
 
   const [kpis, setKpis] = useState({
     staff: 0, regularStaff: 0, casualStaff: 0,
@@ -165,29 +165,29 @@ export default function Reports() {
 
   const days = PERIODS[period].days;
 
-  // Resolve outlet once
+  // Resolve branch once
   useEffect(() => {
     if (!userId) return;
     supabase.from("staff").select("branch_id, branches(name)")
       .eq("user_id", userId).eq("is_active", true).limit(1)
       .then(async ({ data }) => {
         if (data?.[0]) {
-          setOutletId(data[0].branch_id);
-          setOutletName(data[0].branches?.name || "");
+          setBranchId(data[0].branch_id);
+          setBranchName(data[0].branches?.name || "");
         } else {
           const { data: omRow } = await supabase
             .from("branch_managers").select("branch_id, branches(name)")
             .eq("user_id", userId).limit(1);
           if (omRow?.[0]) {
-            setOutletId(omRow[0].branch_id);
-            setOutletName(omRow[0].branches?.name || "");
+            setBranchId(omRow[0].branch_id);
+            setBranchName(omRow[0].branches?.name || "");
           }
         }
       });
   }, [userId]);
 
   const load = useCallback(async () => {
-    if (!outletId) return;
+    if (!branchId) return;
     setLoading(true);
     try {
       const now            = new Date();
@@ -206,19 +206,19 @@ export default function Reports() {
       ] = await Promise.all([
         supabase.from("staff")
           .select("staff_id, staff_type, is_active, users:user_id(full_name)")
-          .eq("branch_id", outletId),
+          .eq("branch_id", branchId),
         supabase.from("shifts")
           .select("shift_id, status, shift_date")
-          .eq("branch_id", outletId)
+          .eq("branch_id", branchId)
           .order("shift_date"),
         supabase.from("task_assignments")
           .select("assignment_id, staff_id, staff:staff_id(users:user_id(full_name)), shifts!inner(shift_date, branch_id)")
-          .eq("shifts.branch_id", outletId)
+          .eq("shifts.branch_id", branchId)
           .gte("shifts.shift_date", periodStartStr)
           .lte("shifts.shift_date", todayStr),
         supabase.from("task_assignments")
           .select("assignment_id, shifts!inner(shift_date, branch_id)")
-          .eq("shifts.branch_id", outletId)
+          .eq("shifts.branch_id", branchId)
           .gte("shifts.shift_date", prevStartStr)
           .lt("shifts.shift_date", periodStartStr),
       ]);
@@ -370,14 +370,14 @@ export default function Reports() {
     } finally {
       setLoading(false);
     }
-  }, [outletId, days]);
+  }, [branchId, days]);
 
   useEffect(() => { load(); }, [load]);
 
   function downloadCSV() {
     const today = new Date().toISOString().slice(0, 10);
     const lines = [];
-    lines.push(`${outletName || "Outlet"} — Manager Report (${PERIODS[period].label})`);
+    lines.push(`${branchName || "Branch"} — Manager Report (${PERIODS[period].label})`);
     lines.push(`Generated,${today}`);
     lines.push(""); lines.push("KPI SUMMARY"); lines.push("Metric,Value");
     lines.push(`Active Staff,${kpis.staff}`);
@@ -404,7 +404,7 @@ export default function Reports() {
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
-    a.href = url; a.download = `outlet-report-${PERIODS[period].label}-${today}.csv`; a.click();
+    a.href = url; a.download = `branch-report-${PERIODS[period].label}-${today}.csv`; a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -419,7 +419,7 @@ export default function Reports() {
           <div>
             <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>Reports</h2>
             <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {outletName ? `${outletName} — ` : ""}Outlet performance overview
+              {branchName ? `${branchName} — ` : ""}Branch performance overview
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>

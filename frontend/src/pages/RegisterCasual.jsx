@@ -48,7 +48,7 @@ export default function RegisterCasual() {
             <p style={{ fontSize: "14px", color: "#64748B", lineHeight: 1.6, maxWidth: "320px", margin: "0 auto 28px" }}>
               Your application is now pending review. The business owner will approve or reject your account shortly. You'll receive a notification once it's reviewed.
             </p>
-            <button onClick={() => navigate("/outlet-casual-staff/dashboard")} style={s.btn}>
+            <button onClick={() => navigate("/casual-staff/dashboard")} style={s.btn}>
               Go to Dashboard
             </button>
           </div>

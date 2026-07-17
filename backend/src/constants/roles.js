@@ -3,11 +3,11 @@ const ROLES = {
 
     BUSINESS_OWNER: "business_owner",
 
-    OUTLET_MANAGER: "outlet_manager",
+    BRANCH_MANAGER: "manager",
 
     REGULAR_STAFF: "regular_staff",
 
-    OUTLET_CASUAL_STAFF: "outlet_casual_staff",
+    BRANCH_CASUAL_STAFF: "casual_staff",
 
     KREWBY_CASUAL_WORKER: "krewby_casual_worker"
 };

@@ -180,7 +180,7 @@ export default function BOSkills() {
             <p style={{ fontSize: "13px", color: "#94A3B8", maxWidth: "320px", margin: "0 auto", lineHeight: 1.6 }}>
               {search
                 ? "Try a different keyword or clear the search."
-                : "Skills will appear here once they're assigned to your branches via the Outlets settings."}
+                : "Skills will appear here once they're assigned to your branches via the Branches settings."}
             </p>
           </div>
         ) : (

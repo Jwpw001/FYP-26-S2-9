@@ -27,9 +27,9 @@ const PERIODS = [
 
 const ROLE_LABELS = {
   system_admin:          "System Admin",
-  outlet_manager:        "Outlet Manager",
+  manager:        "Manager",
   regular_staff:         "Regular Staff",
-  outlet_casual_staff:   "Casual Staff",
+  casual_staff:   "Casual Staff",
   krewby_casual_worker:  "Krewby Worker",
   business_owner:        "Business Owner",
 };
@@ -37,7 +37,7 @@ const ROLE_LABELS = {
 const ROLE_COLORS = {
   "System Admin":    "#0F172A",
   "Business Owner":  "#7C3AED",
-  "Outlet Manager":  "#059669",
+  "Manager":  "#059669",
   "Regular Staff":   "#2563EB",
   "Casual Staff":    "#D97706",
   "Krewby Worker":   "#DB2777",

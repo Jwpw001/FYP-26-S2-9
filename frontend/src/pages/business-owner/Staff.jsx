@@ -170,23 +170,23 @@ function CasualBlock({ casuals, goTo }) {
 
 /* ── Org view root ── */
 function OrgView({ people, goTo }) {
-  const outletMap = new Map();
+  const branchMap = new Map();
   const casuals = [];
 
   people.forEach(p => {
     if (p.type === "casual") {
       casuals.push(p);
     } else {
-      if (!outletMap.has(p.branch_id)) {
-        outletMap.set(p.branch_id, { id: p.branch_id, name: p.outlet_name || "Unnamed Branch", managers: [], regular: [] });
+      if (!branchMap.has(p.branch_id)) {
+        branchMap.set(p.branch_id, { id: p.branch_id, name: p.branch_name || "Unnamed Branch", managers: [], regular: [] });
       }
-      const b = outletMap.get(p.branch_id);
+      const b = branchMap.get(p.branch_id);
       if (p.type === "manager") b.managers.push(p);
       else b.regular.push(p);
     }
   });
 
-  const branches = [...outletMap.values()];
+  const branches = [...branchMap.values()];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -208,7 +208,7 @@ export default function BOStaff() {
   const [people, setPeople] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterOutlet, setFilterOutlet] = useState("all");
+  const [filterBranch, setFilterBranch] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [view, setView] = useState("org"); // "list" | "org"
@@ -219,7 +219,7 @@ export default function BOStaff() {
       api.get("/api/business/managers"),
     ]).then(([staffRes, mgrRes]) => {
       const staffRows = (staffRes.staff || [])
-        .filter(s => s.users?.role !== "outlet_manager")
+        .filter(s => s.users?.role !== "manager")
         .map(s => ({
           key: `staff-${s.staff_id}`,
           nav: `/business-owner/staff/${s.staff_id}`,
@@ -227,7 +227,7 @@ export default function BOStaff() {
           email: s.users?.email || "—",
           type: s.staff_type === "regular" ? "regular" : "casual",
           branch_id: s.branch_id,
-          outlet_name: s.outlet_name,
+          branch_name: s.branch_name,
           is_active: s.is_active,
         }));
       const managerRows = (mgrRes.managers || []).map(m => ({
@@ -237,22 +237,22 @@ export default function BOStaff() {
         email: m.email || "—",
         type: "manager",
         branch_id: m.branch_id,
-        outlet_name: m.outlet_name,
+        branch_name: m.branch_name,
         is_active: m.is_active,
       }));
       setPeople([...managerRows, ...staffRows]);
     }).finally(() => setLoading(false));
   }, []);
 
-  const outlets = [...new Map(people.map(p => [p.branch_id, p.outlet_name])).entries()];
+  const branches = [...new Map(people.map(p => [p.branch_id, p.branch_name])).entries()];
 
   const filtered = people.filter(p => {
     const q = search.toLowerCase();
     const matchSearch = p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q);
-    const matchOutlet = filterOutlet === "all" || String(p.branch_id) === filterOutlet;
+    const matchBranch = filterBranch === "all" || String(p.branch_id) === filterBranch;
     const matchType = filterType === "all" || p.type === filterType;
     const matchStatus = filterStatus === "all" || (filterStatus === "active" ? p.is_active : !p.is_active);
-    return matchSearch && matchOutlet && matchType && matchStatus;
+    return matchSearch && matchBranch && matchType && matchStatus;
   });
 
   const managerCount = people.filter(p => p.type === "manager").length;
@@ -283,7 +283,7 @@ export default function BOStaff() {
           <div>
             <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>All Staff</h2>
             <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {loading ? "Loading…" : `${activeCount} active · ${inactiveCount} inactive · ${people.length} total across all outlets`}
+              {loading ? "Loading…" : `${activeCount} active · ${inactiveCount} inactive · ${people.length} total across all branches`}
             </p>
           </div>
           {/* View toggle */}
@@ -325,10 +325,10 @@ export default function BOStaff() {
                   placeholder="Search by name or email…"
                   style={{ width: "100%", padding: "9px 13px 9px 36px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#FFF", color: "#1E293B", outline: "none", boxSizing: "border-box" }} />
               </div>
-              <select value={filterOutlet} onChange={e => setFilterOutlet(e.target.value)}
+              <select value={filterBranch} onChange={e => setFilterBranch(e.target.value)}
                 style={{ padding: "9px 13px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#FFF", color: "#1E293B", cursor: "pointer" }}>
-                <option value="all">All outlets</option>
-                {outlets.map(([id, name]) => <option key={id} value={String(id)}>{name}</option>)}
+                <option value="all">All branches</option>
+                {branches.map(([id, name]) => <option key={id} value={String(id)}>{name}</option>)}
               </select>
             </div>
           </>
@@ -384,7 +384,7 @@ export default function BOStaff() {
                         {badge.label}
                       </span>
                       <span style={{ display: "flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: "#F1F5F9", color: "#475569" }}>
-                        <Building2 size={11} /> {p.outlet_name}
+                        <Building2 size={11} /> {p.branch_name}
                       </span>
                     </div>
                     <div style={{ paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>

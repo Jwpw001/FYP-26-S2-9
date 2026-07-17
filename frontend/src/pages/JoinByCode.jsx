@@ -4,9 +4,9 @@ import { getUser, setUser } from "../utils/auth";
 import { CheckCircle2 } from "lucide-react";
 
 const DASHBOARD = {
-  outlet_manager:      "/outlet-manager/dashboard",
+  manager:      "/manager/dashboard",
   regular_staff:       "/regular-staff/dashboard",
-  outlet_casual_staff: "/outlet-casual-staff/dashboard",
+  casual_staff: "/casual-staff/dashboard",
   business_owner:      "/business-owner/dashboard",
   system_admin:        "/system-admin/dashboard",
 };
@@ -138,7 +138,7 @@ export default function JoinByCode() {
               <p style={{ fontSize: "13px", color: "#166534", fontWeight: "600" }}>
                 Invitation: <strong>{roleLabel(invite?.role)}</strong>
               </p>
-              {invite?.outlet_name && <p style={{ fontSize: "12px", color: "#4ADE80", marginTop: "3px" }}>Outlet: {invite.outlet_name}</p>}
+              {invite?.branch_name && <p style={{ fontSize: "12px", color: "#4ADE80", marginTop: "3px" }}>Branch: {invite.branch_name}</p>}
               <p style={{ fontSize: "12px", color: "#16A34A", marginTop: "3px" }}>For: {invite?.email}</p>
             </div>
 
@@ -156,7 +156,7 @@ export default function JoinByCode() {
               </>
             ) : (
               <>
-                <h2 style={s.title}>Join this outlet</h2>
+                <h2 style={s.title}>Join this branch</h2>
                 <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>How would you like to continue?</p>
                 <button onClick={() => setStep("signup")} style={s.btnPrimary}>Create New Account</button>
                 <div style={{ textAlign: "center", margin: "12px 0", fontSize: "12px", color: "#94A3B8" }}>— or —</div>

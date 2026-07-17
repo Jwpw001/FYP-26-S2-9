@@ -236,8 +236,8 @@ const resetPassword = async (req, res) => {
 // Used by managers to create staff accounts (bypasses email domain restrictions)
 const createStaffAccount = async (req, res) => {
     try {
-        const { full_name, username, email: rawEmail, password, role, branch_id: branch_id_body, outlet_id, staff_type, default_work_days, hired_at, skill_ids, skill_assignments } = req.body;
-        const resolvedBranchId = branch_id_body ?? outlet_id;
+        const { full_name, username, email: rawEmail, password, role, branch_id: branch_id_body, branch_id, staff_type, default_work_days, hired_at, skill_ids, skill_assignments } = req.body;
+        const resolvedBranchId = branch_id_body ?? branch_id;
         const email = rawEmail?.trim().toLowerCase();
 
         if (!email || !password || !full_name || !username) {
@@ -391,10 +391,10 @@ const createWorkerAccount = async (req, res) => {
     }
 };
 
-// Used by system admin to create outlet manager accounts
+// Used by system admin to create manager accounts
 const createManagerAccount = async (req, res) => {
     try {
-        const { full_name, username, email: rawEmail, password, outlet_id } = req.body;
+        const { full_name, username, email: rawEmail, password, branch_id } = req.body;
         const email = rawEmail?.trim().toLowerCase();
 
         if (!email || !password || !full_name || !username) {
@@ -418,7 +418,7 @@ const createManagerAccount = async (req, res) => {
         }
 
         const newUser = await prisma.users.create({
-            data: { full_name, username, email, role: "outlet_manager", is_active: true },
+            data: { full_name, username, email, role: "manager", is_active: true },
         });
 
         return res.status(201).json({

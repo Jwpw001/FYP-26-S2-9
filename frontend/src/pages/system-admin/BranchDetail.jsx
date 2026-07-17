@@ -5,9 +5,9 @@ import AdminLayout from "../../components/layout/AdminLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { ArrowLeft, MapPin, Users, ShieldCheck } from "lucide-react";
 
-if (typeof document !== "undefined" && !document.getElementById("sa-outlet-kf")) {
+if (typeof document !== "undefined" && !document.getElementById("sa-branch-kf")) {
   const st = document.createElement("style");
-  st.id = "sa-outlet-kf";
+  st.id = "sa-branch-kf";
   st.textContent = `
     @keyframes pageIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
     @keyframes fadeSlideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
@@ -28,11 +28,11 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />;
 }
 
-export default function OutletDetail() {
+export default function BranchDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const goTo = useGoTo();
-  const [outlet,   setOutlet]   = useState(null);
+  const [branch,   setBranch]   = useState(null);
   const [managers, setManagers] = useState([]);
   const [staff,    setStaff]    = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -41,13 +41,13 @@ export default function OutletDetail() {
 
   async function load() {
     setLoading(true);
-    const [{ data: outletData }, { data: allStaff }, { data: skillData }] = await Promise.all([
+    const [{ data: branchData }, { data: allStaff }, { data: skillData }] = await Promise.all([
       supabase.from("branches").select("branch_id, name, address, business_id, businesses(name)").eq("branch_id", id).single(),
       supabase.from("staff").select("staff_id, staff_type, is_active, user_id, users(user_id, full_name, email, role)").eq("branch_id", id).order("staff_id"),
       supabase.from("user_skill_tags").select("user_id, skills(name)"),
     ]);
-    if (!outletData) { navigate(-1); return; }
-    setOutlet(outletData);
+    if (!branchData) { navigate(-1); return; }
+    setBranch(branchData);
 
     const skillMap = {};
     (skillData || []).forEach(r => {
@@ -56,21 +56,21 @@ export default function OutletDetail() {
     });
 
     const rows = (allStaff || []).map(s => ({ ...s, skillNames: skillMap[s.user_id] || [] }));
-    setManagers(rows.filter(s => s.users?.role === "outlet_manager").map(s => ({ ...s, is_primary: true })));
-    setStaff(rows.filter(s => s.users?.role !== "outlet_manager"));
+    setManagers(rows.filter(s => s.users?.role === "manager").map(s => ({ ...s, is_primary: true })));
+    setStaff(rows.filter(s => s.users?.role !== "manager"));
     setLoading(false);
   }
 
   const activeCount = staff.filter(s => s.is_active).length;
-  const backPath = `/system-admin/outlets/${id}`;
+  const backPath = `/system-admin/branches/${id}`;
 
   return (
-    <AdminLayout title="Outlet Staff">
+    <AdminLayout title="Branch Staff">
       <div style={{ animation: "pageIn 0.35s ease both" }}>
 
-        <button onClick={() => goTo(`/system-admin/businesses/${outlet?.business_id ?? ""}`)}
+        <button onClick={() => goTo(`/system-admin/businesses/${branch?.business_id ?? ""}`)}
           style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "22px", padding: 0 }}>
-          <ArrowLeft size={15} /> Back to {outlet?.businesses?.name ?? "Business"}
+          <ArrowLeft size={15} /> Back to {branch?.businesses?.name ?? "Business"}
         </button>
 
         {loading ? (
@@ -83,16 +83,16 @@ export default function OutletDetail() {
           </div>
         ) : (
           <>
-            {/* Outlet header */}
+            {/* Branch header */}
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: "16px" }}>
-              <div style={{ width: "56px", height: "56px", borderRadius: "14px", background: avatarColor(outlet.name), color: "#FFF", fontSize: "20px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {outlet.name[0]?.toUpperCase()}
+              <div style={{ width: "56px", height: "56px", borderRadius: "14px", background: avatarColor(branch.name), color: "#FFF", fontSize: "20px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {branch.name[0]?.toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
-                <h2 style={{ fontSize: "17px", fontWeight: "800", color: "#0F172A" }}>{outlet.name}</h2>
-                {outlet.address && (
+                <h2 style={{ fontSize: "17px", fontWeight: "800", color: "#0F172A" }}>{branch.name}</h2>
+                {branch.address && (
                   <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <MapPin size={12} /> {outlet.address}
+                    <MapPin size={12} /> {branch.address}
                   </p>
                 )}
               </div>
@@ -117,7 +117,7 @@ export default function OutletDetail() {
               </div>
 
               {managers.length === 0 ? (
-                <p style={{ fontSize: "13px", color: "#CBD5E1", fontStyle: "italic" }}>No managers assigned to this outlet.</p>
+                <p style={{ fontSize: "13px", color: "#CBD5E1", fontStyle: "italic" }}>No managers assigned to this branch.</p>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: "14px" }}>
                   {managers.map((m, i) => {
@@ -174,7 +174,7 @@ export default function OutletDetail() {
                     <Users size={22} color="#3B82F6" />
                   </div>
                   <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>No staff assigned</p>
-                  <p style={{ fontSize: "13px", color: "#94A3B8" }}>Staff assigned to this outlet will appear here.</p>
+                  <p style={{ fontSize: "13px", color: "#94A3B8" }}>Staff assigned to this branch will appear here.</p>
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: "16px" }}>

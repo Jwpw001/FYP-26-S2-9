@@ -39,7 +39,7 @@ export default function BusinessDetail() {
   const navigate = useNavigate();
 
   const [business, setBusiness] = useState(null);
-  const [outlets, setOutlets]   = useState([]);
+  const [branches, setBranches]   = useState([]);
   const [loading, setLoading]   = useState(true);
   const [planSaving, setPlanSaving] = useState(false);
 
@@ -47,13 +47,13 @@ export default function BusinessDetail() {
 
   async function load() {
     setLoading(true);
-    const [{ data: biz }, { data: outletRows }] = await Promise.all([
+    const [{ data: biz }, { data: branchRows }] = await Promise.all([
       supabase.from("businesses").select("business_id, name, description, created_at, plan").eq("business_id", id).single(),
       supabase.from("branches").select("branch_id, name, address, staff(staff_id)").eq("business_id", id).order("name"),
     ]);
     if (!biz) { navigate("/system-admin/businesses"); return; }
     setBusiness(biz);
-    setOutlets(outletRows || []);
+    setBranches(branchRows || []);
     setLoading(false);
   }
 
@@ -65,7 +65,7 @@ export default function BusinessDetail() {
   }
 
   const bizColor = business ? avatarColor(business.name) : "#3B82F6";
-  const totalStaff = outlets.reduce((sum, o) => sum + (o.staff?.length ?? 0), 0);
+  const totalStaff = branches.reduce((sum, o) => sum + (o.staff?.length ?? 0), 0);
 
   return (
     <AdminLayout title="Business Detail">
@@ -140,8 +140,8 @@ export default function BusinessDetail() {
               <div style={{ display: "flex", gap: "10px", marginTop: "20px", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "7px", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "10px", padding: "8px 14px" }}>
                   <GitBranch size={13} color="#2563EB" />
-                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#2563EB" }}>{outlets.length}</span>
-                  <span style={{ fontSize: "12px", color: "#3B82F6", fontWeight: "500" }}>{outlets.length === 1 ? "Branch" : "Branches"}</span>
+                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#2563EB" }}>{branches.length}</span>
+                  <span style={{ fontSize: "12px", color: "#3B82F6", fontWeight: "500" }}>{branches.length === 1 ? "Branch" : "Branches"}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "7px", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "10px", padding: "8px 14px" }}>
                   <Users size={13} color="#16A34A" />
@@ -164,11 +164,11 @@ export default function BusinessDetail() {
               <div style={{ marginBottom: "18px" }}>
                 <h3 style={{ fontSize: "15px", fontWeight: "800", color: "#0F172A" }}>Branches</h3>
                 <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "3px" }}>
-                  {outlets.length} {outlets.length === 1 ? "branch" : "branches"} under this business
+                  {branches.length} {branches.length === 1 ? "branch" : "branches"} under this business
                 </p>
               </div>
 
-              {outlets.length === 0 ? (
+              {branches.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 20px" }}>
                   <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
                     <GitBranch size={22} color="#3B82F6" />
@@ -178,20 +178,20 @@ export default function BusinessDetail() {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: "12px" }}>
-                  {outlets.map((outlet, i) => {
-                    const oColor = avatarColor(outlet.name);
-                    const staffCount = outlet.staff?.length ?? 0;
+                  {branches.map((branch, i) => {
+                    const oColor = avatarColor(branch.name);
+                    const staffCount = branch.staff?.length ?? 0;
                     return (
-                      <div key={outlet.branch_id} className="branch-card"
-                        onClick={() => navigate(`/system-admin/outlets/${outlet.branch_id}`)}
+                      <div key={branch.branch_id} className="branch-card"
+                        onClick={() => navigate(`/system-admin/branches/${branch.branch_id}`)}
                         style={{ display: "flex", alignItems: "center", gap: "14px", padding: "16px 18px", border: "1px solid #E2E8F0", borderRadius: "14px", background: "#FAFAFA", animation: `fadeSlideUp 0.25s ease ${i * 0.04}s both`, cursor: "pointer" }}>
                         <div style={{ width: "42px", height: "42px", borderRadius: "11px", background: oColor, color: "#FFF", fontSize: "16px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          {outlet.name[0]?.toUpperCase()}
+                          {branch.name[0]?.toUpperCase()}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{outlet.name}</p>
+                          <p style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{branch.name}</p>
                           <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {outlet.address || <span style={{ fontStyle: "italic", color: "#CBD5E1" }}>No address set</span>}
+                            {branch.address || <span style={{ fontStyle: "italic", color: "#CBD5E1" }}>No address set</span>}
                           </p>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 }}>

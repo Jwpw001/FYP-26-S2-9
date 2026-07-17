@@ -24,10 +24,10 @@ router.get(
     "/",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getNotifications
@@ -37,10 +37,10 @@ router.get(
     "/:id",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getNotificationById
@@ -50,7 +50,7 @@ router.post(
     "/",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN
     ),
     validate(createNotificationSchema),
@@ -61,7 +61,7 @@ router.patch(
     "/:id",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN
     ),
     validate(updateNotificationSchema),
@@ -72,7 +72,7 @@ router.delete(
     "/:id",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN
     ),
     deleteNotification

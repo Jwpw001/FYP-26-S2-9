@@ -4,9 +4,9 @@ import { getUser, setUser } from "../utils/auth";
 import { X, CheckCircle2 } from "lucide-react";
 
 const DASHBOARD = {
-  outlet_manager:      "/outlet-manager/dashboard",
+  manager:      "/manager/dashboard",
   regular_staff:       "/regular-staff/dashboard",
-  outlet_casual_staff: "/outlet-casual-staff/dashboard",
+  casual_staff: "/casual-staff/dashboard",
   business_owner:      "/business-owner/dashboard",
   system_admin:        "/system-admin/dashboard",
 };
@@ -125,8 +125,8 @@ export default function AcceptInvite() {
               <p style={{ fontSize: "13px", color: "#166534", fontWeight: "600" }}>
                 You've been invited as <strong>{roleLabel(invite?.role)}</strong>
               </p>
-              {invite?.outlet_name && (
-                <p style={{ fontSize: "12px", color: "#4ADE80", marginTop: "3px" }}>Outlet: {invite.outlet_name}</p>
+              {invite?.branch_name && (
+                <p style={{ fontSize: "12px", color: "#4ADE80", marginTop: "3px" }}>Branch: {invite.branch_name}</p>
               )}
             </div>
 
@@ -135,7 +135,7 @@ export default function AcceptInvite() {
               <>
                 <h2 style={s.title}>Accept Invitation</h2>
                 <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>
-                  You're logged in as <strong>{loggedInUser.full_name || loggedInUser.email}</strong>. Accept this invitation to join the outlet.
+                  You're logged in as <strong>{loggedInUser.full_name || loggedInUser.email}</strong>. Accept this invitation to join the branch.
                 </p>
                 {formError && <p style={s.errorBox}>{formError}</p>}
                 <button onClick={acceptAsExisting} disabled={submitting} style={s.btnPrimary}>

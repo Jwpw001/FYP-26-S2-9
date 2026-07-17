@@ -66,9 +66,9 @@ function CountUp({ end, suffix = "", duration = 1400 }) {
 const ROLE_ROUTES = {
   system_admin:         "/system-admin/dashboard",
   business_owner:       "/business-owner/dashboard",
-  outlet_manager:       "/outlet-manager/dashboard",
+  manager:       "/manager/dashboard",
   regular_staff:        "/regular-staff/dashboard",
-  outlet_casual_staff:  "/outlet-casual-staff/dashboard",
+  casual_staff:  "/casual-staff/dashboard",
 };
 
 /* ─────────────────────────────────────────────
@@ -769,7 +769,7 @@ const s = {
   workerCardDivider:{ height:"1px", background:"rgba(255,255,255,0.07)", marginBottom:"16px" },
   workerCardLabel:  { fontSize:"11px", fontWeight:"700", color:"#475569", letterSpacing:"0.05em", textTransform:"uppercase", marginBottom:"12px" },
   workerShiftRow:   { display:"flex", alignItems:"center", gap:"10px", paddingBottom:"12px", marginBottom:"12px", borderBottom:"1px solid rgba(255,255,255,0.05)" },
-  workerShiftOutlet:{ fontSize:"13px", fontWeight:"600", color:"#E2E8F0", marginBottom:"3px" },
+  workerShiftBranch:{ fontSize:"13px", fontWeight:"600", color:"#E2E8F0", marginBottom:"3px" },
   workerShiftTime:  { fontSize:"11px", color:"#475569" },
   workerShiftTag:   { fontSize:"11px", fontWeight:"700", padding:"3px 9px", borderRadius:"6px", flexShrink:0 },
   workerCardFooter: { display:"flex", gap:"16px", marginTop:"4px" },

@@ -1,7 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 
-async function getCallerOutletId(userId) {
+async function getCallerBranchId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
   if (s?.branch_id) return s.branch_id;
   const { data: mgr } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1).maybeSingle();
@@ -10,14 +10,14 @@ async function getCallerOutletId(userId) {
 
 const getAvailability = async (req, res) => {
   try {
-    const outletId = await getCallerOutletId(req.user.user_id);
-    if (!outletId) return res.status(403).json({ success: false, message: "No outlet found for your account." });
+    const branchId = await getCallerBranchId(req.user.user_id);
+    if (!branchId) return res.status(403).json({ success: false, message: "No branch found for your account." });
 
-    const outletStaff = await prisma.staff.findMany({
-      where: { branch_id: outletId },
+    const branchStaff = await prisma.staff.findMany({
+      where: { branch_id: branchId },
       select: { staff_id: true },
     });
-    const staffIds = outletStaff.map(s => s.staff_id);
+    const staffIds = branchStaff.map(s => s.staff_id);
 
     const availability = await prisma.availability.findMany({
       where: { staff_id: { in: staffIds } },
@@ -35,7 +35,7 @@ const getAvailability = async (req, res) => {
 const getAvailabilityById = async (req, res) => {
   try {
     const requestId = Number(req.params.id);
-    const outletId = await getCallerOutletId(req.user.user_id);
+    const branchId = await getCallerBranchId(req.user.user_id);
 
     const availability = await prisma.availability.findUnique({
       where: { request_id: requestId },
@@ -45,7 +45,7 @@ const getAvailabilityById = async (req, res) => {
     });
 
     if (!availability) return res.status(404).json({ success: false, message: "Availability request not found" });
-    if (outletId && availability.staff?.branch_id !== outletId)
+    if (branchId && availability.staff?.branch_id !== branchId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
     res.json({ success: true, availability });

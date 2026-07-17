@@ -24,10 +24,10 @@ router.get(
     "/",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF
+        ROLES.BRANCH_CASUAL_STAFF
     ),
     getAttendance
 );
@@ -36,10 +36,10 @@ router.get(
     "/:id",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF
+        ROLES.BRANCH_CASUAL_STAFF
     ),
     getAttendanceById
 );
@@ -48,10 +48,10 @@ router.post(
     "/",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF
+        ROLES.BRANCH_CASUAL_STAFF
     ),
     validate(createAttendanceSchema),
     createAttendance
@@ -61,10 +61,10 @@ router.patch(
     "/:id",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF
+        ROLES.BRANCH_CASUAL_STAFF
     ),
     validate(updateAttendanceSchema),
     updateAttendance
@@ -74,7 +74,7 @@ router.delete(
     "/:id",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN
     ),
     deleteAttendance

@@ -96,13 +96,13 @@ export default function CreateAccount() {
             Create your Krewby account
           </h1>
           <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.8)", lineHeight: 1.7, maxWidth: "380px" }}>
-            Sign up and your manager or system administrator will assign your role and outlet once you're set up.
+            Sign up and your manager or system administrator will assign your role and branch once you're set up.
           </p>
 
           <div style={{ marginTop: "40px", display: "flex", flexDirection: "column", gap: "20px" }}>
             {[
               [PenLine, "Quick sign-up", "Just your name, email, and a password to get started."],
-              [Briefcase, "Role assigned for you", "Your manager links your account to the right outlet and role."],
+              [Briefcase, "Role assigned for you", "Your manager links your account to the right branch and role."],
               [Key, "Ready to log in", "Once assigned, sign in and access your dashboard right away."],
             ].map(([Icon, title, desc]) => (
               <div key={title} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>

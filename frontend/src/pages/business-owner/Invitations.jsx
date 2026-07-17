@@ -36,23 +36,23 @@ const STATUS_META = {
 };
 
 const ROLE_META = {
-  outlet_manager:      { label: "Branch Manager", bg: "#EDE9FE", text: "#7C3AED", icon: "shield" },
+  manager:      { label: "Branch Manager", bg: "#EDE9FE", text: "#7C3AED", icon: "shield" },
   regular_staff:       { label: "Regular Staff", bg: "#EFF6FF", text: "#3B82F6", icon: "user" },
-  outlet_casual_staff: { label: "Casual Staff", bg: "#FFF7ED", text: "#EA580C", icon: "clock" },
+  casual_staff: { label: "Casual Staff", bg: "#FFF7ED", text: "#EA580C", icon: "clock" },
 };
 
 const ROLES = [
-  { value: "outlet_manager",      label: "Branch Manager" },
+  { value: "manager",      label: "Branch Manager" },
   { value: "regular_staff",       label: "Regular Staff" },
-  { value: "outlet_casual_staff", label: "Casual Staff" },
+  { value: "casual_staff", label: "Casual Staff" },
 ];
 
 export default function BOInvitations() {
   const [invites, setInvites] = useState([]);
-  const [outlets, setOutlets] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ email: "", role: "outlet_manager", branch_id: "" });
+  const [form, setForm] = useState({ email: "", role: "manager", branch_id: "" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successCode, setSuccessCode] = useState(null);
@@ -66,10 +66,10 @@ export default function BOInvitations() {
     setLoading(true);
     Promise.all([
       api.get("/api/invitations").catch(() => ({ invitations: [] })),
-      api.get("/api/business/outlets").catch(() => ({ outlets: [] })),
+      api.get("/api/business/branches").catch(() => ({ branches: [] })),
     ]).then(([inv, out]) => {
       setInvites(inv.invitations || []);
-      setOutlets(out.outlets || []);
+      setBranches(out.branches || []);
     }).finally(() => setLoading(false));
   };
 
@@ -84,7 +84,7 @@ export default function BOInvitations() {
       const resp = await api.post("/api/invitations/send", body);
       setSuccessCode({ code: resp.code, email: form.email, link: resp.invite_link });
       setShowForm(false);
-      setForm({ email: "", role: "outlet_manager", branch_id: "" });
+      setForm({ email: "", role: "manager", branch_id: "" });
       load();
     } catch (err) {
       if (err.limitReached) {
@@ -237,7 +237,7 @@ export default function BOInvitations() {
                     <label style={sty.label}><Building2 size={12} style={{ marginRight: "4px" }} /> Branch</label>
                     <select value={form.branch_id} onChange={e => setForm(p => ({ ...p, branch_id: e.target.value }))} required style={sty.input}>
                       <option value="">Select branch</option>
-                      {outlets.map(o => <option key={o.branch_id} value={o.branch_id}>{o.name}</option>)}
+                      {branches.map(o => <option key={o.branch_id} value={o.branch_id}>{o.name}</option>)}
                     </select>
                   </div>
                 </div>

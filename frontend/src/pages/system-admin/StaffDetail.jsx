@@ -28,7 +28,7 @@ export default function AdminStaffDetail() {
     setLoading(true);
     const { data: staffRow } = await supabase
       .from("staff")
-      .select("staff_id,staff_type,default_work_days,hired_at,is_active,outlet_id,users(user_id,full_name,email),outlets(name)")
+      .select("staff_id,staff_type,default_work_days,hired_at,is_active,branch_id,users(user_id,full_name,email),branches(name)")
       .eq("staff_id", id).single();
 
     if (!staffRow) { goTo("/system-admin/staff"); return; }
@@ -60,12 +60,12 @@ export default function AdminStaffDetail() {
           <h2 style={s.profileName}>{name}</h2>
           <p style={s.profileEmail}>{member.users?.email}</p>
           <span style={{ ...s.typeBadge, background: member.staff_type==="regular"?"#DBEAFE":"#F3E8FF", color: member.staff_type==="regular"?"#1E40AF":"#6B21A8" }}>
-            {member.staff_type==="regular"?"Regular Staff":"Outlet Casual"}
+            {member.staff_type==="regular"?"Regular Staff":"Branch Casual"}
           </span>
 
           {member.branches?.name && (
             <div style={s.metaRow}>
-              <span style={s.metaLabel}>Outlet</span>
+              <span style={s.metaLabel}>Branch</span>
               <span style={s.metaVal}>{member.branches.name}</span>
             </div>
           )}
@@ -84,7 +84,7 @@ export default function AdminStaffDetail() {
 
           <div style={{ marginTop:"16px", padding:"12px", background:"#F8FAFC", borderRadius:"9px", border:"1px solid #F1F5F9" }}>
             <p style={{ fontSize:"12px", color:"#94A3B8", textAlign:"center", lineHeight:1.5 }}>
-              Staff management is handled by the outlet manager.
+              Staff management is handled by the manager.
             </p>
           </div>
         </div>
@@ -96,7 +96,7 @@ export default function AdminStaffDetail() {
           <div style={s.fields}>
             <Field label="Full Name"><p style={s.value}>{member.users?.full_name}</p></Field>
             <Field label="Email"><p style={s.value}>{member.users?.email}</p></Field>
-            <Field label="Staff Type"><p style={s.value}>{member.staff_type==="regular"?"Regular Staff":"Outlet Casual Staff"}</p></Field>
+            <Field label="Staff Type"><p style={s.value}>{member.staff_type==="regular"?"Regular Staff":"Casual Staff"}</p></Field>
             {member.staff_type==="regular" && (
               <Field label="Default Work Days">
                 <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>

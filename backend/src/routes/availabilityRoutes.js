@@ -24,9 +24,9 @@ router.get(
     "/",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
         ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
@@ -37,9 +37,9 @@ router.get(
     "/:id",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
         ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
@@ -50,9 +50,9 @@ router.post(
     "/",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
         ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
@@ -64,9 +64,9 @@ router.patch(
     "/:id",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
         ROLES.SYSTEM_ADMIN,
         ROLES.KREWBY_CASUAL_WORKER
     ),
@@ -78,7 +78,7 @@ router.delete(
     "/:id",
     verifyToken,
     allowRoles(
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN
     ),
     deleteAvailability

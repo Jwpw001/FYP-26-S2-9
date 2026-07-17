@@ -226,7 +226,7 @@ export default function StaffDashboard() {
                 <p style={{ fontSize:"16px", fontWeight:"700", color:"#1E293B" }}>{todayShift.shifts?.title || "Shift"}</p>
                 <p style={{ fontSize:"13px", color:"#64748B", marginTop:"3px" }}>
                   {todayShift.shifts?.start_time?.slice(0,5)} – {todayShift.shifts?.end_time?.slice(0,5)}
-                  {todayShift.shifts?.outlets?.name && ` · ${todayShift.shifts.outlets.name}`}
+                  {todayShift.shifts?.branches?.name && ` · ${todayShift.shifts.branches.name}`}
                 </p>
               </div>
 
@@ -288,7 +288,7 @@ export default function StaffDashboard() {
                   <p style={{ fontSize:"14px", fontWeight:"600", color:"#1E293B", marginBottom:"2px" }}>{a.shifts?.title || "Shift"}</p>
                   <p style={{ fontSize:"12px", color:"#64748B" }}>
                     {a.shifts?.start_time?.slice(0,5)} – {a.shifts?.end_time?.slice(0,5)}
-                    {a.shifts?.outlets?.name && ` · ${a.shifts.outlets.name}`}
+                    {a.shifts?.branches?.name && ` · ${a.shifts.branches.name}`}
                   </p>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"4px" }}>

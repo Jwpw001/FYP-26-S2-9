@@ -25,7 +25,7 @@ router.get(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN
     ),
     getReports
@@ -36,7 +36,7 @@ router.get(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN
     ),
     getReportById
@@ -47,7 +47,7 @@ router.post(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN
     ),
     validate(createReportSchema),
@@ -59,7 +59,7 @@ router.patch(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN
     ),
     validate(updateReportSchema),
@@ -71,7 +71,7 @@ router.delete(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER
+        ROLES.BRANCH_MANAGER
     ),
     deleteReport
 );

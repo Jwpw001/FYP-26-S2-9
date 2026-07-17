@@ -89,7 +89,7 @@ function ActionCard({ Icon, label, sub, color, bg, onClick, delay }) {
 }
 
 const ACTIONS = [
-  { Icon: Building2, label: "Branches",    sub: "Manage your locations",   color: "#D97706", bg: "#FEF3C7", link: "/business-owner/outlets" },
+  { Icon: Building2, label: "Branches",    sub: "Manage your locations",   color: "#D97706", bg: "#FEF3C7", link: "/business-owner/branches" },
   { Icon: Users,     label: "Workforce",   sub: "View all staff members",  color: "#2563EB", bg: "#EFF6FF", link: "/business-owner/staff" },
   { Icon: UserPlus,  label: "Invitations", sub: "Pending join requests",   color: "#0891B2", bg: "#ECFEFF", link: "/business-owner/invitations" },
   { Icon: Tag,       label: "Skill Tags",  sub: "Categorise staff skills", color: "#059669", bg: "#ECFDF5", link: "/business-owner/skills" },
@@ -185,8 +185,8 @@ export default function BODashboard() {
             <>
               <StatCard
                 Icon={Building2} label="Branches" sub="Across your business"
-                value={stats?.outlets_count ?? 0} color="#D97706" bg="#FEF3C7"
-                onClick={() => goTo("/business-owner/outlets")} delay={0}
+                value={stats?.branches_count ?? 0} color="#D97706" bg="#FEF3C7"
+                onClick={() => goTo("/business-owner/branches")} delay={0}
               />
               <StatCard
                 Icon={Users} label="Total Staff" sub="Active members"

@@ -672,7 +672,7 @@ export default function BOStaffDetail() {
     setDeleting(true);
     try {
       await api.delete(`/api/business/staff/${id}`);
-      goTo(`/business-owner/outlets/${member.branch_id}`);
+      goTo(`/business-owner/branches/${member.branch_id}`);
     } catch (err) {
       setError(err.message || "Failed to delete staff. Please try again.");
       setDeleting(false);
@@ -710,7 +710,7 @@ export default function BOStaffDetail() {
             background: member.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF",
             color: member.staff_type === "regular" ? "#1E40AF" : "#6B21A8",
           }}>
-            {member.staff_type === "regular" ? "Regular Staff" : "Outlet Casual"}
+            {member.staff_type === "regular" ? "Regular Staff" : "Branch Casual"}
           </span>
 
           <div style={s.metaRow}>
@@ -804,10 +804,10 @@ export default function BOStaffDetail() {
                 <select style={s.input} value={form.staff_type}
                   onChange={e => setForm(p => ({ ...p, staff_type: e.target.value }))}>
                   <option value="regular">Regular Staff</option>
-                  <option value="casual">Outlet Casual Staff</option>
+                  <option value="casual">Casual Staff</option>
                 </select>
               ) : (
-                <p style={s.value}>{member.staff_type === "regular" ? "Regular Staff" : "Outlet Casual Staff"}</p>
+                <p style={s.value}>{member.staff_type === "regular" ? "Regular Staff" : "Casual Staff"}</p>
               )}
             </div>
 

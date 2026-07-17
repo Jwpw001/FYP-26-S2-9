@@ -107,11 +107,11 @@ const removeStaffSkill = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-// GET /api/skills/outlet/:outlet_id — bulk staff→skill assignments for a whole outlet
-const getOutletStaffSkills = async (req, res) => {
+// GET /api/skills/branch/:branch_id — bulk staff→skill assignments for a whole branch
+const getBranchStaffSkills = async (req, res) => {
   try {
-    const outlet_id = Number(req.params.outlet_id);
-    const staffRows = await prisma.staff.findMany({ where: { branch_id: outlet_id }, select: { staff_id: true, user_id: true } });
+    const branch_id = Number(req.params.branch_id);
+    const staffRows = await prisma.staff.findMany({ where: { branch_id: branch_id }, select: { staff_id: true, user_id: true } });
     if (staffRows.length === 0) return res.json({ success: true, skills: [] });
     const userToStaff = Object.fromEntries(staffRows.map(s => [s.user_id, s.staff_id]));
     const userIds = staffRows.map(s => s.user_id);
@@ -146,5 +146,5 @@ const getGlobalSkills = async (req, res) => {
 };
 
 module.exports = {
-  getStaffSkills, addStaffSkill, updateStaffSkill, removeStaffSkill, getOutletStaffSkills, getGlobalSkills,
+  getStaffSkills, addStaffSkill, updateStaffSkill, removeStaffSkill, getBranchStaffSkills, getGlobalSkills,
 };

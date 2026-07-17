@@ -8,7 +8,7 @@ const ROLES = require("../constants/roles");
 router.post(
   "/shift/:shift_id",
   verifyToken,
-  allowRoles(ROLES.SYSTEM_ADMIN, ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN),
+  allowRoles(ROLES.SYSTEM_ADMIN, ROLES.BRANCH_MANAGER, ROLES.SYSTEM_ADMIN),
   recommendShiftStaff
 );
 

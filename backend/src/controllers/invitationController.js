@@ -11,16 +11,16 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const ROLE_HIERARCHY = {
   system_admin:        5,
   business_owner:      4,
-  outlet_manager:      3,
+  manager:      3,
   regular_staff:       2,
-  outlet_casual_staff: 2,
+  casual_staff: 2,
   krewby_casual_worker:1,
 };
 
 const ROLE_LABELS = {
-  outlet_manager:      "Outlet Manager",
+  manager:      "Manager",
   regular_staff:       "Regular Staff",
-  outlet_casual_staff: "Casual Staff",
+  casual_staff: "Casual Staff",
 };
 
 async function isEmailDomainValid(email) {
@@ -43,7 +43,7 @@ function generateCode() {
   return `${rand(4)}-${rand(4)}`;
 }
 
-async function sendInviteEmail({ to, inviterName, roleName, outletName, inviteLink, code }) {
+async function sendInviteEmail({ to, inviterName, roleName, branchName, inviteLink, code }) {
   if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.startsWith("re_placeholder")) {
     console.log(`[INVITE EMAIL - DEV] To: ${to} | Link: ${inviteLink} | Code: ${code}`);
     return;
@@ -51,7 +51,7 @@ async function sendInviteEmail({ to, inviterName, roleName, outletName, inviteLi
   await resend.emails.send({
     from: "Krewby <noreply@krewby.com>",
     to,
-    subject: `You've been invited to join ${outletName || "a business"} on Krewby`,
+    subject: `You've been invited to join ${branchName || "a business"} on Krewby`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fff;border-radius:12px;">
         <div style="text-align:center;margin-bottom:28px;">
@@ -60,7 +60,7 @@ async function sendInviteEmail({ to, inviterName, roleName, outletName, inviteLi
         </div>
         <h2 style="font-size:20px;font-weight:700;color:#0F172A;margin-bottom:8px;">You're invited!</h2>
         <p style="color:#475569;font-size:14px;line-height:1.6;margin-bottom:20px;">
-          <strong>${inviterName}</strong> has invited you to join <strong>${outletName || "their outlet"}</strong> as <strong>${roleName}</strong>.
+          <strong>${inviterName}</strong> has invited you to join <strong>${branchName || "their branch"}</strong> as <strong>${roleName}</strong>.
         </p>
         <a href="${inviteLink}" style="display:block;background:#F59E0B;color:#1C1917;text-align:center;padding:14px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:24px;">
           Accept Invitation
@@ -80,10 +80,10 @@ async function sendInviteEmail({ to, inviterName, roleName, outletName, inviteLi
 const sendInvitation = async (req, res) => {
   try {
     const sender = req.user;
-    const { email, role, branch_id: outlet_id, business_id } = req.body;
+    const { email, role, branch_id: branch_id, business_id } = req.body;
 
     if (!email || !role) return res.status(400).json({ success: false, message: "Email and role are required." });
-    if (!outlet_id) return res.status(400).json({ success: false, message: "Branch is required." });
+    if (!branch_id) return res.status(400).json({ success: false, message: "Branch is required." });
 
     const senderLevel = ROLE_HIERARCHY[sender.role] || 0;
     const targetLevel = ROLE_HIERARCHY[role] || 0;
@@ -92,21 +92,21 @@ const sendInvitation = async (req, res) => {
     }
 
     // Enforce staff limit based on business plan
-    const outletRow = await prisma.branches.findUnique({ where: { branch_id: Number(outlet_id) }, select: { business_id: true } });
-    if (outletRow?.business_id) {
-      const { data: biz } = await supabaseAdmin.from("businesses").select("plan").eq("business_id", outletRow.business_id).maybeSingle();
+    const branchRow = await prisma.branches.findUnique({ where: { branch_id: Number(branch_id) }, select: { business_id: true } });
+    if (branchRow?.business_id) {
+      const { data: biz } = await supabaseAdmin.from("businesses").select("plan").eq("business_id", branchRow.business_id).maybeSingle();
       const limits = getLimits(biz?.plan || "free");
       if (limits.staff !== Infinity) {
         const { count: staffCount } = await supabaseAdmin
           .from("staff").select("*", { count: "exact", head: true })
-          .eq("branch_id", Number(outlet_id)).eq("is_active", true);
+          .eq("branch_id", Number(branch_id)).eq("is_active", true);
         if ((staffCount || 0) >= limits.staff) {
           return res.status(403).json({
             success: false,
             limitReached: true,
             limitType: "staff",
             plan: biz?.plan || "free",
-            message: `Your ${biz?.plan || "free"} plan allows ${limits.staff} staff per outlet. Upgrade to add more.`,
+            message: `Your ${biz?.plan || "free"} plan allows ${limits.staff} staff per branch. Upgrade to add more.`,
           });
         }
       }
@@ -121,13 +121,13 @@ const sendInvitation = async (req, res) => {
     // Check if user already exists — allowed, we'll link them
     const existing = await prisma.users.findUnique({ where: { email } });
 
-    // Cancel any existing pending invite for this email + outlet
+    // Cancel any existing pending invite for this email + branch
     await supabaseAdmin.from("invitations").update({ status: "cancelled" })
-      .eq("email", email).eq("branch_id", outlet_id).eq("status", "pending");
+      .eq("email", email).eq("branch_id", branch_id).eq("status", "pending");
 
-    // Get outlet name for email
-    const outlet = await prisma.branches.findUnique({ where: { branch_id: Number(outlet_id) }, select: { name: true } });
-    const outletName = outlet?.name || "";
+    // Get branch name for email
+    const branch = await prisma.branches.findUnique({ where: { branch_id: Number(branch_id) }, select: { name: true } });
+    const branchName = branch?.name || "";
 
     // Get sender name
     const senderUser = await prisma.users.findUnique({ where: { user_id: sender.user_id }, select: { full_name: true } });
@@ -148,7 +148,7 @@ const sendInvitation = async (req, res) => {
       invitation_code: code,
       email,
       role,
-      branch_id: Number(outlet_id),
+      branch_id: Number(branch_id),
       business_id: business_id ? Number(business_id) : null,
       invited_by: sender.user_id,
       status: "pending",
@@ -159,7 +159,7 @@ const sendInvitation = async (req, res) => {
     const inviteLink = `${FRONTEND_URL}/invite/${token}`;
     const roleName = ROLE_LABELS[role] || role;
 
-    await sendInviteEmail({ to: email, inviterName, roleName, outletName, inviteLink, code });
+    await sendInviteEmail({ to: email, inviterName, roleName, branchName, inviteLink, code });
 
     return res.status(201).json({ success: true, message: "Invitation sent.", invite_link: inviteLink, code });
   } catch (error) {
@@ -199,7 +199,7 @@ const getInvitation = async (req, res) => {
     }
     return res.json({ success: true, invitation: {
       email: data.email, role: data.role, branch_id: data.branch_id,
-      outlet_name: data.branches?.name || null, business_id: data.business_id,
+      branch_name: data.branches?.name || null, business_id: data.business_id,
       invitation_code: data.invitation_code,
     }});
   } catch (error) {
@@ -223,7 +223,7 @@ const getInvitationByCode = async (req, res) => {
     }
     return res.json({ success: true, invitation: {
       token: data.token, email: data.email, role: data.role,
-      branch_id: data.branch_id, outlet_name: data.branches?.name || null,
+      branch_id: data.branch_id, branch_name: data.branches?.name || null,
       business_id: data.business_id, invitation_code: data.invitation_code,
     }});
   } catch (error) {
@@ -253,7 +253,7 @@ const acceptInvitation = async (req, res) => {
       if (!user) return res.status(404).json({ success: false, message: "User not found." });
 
       // Create staff record if needed
-      if (invite.branch_id && ["regular_staff", "outlet_casual_staff"].includes(invite.role)) {
+      if (invite.branch_id && ["regular_staff", "casual_staff"].includes(invite.role)) {
         // Update role from pending (or lower role) to the invited role
         if (user.role === "pending" || user.role === "krewby_casual_worker") {
           await prisma.users.update({ where: { user_id: user.user_id }, data: { role: invite.role } });
@@ -261,13 +261,13 @@ const acceptInvitation = async (req, res) => {
         const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, branch_id: invite.branch_id } });
         if (!alreadyStaff) {
           await prisma.staff.create({
-            data: { user_id: user.user_id, branch_id: invite.branch_id, staff_type: invite.role === "outlet_casual_staff" ? "casual" : "regular", is_active: true },
+            data: { user_id: user.user_id, branch_id: invite.branch_id, staff_type: invite.role === "casual_staff" ? "casual" : "regular", is_active: true },
           });
         }
-      } else if (invite.branch_id && invite.role === "outlet_manager") {
+      } else if (invite.branch_id && invite.role === "manager") {
         // Update user role if needed
-        if (user.role !== "outlet_manager" && user.role !== "business_owner" && user.role !== "system_admin") {
-          await prisma.users.update({ where: { user_id: user.user_id }, data: { role: "outlet_manager" } });
+        if (user.role !== "manager" && user.role !== "business_owner" && user.role !== "system_admin") {
+          await prisma.users.update({ where: { user_id: user.user_id }, data: { role: "manager" } });
         }
         const { data: alreadyMgr } = await supabaseAdmin.from("branch_managers").select("id").eq("user_id", user.user_id).eq("branch_id", invite.branch_id).maybeSingle();
         if (!alreadyMgr) {
@@ -303,11 +303,11 @@ const acceptInvitation = async (req, res) => {
       data: { full_name, username: username.toLowerCase(), email: invite.email, role: invite.role, is_active: true },
     });
 
-    if (invite.branch_id && ["regular_staff", "outlet_casual_staff"].includes(invite.role)) {
+    if (invite.branch_id && ["regular_staff", "casual_staff"].includes(invite.role)) {
       await prisma.staff.create({
-        data: { user_id: newUser.user_id, branch_id: invite.branch_id, staff_type: invite.role === "outlet_casual_staff" ? "casual" : "regular", is_active: true },
+        data: { user_id: newUser.user_id, branch_id: invite.branch_id, staff_type: invite.role === "casual_staff" ? "casual" : "regular", is_active: true },
       });
-    } else if (invite.branch_id && invite.role === "outlet_manager") {
+    } else if (invite.branch_id && invite.role === "manager") {
       const { data: alreadyMgr } = await supabaseAdmin.from("branch_managers").select("id").eq("user_id", newUser.user_id).eq("branch_id", invite.branch_id).maybeSingle();
       if (!alreadyMgr) {
         await supabaseAdmin.from("branch_managers").insert({ user_id: newUser.user_id, branch_id: invite.branch_id, is_primary: false });
@@ -353,7 +353,7 @@ const resendInvitation = async (req, res) => {
     await sendInviteEmail({
       to: invite.email, inviterName: senderUser?.full_name || "Someone",
       roleName: ROLE_LABELS[invite.role] || invite.role,
-      outletName: invite.branches?.name || "", inviteLink, code: invite.invitation_code,
+      branchName: invite.branches?.name || "", inviteLink, code: invite.invitation_code,
     });
     return res.json({ success: true, message: "Invitation resent." });
   } catch (error) {

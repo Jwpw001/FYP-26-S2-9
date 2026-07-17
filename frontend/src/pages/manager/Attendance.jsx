@@ -51,7 +51,7 @@ const TS_STYLE = {
 export default function Attendance() {
   const user   = getUser();
   const userId = user?.user_id;
-  const [outletId,   setOutletId]   = useState(null);
+  const [branchId,   setBranchId]   = useState(null);
   const [activeTab,  setActiveTab]  = useState("submissions");
   const [toast,      setToast]      = useState(null);
 
@@ -64,9 +64,9 @@ export default function Attendance() {
     if (!userId) return;
     supabase.from("staff").select("branch_id").eq("user_id", userId).eq("is_active", true).limit(1)
       .then(async ({ data }) => {
-        if (data?.[0]) { setOutletId(data[0].branch_id); return; }
+        if (data?.[0]) { setBranchId(data[0].branch_id); return; }
         const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1);
-        if (omRow?.[0]) setOutletId(omRow[0].branch_id);
+        if (omRow?.[0]) setBranchId(omRow[0].branch_id);
       });
   }, [userId]);
 
@@ -96,8 +96,8 @@ export default function Attendance() {
         </div>
 
         {activeTab === "submissions"
-          ? <Submissions outletId={outletId} managerId={userId} showToast={showToast} />
-          : <WorkingHours outletId={outletId} />
+          ? <Submissions branchId={branchId} managerId={userId} showToast={showToast} />
+          : <WorkingHours branchId={branchId} />
         }
       </div>
 
@@ -116,7 +116,7 @@ export default function Attendance() {
 
 // ── Submissions ──────────────────────────────────────────────────────────────
 
-function Submissions({ outletId, managerId, showToast }) {
+function Submissions({ branchId, managerId, showToast }) {
   const [rows,        setRows]        = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [filter,      setFilter]      = useState("pending");
@@ -126,14 +126,14 @@ function Submissions({ outletId, managerId, showToast }) {
   const [checked,     setChecked]     = useState(new Set()); // selected timesheet_ids
 
   useEffect(() => {
-    if (!outletId) return;
+    if (!branchId) return;
     let cancelled = false;
     async function load() {
       setLoading(true);
       try {
         const { data: staffRows } = await supabase
           .from("staff").select("staff_id, users(full_name)")
-          .eq("branch_id", outletId).eq("is_active", true);
+          .eq("branch_id", branchId).eq("is_active", true);
         if (!staffRows?.length || cancelled) { setRows([]); setLoading(false); return; }
 
         const staffIds = staffRows.map(s => s.staff_id);
@@ -171,7 +171,7 @@ function Submissions({ outletId, managerId, showToast }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [outletId]);
+  }, [branchId]);
 
   // Clear selection when filter changes
   useEffect(() => { setChecked(new Set()); }, [filter]);
@@ -497,7 +497,7 @@ function MetaRow({ icon, label, value }) {
 
 // ── Working Hours ────────────────────────────────────────────────────────────
 
-function WorkingHours({ outletId }) {
+function WorkingHours({ branchId }) {
   const [period,      setPeriod]      = useState("week");
   const [customStart, setCustomStart] = useState("");
   const [customEnd,   setCustomEnd]   = useState("");
@@ -523,7 +523,7 @@ function WorkingHours({ outletId }) {
   }
 
   useEffect(() => {
-    if (!outletId) return;
+    if (!branchId) return;
     if (period === "custom" && (!customStart || !customEnd)) return;
     const [startDate, endDate] = getRange(period);
     if (!startDate || !endDate) return;
@@ -532,11 +532,11 @@ function WorkingHours({ outletId }) {
     async function load() {
       setLoading(true);
       try {
-        // Get staff in outlet
+        // Get staff in branch
         const { data: staffRows } = await supabase
           .from("staff")
           .select("staff_id, users(full_name)")
-          .eq("branch_id", outletId)
+          .eq("branch_id", branchId)
           .eq("is_active", true);
 
         if (!staffRows?.length || cancelled) { setStaffData([]); setLoading(false); return; }
@@ -592,9 +592,9 @@ function WorkingHours({ outletId }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [outletId, period, customStart, customEnd]);
+  }, [branchId, period, customStart, customEnd]);
 
-  if (!outletId) return <div style={{ textAlign:"center", padding:"64px", color:"#94A3B8", fontSize:"14px" }}>Loading…</div>;
+  if (!branchId) return <div style={{ textAlign:"center", padding:"64px", color:"#94A3B8", fontSize:"14px" }}>Loading…</div>;
 
   const [startDate, endDate] = getRange(period);
   const totalHours = staffData.reduce((s, x) => s + x.totalHours, 0);

@@ -12,7 +12,7 @@ function generateJoinCode() {
   return `${rand(4)}-${rand(4)}`;
 }
 
-async function resolveManagerOutlet(userId) {
+async function resolveManagerBranch(userId) {
   const { data: link } = await supabaseAdmin
     .from("branch_managers")
     .select("branch_id")
@@ -20,11 +20,11 @@ async function resolveManagerOutlet(userId) {
     .limit(1)
     .maybeSingle();
   if (!link) return null;
-  const outlet = await prisma.branches.findUnique({
+  const branch = await prisma.branches.findUnique({
     where: { branch_id: link.branch_id },
     select: { branch_id: true, business_id: true, name: true },
   });
-  return outlet || null;
+  return branch || null;
 }
 
 async function resolveOwnerBusiness(userId) {
@@ -84,7 +84,7 @@ async function registerCasualWorker(req, res) {
     if (authErr) return res.status(400).json({ success: false, message: authErr.message });
 
     const newUser = await prisma.users.create({
-      data: { full_name, username, email, role: "outlet_casual_staff", is_active: true },
+      data: { full_name, username, email, role: "casual_staff", is_active: true },
     });
 
     const { error: cwErr } = await supabaseAdmin.from("casual_workers").insert({
@@ -136,8 +136,8 @@ async function getCasualWorkerStatus(req, res) {
   }
 }
 
-// GET /api/casual/my-outlets — list all outlets in the worker's business
-async function getMyOutlets(req, res) {
+// GET /api/casual/my-branches — list all branches in the worker's business
+async function getMyBranches(req, res) {
   try {
     const { data: cw } = await supabaseAdmin
       .from("casual_workers")
@@ -147,19 +147,19 @@ async function getMyOutlets(req, res) {
 
     if (!cw) return res.status(404).json({ success: false, message: "Casual worker record not found." });
 
-    const { data: outlets } = await supabaseAdmin
+    const { data: branches } = await supabaseAdmin
       .from("branches")
       .select("branch_id, name, address")
       .eq("business_id", cw.business_id)
       .order("name");
 
-    return res.json({ success: true, outlets: outlets || [], approval_status: cw.status });
+    return res.json({ success: true, branches: branches || [], approval_status: cw.status });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 }
 
-// GET /api/casual/preferences — get preferred outlet IDs
+// GET /api/casual/preferences — get preferred branch IDs
 async function getPreferences(req, res) {
   try {
     const { data: prefs } = await supabaseAdmin
@@ -167,13 +167,13 @@ async function getPreferences(req, res) {
       .select("branch_id")
       .eq("user_id", req.user.user_id);
 
-    return res.json({ success: true, preferred_outlet_ids: (prefs || []).map(p => p.branch_id) });
+    return res.json({ success: true, preferred_branch_ids: (prefs || []).map(p => p.branch_id) });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 }
 
-// PUT /api/casual/preferences — replace preferred outlets { outlet_ids: [1,2,3] }
+// PUT /api/casual/preferences — replace preferred branches { branch_ids: [1,2,3] }
 async function setPreferences(req, res) {
   try {
     const { data: cw } = await supabaseAdmin
@@ -184,21 +184,21 @@ async function setPreferences(req, res) {
 
     if (!cw) return res.status(404).json({ success: false, message: "Casual worker record not found." });
 
-    const { outlet_ids } = req.body;
-    if (!Array.isArray(outlet_ids)) {
-      return res.status(400).json({ success: false, message: "outlet_ids must be an array." });
+    const { branch_ids } = req.body;
+    if (!Array.isArray(branch_ids)) {
+      return res.status(400).json({ success: false, message: "branch_ids must be an array." });
     }
 
     // Delete existing, then insert new ones
     await supabaseAdmin.from("casual_branch_preferences").delete().eq("user_id", req.user.user_id);
 
-    if (outlet_ids.length > 0) {
-      const rows = outlet_ids.map(id => ({ user_id: req.user.user_id, branch_id: id }));
+    if (branch_ids.length > 0) {
+      const rows = branch_ids.map(id => ({ user_id: req.user.user_id, branch_id: id }));
       const { error } = await supabaseAdmin.from("casual_branch_preferences").insert(rows);
       if (error) throw new Error(error.message);
     }
 
-    return res.json({ success: true, message: "Branch preferences saved.", preferred_outlet_ids: outlet_ids });
+    return res.json({ success: true, message: "Branch preferences saved.", preferred_branch_ids: branch_ids });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -328,20 +328,20 @@ async function submitWeeklyAvailability(req, res) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MANAGER — casual pool for their outlet
+// MANAGER — casual pool for their branch
 // ─────────────────────────────────────────────────────────────────────────────
 
-// GET /api/casual/manager/pool — workers who prefer this outlet
+// GET /api/casual/manager/pool — workers who prefer this branch
 async function getManagerPool(req, res) {
   try {
-    const outlet = await resolveManagerOutlet(req.user.user_id);
-    if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found for this manager." });
+    const branch = await resolveManagerBranch(req.user.user_id);
+    if (!branch) return res.status(404).json({ success: false, message: "Branch not found for this manager." });
 
-    // Get all users who have this outlet as a preference and are approved
+    // Get all users who have this branch as a preference and are approved
     const { data: prefs } = await supabaseAdmin
       .from("casual_branch_preferences")
       .select("user_id")
-      .eq("branch_id", outlet.branch_id);
+      .eq("branch_id", branch.branch_id);
 
     const userIds = (prefs || []).map(p => p.user_id);
     if (userIds.length === 0) return res.json({ success: true, workers: [] });
@@ -350,7 +350,7 @@ async function getManagerPool(req, res) {
     const { data: approved } = await supabaseAdmin
       .from("casual_workers")
       .select("id, user_id, status, bio, approved_at")
-      .eq("business_id", outlet.business_id)
+      .eq("business_id", branch.business_id)
       .eq("status", "approved")
       .in("user_id", userIds);
 
@@ -521,8 +521,8 @@ async function autoAssignCasual(req, res) {
       return res.status(400).json({ success: false, message: "shift_id and task_id are required." });
     }
 
-    const outlet = await resolveManagerOutlet(req.user.user_id);
-    if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found." });
+    const branch = await resolveManagerBranch(req.user.user_id);
+    if (!branch) return res.status(404).json({ success: false, message: "Branch not found." });
 
     // Get shift details
     const shift = await prisma.shifts.findUnique({
@@ -530,7 +530,7 @@ async function autoAssignCasual(req, res) {
       select: { shift_id: true, branch_id: true, shift_date: true, start_time: true, end_time: true },
     });
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found." });
-    if (shift.branch_id !== outlet.branch_id) return res.status(403).json({ success: false, message: "Access denied." });
+    if (shift.branch_id !== branch.branch_id) return res.status(403).json({ success: false, message: "Access denied." });
 
     // One task = one person: reject if already assigned
     const existingAssignment = await prisma.task_assignments.findFirst({ where: { task_id: Number(task_id) } });
@@ -555,7 +555,7 @@ async function autoAssignCasual(req, res) {
     const { data: approvedWorkers } = await supabaseAdmin
       .from("casual_workers")
       .select("id, user_id, status")
-      .eq("business_id", outlet.business_id)
+      .eq("business_id", branch.business_id)
       .eq("status", "approved");
 
     if (!approvedWorkers || approvedWorkers.length === 0) {
@@ -604,7 +604,7 @@ async function autoAssignCasual(req, res) {
         .from("casual_branch_preferences")
         .select("branch_id", { count: "exact", head: true })
         .eq("user_id", cw.user_id)
-        .eq("branch_id", outlet.branch_id);
+        .eq("branch_id", branch.branch_id);
 
       const pastAssignments = await prisma.task_assignments.count({
         where: { krewby_worker_id: kw.krewby_worker_id, status: { not: "cancelled" } },
@@ -647,7 +647,7 @@ async function autoAssignCasual(req, res) {
       recipient_id: winner.cw.user_id,
       type: "casual_assigned",
       title: "You've been assigned to a shift!",
-      message: `You've been assigned to ${task?.title || "a task"} on ${shiftDateStr} at ${outlet.name}. Please check your schedule.`,
+      message: `You've been assigned to ${task?.title || "a task"} on ${shiftDateStr} at ${branch.name}. Please check your schedule.`,
       related_entity: "shift",
       related_id: Number(shift_id),
     });
@@ -686,7 +686,7 @@ async function regenerateJoinCode(req, res) {
 module.exports = {
   registerCasualWorker,
   getCasualWorkerStatus,
-  getMyOutlets,
+  getMyBranches,
   getPreferences,
   setPreferences,
   getMyAvailability,

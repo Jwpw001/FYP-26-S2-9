@@ -8,7 +8,7 @@ import ProfileModal from "../ProfileModal";
 
 const NAV = [
   { label: "Dashboard",   path: "/business-owner/dashboard",    Icon: LayoutDashboard },
-  { label: "Branches",    path: "/business-owner/outlets",      Icon: Building2 },
+  { label: "Branches",    path: "/business-owner/branches",      Icon: Building2 },
   { label: "Workforce",   path: "/business-owner/staff",        Icon: Users },
   { label: "Invitations", path: "/business-owner/invitations",  Icon: UserPlus },
   { label: "Skill Tags",  path: "/business-owner/skills",       Icon: Tag },

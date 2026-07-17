@@ -23,7 +23,7 @@ if (typeof document !== "undefined" && !document.getElementById("dash-styles")) 
 
 /* ── SVG Icons ── */
 const icons = {
-  outlets:  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  branches:  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
   managers: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
   staff:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
   skills:   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
@@ -126,7 +126,7 @@ function SkeletonCard() {
 /* ── Bottom section: Platform overview + Quick actions ── */
 function BottomSection({ stats, actions, ready, goTo }) {
   const bars = [
-    { label: "Branches",   val: stats.outlets,   color: "#2563EB", bg: "#EFF6FF" },
+    { label: "Branches",   val: stats.branches,   color: "#2563EB", bg: "#EFF6FF" },
     { label: "Managers",   val: stats.managers,  color: "#059669", bg: "#ECFDF5" },
     { label: "Staff",      val: stats.staff,     color: "#D97706", bg: "#FFFBEB" },
     { label: "Skill Tags", val: stats.skills,    color: "#7C3AED", bg: "#F5F3FF" },
@@ -236,12 +236,12 @@ function QuickActionRow({ action, index, ready, goTo }) {
   );
 }
 
-/* ── Combined Businesses + Outlets card ── */
-function BizOutletCard({ stats, ready, goTo }) {
+/* ── Combined Businesses + Branches card ── */
+function BizBranchCard({ stats, ready, goTo }) {
   const [hov, setHov] = useState(false);
   const [pressed, setPressed] = useState(false);
   const bizCount    = useCountUp(stats.businesses, 900, ready);
-  const outletCount = useCountUp(stats.outlets,    900, ready);
+  const branchCount = useCountUp(stats.branches,    900, ready);
 
   return (
     <div
@@ -266,7 +266,7 @@ function BizOutletCard({ stats, ready, goTo }) {
           transform: hov ? "scale(1.1) rotate(-4deg)" : "scale(1) rotate(0deg)",
           transition: "transform 0.25s cubic-bezier(.34,1.56,.64,1)",
         }}>
-          {icons.outlets}
+          {icons.branches}
         </div>
         <div style={{ color: "#2563EB", opacity: hov ? 1 : 0.4, transition: "opacity 0.2s" }}>
           {icons.arrowUpRight}
@@ -280,7 +280,7 @@ function BizOutletCard({ stats, ready, goTo }) {
         </div>
         <div style={{ width: "1px", height: "32px", background: "#E2E8F0", flexShrink: 0 }} />
         <div style={{ textAlign: "center" }}>
-          <p style={{ ...s.statValue, fontSize: "26px", color: "#2563EB" }}>{outletCount}</p>
+          <p style={{ ...s.statValue, fontSize: "26px", color: "#2563EB" }}>{branchCount}</p>
           <p style={{ fontSize: "10px", fontWeight: "600", color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Branches</p>
         </div>
       </div>
@@ -290,7 +290,7 @@ function BizOutletCard({ stats, ready, goTo }) {
       <div style={{ ...s.statBar, background: "#EFF6FF" }}>
         <div style={{
           height: "100%", borderRadius: "100px", background: "#2563EB",
-          width: ready ? `${Math.min((stats.outlets / Math.max(stats.outlets, 20)) * 100, 100)}%` : "0%",
+          width: ready ? `${Math.min((stats.branches / Math.max(stats.branches, 20)) * 100, 100)}%` : "0%",
           transition: ready ? "width 1s cubic-bezier(.4,0,.2,1) 0ms" : "none",
         }} />
       </div>
@@ -302,7 +302,7 @@ function BizOutletCard({ stats, ready, goTo }) {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const user = getUser();
-  const [stats, setStats] = useState({ businesses: 0, outlets: 0, managers: 0, staff: 0, skills: 0 });
+  const [stats, setStats] = useState({ businesses: 0, branches: 0, managers: 0, staff: 0, skills: 0 });
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const [fading, setFading] = useState(false);
@@ -315,16 +315,16 @@ export default function AdminDashboard() {
     async function load() {
       try {
         const [
-          { count: bizCount }, { count: outletCount }, { count: mgr }, { count: stf }, { count: skl },
+          { count: bizCount }, { count: branchCount }, { count: mgr }, { count: stf }, { count: skl },
         ] = await Promise.all([
           supabase.from("businesses").select("*", { count: "exact", head: true }),
           supabase.from("branches").select("*", { count: "exact", head: true }),
-          supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "outlet_manager"),
+          supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "manager"),
           supabase.from("staff").select("*", { count: "exact", head: true }).eq("is_active", true),
           supabase.from("skills").select("*", { count: "exact", head: true }),
         ]);
         if (!cancelled) {
-          setStats({ businesses: bizCount || 0, outlets: outletCount || 0, managers: mgr || 0, staff: stf || 0, skills: skl || 0 });
+          setStats({ businesses: bizCount || 0, branches: branchCount || 0, managers: mgr || 0, staff: stf || 0, skills: skl || 0 });
           setLoading(false);
           // small delay so CSS animations fire after paint
           setTimeout(() => setReady(true), 30);
@@ -347,8 +347,8 @@ export default function AdminDashboard() {
   const reportsIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
 
   const actions = [
-    { label: "Businesses", desc: "Browse businesses & branches",      icon: icons.outlets,  color: "#2563EB", bg: "#EFF6FF", link: "/system-admin/businesses" },
-    { label: "Managers",   desc: "View outlet managers",             icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
+    { label: "Businesses", desc: "Browse businesses & branches",      icon: icons.branches,  color: "#2563EB", bg: "#EFF6FF", link: "/system-admin/businesses" },
+    { label: "Managers",   desc: "View managers",             icon: icons.managers, color: "#059669", bg: "#ECFDF5", link: "/system-admin/managers" },
     { label: "Staff",      desc: "Browse all staff across platform", icon: icons.staff,    color: "#D97706", bg: "#FFFBEB", link: "/system-admin/staff" },
     { label: "Skill Tags", desc: "View skill categories",            icon: icons.skills,   color: "#7C3AED", bg: "#F5F3FF", link: "/system-admin/skills" },
     { label: "Reports",    desc: "Platform analytics & reports",     icon: reportsIcon,    color: "#0891B2", bg: "#ECFEFF", link: "/system-admin/reports" },
@@ -378,7 +378,7 @@ export default function AdminDashboard() {
         {loading
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
           : [
-              <BizOutletCard key="biz" stats={stats} ready={ready} goTo={goTo} />,
+              <BizBranchCard key="biz" stats={stats} ready={ready} goTo={goTo} />,
               ...cards.map((card, i) => <StatCard key={card.label} card={card} index={i + 1} ready={ready} goTo={goTo} />),
             ]
         }

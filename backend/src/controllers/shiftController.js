@@ -1,7 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 
-async function getCallerOutletId(userId) {
+async function getCallerBranchId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
   if (s?.branch_id) return s.branch_id;
   const { data: mgr } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1).maybeSingle();
@@ -34,11 +34,11 @@ function normalizeShift(shift) {
 
 const getShifts = async (req, res) => {
   try {
-    const outletId = await getCallerOutletId(req.user.user_id);
-    if (!outletId) return res.status(403).json({ success: false, message: "No outlet found for your account." });
+    const branchId = await getCallerBranchId(req.user.user_id);
+    if (!branchId) return res.status(403).json({ success: false, message: "No branch found for your account." });
 
     const shifts = await prisma.shifts.findMany({
-      where: { branch_id: outletId },
+      where: { branch_id: branchId },
       include: {
         branches: true,
         users: { select: { user_id: true, full_name: true, email: true, role: true } },
@@ -64,7 +64,7 @@ const getShifts = async (req, res) => {
 const getShiftById = async (req, res) => {
   try {
     const shiftId = Number(req.params.id);
-    const outletId = await getCallerOutletId(req.user.user_id);
+    const branchId = await getCallerBranchId(req.user.user_id);
 
     const shift = await prisma.shifts.findUnique({
       where: { shift_id: shiftId },
@@ -85,7 +85,7 @@ const getShiftById = async (req, res) => {
     });
 
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found" });
-    if (outletId && shift.branch_id !== outletId)
+    if (branchId && shift.branch_id !== branchId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
     res.json({ success: true, shift: normalizeShift(shift) });
@@ -96,16 +96,16 @@ const getShiftById = async (req, res) => {
 
 const createShift = async (req, res) => {
   try {
-    const callerOutletId = await getCallerOutletId(req.user.user_id);
-    const { outlet_id, title, shift_date, start_time, end_time, deadline, status } = req.body;
+    const callerBranchId = await getCallerBranchId(req.user.user_id);
+    const { branch_id, title, shift_date, start_time, end_time, deadline, status } = req.body;
 
-    // Ensure manager can only create shifts for their own outlet
-    if (callerOutletId && outlet_id && outlet_id !== callerOutletId)
-      return res.status(403).json({ success: false, message: "Cannot create shifts for a different outlet." });
+    // Ensure manager can only create shifts for their own branch
+    if (callerBranchId && branch_id && branch_id !== callerBranchId)
+      return res.status(403).json({ success: false, message: "Cannot create shifts for a different branch." });
 
     const shift = await prisma.shifts.create({
       data: {
-        branch_id: outlet_id || callerOutletId,
+        branch_id: branch_id || callerBranchId,
         title: title || null,
         shift_date: new Date(shift_date),
         start_time: new Date(`1970-01-01T${start_time}:00Z`),
@@ -124,18 +124,18 @@ const createShift = async (req, res) => {
 const updateShift = async (req, res) => {
   try {
     const shiftId = Number(req.params.id);
-    const outletId = await getCallerOutletId(req.user.user_id);
+    const branchId = await getCallerBranchId(req.user.user_id);
 
     const existing = await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { branch_id: true } });
     if (!existing) return res.status(404).json({ success: false, message: "Shift not found" });
-    if (outletId && existing.branch_id !== outletId)
+    if (branchId && existing.branch_id !== branchId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
-    const { outlet_id, title, shift_date, start_time, end_time, status } = req.body;
+    const { branch_id, title, shift_date, start_time, end_time, status } = req.body;
     const shift = await prisma.shifts.update({
       where: { shift_id: shiftId },
       data: {
-        branch_id: outlet_id,
+        branch_id: branch_id,
         title,
         shift_date: shift_date ? new Date(shift_date) : undefined,
         start_time: start_time ? new Date(`1970-01-01T${start_time}:00Z`) : undefined,
@@ -152,11 +152,11 @@ const updateShift = async (req, res) => {
 const deleteShift = async (req, res) => {
   try {
     const shiftId = Number(req.params.id);
-    const outletId = await getCallerOutletId(req.user.user_id);
+    const branchId = await getCallerBranchId(req.user.user_id);
 
     const existing = await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { branch_id: true } });
     if (!existing) return res.status(404).json({ success: false, message: "Shift not found" });
-    if (outletId && existing.branch_id !== outletId)
+    if (branchId && existing.branch_id !== branchId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
     await prisma.shifts.delete({ where: { shift_id: shiftId } });
@@ -173,26 +173,26 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const generateWeeklySchedule = async (req, res) => {
   try {
-    const outletId = await getCallerOutletId(req.user.user_id);
-    if (!outletId) return res.status(403).json({ success: false, message: "No outlet found." });
+    const branchId = await getCallerBranchId(req.user.user_id);
+    if (!branchId) return res.status(403).json({ success: false, message: "No branch found." });
 
     const { weekStart, weekEnd } = req.body;
     if (!weekStart || !weekEnd) return res.status(400).json({ success: false, message: "weekStart and weekEnd required." });
 
-    // Fetch outlet info
-    const outlet = await prisma.branches.findUnique({
-      where: { branch_id: outletId },
+    // Fetch branch info
+    const branch = await prisma.branches.findUnique({
+      where: { branch_id: branchId },
       select: { name: true, open_time: true, close_time: true },
     });
 
     // Fetch all active staff
     const staff = await prisma.staff.findMany({
-      where: { branch_id: outletId, is_active: true },
+      where: { branch_id: branchId, is_active: true },
       include: { users: { select: { full_name: true, role: true } } },
     });
 
-    const regularStaff = staff.filter(s => s.users?.role === "outlet_regular_staff" || s.users?.role === "regular_staff");
-    const casualStaff  = staff.filter(s => s.users?.role === "outlet_casual_staff");
+    const regularStaff = staff.filter(s => s.users?.role === "branch_regular_staff" || s.users?.role === "regular_staff");
+    const casualStaff  = staff.filter(s => s.users?.role === "casual_staff");
 
     // Fetch casual availability for this week
     const casualIds = casualStaff.map(s => s.staff_id);
@@ -219,14 +219,14 @@ const generateWeeklySchedule = async (req, res) => {
       }
     });
 
-    // Fetch existing role templates for this outlet
+    // Fetch existing role templates for this branch
     const roleTemplates = await prisma.branch_role_templates.findMany({
-      where: { branch_id: outletId },
+      where: { branch_id: branchId },
       select: { role_name: true, headcount: true },
     }).catch(() => []);
 
     const context = {
-      outlet: { name: outlet?.name, open_time: outlet?.open_time, close_time: outlet?.close_time },
+      branch: { name: branch?.name, open_time: branch?.open_time, close_time: branch?.close_time },
       weekStart,
       weekEnd,
       regularStaff: regularStaff.map(s => s.users?.full_name),
@@ -241,8 +241,8 @@ const generateWeeklySchedule = async (req, res) => {
       if (val instanceof Date) return val.toISOString().slice(11, 16);
       return String(val).slice(0, 5);
     };
-    const openTime  = toHHMM(context.outlet.open_time)  || "09:00";
-    const closeTime = toHHMM(context.outlet.close_time) || "22:00";
+    const openTime  = toHHMM(context.branch.open_time)  || "09:00";
+    const closeTime = toHHMM(context.branch.close_time) || "22:00";
 
     // Calculate midpoint for morning/evening split
     const [openH, openM]   = openTime.split(":").map(Number);
@@ -257,8 +257,8 @@ const generateWeeklySchedule = async (req, res) => {
 
 Generate a COMPLETE weekly shift schedule for the week ${weekStart} to ${weekEnd}.
 
-OUTLET INFO:
-- Name: ${context.outlet.name}
+BRANCH INFO:
+- Name: ${context.branch.name}
 - Opening time: ${openTime}
 - Closing time: ${closeTime}
 - Suggested shift split: Morning ${openTime}–${midTime}, Evening ${midTime}–${closeTime}
@@ -331,8 +331,8 @@ Generate ALL 14 shifts now (2 per day × 7 days):`;
 
 const confirmWeeklySchedule = async (req, res) => {
   try {
-    const outletId = await getCallerOutletId(req.user.user_id);
-    if (!outletId) return res.status(403).json({ success: false, message: "No outlet found." });
+    const branchId = await getCallerBranchId(req.user.user_id);
+    if (!branchId) return res.status(403).json({ success: false, message: "No branch found." });
 
     const { shifts: scheduleShifts } = req.body;
     if (!Array.isArray(scheduleShifts) || scheduleShifts.length === 0)
@@ -340,7 +340,7 @@ const confirmWeeklySchedule = async (req, res) => {
 
     // Fetch all staff for name→id lookup
     const allStaff = await prisma.staff.findMany({
-      where: { branch_id: outletId, is_active: true },
+      where: { branch_id: branchId, is_active: true },
       include: { users: { select: { full_name: true } } },
     });
     const nameToStaffId = {};
@@ -351,7 +351,7 @@ const confirmWeeklySchedule = async (req, res) => {
       // Create shift
       const shift = await prisma.shifts.create({
         data: {
-          branch_id: outletId,
+          branch_id: branchId,
           title: s.title || "Shift",
           shift_date: new Date(s.date),
           start_time: new Date(`1970-01-01T${s.start_time}:00Z`),

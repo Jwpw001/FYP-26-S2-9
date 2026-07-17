@@ -75,11 +75,11 @@ export default function ManagerSettings() {
   const [alloc, setAlloc]           = useState(null);
   const [savedAlloc, setSavedAlloc] = useState(null);
   const [editingAlloc, setEditingAlloc] = useState(false);
-  const [outletId, setOutletId]     = useState(null);
+  const [branchId, setBranchId]     = useState(null);
 
   useEffect(() => { load(); }, []);
 
-  async function resolveOutletId() {
+  async function resolveBranchId() {
     const { data: staffRow } = await supabase.from("staff").select("branch_id").eq("user_id", user?.user_id).eq("is_active", true).limit(1);
     if (staffRow?.[0]?.branch_id) return staffRow[0].branch_id;
     const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", user?.user_id).limit(1);
@@ -89,19 +89,19 @@ export default function ManagerSettings() {
   async function load() {
     setLoading(true);
     try {
-      const oid = outletId || await resolveOutletId();
-      if (oid) setOutletId(oid);
+      const oid = branchId || await resolveBranchId();
+      if (oid) setBranchId(oid);
 
-      const [r, { data: outletRow }] = await Promise.all([
-        oid ? api.get(`/api/business/outlets/${oid}/settings`) : api.get("/api/business/settings"),
+      const [r, { data: branchRow }] = await Promise.all([
+        oid ? api.get(`/api/business/branches/${oid}/settings`) : api.get("/api/business/settings"),
         oid ? supabase.from("branches").select("open_time, close_time").eq("branch_id", oid).maybeSingle() : Promise.resolve({ data: null }),
       ]);
 
-      // Merge outlet-level open/close times into settings (they live on outlets table, not outlet_settings)
+      // Merge branch-level open/close times into settings (they live on branches table, not branch_settings)
       const merged = {
         ...(r.settings || {}),
-        open_time:  outletRow?.open_time?.slice(0, 5)  || r.settings?.open_time  || "09:00",
-        close_time: outletRow?.close_time?.slice(0, 5) || r.settings?.close_time || "18:00",
+        open_time:  branchRow?.open_time?.slice(0, 5)  || r.settings?.open_time  || "09:00",
+        close_time: branchRow?.close_time?.slice(0, 5) || r.settings?.close_time || "18:00",
       };
       setSettings(parseSettings(merged));
       const a = r.allocation ? { ...ALLOC_DEFAULTS, ...r.allocation } : { ...ALLOC_DEFAULTS };
@@ -142,7 +142,7 @@ export default function ManagerSettings() {
     if (total !== 100) { setError("Weights must sum to 100%."); return; }
     setSaving(true); setError(""); setSuccess("");
     try {
-      await api.put(outletId ? `/api/business/outlets/${outletId}/settings/allocation` : "/api/business/settings/allocation", alloc);
+      await api.put(branchId ? `/api/business/branches/${branchId}/settings/allocation` : "/api/business/settings/allocation", alloc);
       setSavedAlloc({ ...alloc });
       setEditingAlloc(false);
       setSuccess("Smart allocation saved.");
@@ -382,7 +382,7 @@ export default function ManagerSettings() {
 
           <div style={{ padding: "12px 20px", borderTop: "1px solid #F1F5F9", flexShrink: 0 }}>
             <p style={{ fontSize: "10px", color: "#CBD5E1", textAlign: "center", lineHeight: 1.5 }}>
-              Business setup is managed by the Business Owner. You can adjust smart allocation weights for this outlet.
+              Business setup is managed by the Business Owner. You can adjust smart allocation weights for this branch.
             </p>
           </div>
         </div>

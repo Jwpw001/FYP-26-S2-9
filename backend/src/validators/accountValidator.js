@@ -9,9 +9,9 @@ const updateAccountSchema = z.object({
 
     role: z.enum([
         "system_admin",
-        "outlet_manager",
+        "manager",
         "regular_staff",
-        "outlet_casual_staff",
+        "casual_staff",
         "krewby_casual_worker"
     ]).optional()
 });

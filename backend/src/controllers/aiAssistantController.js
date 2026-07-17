@@ -14,11 +14,11 @@ async function chat(req, res) {
       return res.status(401).json({ success: false, message: "Unauthorized." });
     }
 
-    // Only outlet managers can use the AI assistant
-    if (role !== "outlet_manager") {
+    // Only managers can use the AI assistant
+    if (role !== "manager") {
       return res.status(403).json({
         success: false,
-        message: "AI Workforce Assistant is available for outlet managers only.",
+        message: "AI Workforce Assistant is available for managers only.",
       });
     }
 

@@ -62,7 +62,7 @@ export default function StaffList() {
           supabase.from("staff")
             .select("staff_id, branch_id, staff_type, is_active, users(user_id, full_name, email, role)")
             .eq("branch_id", oid),
-          api.get(`/api/skills/outlet/${oid}`).catch(() => ({ skills: [] })),
+          api.get(`/api/skills/branch/${oid}`).catch(() => ({ skills: [] })),
         ]);
 
         if (cancelled) return;
@@ -74,12 +74,12 @@ export default function StaffList() {
           tagsByStaffId[t.staff_id].push({ id: t.skill_id, name: t.name });
         }
 
-        const enriched = (staffData || []).filter(s => s.users?.role !== "outlet_manager").map(s => ({
+        const enriched = (staffData || []).filter(s => s.users?.role !== "manager").map(s => ({
           ...s,
           skillTags: tagsByStaffId[s.staff_id] || [],
         }));
 
-        // Derive unique skills only from what's actually assigned to this outlet's staff
+        // Derive unique skills only from what's actually assigned to this branch's staff
         const seenIds = new Set();
         const uniqueSkills = [];
         enriched.forEach(s => s.skillTags.forEach(t => {
@@ -129,7 +129,7 @@ export default function StaffList() {
               {loading ? "Loading…" : `${activeCount} active · ${inactiveCount} inactive · ${staff.length} total`}
             </p>
           </div>
-          <button onClick={() => goTo("/outlet-manager/staff/new")}
+          <button onClick={() => goTo("/manager/staff/new")}
             style={{ padding: "10px 18px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", border: "none", background: "#2563EB", color: "#FFF", cursor: "pointer" }}>
             + Add Staff
           </button>
@@ -215,7 +215,7 @@ export default function StaffList() {
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
               {filtered.map((m, i) => (
-                <StaffCard key={m.staff_id} member={m} index={i} onNav={() => goTo(`/outlet-manager/staff/${m.staff_id}`)} />
+                <StaffCard key={m.staff_id} member={m} index={i} onNav={() => goTo(`/manager/staff/${m.staff_id}`)} />
               ))}
             </div>
             <p style={{ textAlign: "center", fontSize: "13px", color: "#94A3B8", marginTop: "20px" }}>

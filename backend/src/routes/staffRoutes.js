@@ -23,21 +23,21 @@ const {
 router.get(
     "/",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN),
+    allowRoles(ROLES.BRANCH_MANAGER, ROLES.SYSTEM_ADMIN),
     getStaff
 );
 
 router.get(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN),
+    allowRoles(ROLES.BRANCH_MANAGER, ROLES.SYSTEM_ADMIN),
     getStaffById
 );
 
 router.post(
     "/",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER),
+    allowRoles(ROLES.BRANCH_MANAGER),
     validate(createStaffSchema),
     createStaff
 );
@@ -45,7 +45,7 @@ router.post(
 router.patch(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER),
+    allowRoles(ROLES.BRANCH_MANAGER),
     validate(updateStaffSchema),
     updateStaff
 );
@@ -53,7 +53,7 @@ router.patch(
 router.delete(
     "/:id",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER),
+    allowRoles(ROLES.BRANCH_MANAGER),
     deleteStaff
 );
 

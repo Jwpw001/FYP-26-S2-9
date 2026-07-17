@@ -40,7 +40,7 @@ export default function SkillSettings() {
     try {
       // Fetch branch skills and global skills independently so one failure doesn't block the other
       const [branchRes, globalRes] = await Promise.allSettled([
-        api.get(`/api/business/outlets/${bid}/skills`),
+        api.get(`/api/business/branches/${bid}/skills`),
         api.get("/api/skills/global"),
       ]);
       const branchSkills = branchRes.status === "fulfilled" ? (branchRes.value.skills || []) : [];
@@ -57,7 +57,7 @@ export default function SkillSettings() {
     if (!branchId) return;
     setAdding(true); setError("");
     try {
-      await api.post(`/api/business/outlets/${branchId}/skills`, { skill_id });
+      await api.post(`/api/business/branches/${branchId}/skills`, { skill_id });
       await loadSkills(branchId);
     } catch (err) { setError(err.message); }
     finally { setAdding(false); }
@@ -72,7 +72,7 @@ export default function SkillSettings() {
     }
     setAdding(true); setError("");
     try {
-      await api.post(`/api/business/outlets/${branchId}/skills`, { name: n, description: description || "" });
+      await api.post(`/api/business/branches/${branchId}/skills`, { name: n, description: description || "" });
       setNewSkill("");
       setSuccess(`"${n}" added!`);
       setTimeout(() => setSuccess(""), 2500);
@@ -85,7 +85,7 @@ export default function SkillSettings() {
     if (!branchId) return;
     setDeleting(skill_id);
     try {
-      await api.delete(`/api/business/outlets/${branchId}/skills/${skill_id}`);
+      await api.delete(`/api/business/branches/${branchId}/skills/${skill_id}`);
       await loadSkills(branchId);
     } catch { } finally { setDeleting(null); }
   }

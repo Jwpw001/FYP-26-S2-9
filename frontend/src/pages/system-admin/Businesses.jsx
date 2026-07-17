@@ -58,7 +58,7 @@ export default function Businesses() {
     setLoading(true);
     const { data } = await supabase
       .from("businesses")
-      .select("business_id, name, description, plan, created_at, outlets(outlet_id)");
+      .select("business_id, name, description, plan, created_at, branches(branch_id)");
     setBusinesses(data || []);
     setLoading(false);
   }
@@ -72,8 +72,8 @@ export default function Businesses() {
     });
 
     list = [...list].sort((a, b) => {
-      const aC = a.outlets?.length ?? 0;
-      const bC = b.outlets?.length ?? 0;
+      const aC = a.branches?.length ?? 0;
+      const bC = b.branches?.length ?? 0;
       if (sort === "name_asc")     return a.name.localeCompare(b.name);
       if (sort === "name_desc")    return b.name.localeCompare(a.name);
       if (sort === "date_newest")  return new Date(b.created_at) - new Date(a.created_at);
@@ -209,7 +209,7 @@ export default function Businesses() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: "16px" }}>
             {filtered.map((biz, i) => {
-              const branchCount = biz.outlets?.length ?? 0;
+              const branchCount = biz.branches?.length ?? 0;
               const color = avatarColor(biz.name);
               const plan = biz.plan || "free";
               const pm = PLAN_META[plan] ?? PLAN_META.free;

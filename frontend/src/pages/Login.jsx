@@ -8,9 +8,9 @@ import { supabase } from "../lib/supabaseClient";
 const ROLE_ROUTES = {
   system_admin:         "/system-admin/dashboard",
   business_owner:       "/business-owner/dashboard",
-  outlet_manager:       "/outlet-manager/dashboard",
+  manager:       "/manager/dashboard",
   regular_staff:        "/regular-staff/dashboard",
-  outlet_casual_staff:  "/outlet-casual-staff/dashboard",
+  casual_staff:  "/casual-staff/dashboard",
 };
 
 const EyeIcon = ({ open }) => open ? (

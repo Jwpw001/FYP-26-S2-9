@@ -7,19 +7,19 @@ import { Plus, Building2, MapPin, ArrowRight, Clock, Check, Calendar } from "luc
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 import { SG_HOLIDAYS } from "../../data/sgHolidays";
 
-if (typeof document !== "undefined" && !document.getElementById("bo-outlet-styles")) {
+if (typeof document !== "undefined" && !document.getElementById("bo-branch-styles")) {
   const style = document.createElement("style");
-  style.id = "bo-outlet-styles";
+  style.id = "bo-branch-styles";
   style.textContent = `
     @keyframes fadeSlideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
     @keyframes shimmer { from { background-position:-600px 0; } to { background-position:600px 0; } }
     @keyframes pageIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-    .bo-outlet-card { transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; position: relative; overflow: hidden; }
-    .bo-outlet-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(217,119,6,0.14) !important; border-color: #FDE9C2 !important; }
-    .bo-outlet-card:hover .bo-outlet-arrow { opacity: 1; transform: translateX(0); }
-    .bo-outlet-card:hover .bo-outlet-icon { background: #F59E0B !important; }
-    .bo-outlet-card:hover .bo-outlet-icon svg { stroke: #fff !important; }
-    .bo-outlet-arrow { opacity: 0; transform: translateX(-6px); transition: opacity 0.2s, transform 0.2s; }
+    .bo-branch-card { transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; position: relative; overflow: hidden; }
+    .bo-branch-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(217,119,6,0.14) !important; border-color: #FDE9C2 !important; }
+    .bo-branch-card:hover .bo-branch-arrow { opacity: 1; transform: translateX(0); }
+    .bo-branch-card:hover .bo-branch-icon { background: #F59E0B !important; }
+    .bo-branch-card:hover .bo-branch-icon svg { stroke: #fff !important; }
+    .bo-branch-arrow { opacity: 0; transform: translateX(-6px); transition: opacity 0.2s, transform 0.2s; }
   `;
   document.head.appendChild(style);
 }
@@ -42,9 +42,9 @@ const EMPTY_FORM = {
   min_workers_per_assignment: 1,
 };
 
-export default function BOOutlets() {
+export default function BOBranches() {
   const goTo = useGoTo();
-  const [outlets, setOutlets] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
   const [step, setStep] = useState(1);
@@ -55,8 +55,8 @@ export default function BOOutlets() {
 
   const load = () => {
     setLoading(true);
-    api.get("/api/business/outlets")
-      .then(d => setOutlets(d.outlets || []))
+    api.get("/api/business/branches")
+      .then(d => setBranches(d.branches || []))
       .catch(err => console.error("Failed to load branches:", err))
       .finally(() => setLoading(false));
   };
@@ -84,7 +84,7 @@ export default function BOOutlets() {
   const handleCreate = async () => {
     setSubmitting(true); setError("");
     try {
-      await api.post("/api/business/outlets", {
+      await api.post("/api/business/branches", {
         name: form.name.trim(),
         address: form.address.trim() || null,
         open_time: form.open_time + ":00",
@@ -122,7 +122,7 @@ export default function BOOutlets() {
           <div>
             <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Branches</h2>
             <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {loading ? "Loading…" : `${outlets.length} branch${outlets.length !== 1 ? "es" : ""} across your business`}
+              {loading ? "Loading…" : `${branches.length} branch${branches.length !== 1 ? "es" : ""} across your business`}
             </p>
           </div>
           <button onClick={openWizard} style={s.btnPrimary}>
@@ -285,7 +285,7 @@ export default function BOOutlets() {
           </div>
         , document.body)}
 
-        {/* Outlet list */}
+        {/* Branch list */}
         {loading ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "18px" }}>
             {Array.from({ length: 2 }).map((_, i) => (
@@ -298,7 +298,7 @@ export default function BOOutlets() {
               </div>
             ))}
           </div>
-        ) : outlets.length === 0 ? (
+        ) : branches.length === 0 ? (
           <div style={s.empty}>
             <Building2 size={40} color="#CBD5E1" />
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No branches yet</p>
@@ -306,9 +306,9 @@ export default function BOOutlets() {
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "18px" }}>
-            {outlets.map((o, i) => (
-              <div key={o.branch_id} className="bo-outlet-card" style={{ ...s.card, animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both` }} onClick={() => goTo(`/business-owner/outlets/${o.branch_id}`)}>
-                <div className="bo-outlet-icon" style={s.cardIcon}><Building2 size={22} color="#D97706" /></div>
+            {branches.map((o, i) => (
+              <div key={o.branch_id} className="bo-branch-card" style={{ ...s.card, animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both` }} onClick={() => goTo(`/business-owner/branches/${o.branch_id}`)}>
+                <div className="bo-branch-icon" style={s.cardIcon}><Building2 size={22} color="#D97706" /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={s.cardName}>{o.name}</p>
                   {o.address
@@ -320,7 +320,7 @@ export default function BOOutlets() {
                     </p>
                   )}
                 </div>
-                <ArrowRight className="bo-outlet-arrow" size={18} color="#D97706" style={{ flexShrink: 0 }} />
+                <ArrowRight className="bo-branch-arrow" size={18} color="#D97706" style={{ flexShrink: 0 }} />
               </div>
             ))}
           </div>

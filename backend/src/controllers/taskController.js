@@ -25,7 +25,7 @@ function normalizeTask(task) {
   return { ...task, start_time: toHHMMSS(task.start_time), end_time: toHHMMSS(task.end_time) };
 }
 
-async function getCallerOutletId(userId) {
+async function getCallerBranchId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
   if (s?.branch_id) return s.branch_id;
   const { data: mgr } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1).maybeSingle();
@@ -223,14 +223,14 @@ const getStaffRoster = async (req, res) => {
 
     const shiftDateStr = shift.shift_date.toISOString().slice(0, 10);
     const shiftDate    = new Date(shiftDateStr + "T00:00:00Z");
-    const outletId     = shift.branch_id;
+    const branchId     = shift.branch_id;
 
     const staffList = await prisma.staff.findMany({
-      where: { branch_id: outletId, is_active: true },
+      where: { branch_id: branchId, is_active: true },
       include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
     });
 
-    const filtered = staffList.filter(s => s.users?.role !== "outlet_manager");
+    const filtered = staffList.filter(s => s.users?.role !== "manager");
 
     // staff.experience_level isn't declared in schema.prisma (only the legacy, never-populated
     // exp_level is), so Prisma silently omits it — fetch it directly via supabaseAdmin instead.

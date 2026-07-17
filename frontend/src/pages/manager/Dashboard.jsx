@@ -149,38 +149,38 @@ export default function ManagerDashboard() {
           .from("staff").select("branch_id, branches(name)")
           .eq("user_id", userId).eq("is_active", true).limit(1);
 
-        let outletId = myStaff?.[0]?.branch_id;
+        let branchId = myStaff?.[0]?.branch_id;
         let resolvedBranchName = myStaff?.[0]?.branches?.name || null;
-        if (!outletId) {
+        if (!branchId) {
           const { data: myMgr } = await supabase
             .from("branch_managers").select("branch_id, branches(name)")
             .eq("user_id", userId).limit(1);
-          outletId = myMgr?.[0]?.branch_id;
+          branchId = myMgr?.[0]?.branch_id;
           resolvedBranchName = myMgr?.[0]?.branches?.name || null;
         }
         if (!cancelled) setBranchName(resolvedBranchName);
-        if (!outletId || cancelled) return;
+        if (!branchId || cancelled) return;
 
-        // Get outlet staff IDs first so we can scope leave/swap counts correctly
-        const { data: outletStaffRows } = await supabase
-          .from("staff").select("staff_id").eq("branch_id", outletId).eq("is_active", true);
-        const outletStaffIds = (outletStaffRows || []).map(s => s.staff_id);
+        // Get branch staff IDs first so we can scope leave/swap counts correctly
+        const { data: branchStaffRows } = await supabase
+          .from("staff").select("staff_id").eq("branch_id", branchId).eq("is_active", true);
+        const branchStaffIds = (branchStaffRows || []).map(s => s.staff_id);
 
         const [{ data: shifts }, { count: staffCount }, { count: leaveCount }, { count: swapCount }] =
           await Promise.all([
             supabase.from("shifts")
               .select("shift_id,title,shift_date,start_time,end_time,status")
-              .eq("branch_id", outletId).gte("shift_date", today).lte("shift_date", future)
+              .eq("branch_id", branchId).gte("shift_date", today).lte("shift_date", future)
               .order("shift_date", { ascending: true }),
             supabase.from("staff").select("*", { count: "exact", head: true })
-              .eq("branch_id", outletId).eq("is_active", true).neq("user_id", userId),
-            outletStaffIds.length > 0
+              .eq("branch_id", branchId).eq("is_active", true).neq("user_id", userId),
+            branchStaffIds.length > 0
               ? supabase.from("availability").select("*", { count: "exact", head: true })
-                  .eq("status", "pending").in("staff_id", outletStaffIds)
+                  .eq("status", "pending").in("staff_id", branchStaffIds)
               : Promise.resolve({ count: 0 }),
-            outletStaffIds.length > 0
+            branchStaffIds.length > 0
               ? supabase.from("swap_requests").select("*", { count: "exact", head: true })
-                  .eq("status", "pending").in("requester_id", outletStaffIds)
+                  .eq("status", "pending").in("requester_id", branchStaffIds)
               : Promise.resolve({ count: 0 }),
           ]);
 
@@ -201,7 +201,7 @@ export default function ManagerDashboard() {
         const { data: pubShifts } = await supabase
           .from("shifts")
           .select("shift_id, title, shift_date")
-          .eq("branch_id", outletId)
+          .eq("branch_id", branchId)
           .eq("status", "published")
           .gte("shift_date", today);
 
@@ -249,17 +249,17 @@ export default function ManagerDashboard() {
   }
 
   const cardDefs = [
-    { label: "Upcoming Tasks",  key: "upcomingShifts", sub: "Next 7 days",      icon: Icons.calendar,  color: "#2563EB", bg: "#EFF6FF", link: "/outlet-manager/shifts" },
-    { label: "Total Staff",     key: "totalStaff",     sub: "Active members",   icon: Icons.users,     color: "#059669", bg: "#ECFDF5", link: "/outlet-manager/staff" },
-    { label: "Pending Leave",   key: "pendingLeave",   sub: "Awaiting approval",icon: Icons.clipboard, color: "#D97706", bg: "#FFFBEB", link: "/outlet-manager/availability" },
-    { label: "Swap Requests",   key: "pendingSwaps",   sub: "Needs review",     icon: Icons.refresh,   color: "#7C3AED", bg: "#F5F3FF", link: "/outlet-manager/availability" },
+    { label: "Upcoming Tasks",  key: "upcomingShifts", sub: "Next 7 days",      icon: Icons.calendar,  color: "#2563EB", bg: "#EFF6FF", link: "/manager/shifts" },
+    { label: "Total Staff",     key: "totalStaff",     sub: "Active members",   icon: Icons.users,     color: "#059669", bg: "#ECFDF5", link: "/manager/staff" },
+    { label: "Pending Leave",   key: "pendingLeave",   sub: "Awaiting approval",icon: Icons.clipboard, color: "#D97706", bg: "#FFFBEB", link: "/manager/availability" },
+    { label: "Swap Requests",   key: "pendingSwaps",   sub: "Needs review",     icon: Icons.refresh,   color: "#7C3AED", bg: "#F5F3FF", link: "/manager/availability" },
   ];
 
   const quickActions = [
-    { label: "Create Task",   icon: Icons.plus,      link: "/outlet-manager/shifts/new" },
-    { label: "View Staff",    icon: Icons.users,     link: "/outlet-manager/staff" },
-    { label: "Approve Leave", icon: Icons.check,     link: "/outlet-manager/availability" },
-    { label: "View Reports",  icon: Icons.chart,     link: "/outlet-manager/reports" },
+    { label: "Create Task",   icon: Icons.plus,      link: "/manager/shifts/new" },
+    { label: "View Staff",    icon: Icons.users,     link: "/manager/staff" },
+    { label: "Approve Leave", icon: Icons.check,     link: "/manager/availability" },
+    { label: "View Reports",  icon: Icons.chart,     link: "/manager/reports" },
   ];
 
   const maxBar = Math.max(...weekBarData, 1);
@@ -461,7 +461,7 @@ export default function ManagerDashboard() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
             <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Upcoming Tasks</h3>
             <button style={{ background: "none", border: "none", fontSize: "13px", color: "#2563EB", fontWeight: "600", cursor: "pointer" }}
-              onClick={() => goTo("/outlet-manager/shifts")}>
+              onClick={() => goTo("/manager/shifts")}>
               View all →
             </button>
           </div>
@@ -487,7 +487,7 @@ export default function ManagerDashboard() {
                 <span>Date</span><span>Title</span><span>Time</span><span>Status</span>
               </div>
               {recentShifts.map((shift) => (
-                <ShiftRow key={shift.shift_id} shift={shift} onNav={() => goTo(`/outlet-manager/shifts/${shift.shift_id}`)} />
+                <ShiftRow key={shift.shift_id} shift={shift} onNav={() => goTo(`/manager/shifts/${shift.shift_id}`)} />
               ))}
             </div>
           )}

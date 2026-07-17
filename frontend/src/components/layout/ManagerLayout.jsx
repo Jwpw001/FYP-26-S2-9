@@ -9,15 +9,15 @@ import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 
 const NAV = [
-  { label: "Dashboard",    path: "/outlet-manager/dashboard",       Icon: LayoutDashboard },
-  { label: "Workforce",    path: "/outlet-manager/staff",           Icon: Users },
-  { label: "Tasks",        path: "/outlet-manager/shifts",          Icon: CalendarDays },
-  { label: "Availability", path: "/outlet-manager/availability",    Icon: CalendarClock },
-  { label: "Timesheet",   path: "/outlet-manager/attendance",      Icon: ClipboardCheck },
-  { label: "Reports",      path: "/outlet-manager/reports",         Icon: BarChart2 },
-  { label: "Skills",       path: "/outlet-manager/skills",          Icon: Tag },
-  { label: "Invitations",  path: "/outlet-manager/invitations",     Icon: Mail },
-  { label: "Settings",    path: "/outlet-manager/settings",        Icon: Settings },
+  { label: "Dashboard",    path: "/manager/dashboard",       Icon: LayoutDashboard },
+  { label: "Workforce",    path: "/manager/staff",           Icon: Users },
+  { label: "Tasks",        path: "/manager/shifts",          Icon: CalendarDays },
+  { label: "Availability", path: "/manager/availability",    Icon: CalendarClock },
+  { label: "Timesheet",   path: "/manager/attendance",      Icon: ClipboardCheck },
+  { label: "Reports",      path: "/manager/reports",         Icon: BarChart2 },
+  { label: "Skills",       path: "/manager/skills",          Icon: Tag },
+  { label: "Invitations",  path: "/manager/invitations",     Icon: Mail },
+  { label: "Settings",    path: "/manager/settings",        Icon: Settings },
 ];
 
 export default function ManagerLayout({ children, title }) {
@@ -47,7 +47,7 @@ export default function ManagerLayout({ children, title }) {
         onMouseLeave={() => setExpanded(false)}
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
         <div style={{ ...s.sidebarTop, padding: "20px 14px 16px" }}>
-          <Link to="/outlet-manager/dashboard" style={s.logoRow}>
+          <Link to="/manager/dashboard" style={s.logoRow}>
             <div style={{ height: "34px", width: expanded ? "auto" : "34px", maxWidth: expanded ? "160px" : "34px", background: "#fff", borderRadius: "9px", overflow: "hidden", display: "flex", alignItems: "center", transition: "max-width 0.25s ease, width 0.25s ease", flexShrink: 0, padding: expanded ? "0 8px" : "0" }}>
               <img src="/krewby-logo.png" alt="Krewby" style={{ height: expanded ? "22px" : "34px", width: expanded ? "auto" : "34px", objectFit: expanded ? "contain" : "cover", objectPosition: "left center", display: "block" }} />
             </div>
@@ -103,16 +103,16 @@ export default function ManagerLayout({ children, title }) {
           <div style={{ flex: 1 }} />
           {/* Notification bell */}
           <button
-            onClick={() => navigate("/outlet-manager/notifications")}
+            onClick={() => navigate("/manager/notifications")}
             style={{
               position: "relative",
-              background: location.pathname === "/outlet-manager/notifications" ? "#EFF6FF" : "none",
-              border: location.pathname === "/outlet-manager/notifications" ? "1.5px solid #BFDBFE" : "1px solid transparent",
+              background: location.pathname === "/manager/notifications" ? "#EFF6FF" : "none",
+              border: location.pathname === "/manager/notifications" ? "1.5px solid #BFDBFE" : "1px solid transparent",
               borderRadius: "10px", padding: "7px 9px", cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "all 0.15s",
             }}>
-            <svg width="20" height="20" fill="none" stroke={location.pathname === "/outlet-manager/notifications" ? "#2563EB" : "#64748B"} strokeWidth="2" viewBox="0 0 24 24">
+            <svg width="20" height="20" fill="none" stroke={location.pathname === "/manager/notifications" ? "#2563EB" : "#64748B"} strokeWidth="2" viewBox="0 0 24 24">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>

@@ -54,7 +54,7 @@ async function getShiftRecommendations(shiftId) {
     return { message: "All tasks are already assigned.", recommendations: [] };
   }
 
-  // 2. Load all active non-manager staff for the outlet
+  // 2. Load all active non-manager staff for the branch
   const { data: staffRows } = await supabaseAdmin
     .from("staff")
     .select("staff_id, user_id, staff_type, default_work_days, experience_level, years_of_experience")
@@ -135,7 +135,7 @@ async function getShiftRecommendations(shiftId) {
     return staffRows
       .map(s => {
         const user = userMap[s.user_id] || {};
-        if (user.role === "outlet_manager") return null;
+        if (user.role === "manager") return null;
         if (alreadyAssignedStaffIds.has(s.staff_id)) return null;
 
         const skills = (skillMap[s.user_id] || [])
@@ -187,7 +187,7 @@ async function getShiftRecommendations(shiftId) {
   }));
 
   // 8. Call Groq
-  const prompt = `You are a smart workforce scheduling assistant for an F&B outlet.
+  const prompt = `You are a smart workforce scheduling assistant for an F&B branch.
 
 SHIFT: ${shift.title} on ${shift.shift_date} (${shiftDayName}), ${toHHMM(shift.start_time)}–${toHHMM(shift.end_time)} at ${shift.branches?.name}
 

@@ -7,9 +7,9 @@ import { useGoTo } from "../../components/PageTransition";
 import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star, Settings2, Calendar, Zap, Pencil, X, Save, Loader2, Check, Minus, Scale, Award, TrendingUp, BarChart3, RotateCcw, ChevronDown } from "lucide-react";
 import { SG_HOLIDAYS } from "../../data/sgHolidays";
 
-if (typeof document !== "undefined" && !document.getElementById("bo-outletdetail-styles")) {
+if (typeof document !== "undefined" && !document.getElementById("bo-branchdetail-styles")) {
   const style = document.createElement("style");
-  style.id = "bo-outletdetail-styles";
+  style.id = "bo-branchdetail-styles";
   style.textContent = `
     @keyframes pageIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
     @keyframes fadeSlideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
@@ -34,7 +34,7 @@ const WEIGHTS = [
 
 const ALLOC_DEFAULTS = { weight_availability: 40, weight_skills: 30, weight_attendance: 15, weight_performance: 10, weight_workload: 5 };
 
-const DEFAULT_OUTLET_SETTINGS = {
+const DEFAULT_BRANCH_SETTINGS = {
   operating_days: [1,1,1,1,1,0,0],
   holidays: SG_HOLIDAYS.map(h => ({ ...h })),
   work_hours_day: 8, max_work_hours_day: 12,
@@ -42,7 +42,7 @@ const DEFAULT_OUTLET_SETTINGS = {
   off_days_per_week: 1,
 };
 
-function parseOutletSettings(s) {
+function parseBranchSettings(s) {
   return {
     operating_days: s.operating_days ? s.operating_days.split("").map(Number) : [1,1,1,1,1,0,0],
     holidays: s.holidays?.length ? s.holidays : SG_HOLIDAYS.map(h => ({ ...h })),
@@ -108,11 +108,11 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />;
 }
 
-export default function OutletDetail() {
+export default function BranchDetail() {
   const { id } = useParams();
   const goTo = useGoTo();
 
-  const [outlet, setOutlet]       = useState(null);
+  const [branch, setBranch]       = useState(null);
   const [loading, setLoading]     = useState(true);
   const [deleting, setDeleting]   = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -130,7 +130,7 @@ export default function OutletDetail() {
   const [rolesSaving, setRolesSaving] = useState(false);
   const [skills, setSkills] = useState([]);
 
-  // Per-outlet business setup settings
+  // Per-branch business setup settings
   const [bizSettings, setBizSettings] = useState(null);
   const [savedBizSettings, setSavedBizSettings] = useState(null);
   const [bizAlloc, setBizAlloc] = useState(null);
@@ -148,16 +148,16 @@ export default function OutletDetail() {
   const [modalOpenTime, setModalOpenTime] = useState("");
   const [modalCloseTime, setModalCloseTime] = useState("");
 
-  useEffect(() => { fetchOutlet(); fetchStaff(); fetchManagers(); fetchRoleTemplates(); fetchBizSettings(); }, [id]);
+  useEffect(() => { fetchBranch(); fetchStaff(); fetchManagers(); fetchRoleTemplates(); fetchBizSettings(); }, [id]);
   useEffect(() => { api.get("/api/business/skills").then(r => setSkills((r.skills || []).map(sk => ({ skill_id: sk.skill_id, name: sk.name })))).catch(() => {}); }, []);
 
-  async function fetchOutlet() {
+  async function fetchBranch() {
     setLoading(true);
     try {
-      const data = await api.get("/api/business/outlets");
-      const found = (data.outlets || []).find(o => String(o.branch_id) === String(id));
-      if (!found) { goTo("/business-owner/outlets"); return; }
-      setOutlet(found);
+      const data = await api.get("/api/business/branches");
+      const found = (data.branches || []).find(o => String(o.branch_id) === String(id));
+      if (!found) { goTo("/business-owner/branches"); return; }
+      setBranch(found);
     } catch (err) {
       console.error(err);
     } finally {
@@ -168,7 +168,7 @@ export default function OutletDetail() {
   async function fetchStaff() {
     setStaffLoading(true);
     try {
-      const data = await api.get(`/api/business/outlets/${id}/staff`);
+      const data = await api.get(`/api/business/branches/${id}/staff`);
       setStaff(data.staff || []);
     } catch (err) {
       console.error(err);
@@ -180,7 +180,7 @@ export default function OutletDetail() {
   async function fetchManagers() {
     setManagersLoading(true);
     try {
-      const data = await api.get(`/api/business/outlets/${id}/managers`);
+      const data = await api.get(`/api/business/branches/${id}/managers`);
       setManagers(data.managers || []);
     } catch (err) {
       console.error(err);
@@ -192,8 +192,8 @@ export default function OutletDetail() {
   async function fetchBizSettings() {
     setBizSettingsLoading(true);
     try {
-      const data = await api.get(`/api/business/outlets/${id}/settings`);
-      const s = data.settings ? parseOutletSettings(data.settings) : { ...DEFAULT_OUTLET_SETTINGS };
+      const data = await api.get(`/api/business/branches/${id}/settings`);
+      const s = data.settings ? parseBranchSettings(data.settings) : { ...DEFAULT_BRANCH_SETTINGS };
       const a = data.allocation ? { ...ALLOC_DEFAULTS, ...data.allocation } : { ...ALLOC_DEFAULTS };
       setBizSettings(s);
       setSavedBizSettings(JSON.parse(JSON.stringify(s)));
@@ -206,7 +206,7 @@ export default function OutletDetail() {
   async function fetchRoleTemplates() {
     setRoleTemplatesLoading(true);
     try {
-      const data = await api.get(`/api/business/outlets/${id}/role-templates`);
+      const data = await api.get(`/api/business/branches/${id}/role-templates`);
       setRoleTemplates(data.templates || []);
     } catch (err) {
       console.error(err);
@@ -227,7 +227,7 @@ export default function OutletDetail() {
   async function saveRoles() {
     setRolesSaving(true);
     try {
-      await api.put(`/api/business/outlets/${id}/role-templates`, {
+      await api.put(`/api/business/branches/${id}/role-templates`, {
         role_templates: rolesDraft.filter(r => r.role_name.trim()).map(r => ({
           role_name: r.role_name.trim(),
           skill_id: r.skill_id ? Number(r.skill_id) : null,
@@ -306,16 +306,16 @@ export default function OutletDetail() {
         close_time: modalCloseTime ? modalCloseTime + ":00" : undefined,
       };
       const [patchRes] = await Promise.all([
-        api.patch(`/api/business/outlets/${id}`, patchBody),
-        api.put(`/api/business/outlets/${id}/settings`, {
+        api.patch(`/api/business/branches/${id}`, patchBody),
+        api.put(`/api/business/branches/${id}/settings`, {
           ...bizSettings,
           operating_days: bizSettings.operating_days.join(""),
         }),
       ]);
-      if (patchRes.outlet) {
-        setOutlet(patchRes.outlet);
+      if (patchRes.branch) {
+        setBranch(patchRes.branch);
       } else {
-        setOutlet(prev => ({ ...prev, ...patchBody }));
+        setBranch(prev => ({ ...prev, ...patchBody }));
       }
       setSavedBizSettings(JSON.parse(JSON.stringify(bizSettings)));
       setEditingBizSetup(false);
@@ -326,11 +326,11 @@ export default function OutletDetail() {
   }
 
   function openSettings() {
-    setModalAllowOffDay((outlet?.working_days ?? 5) >= 6);
-    setModalName(outlet?.name || "");
-    setModalAddress(outlet?.address || "");
-    setModalOpenTime(fmtTimeInput(outlet?.open_time));
-    setModalCloseTime(fmtTimeInput(outlet?.close_time));
+    setModalAllowOffDay((branch?.working_days ?? 5) >= 6);
+    setModalName(branch?.name || "");
+    setModalAddress(branch?.address || "");
+    setModalOpenTime(fmtTimeInput(branch?.open_time));
+    setModalCloseTime(fmtTimeInput(branch?.close_time));
     setBizSettings(JSON.parse(JSON.stringify(savedBizSettings)));
     setBizAlloc({ ...savedBizAlloc });
     setEditingBizSetup(false);
@@ -352,7 +352,7 @@ export default function OutletDetail() {
     const total = WEIGHTS.reduce((s, w) => s + (bizAlloc[w.key] || 0), 0);
     if (total !== 100) { setBizError("Weights must sum to 100%."); setBizSaving(null); return; }
     try {
-      await api.put(`/api/business/outlets/${id}/settings/allocation`, bizAlloc);
+      await api.put(`/api/business/branches/${id}/settings/allocation`, bizAlloc);
       setSavedBizAlloc({ ...bizAlloc });
       setEditingBizAlloc(false);
       setBizSuccess("Allocation preferences saved.");
@@ -364,8 +364,8 @@ export default function OutletDetail() {
   async function handleDelete() {
     setDeleting(true);
     try {
-      await api.delete(`/api/business/outlets/${id}`);
-      goTo("/business-owner/outlets");
+      await api.delete(`/api/business/branches/${id}`);
+      goTo("/business-owner/branches");
     } catch (err) {
       console.error(err);
       setDeleting(false);
@@ -385,15 +385,15 @@ export default function OutletDetail() {
 
   return (
     <BusinessOwnerLayout title="Branch Details">
-      <button style={s.back} onClick={() => goTo("/business-owner/outlets")}>← Back to Branches</button>
+      <button style={s.back} onClick={() => goTo("/business-owner/branches")}>← Back to Branches</button>
 
       <div style={s.layout}>
         {/* ── Left: branch card ── */}
         <div style={s.profileCard}>
           <div style={s.avatarLg}><Building2 size={28} color="#F59E0B" /></div>
-          <h2 style={s.profileName}>{outlet.name}</h2>
-          {outlet.address ? (
-            <p style={s.profileMeta}><MapPin size={12} /> {outlet.address}</p>
+          <h2 style={s.profileName}>{branch.name}</h2>
+          {branch.address ? (
+            <p style={s.profileMeta}><MapPin size={12} /> {branch.address}</p>
           ) : (
             <p style={s.profileMetaMuted}>No address set</p>
           )}
@@ -443,22 +443,22 @@ export default function OutletDetail() {
           <div style={s.fields}>
             <div style={s.field}>
               <label style={s.label}>Branch Name</label>
-              <p style={s.value}>{outlet.name}</p>
+              <p style={s.value}>{branch.name}</p>
             </div>
 
             <div style={s.field}>
               <label style={s.label}>Address</label>
-              <p style={s.value}>{outlet.address || "—"}</p>
+              <p style={s.value}>{branch.address || "—"}</p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div style={s.field}>
                 <label style={s.label}><Clock size={12} style={{ marginRight: 4 }} />Opening Time</label>
-                <p style={s.value}>{fmtTimeDisplay(outlet.open_time) || "—"}</p>
+                <p style={s.value}>{fmtTimeDisplay(branch.open_time) || "—"}</p>
               </div>
               <div style={s.field}>
                 <label style={s.label}><Clock size={12} style={{ marginRight: 4 }} />Closing Time</label>
-                <p style={s.value}>{fmtTimeDisplay(outlet.close_time) || "—"}</p>
+                <p style={s.value}>{fmtTimeDisplay(branch.close_time) || "—"}</p>
               </div>
             </div>
 
@@ -483,7 +483,7 @@ export default function OutletDetail() {
             <div style={s.field}>
               <label style={s.label}>Off Day Requests</label>
               <p style={s.value}>
-                {(outlet.working_days ?? 5) >= 6
+                {(branch.working_days ?? 5) >= 6
                   ? `Allowed — ${savedBizSettings?.off_days_per_week ?? 1} day${(savedBizSettings?.off_days_per_week ?? 1) !== 1 ? "s" : ""}/week`
                   : "Not allowed"}
               </p>
@@ -615,7 +615,7 @@ export default function OutletDetail() {
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
-            {staff.filter(m => m.users?.role !== "outlet_manager").map((m, i) => {
+            {staff.filter(m => m.users?.role !== "manager").map((m, i) => {
               const name = m.users?.full_name || "—";
               const initials = name[0]?.toUpperCase() || "?";
               const color = avatarColor(name);
@@ -651,7 +651,7 @@ export default function OutletDetail() {
             <div style={s.modalIcon}><Trash2 size={36} color="#EF4444" /></div>
             <h3 style={s.modalTitle}>Delete Branch?</h3>
             <p style={s.modalBody}>
-              This will permanently remove <strong>{outlet.name}</strong> along with its staff, shifts, and reports.
+              This will permanently remove <strong>{branch.name}</strong> along with its staff, shifts, and reports.
               This cannot be undone.
             </p>
             <div style={s.modalActions}>
@@ -681,7 +681,7 @@ export default function OutletDetail() {
               </div>
               <div>
                 <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Branch Settings</h3>
-                <p style={{ fontSize: "12px", color: "#94A3B8" }}>{outlet.name}</p>
+                <p style={{ fontSize: "12px", color: "#94A3B8" }}>{branch.name}</p>
               </div>
             </div>
             <button onClick={closeSettings} style={{ width: "32px", height: "32px", borderRadius: "8px", border: "1px solid #E2E8F0", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748B" }}>

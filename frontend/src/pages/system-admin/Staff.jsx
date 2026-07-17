@@ -29,8 +29,8 @@ export default function AdminStaff() {
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
   const [filter,  setFilter]  = useState("all");   // all | regular | casual
-  const [outlet,  setOutlet]  = useState("");       // outlet filter
-  const [outlets, setOutlets] = useState([]);
+  const [branch,  setBranch]  = useState("");       // branch filter
+  const [branches, setBranches] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,7 +38,7 @@ export default function AdminStaff() {
       supabase.from("staff").select("staff_id,staff_type,is_active,branch_id,user_id,users(full_name,email,role),branches(name)").order("staff_id"),
       supabase.from("branches").select("branch_id,name").order("name"),
       supabase.from("user_skill_tags").select("user_id,skills(name)"),
-    ]).then(([{ data: staffData }, { data: outletData }, { data: skillData }]) => {
+    ]).then(([{ data: staffData }, { data: branchData }, { data: skillData }]) => {
       if (!cancelled) {
         const skillMap = {};
         (skillData || []).forEach(row => {
@@ -48,7 +48,7 @@ export default function AdminStaff() {
         const staffWithSkills = (staffData || [])
           .map(s => ({ ...s, skillNames: skillMap[s.user_id] || [] }));
         setStaff(staffWithSkills);
-        setOutlets(outletData || []);
+        setBranches(branchData || []);
         setLoading(false);
       }
     });
@@ -60,16 +60,16 @@ export default function AdminStaff() {
     const email = s.users?.email?.toLowerCase() || "";
     const q     = search.toLowerCase();
     if (q && !name.includes(q) && !email.includes(q)) return false;
-    if (filter === "manager" && s.users?.role !== "outlet_manager") return false;
+    if (filter === "manager" && s.users?.role !== "manager") return false;
     if (filter === "regular" && s.staff_type !== "regular") return false;
     if (filter === "casual"  && s.staff_type !== "casual")  return false;
-    if (outlet && String(s.branch_id) !== outlet) return false;
+    if (branch && String(s.branch_id) !== branch) return false;
     return true;
   });
 
   const counts = {
     all:     staff.length,
-    manager: staff.filter(s => s.users?.role === "outlet_manager").length,
+    manager: staff.filter(s => s.users?.role === "manager").length,
     regular: staff.filter(s => s.staff_type === "regular").length,
     casual:  staff.filter(s => s.staff_type === "casual").length,
   };
@@ -111,11 +111,11 @@ export default function AdminStaff() {
             ))}
           </div>
 
-          {/* Outlet filter */}
-          <select value={outlet} onChange={e => setOutlet(e.target.value)}
+          {/* Branch filter */}
+          <select value={branch} onChange={e => setBranch(e.target.value)}
             style={{ padding:"8px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"13px", color:"#1E293B", background:"#FFF", outline:"none", cursor:"pointer" }}>
-            <option value="">All Outlets</option>
-            {outlets.map(o => <option key={o.branch_id} value={String(o.branch_id)}>{o.name}</option>)}
+            <option value="">All Branches</option>
+            {branches.map(o => <option key={o.branch_id} value={String(o.branch_id)}>{o.name}</option>)}
           </select>
 
           {/* Search */}
@@ -168,10 +168,10 @@ export default function AdminStaff() {
                       </div>
                     </div>
 
-                    {/* Outlet */}
-                    {s.outlets?.name && (
+                    {/* Branch */}
+                    {s.branches?.name && (
                       <p style={{ fontSize:"11px", color:"#94A3B8", marginBottom:"10px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                        <MapPin size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} /> {s.outlets.name}
+                        <MapPin size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} /> {s.branches.name}
                       </p>
                     )}
 

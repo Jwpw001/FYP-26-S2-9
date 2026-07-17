@@ -1,20 +1,20 @@
 ﻿const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/authMiddleware");
-const { getMyOutlets, createOutlet, updateOutlet, deleteOutlet, getAllStaff, getAllManagers, getOutletStaff, getOutletManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, getOutletSkills, createOutletSkill, updateOutletSkill, deleteOutletSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getOutletSettings, updateOutletSettings, updateOutletAllocationPrefs } = require("../controllers/businessOwnerController");
+const { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs } = require("../controllers/businessOwnerController");
 
 router.use(protect);
 
 router.get("/info",                              getMyBusiness);
 router.get("/stats",                             getBusinessStats);
-router.get("/outlets",                           getMyOutlets);
-router.post("/outlets",                          createOutlet);
-router.patch("/outlets/:outlet_id",              updateOutlet);
-router.delete("/outlets/:outlet_id",             deleteOutlet);
+router.get("/branches",                           getMyBranches);
+router.post("/branches",                          createBranch);
+router.patch("/branches/:branch_id",              updateBranch);
+router.delete("/branches/:branch_id",             deleteBranch);
 router.get("/staff",                             getAllStaff);
 router.get("/managers",                          getAllManagers);
-router.get("/outlets/:outlet_id/staff",          getOutletStaff);
-router.get("/outlets/:outlet_id/managers",       getOutletManagers);
+router.get("/branches/:branch_id/staff",          getBranchStaff);
+router.get("/branches/:branch_id/managers",       getBranchManagers);
 router.get("/managers/:user_id",                 getManagerDetail);
 router.patch("/managers/:user_id",               updateManagerDetail);
 router.delete("/managers/:user_id",              deleteManagerDetail);
@@ -30,15 +30,15 @@ router.get("/skills/assignable",                       getBusinessSkillsForAssig
 router.get("/branch-skills-summary",                   getBranchSkillsSummary);
 router.post("/skills",                                createBusinessSkill);
 router.delete("/skills/:skill_id",                    deleteBusinessSkill);
-router.get("/outlets/:outlet_id/skills",              getOutletSkills);
-router.post("/outlets/:outlet_id/skills",             createOutletSkill);
-router.patch("/outlets/:outlet_id/skills/:skill_id",  updateOutletSkill);
-router.delete("/outlets/:outlet_id/skills/:skill_id", deleteOutletSkill);
-router.get("/outlets/:outlet_id/role-templates",      getRoleTemplates);
-router.put("/outlets/:outlet_id/role-templates",      upsertRoleTemplates);
-router.get("/outlets/:outlet_id/settings",            getOutletSettings);
-router.put("/outlets/:outlet_id/settings",            updateOutletSettings);
-router.put("/outlets/:outlet_id/settings/allocation", updateOutletAllocationPrefs);
+router.get("/branches/:branch_id/skills",              getBranchSkills);
+router.post("/branches/:branch_id/skills",             createBranchSkill);
+router.patch("/branches/:branch_id/skills/:skill_id",  updateBranchSkill);
+router.delete("/branches/:branch_id/skills/:skill_id", deleteBranchSkill);
+router.get("/branches/:branch_id/role-templates",      getRoleTemplates);
+router.put("/branches/:branch_id/role-templates",      upsertRoleTemplates);
+router.get("/branches/:branch_id/settings",            getBranchSettings);
+router.put("/branches/:branch_id/settings",            updateBranchSettings);
+router.put("/branches/:branch_id/settings/allocation", updateBranchAllocationPrefs);
 
 module.exports = router;
 

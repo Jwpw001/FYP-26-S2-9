@@ -20,7 +20,7 @@ const PLANS = [
     buttonText: "Current plan",
     description: "No credit card required",
     features: [
-      "1 outlet",
+      "1 branch",
       "Up to 20 staff",
       "Shift scheduling",
       "Leave & swap requests",
@@ -41,7 +41,7 @@ const PLANS = [
     buttonText: "Upgrade to Premium",
     description: "Billed monthly, cancel anytime",
     features: [
-      "1 outlet",
+      "1 branch",
       "Unlimited staff",
       "Everything in Free",
       "Advanced reports",
@@ -56,7 +56,7 @@ const PLANS = [
     price: "120",
     yearlyPrice: "96",
     period: "/ month",
-    tagline: "For multi-outlet operations",
+    tagline: "For multi-branch operations",
     accent: "#7C3AED",
     accentLight: "#F5F3FF",
     isPopular: false,
@@ -64,7 +64,7 @@ const PLANS = [
     description: "Custom onboarding included",
     features: [
       "Up to 2 businesses",
-      "Unlimited outlets",
+      "Unlimited branches",
       "Unlimited staff",
       "Everything in Premium",
       "Dedicated account manager",

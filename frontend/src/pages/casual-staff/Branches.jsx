@@ -14,7 +14,7 @@ if (typeof document !== "undefined" && !document.getElementById("casual-branches
 }
 
 export default function CasualBranches() {
-  const [outlets, setOutlets]         = useState([]);
+  const [branches, setBranches]         = useState([]);
   const [selected, setSelected]       = useState(new Set());
   const [approvalStatus, setApproval] = useState(null);
   const [loading, setLoading]         = useState(true);
@@ -23,20 +23,20 @@ export default function CasualBranches() {
 
   useEffect(() => {
     Promise.all([
-      api.get("/api/casual/my-outlets"),
+      api.get("/api/casual/my-branches"),
       api.get("/api/casual/preferences"),
-    ]).then(([myOutlets, prefs]) => {
-      setOutlets(myOutlets?.outlets || []);
-      setApproval(myOutlets?.approval_status || null);
-      setSelected(new Set(prefs?.preferred_outlet_ids || []));
+    ]).then(([myBranches, prefs]) => {
+      setBranches(myBranches?.branches || []);
+      setApproval(myBranches?.approval_status || null);
+      setSelected(new Set(prefs?.preferred_branch_ids || []));
     }).finally(() => setLoading(false));
   }, []);
 
-  function toggle(outletId) {
+  function toggle(branchId) {
     setSelected(prev => {
       const next = new Set(prev);
-      if (next.has(outletId)) next.delete(outletId);
-      else next.add(outletId);
+      if (next.has(branchId)) next.delete(branchId);
+      else next.add(branchId);
       return next;
     });
     setSaved(false);
@@ -45,7 +45,7 @@ export default function CasualBranches() {
   async function save() {
     setSaving(true);
     try {
-      await api.put("/api/casual/preferences", { outlet_ids: [...selected] });
+      await api.put("/api/casual/preferences", { branch_ids: [...selected] });
       setSaved(true);
     } finally {
       setSaving(false);
@@ -86,7 +86,7 @@ export default function CasualBranches() {
               <div key={i} style={{ height: "64px", borderRadius: "12px", background: "#F1F5F9", animation: "pulse 1.5s infinite" }} />
             ))}
           </div>
-        ) : outlets.length === 0 ? (
+        ) : branches.length === 0 ? (
           <div style={{ textAlign: "center", padding: "48px 0", color: "#94A3B8" }}>
             <Building2 size={36} style={{ margin: "0 auto 12px" }} />
             <p style={{ fontSize: "14px" }}>No branches available yet.</p>
@@ -94,10 +94,10 @@ export default function CasualBranches() {
         ) : (
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
-              {outlets.map(outlet => {
-                const isSelected = selected.has(outlet.branch_id);
+              {branches.map(branch => {
+                const isSelected = selected.has(branch.branch_id);
                 return (
-                  <button key={outlet.branch_id} onClick={() => toggle(outlet.branch_id)}
+                  <button key={branch.branch_id} onClick={() => toggle(branch.branch_id)}
                     style={{
                       display: "flex", alignItems: "center", gap: "14px",
                       background: isSelected ? "#EFF6FF" : "#FFF",
@@ -119,13 +119,13 @@ export default function CasualBranches() {
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: "14px", fontWeight: "700", color: isSelected ? "#1E40AF" : "#1E293B" }}>
-                        {outlet.name}
+                        {branch.name}
                       </p>
-                      {outlet.address && (
+                      {branch.address && (
                         <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "3px" }}>
                           <MapPin size={11} color="#94A3B8" />
                           <p style={{ fontSize: "12px", color: "#94A3B8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {outlet.address}
+                            {branch.address}
                           </p>
                         </div>
                       )}
@@ -149,7 +149,7 @@ export default function CasualBranches() {
             {/* Footer */}
             <div style={{ paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
               <p style={{ fontSize: "13px", color: "#64748B" }}>
-                {selected.size === 0 ? "No branches selected" : `${selected.size} of ${outlets.length} branch${outlets.length > 1 ? "es" : ""} selected`}
+                {selected.size === 0 ? "No branches selected" : `${selected.size} of ${branches.length} branch${branches.length > 1 ? "es" : ""} selected`}
               </p>
             </div>
           </>

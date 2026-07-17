@@ -46,9 +46,9 @@ export default function CreateShift() {
   const [createdShift, setCreatedShift] = useState(null);
 
   // Step 1 state
-  const [outletId, setOutletId]         = useState(null);
-  const [outletHours, setOutletHours]   = useState({ open: null, close: null });
-  const [outletSettings, setOutletSettings] = useState(null);
+  const [branchId, setBranchId]         = useState(null);
+  const [branchHours, setBranchHours]   = useState({ open: null, close: null });
+  const [branchSettings, setBranchSettings] = useState(null);
   const [skills, setSkills]             = useState([]);
   const [saving, setSaving]             = useState(false);
   const [error, setError]               = useState("");
@@ -77,28 +77,28 @@ export default function CreateShift() {
         oid = omRow?.[0]?.branch_id || null;
       }
       if (!oid || cancelled) return;
-      if (!cancelled) { setOutletId(oid); setSkills(skillsRes.skills || []); }
+      if (!cancelled) { setBranchId(oid); setSkills(skillsRes.skills || []); }
 
       const [{ data: od }, settingsRes] = await Promise.all([
         supabase.from("branches").select("open_time, close_time").eq("branch_id", oid).single(),
-        api.get(`/api/business/outlets/${oid}/settings`).catch(() => ({ settings: null })),
+        api.get(`/api/business/branches/${oid}/settings`).catch(() => ({ settings: null })),
       ]);
       if (cancelled) return;
-      if (od) setOutletHours({ open: od.open_time?.slice(0,5) || null, close: od.close_time?.slice(0,5) || null });
-      if (settingsRes?.settings) setOutletSettings(settingsRes.settings);
+      if (od) setBranchHours({ open: od.open_time?.slice(0,5) || null, close: od.close_time?.slice(0,5) || null });
+      if (settingsRes?.settings) setBranchSettings(settingsRes.settings);
     }
     load();
     return () => { cancelled = true; };
   }, [userId]);
 
-  const operatingDays = parseOperatingDays(outletSettings?.operating_days);
-  const allowOvertime = outletSettings?.allow_overtime ?? false;
-  const maxHoursDay   = outletSettings?.max_work_hours_day ?? null;
-  const timeMin       = !allowOvertime ? (outletHours.open  || undefined) : undefined;
-  const timeMax       = !allowOvertime ? (outletHours.close || undefined) : undefined;
+  const operatingDays = parseOperatingDays(branchSettings?.operating_days);
+  const allowOvertime = branchSettings?.allow_overtime ?? false;
+  const maxHoursDay   = branchSettings?.max_work_hours_day ?? null;
+  const timeMin       = !allowOvertime ? (branchHours.open  || undefined) : undefined;
+  const timeMax       = !allowOvertime ? (branchHours.close || undefined) : undefined;
 
   function checkDateOperating(dateStr) {
-    if (!dateStr || !outletSettings) { setDateWarning(""); return; }
+    if (!dateStr || !branchSettings) { setDateWarning(""); return; }
     const dow = jsDayToMonBased(new Date(dateStr + "T00:00:00").getDay());
     setDateWarning(!operatingDays[dow] ? `${DAY_FULL[dow]} is not an operating day.` : "");
   }
@@ -121,25 +121,25 @@ export default function CreateShift() {
     if (!form.end_time)                   { setError("End time is required."); return; }
     if (form.end_time <= form.start_time) { setError("End time must be after start time."); return; }
 
-    if (outletSettings) {
+    if (branchSettings) {
       const dow = jsDayToMonBased(new Date(form.shift_date + "T00:00:00").getDay());
       if (!operatingDays[dow]) {
         setError(`Cannot create a shift on ${DAY_FULL[dow]} — not an operating day.`); return;
       }
     }
     if (!allowOvertime) {
-      if (outletHours.open  && form.start_time < outletHours.open)  { setError(`Start time before opening (${fmtTime(outletHours.open)}).`); return; }
-      if (outletHours.close && form.end_time   > outletHours.close) { setError(`End time after closing (${fmtTime(outletHours.close)}).`); return; }
+      if (branchHours.open  && form.start_time < branchHours.open)  { setError(`Start time before opening (${fmtTime(branchHours.open)}).`); return; }
+      if (branchHours.close && form.end_time   > branchHours.close) { setError(`End time after closing (${fmtTime(branchHours.close)}).`); return; }
     }
     if (maxHoursDay && getShiftMinutes() > maxHoursDay * 60) {
       setError(`Shift duration exceeds the maximum of ${maxHoursDay}h per day.`); return;
     }
-    if (!outletId) { setError("No outlet found for your account."); return; }
+    if (!branchId) { setError("No branch found for your account."); return; }
 
     setSaving(true); setError("");
     try {
       const res = await api.post("/api/shifts", {
-        branch_id: outletId,
+        branch_id: branchId,
         title: form.title.trim() || null,
         shift_date: form.shift_date,
         start_time: form.start_time,
@@ -166,7 +166,7 @@ export default function CreateShift() {
     const validTasks = tasks.filter(t => t.title.trim());
     if (validTasks.length === 0) {
       // Skip — no tasks to save
-      navigate(`/outlet-manager/shifts/${createdShift.shift_id}`);
+      navigate(`/manager/shifts/${createdShift.shift_id}`);
       return;
     }
     setSavingTasks(true); setTaskError("");
@@ -180,7 +180,7 @@ export default function CreateShift() {
           end_time: t.end_time || null,
         });
       }
-      navigate(`/outlet-manager/shifts/${createdShift.shift_id}`);
+      navigate(`/manager/shifts/${createdShift.shift_id}`);
     } catch (err) {
       setTaskError(err.message || "Failed to save tasks. Please try again.");
     } finally { setSavingTasks(false); }
@@ -199,7 +199,7 @@ export default function CreateShift() {
 
   return (
     <ManagerLayout title={step === 1 ? "Create Shift" : "Add Tasks"}>
-      <button style={s.back} onClick={() => step === 2 ? setStep(1) : navigate("/outlet-manager/shifts")}>
+      <button style={s.back} onClick={() => step === 2 ? setStep(1) : navigate("/manager/shifts")}>
         ← {step === 2 ? "Back to Shift Details" : "Back to Shifts"}
       </button>
 
@@ -247,7 +247,7 @@ export default function CreateShift() {
                 {dateWarning && (
                   <p style={s.warningText}><AlertTriangle size={11} /> {dateWarning}</p>
                 )}
-                {outletSettings && (
+                {branchSettings && (
                   <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px" }}>
                     {DAY_NAMES.map((d, i) => (
                       <span key={d} style={{
@@ -286,9 +286,9 @@ export default function CreateShift() {
                     <Clock size={11} /> {duration}{overMax ? ` — exceeds ${maxHoursDay}h max` : ""}
                   </span>
                 )}
-                {(outletHours.open || outletHours.close) && (
+                {(branchHours.open || branchHours.close) && (
                   <span style={{ ...s.pill, background: "#F0F9FF", color: "#0369A1", borderColor: "#BAE6FD" }}>
-                    Hours: {fmtTime(outletHours.open)} – {fmtTime(outletHours.close)}
+                    Hours: {fmtTime(branchHours.open)} – {fmtTime(branchHours.close)}
                   </span>
                 )}
               </div>
@@ -296,7 +296,7 @@ export default function CreateShift() {
           </div>
 
           <div style={s.actions}>
-            <button style={s.cancelBtn} onClick={() => navigate("/outlet-manager/shifts")} disabled={saving}>Cancel</button>
+            <button style={s.cancelBtn} onClick={() => navigate("/manager/shifts")} disabled={saving}>Cancel</button>
             <div style={{ display: "flex", gap: "8px" }}>
               <button style={s.draftBtn} onClick={() => handleCreateShift(false)} disabled={saving}>
                 {saving ? "Saving…" : "Save as Draft"}
@@ -392,7 +392,7 @@ export default function CreateShift() {
           </div>
 
           <div style={s.actions}>
-            <button style={s.cancelBtn} onClick={() => navigate(`/outlet-manager/shifts/${createdShift.shift_id}`)} disabled={savingTasks}>
+            <button style={s.cancelBtn} onClick={() => navigate(`/manager/shifts/${createdShift.shift_id}`)} disabled={savingTasks}>
               Skip — assign later
             </button>
             <button style={s.publishBtn} onClick={handleSaveTasks} disabled={savingTasks}>

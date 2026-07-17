@@ -25,9 +25,9 @@ router.get(
     allowRoles(
         ROLES.SYSTEM_ADMIN,
         ROLES.BUSINESS_OWNER,
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getAccount
@@ -39,9 +39,9 @@ router.patch(
     allowRoles(
         ROLES.SYSTEM_ADMIN,
         ROLES.BUSINESS_OWNER,
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     validate(updateAccountSchema),
@@ -53,9 +53,9 @@ router.get(
     verifyToken,
     allowRoles(
         ROLES.SYSTEM_ADMIN,
-        ROLES.OUTLET_MANAGER,
+        ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.OUTLET_CASUAL_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
         ROLES.KREWBY_CASUAL_WORKER
     ),
     getAccountSkills
@@ -64,7 +64,7 @@ router.get(
 router.get(
     "/branch",
     verifyToken,
-    allowRoles(ROLES.OUTLET_MANAGER, ROLES.REGULAR_STAFF, ROLES.OUTLET_CASUAL_STAFF, ROLES.SYSTEM_ADMIN),
+    allowRoles(ROLES.BRANCH_MANAGER, ROLES.REGULAR_STAFF, ROLES.BRANCH_CASUAL_STAFF, ROLES.SYSTEM_ADMIN),
     getMyBranch
 );
 

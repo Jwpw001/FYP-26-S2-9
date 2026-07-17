@@ -4,7 +4,7 @@ const protect = require("../middleware/authMiddleware");
 const {
   registerCasualWorker,
   getCasualWorkerStatus,
-  getMyOutlets,
+  getMyBranches,
   getPreferences,
   setPreferences,
   getMyAvailability,
@@ -26,7 +26,7 @@ router.use(protect);
 
 // Casual worker
 router.get("/me",              getCasualWorkerStatus);
-router.get("/my-outlets",      getMyOutlets);
+router.get("/my-branches",      getMyBranches);
 router.get("/preferences",     getPreferences);
 router.put("/preferences",     setPreferences);
 router.get("/availability",        getMyAvailability);

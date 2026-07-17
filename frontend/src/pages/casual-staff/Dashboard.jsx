@@ -80,7 +80,7 @@ export default function CasualDashboard() {
   }, [userId]);
 
   const isActive   = staffRecord?.is_active === true;
-  const outletName = staffRecord?.branches?.name || null;
+  const branchName = staffRecord?.branches?.name || null;
   const availDone  = avail.length > 0;
 
   const greeting = () => {
@@ -100,7 +100,7 @@ export default function CasualDashboard() {
             {greeting()}, {user?.full_name?.split(" ")[0] || "there"}
           </h2>
           <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px" }}>
-            {loading ? "Loading your profile…" : outletName ? `Casual worker · ${outletName}` : "Casual worker"}
+            {loading ? "Loading your profile…" : branchName ? `Casual worker · ${branchName}` : "Casual worker"}
           </p>
         </div>
 
@@ -133,12 +133,12 @@ export default function CasualDashboard() {
               </div>
             </div>
 
-            {/* Outlet */}
+            {/* Branch */}
             <StatCard
               icon={<Building2 size={18} color="#2563EB" />} bg="#DBEAFE"
-              label="My Outlet"
-              value={outletName || "—"}
-              sub={outletName ? "Primary location" : "Not assigned yet"}
+              label="My Branch"
+              value={branchName || "—"}
+              sub={branchName ? "Primary location" : "Not assigned yet"}
               large={false}
             />
 
@@ -216,7 +216,7 @@ export default function CasualDashboard() {
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Weekly Availability</p>
-              <button onClick={() => navigate("/outlet-casual-staff/availability")}
+              <button onClick={() => navigate("/casual-staff/availability")}
                 style={{ display: "flex", alignItems: "center", gap: "3px", fontSize: "13px", fontWeight: "600", color: "#2563EB", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 {availDone ? "Edit" : "Set up"} <ChevronRight size={14} />
               </button>
@@ -230,7 +230,7 @@ export default function CasualDashboard() {
               <div style={{ textAlign: "center", padding: "32px 0" }}>
                 <CalendarClock size={34} color="#CBD5E1" style={{ margin: "0 auto 10px" }} />
                 <p style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "16px" }}>No availability set yet.</p>
-                <button onClick={() => navigate("/outlet-casual-staff/availability")}
+                <button onClick={() => navigate("/casual-staff/availability")}
                   style={{ background: "#2563EB", color: "#FFF", border: "none", borderRadius: "9px", padding: "9px 22px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
                   Set Availability
                 </button>
@@ -266,7 +266,7 @@ export default function CasualDashboard() {
                 <p style={{ fontSize: "12px", color: "#3B82F6", marginTop: "2px" }}>Tell your manager which days and times you can work so they can assign you shifts.</p>
               </div>
             </div>
-            <button onClick={() => navigate("/outlet-casual-staff/availability")}
+            <button onClick={() => navigate("/casual-staff/availability")}
               style={{ background: "#2563EB", color: "#FFF", border: "none", borderRadius: "9px", padding: "9px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", flexShrink: 0 }}>
               Set Availability
             </button>

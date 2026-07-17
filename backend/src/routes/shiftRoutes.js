@@ -36,14 +36,14 @@ const {
 } = require("../validators/shiftValidator");
 
 const ALL_SHIFT_ROLES = [
-    ROLES.OUTLET_MANAGER,
+    ROLES.BRANCH_MANAGER,
     ROLES.SYSTEM_ADMIN,
     ROLES.REGULAR_STAFF,
-    ROLES.OUTLET_CASUAL_STAFF,
+    ROLES.BRANCH_CASUAL_STAFF,
     ROLES.KREWBY_CASUAL_WORKER,
 ];
 
-const MANAGER_ONLY = [ROLES.OUTLET_MANAGER, ROLES.SYSTEM_ADMIN];
+const MANAGER_ONLY = [ROLES.BRANCH_MANAGER, ROLES.SYSTEM_ADMIN];
 
 // ── Static routes first (must come before any /:param routes) ─────────────────
 

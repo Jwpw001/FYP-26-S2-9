@@ -81,7 +81,7 @@ export default function AvailabilityLeave() {
   const [requests, setRequests]         = useState([]);
   const [loadingLeave, setLoadingLeave] = useState(true);
   const [leaveFilter, setLeaveFilter]   = useState("pending");
-  const [outletId, setOutletId]         = useState(null);
+  const [branchId, setBranchId]         = useState(null);
   const [staffUserMap, setStaffUserMap] = useState({}); // staff_id -> user_id
 
   // Swap state
@@ -113,7 +113,7 @@ export default function AvailabilityLeave() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  // ── Load outlet + staff info once ─────────────────────────────────────────
+  // ── Load branch + staff info once ─────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     async function loadBase() {
@@ -125,13 +125,13 @@ export default function AvailabilityLeave() {
         oid = omRow?.[0]?.branch_id;
       }
       if (!oid || cancelled) return;
-      setOutletId(oid);
+      setBranchId(oid);
 
-      const [{ data: staffRows }, { data: outletRow }] = await Promise.all([
+      const [{ data: staffRows }, { data: branchRow }] = await Promise.all([
         supabase.from("staff").select("staff_id, user_id").eq("branch_id", oid),
         supabase.from("branches").select("working_days").eq("branch_id", oid).single(),
       ]);
-      if (!cancelled) setWorkingDays(outletRow?.working_days ?? 7);
+      if (!cancelled) setWorkingDays(branchRow?.working_days ?? 7);
       const map = {};
       (staffRows || []).forEach(s => { map[s.staff_id] = s.user_id; });
       if (!cancelled) setStaffUserMap(map);
@@ -142,7 +142,7 @@ export default function AvailabilityLeave() {
 
   // ── Load leave requests ────────────────────────────────────────────────────
   useEffect(() => {
-    if (!outletId) return;
+    if (!branchId) return;
     let cancelled = false;
     async function load() {
       setLoadingLeave(true);
@@ -173,11 +173,11 @@ export default function AvailabilityLeave() {
     }
     load();
     return () => { cancelled = true; };
-  }, [outletId, staffUserMap]);
+  }, [branchId, staffUserMap]);
 
   // ── Load swap requests ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (!outletId) return;
+    if (!branchId) return;
     let cancelled = false;
     async function load() {
       setLoadingSwap(true);
@@ -185,7 +185,7 @@ export default function AvailabilityLeave() {
         const staffIds = Object.keys(staffUserMap);
         if (staffIds.length === 0) { if (!cancelled) setLoadingSwap(false); return; }
 
-        // Fetch swap requests where requester is in this outlet's staff
+        // Fetch swap requests where requester is in this branch's staff
         const { data: swapRows, error } = await supabase
           .from("swap_requests")
           .select(`
@@ -249,11 +249,11 @@ export default function AvailabilityLeave() {
     }
     load();
     return () => { cancelled = true; };
-  }, [outletId, staffUserMap]);
+  }, [branchId, staffUserMap]);
 
   // ── Load off day requests ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!outletId) return;
+    if (!branchId) return;
     let cancelled = false;
     async function load() {
       setLoadingOffDay(true);
@@ -277,7 +277,7 @@ export default function AvailabilityLeave() {
     }
     load();
     return () => { cancelled = true; };
-  }, [outletId, staffUserMap]);
+  }, [branchId, staffUserMap]);
 
   async function handleOffDay(id, action) {
     setProcessing(id);
@@ -294,16 +294,16 @@ export default function AvailabilityLeave() {
 
   // ── Load casual availability ───────────────────────────────────────────────
   useEffect(() => {
-    if (!outletId) return;
+    if (!branchId) return;
     let cancelled = false;
     async function load() {
       setLoadingCasual(true);
       try {
-        // Get all staff for this outlet (filter by who has casual_availability records)
+        // Get all staff for this branch (filter by who has casual_availability records)
         const { data: casualStaff } = await supabase
           .from("staff")
           .select("staff_id, user_id, users:user_id(full_name, email)")
-          .eq("branch_id", outletId)
+          .eq("branch_id", branchId)
           .eq("is_active", true);
 
         if (!casualStaff || casualStaff.length === 0) {
@@ -345,7 +345,7 @@ export default function AvailabilityLeave() {
     }
     load();
     return () => { cancelled = true; };
-  }, [outletId, staffUserMap]);
+  }, [branchId, staffUserMap]);
 
   // ── Handle leave action ────────────────────────────────────────────────────
   async function handleLeaveAction(requestId, action) {
@@ -433,20 +433,20 @@ export default function AvailabilityLeave() {
       return;
     }
 
-    // Approve — fetch available staff (same outlet, active, not the requester)
+    // Approve — fetch available staff (same branch, active, not the requester)
     const sw = swaps.find(s => s.swap_id === swapId);
     if (!sw) return;
 
-    // Get all outlet staff except the requester
-    const { data: outletStaff } = await supabase
+    // Get all branch staff except the requester
+    const { data: branchStaff } = await supabase
       .from("staff")
       .select("staff_id, user_id, users:user_id(full_name, email)")
-      .eq("branch_id", outletId)
+      .eq("branch_id", branchId)
       .eq("is_active", true)
       .neq("staff_id", sw.requester_id);
 
     setPickedStaffId("");
-    setSwapApproveModal({ sw, availableStaff: outletStaff || [] });
+    setSwapApproveModal({ sw, availableStaff: branchStaff || [] });
   }
 
   async function confirmSwapApproval() {

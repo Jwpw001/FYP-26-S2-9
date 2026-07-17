@@ -31,14 +31,14 @@ const STATUS_COLORS = {
 
 const STAFF_ROLES = [
   { value: "regular_staff",       label: "Regular Staff" },
-  { value: "outlet_casual_staff", label: "Casual Staff" },
+  { value: "casual_staff", label: "Casual Staff" },
 ];
 
 export default function OMInvitations() {
   const user = getUser();
   const [invites, setInvites] = useState([]);
-  const [outletId, setOutletId] = useState(null);
-  const [outletName, setOutletName] = useState("");
+  const [branchId, setBranchId] = useState(null);
+  const [branchName, setBranchName] = useState("");
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ email: "", role: "regular_staff" });
@@ -52,8 +52,8 @@ export default function OMInvitations() {
   const load = async () => {
     setLoading(true);
     try {
-      // Get the manager's outlet
-      if (!outletId) {
+      // Get the manager's branch
+      if (!branchId) {
         const { data: staffRow } = await supabase
           .from("staff")
           .select("branch_id, branches(name)")
@@ -61,15 +61,15 @@ export default function OMInvitations() {
           .eq("is_active", true)
           .maybeSingle();
         if (staffRow) {
-          setOutletId(staffRow.branch_id);
-          setOutletName(staffRow.branches?.name || "");
+          setBranchId(staffRow.branch_id);
+          setBranchName(staffRow.branches?.name || "");
         } else {
           const { data: omRow } = await supabase
             .from("branch_managers").select("branch_id, branches(name)")
             .eq("user_id", user.user_id).limit(1);
           if (omRow?.[0]) {
-            setOutletId(omRow[0].branch_id);
-            setOutletName(omRow[0].branches?.name || "");
+            setBranchId(omRow[0].branch_id);
+            setBranchName(omRow[0].branches?.name || "");
           }
         }
       }
@@ -82,18 +82,18 @@ export default function OMInvitations() {
 
   useEffect(() => { load(); }, []);
 
-  // re-fetch invites once outletId is set
+  // re-fetch invites once branchId is set
   useEffect(() => {
-    if (outletId && invites.length === 0 && !loading) load();
-  }, [outletId]);
+    if (branchId && invites.length === 0 && !loading) load();
+  }, [branchId]);
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!outletId) { setError("Could not determine your outlet."); return; }
+    if (!branchId) { setError("Could not determine your branch."); return; }
     setSubmitting(true); setError("");
     try {
       const resp = await api.post("/api/invitations/send", {
-        email: form.email, role: form.role, branch_id: outletId,
+        email: form.email, role: form.role, branch_id: branchId,
       });
       setSuccessCode({ code: resp.code, email: form.email });
       setShowForm(false);
@@ -150,7 +150,7 @@ export default function OMInvitations() {
           <div>
             <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Invitations</h2>
             <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {outletName ? `Inviting staff to ${outletName}` : "Invite staff to your outlet"}
+              {branchName ? `Inviting staff to ${branchName}` : "Invite staff to your branch"}
             </p>
           </div>
           <button onClick={() => { setShowForm(v => !v); setError(""); setSuccessCode(null); }} style={s.btnPrimary}>
@@ -184,7 +184,7 @@ export default function OMInvitations() {
         {showForm && (
           <div style={{ ...s.formCard, animation: "fadeSlideUp 0.3s ease both" }}>
             <h3 style={s.formTitle}>Invite Staff Member</h3>
-            {outletName && <p style={{ fontSize: "12px", color: "#64748B", marginBottom: "14px" }}>Inviting to: <strong>{outletName}</strong></p>}
+            {branchName && <p style={{ fontSize: "12px", color: "#64748B", marginBottom: "14px" }}>Inviting to: <strong>{branchName}</strong></p>}
             <form onSubmit={handleSend}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "18px" }}>
                 <div>
@@ -241,7 +241,7 @@ export default function OMInvitations() {
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>
               {invites.length === 0 ? "No invitations sent yet" : "No invitations match this filter"}
             </p>
-            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Invite staff members to join your outlet.</p>
+            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Invite staff members to join your branch.</p>
           </div>
         ) : (
           <div style={s.tableWrap}>

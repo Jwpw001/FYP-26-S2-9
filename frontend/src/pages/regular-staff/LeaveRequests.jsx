@@ -133,7 +133,7 @@ export default function LeaveRequests() {
       const { data: staffRow } = await supabase.from("staff").select("branch_id").eq("staff_id", sid).single();
       const oid = staffRow?.branch_id;
 
-      const [{ data: leaveData }, { data: offData }, { data: outletRow }] = await Promise.all([
+      const [{ data: leaveData }, { data: offData }, { data: branchRow }] = await Promise.all([
         supabase.from("availability")
           .select("request_id, leave_type, start_date, end_date, reason, status, reviewed_at")
           .eq("staff_id", sid).order("start_date", { ascending: false }),
@@ -147,7 +147,7 @@ export default function LeaveRequests() {
       if (!cancelled) {
         setRequests(leaveData || []);
         setOffDayRequests(offData || []);
-        const wd = outletRow?.working_days ?? 7;
+        const wd = branchRow?.working_days ?? 7;
         setWorkingDays(wd);
         if (wd < 6) setActiveTab("leave");
         setLoading(false);

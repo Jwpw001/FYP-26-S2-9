@@ -11,7 +11,7 @@ export default function AddStaff() {
   const user = getUser();
   const userId = user?.user_id;
 
-  const [outletId, setOutletId]         = useState(null);
+  const [branchId, setBranchId]         = useState(null);
   const [operatingDays, setOperatingDays] = useState(null); // "1111100" from branch_settings
   const [skills, setSkills]             = useState([]);
   const [saving, setSaving]     = useState(false);
@@ -40,7 +40,7 @@ export default function AddStaff() {
         oid = omRow?.[0]?.branch_id || null;
       }
       if (cancelled) return;
-      setOutletId(oid);
+      setBranchId(oid);
       setSkills(skillRes.skills || []);
 
       if (oid) {
@@ -79,7 +79,7 @@ export default function AddStaff() {
     if (!form.email.trim())            { setError("Email is required."); return; }
     if (!form.password.trim())         { setError("Password is required."); return; }
     if (form.password.length < 6)      { setError("Password must be at least 6 characters."); return; }
-    if (!outletId)                     { setError("No outlet found for your account."); return; }
+    if (!branchId)                     { setError("No branch found for your account."); return; }
 
     setSaving(true); setError("");
 
@@ -89,8 +89,8 @@ export default function AddStaff() {
         username: form.username.trim().toLowerCase().replace(/\s+/g, "_"),
         email: form.email.trim().toLowerCase(),
         password: form.password,
-        role: form.staff_type === "regular" ? "regular_staff" : "outlet_casual_staff",
-        branch_id: outletId,
+        role: form.staff_type === "regular" ? "regular_staff" : "casual_staff",
+        branch_id: branchId,
         staff_type: form.staff_type,
         default_work_days: form.staff_type === "regular" ? form.default_work_days : null,
         hired_at: form.hired_at || null,
@@ -102,7 +102,7 @@ export default function AddStaff() {
       });
 
       setSuccess("Staff member added successfully!");
-      setTimeout(() => goTo("/outlet-manager/staff"), 1500);
+      setTimeout(() => goTo("/manager/staff"), 1500);
     } catch (err) {
       setError(err.message || "Failed to add staff. Please try again.");
       console.error(err);
@@ -115,7 +115,7 @@ export default function AddStaff() {
 
   return (
     <ManagerLayout title="Add New Staff">
-      <button style={s.back} onClick={() => goTo("/outlet-manager/staff")}>
+      <button style={s.back} onClick={() => goTo("/manager/staff")}>
         ← Back to Staff
       </button>
 
@@ -325,7 +325,7 @@ export default function AddStaff() {
       </div>
 
       <div style={s.actions}>
-        <button style={s.cancelBtn} onClick={() => goTo("/outlet-manager/staff")}>
+        <button style={s.cancelBtn} onClick={() => goTo("/manager/staff")}>
           Cancel
         </button>
         <button style={s.saveBtn} onClick={handleSubmit} disabled={saving}>

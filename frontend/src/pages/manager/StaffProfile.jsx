@@ -751,7 +751,7 @@ export default function StaffProfile() {
         .eq("staff_id", id)
         .single();
 
-      if (!staffRow) { goTo("/outlet-manager/staff"); return; }
+      if (!staffRow) { goTo("/manager/staff"); return; }
       setMember(staffRow);
       setForm({
         full_name:         staffRow.users?.full_name || "",
@@ -824,7 +824,7 @@ export default function StaffProfile() {
       const userId = member.users?.user_id;
       await supabase.from("staff").delete().eq("staff_id", id);
       await supabase.from("users").delete().eq("user_id", userId);
-      goTo("/outlet-manager/staff");
+      goTo("/manager/staff");
     } catch (err) {
       setError("Failed to delete staff. Please try again.");
       console.error(err);
@@ -850,7 +850,7 @@ export default function StaffProfile() {
 
   return (
     <ManagerLayout title="Staff Profile">
-      <button style={s.back} onClick={() => goTo("/outlet-manager/staff")}>← Back to Staff</button>
+      <button style={s.back} onClick={() => goTo("/manager/staff")}>← Back to Staff</button>
 
       <div style={s.layout}>
         {/* ── Left: profile card ── */}

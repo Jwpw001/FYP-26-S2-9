@@ -286,7 +286,7 @@ export default function ProfileModal({ onClose }) {
 
   const name   = account?.full_name || cached?.full_name || "";
   const aColor = avatarColor(name);
-  const isStaff = ["regular_staff", "outlet_casual_staff", "krewby_casual_worker"].includes(account?.role);
+  const isStaff = ["regular_staff", "casual_staff", "krewby_casual_worker"].includes(account?.role);
 
   return (
     <div

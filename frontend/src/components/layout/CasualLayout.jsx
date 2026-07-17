@@ -8,10 +8,10 @@ import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 
 const NAV = [
-  { label: "Dashboard",    path: "/outlet-casual-staff/dashboard",    Icon: LayoutDashboard },
-  { label: "Tasks",        path: "/outlet-casual-staff/shifts",       Icon: CalendarDays },
-  { label: "Availability", path: "/outlet-casual-staff/availability", Icon: CalendarClock },
-  { label: "Branches",     path: "/outlet-casual-staff/branches",     Icon: Building2 },
+  { label: "Dashboard",    path: "/casual-staff/dashboard",    Icon: LayoutDashboard },
+  { label: "Tasks",        path: "/casual-staff/shifts",       Icon: CalendarDays },
+  { label: "Availability", path: "/casual-staff/availability", Icon: CalendarClock },
+  { label: "Branches",     path: "/casual-staff/branches",     Icon: Building2 },
 ];
 
 export default function CasualLayout({ children, title }) {
@@ -32,7 +32,7 @@ export default function CasualLayout({ children, title }) {
       .then(({ count }) => setUnread(count || 0));
   }, [user?.user_id]);
 
-  const onNotifPage = location.pathname === "/outlet-casual-staff/notifications";
+  const onNotifPage = location.pathname === "/casual-staff/notifications";
 
   return (
     <div style={s.shell}>
@@ -42,7 +42,7 @@ export default function CasualLayout({ children, title }) {
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
 
         <div style={{ ...s.sidebarTop, padding: "20px 14px 16px" }}>
-          <Link to="/outlet-casual-staff/dashboard" style={s.logoRow}>
+          <Link to="/casual-staff/dashboard" style={s.logoRow}>
             <div style={{ height: "34px", width: expanded ? "auto" : "34px", maxWidth: expanded ? "160px" : "34px", background: "#fff", borderRadius: "9px", overflow: "hidden", display: "flex", alignItems: "center", transition: "max-width 0.25s ease, width 0.25s ease", flexShrink: 0, padding: expanded ? "0 8px" : "0" }}>
               <img src="/krewby-logo.png" alt="Krewby" style={{ height: expanded ? "22px" : "34px", width: expanded ? "auto" : "34px", objectFit: expanded ? "contain" : "cover", objectPosition: "left center", display: "block" }} />
             </div>
@@ -85,7 +85,7 @@ export default function CasualLayout({ children, title }) {
           <h1 style={s.pageTitle}>{title}</h1>
           <div style={{ flex: 1 }} />
           <button
-            onClick={() => navigate("/outlet-casual-staff/notifications")}
+            onClick={() => navigate("/casual-staff/notifications")}
             style={{
               position: "relative", background: onNotifPage ? "#EFF6FF" : "none",
               border: onNotifPage ? "1.5px solid #BFDBFE" : "1px solid transparent",
