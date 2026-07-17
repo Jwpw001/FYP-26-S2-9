@@ -1,7 +1,7 @@
 const { z } = require("zod");
 
 const createShiftSchema = z.object({
-    outlet_id: z.number(),
+    branch_id: z.number(),
     title: z.string().optional().nullable(),
     shift_date: z.string(),
     start_time: z.string(),
@@ -11,7 +11,7 @@ const createShiftSchema = z.object({
 });
 
 const updateShiftSchema = z.object({
-    outlet_id: z.number().optional(),
+    branch_id: z.number().optional(),
     title: z.string().min(2).optional(),
     shift_date: z.string().optional(),
     start_time: z.string().optional(),

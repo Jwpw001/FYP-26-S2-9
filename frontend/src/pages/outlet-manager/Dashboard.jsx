@@ -145,31 +145,31 @@ export default function ManagerDashboard() {
         const future = new Date(now.getTime() + 7 * 86400000).toISOString().split("T")[0];
 
         const { data: myStaff } = await supabase
-          .from("staff").select("outlet_id")
+          .from("staff").select("branch_id")
           .eq("user_id", userId).eq("is_active", true).limit(1);
 
-        let outletId = myStaff?.[0]?.outlet_id;
+        let outletId = myStaff?.[0]?.branch_id;
         if (!outletId) {
           const { data: myMgr } = await supabase
-            .from("outlet_managers").select("outlet_id")
+            .from("branch_managers").select("branch_id")
             .eq("user_id", userId).limit(1);
-          outletId = myMgr?.[0]?.outlet_id;
+          outletId = myMgr?.[0]?.branch_id;
         }
         if (!outletId || cancelled) return;
 
         // Get outlet staff IDs first so we can scope leave/swap counts correctly
         const { data: outletStaffRows } = await supabase
-          .from("staff").select("staff_id").eq("outlet_id", outletId).eq("is_active", true);
+          .from("staff").select("staff_id").eq("branch_id", outletId).eq("is_active", true);
         const outletStaffIds = (outletStaffRows || []).map(s => s.staff_id);
 
         const [{ data: shifts }, { count: staffCount }, { count: leaveCount }, { count: swapCount }] =
           await Promise.all([
             supabase.from("shifts")
               .select("shift_id,title,shift_date,start_time,end_time,status")
-              .eq("outlet_id", outletId).gte("shift_date", today).lte("shift_date", future)
+              .eq("branch_id", outletId).gte("shift_date", today).lte("shift_date", future)
               .order("shift_date", { ascending: true }),
             supabase.from("staff").select("*", { count: "exact", head: true })
-              .eq("outlet_id", outletId).eq("is_active", true).neq("user_id", userId),
+              .eq("branch_id", outletId).eq("is_active", true).neq("user_id", userId),
             outletStaffIds.length > 0
               ? supabase.from("availability").select("*", { count: "exact", head: true })
                   .eq("status", "pending").in("staff_id", outletStaffIds)
@@ -197,7 +197,7 @@ export default function ManagerDashboard() {
         const { data: pubShifts } = await supabase
           .from("shifts")
           .select("shift_id, title, shift_date")
-          .eq("outlet_id", outletId)
+          .eq("branch_id", outletId)
           .eq("status", "published")
           .gte("shift_date", today);
 

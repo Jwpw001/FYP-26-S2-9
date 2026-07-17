@@ -56,20 +56,20 @@ export default function OMInvitations() {
       if (!outletId) {
         const { data: staffRow } = await supabase
           .from("staff")
-          .select("outlet_id, outlets(name)")
+          .select("branch_id, branches(name)")
           .eq("user_id", user.user_id)
           .eq("is_active", true)
           .maybeSingle();
         if (staffRow) {
-          setOutletId(staffRow.outlet_id);
-          setOutletName(staffRow.outlets?.name || "");
+          setOutletId(staffRow.branch_id);
+          setOutletName(staffRow.branches?.name || "");
         } else {
           const { data: omRow } = await supabase
-            .from("outlet_managers").select("outlet_id, outlets(name)")
+            .from("branch_managers").select("branch_id, branches(name)")
             .eq("user_id", user.user_id).limit(1);
           if (omRow?.[0]) {
-            setOutletId(omRow[0].outlet_id);
-            setOutletName(omRow[0].outlets?.name || "");
+            setOutletId(omRow[0].branch_id);
+            setOutletName(omRow[0].branches?.name || "");
           }
         }
       }
@@ -93,7 +93,7 @@ export default function OMInvitations() {
     setSubmitting(true); setError("");
     try {
       const resp = await api.post("/api/invitations/send", {
-        email: form.email, role: form.role, outlet_id: outletId,
+        email: form.email, role: form.role, branch_id: outletId,
       });
       setSuccessCode({ code: resp.code, email: form.email });
       setShowForm(false);

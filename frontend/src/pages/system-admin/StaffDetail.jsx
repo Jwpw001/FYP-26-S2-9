@@ -63,10 +63,10 @@ export default function AdminStaffDetail() {
             {member.staff_type==="regular"?"Regular Staff":"Outlet Casual"}
           </span>
 
-          {member.outlets?.name && (
+          {member.branches?.name && (
             <div style={s.metaRow}>
               <span style={s.metaLabel}>Outlet</span>
-              <span style={s.metaVal}>{member.outlets.name}</span>
+              <span style={s.metaVal}>{member.branches.name}</span>
             </div>
           )}
           <div style={s.metaRow}>

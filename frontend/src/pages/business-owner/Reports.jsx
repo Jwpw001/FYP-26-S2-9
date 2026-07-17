@@ -185,12 +185,12 @@ export default function BOReports() {
       // Fetch staff for each outlet via Supabase
       const { data: staffData } = await supabase
         .from("staff")
-        .select("staff_id, staff_type, is_active, outlet_id")
-        .in("outlet_id", outletIds);
+        .select("staff_id, staff_type, is_active, branch_id")
+        .in("branch_id", outletIds);
 
       const allStaff = (staffData || []).map(s => ({
         ...s,
-        outlet_name: outlets.find(o => o.outlet_id === s.outlet_id)?.name || "",
+        outlet_name: outlets.find(o => o.branch_id === s.branch_id)?.name || "",
       }));
       const staffIds = allStaff.map(s => s.staff_id);
 
@@ -201,7 +201,7 @@ export default function BOReports() {
       // Fetch shifts, leave requests for these outlets
       const [{ data: shiftsAll }, { data: leaveAll }] = await Promise.all([
         outletIds.length > 0
-          ? supabase.from("shifts").select("shift_id, status, shift_date, outlet_id").in("outlet_id", outletIds)
+          ? supabase.from("shifts").select("shift_id, status, shift_date, branch_id").in("branch_id", outletIds)
           : Promise.resolve({ data: [] }),
         staffIds.length > 0
           ? supabase.from("availability").select("request_id, status, start_date, staff_id").in("staff_id", staffIds)

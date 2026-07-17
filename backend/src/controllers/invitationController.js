@@ -92,14 +92,14 @@ const sendInvitation = async (req, res) => {
     }
 
     // Enforce staff limit based on business plan
-    const outletRow = await prisma.outlets.findUnique({ where: { outlet_id: Number(outlet_id) }, select: { business_id: true } });
+    const outletRow = await prisma.branches.findUnique({ where: { branch_id: Number(outlet_id) }, select: { business_id: true } });
     if (outletRow?.business_id) {
       const { data: biz } = await supabaseAdmin.from("businesses").select("plan").eq("business_id", outletRow.business_id).maybeSingle();
       const limits = getLimits(biz?.plan || "free");
       if (limits.staff !== Infinity) {
         const { count: staffCount } = await supabaseAdmin
           .from("staff").select("*", { count: "exact", head: true })
-          .eq("outlet_id", Number(outlet_id)).eq("is_active", true);
+          .eq("branch_id", Number(outlet_id)).eq("is_active", true);
         if ((staffCount || 0) >= limits.staff) {
           return res.status(403).json({
             success: false,
@@ -123,10 +123,10 @@ const sendInvitation = async (req, res) => {
 
     // Cancel any existing pending invite for this email + outlet
     await supabaseAdmin.from("invitations").update({ status: "cancelled" })
-      .eq("email", email).eq("outlet_id", outlet_id).eq("status", "pending");
+      .eq("email", email).eq("branch_id", outlet_id).eq("status", "pending");
 
     // Get outlet name for email
-    const outlet = await prisma.outlets.findUnique({ where: { outlet_id: Number(outlet_id) }, select: { name: true } });
+    const outlet = await prisma.branches.findUnique({ where: { branch_id: Number(outlet_id) }, select: { name: true } });
     const outletName = outlet?.name || "";
 
     // Get sender name
@@ -148,7 +148,7 @@ const sendInvitation = async (req, res) => {
       invitation_code: code,
       email,
       role,
-      outlet_id: Number(outlet_id),
+      branch_id: Number(outlet_id),
       business_id: business_id ? Number(business_id) : null,
       invited_by: sender.user_id,
       status: "pending",
@@ -173,7 +173,7 @@ const listInvitations = async (req, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from("invitations")
-      .select("*, outlets(name)")
+      .select("*, branches(name)")
       .eq("invited_by", req.user.user_id)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -189,7 +189,7 @@ const getInvitation = async (req, res) => {
     const { token } = req.params;
     const { data, error } = await supabaseAdmin
       .from("invitations")
-      .select("*, outlets(name)")
+      .select("*, branches(name)")
       .eq("token", token)
       .maybeSingle();
     if (error || !data) return res.status(404).json({ success: false, message: "Invitation not found or expired." });
@@ -198,8 +198,8 @@ const getInvitation = async (req, res) => {
       return res.status(410).json({ success: false, message: "This invitation has expired." });
     }
     return res.json({ success: true, invitation: {
-      email: data.email, role: data.role, outlet_id: data.outlet_id,
-      outlet_name: data.outlets?.name || null, business_id: data.business_id,
+      email: data.email, role: data.role, branch_id: data.branch_id,
+      outlet_name: data.branches?.name || null, business_id: data.business_id,
       invitation_code: data.invitation_code,
     }});
   } catch (error) {
@@ -213,7 +213,7 @@ const getInvitationByCode = async (req, res) => {
     const code = req.params.code?.toUpperCase().trim();
     const { data, error } = await supabaseAdmin
       .from("invitations")
-      .select("*, outlets(name)")
+      .select("*, branches(name)")
       .eq("invitation_code", code)
       .maybeSingle();
     if (error || !data) return res.status(404).json({ success: false, message: "Invitation code not found." });
@@ -223,7 +223,7 @@ const getInvitationByCode = async (req, res) => {
     }
     return res.json({ success: true, invitation: {
       token: data.token, email: data.email, role: data.role,
-      outlet_id: data.outlet_id, outlet_name: data.outlets?.name || null,
+      branch_id: data.branch_id, outlet_name: data.branches?.name || null,
       business_id: data.business_id, invitation_code: data.invitation_code,
     }});
   } catch (error) {
@@ -238,7 +238,7 @@ const acceptInvitation = async (req, res) => {
     const { full_name, username, password, existing_user_id } = req.body;
 
     const { data: invite, error: fetchErr } = await supabaseAdmin
-      .from("invitations").select("*, outlets(name)").eq("token", token).maybeSingle();
+      .from("invitations").select("*, branches(name)").eq("token", token).maybeSingle();
     if (fetchErr || !invite) return res.status(404).json({ success: false, message: "Invitation not found." });
     if (invite.status !== "pending") return res.status(410).json({ success: false, message: "This invitation has already been used." });
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
@@ -253,27 +253,27 @@ const acceptInvitation = async (req, res) => {
       if (!user) return res.status(404).json({ success: false, message: "User not found." });
 
       // Create staff record if needed
-      if (invite.outlet_id && ["regular_staff", "outlet_casual_staff"].includes(invite.role)) {
-        const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, outlet_id: invite.outlet_id } });
+      if (invite.branch_id && ["regular_staff", "outlet_casual_staff"].includes(invite.role)) {
+        const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, branch_id: invite.branch_id } });
         if (!alreadyStaff) {
           await prisma.staff.create({
-            data: { user_id: user.user_id, outlet_id: invite.outlet_id, staff_type: invite.role === "outlet_casual_staff" ? "casual" : "regular", is_active: true },
+            data: { user_id: user.user_id, branch_id: invite.branch_id, staff_type: invite.role === "outlet_casual_staff" ? "casual" : "regular", is_active: true },
           });
         }
-      } else if (invite.outlet_id && invite.role === "outlet_manager") {
+      } else if (invite.branch_id && invite.role === "outlet_manager") {
         // Update user role if needed
         if (user.role !== "outlet_manager" && user.role !== "business_owner" && user.role !== "system_admin") {
           await prisma.users.update({ where: { user_id: user.user_id }, data: { role: "outlet_manager" } });
         }
-        const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, outlet_id: invite.outlet_id } });
+        const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, branch_id: invite.branch_id } });
         if (!alreadyStaff) {
           await prisma.staff.create({
-            data: { user_id: user.user_id, outlet_id: invite.outlet_id, staff_type: "regular", is_active: true },
+            data: { user_id: user.user_id, branch_id: invite.branch_id, staff_type: "regular", is_active: true },
           });
         }
-        const { data: alreadyMgr } = await supabaseAdmin.from("outlet_managers").select("id").eq("user_id", user.user_id).eq("outlet_id", invite.outlet_id).maybeSingle();
+        const { data: alreadyMgr } = await supabaseAdmin.from("branch_managers").select("id").eq("user_id", user.user_id).eq("branch_id", invite.branch_id).maybeSingle();
         if (!alreadyMgr) {
-          await supabaseAdmin.from("outlet_managers").insert({ user_id: user.user_id, outlet_id: invite.outlet_id, is_primary: false });
+          await supabaseAdmin.from("branch_managers").insert({ user_id: user.user_id, branch_id: invite.branch_id, is_primary: false });
         }
       }
 
@@ -305,17 +305,17 @@ const acceptInvitation = async (req, res) => {
       data: { full_name, username: username.toLowerCase(), email: invite.email, role: invite.role, is_active: true },
     });
 
-    if (invite.outlet_id && ["regular_staff", "outlet_casual_staff"].includes(invite.role)) {
+    if (invite.branch_id && ["regular_staff", "outlet_casual_staff"].includes(invite.role)) {
       await prisma.staff.create({
-        data: { user_id: newUser.user_id, outlet_id: invite.outlet_id, staff_type: invite.role === "outlet_casual_staff" ? "casual" : "regular", is_active: true },
+        data: { user_id: newUser.user_id, branch_id: invite.branch_id, staff_type: invite.role === "outlet_casual_staff" ? "casual" : "regular", is_active: true },
       });
-    } else if (invite.outlet_id && invite.role === "outlet_manager") {
+    } else if (invite.branch_id && invite.role === "outlet_manager") {
       await prisma.staff.create({
-        data: { user_id: newUser.user_id, outlet_id: invite.outlet_id, staff_type: "regular", is_active: true },
+        data: { user_id: newUser.user_id, branch_id: invite.branch_id, staff_type: "regular", is_active: true },
       });
-      const { data: alreadyMgr } = await supabaseAdmin.from("outlet_managers").select("id").eq("user_id", newUser.user_id).eq("outlet_id", invite.outlet_id).maybeSingle();
+      const { data: alreadyMgr } = await supabaseAdmin.from("branch_managers").select("id").eq("user_id", newUser.user_id).eq("branch_id", invite.branch_id).maybeSingle();
       if (!alreadyMgr) {
-        await supabaseAdmin.from("outlet_managers").insert({ user_id: newUser.user_id, outlet_id: invite.outlet_id, is_primary: false });
+        await supabaseAdmin.from("branch_managers").insert({ user_id: newUser.user_id, branch_id: invite.branch_id, is_primary: false });
       }
     }
 
@@ -349,7 +349,7 @@ const resendInvitation = async (req, res) => {
   try {
     const { id } = req.params;
     const { data: invite } = await supabaseAdmin
-      .from("invitations").select("*, outlets(name)").eq("id", id).eq("invited_by", req.user.user_id).maybeSingle();
+      .from("invitations").select("*, branches(name)").eq("id", id).eq("invited_by", req.user.user_id).maybeSingle();
     if (!invite) return res.status(404).json({ success: false, message: "Invitation not found." });
     if (invite.status !== "pending") return res.status(400).json({ success: false, message: "Can only resend pending invitations." });
 
@@ -358,7 +358,7 @@ const resendInvitation = async (req, res) => {
     await sendInviteEmail({
       to: invite.email, inviterName: senderUser?.full_name || "Someone",
       roleName: ROLE_LABELS[invite.role] || invite.role,
-      outletName: invite.outlets?.name || "", inviteLink, code: invite.invitation_code,
+      outletName: invite.branches?.name || "", inviteLink, code: invite.invitation_code,
     });
     return res.json({ success: true, message: "Invitation resent." });
   } catch (error) {

@@ -226,7 +226,7 @@ export default function BOStaff() {
           name: s.users?.full_name || "—",
           email: s.users?.email || "—",
           type: s.staff_type === "regular" ? "regular" : "casual",
-          outlet_id: s.outlet_id,
+          branch_id: s.branch_id,
           outlet_name: s.outlet_name,
           is_active: s.is_active,
         }));
@@ -236,7 +236,7 @@ export default function BOStaff() {
         name: m.full_name || "—",
         email: m.email || "—",
         type: "manager",
-        outlet_id: m.outlet_id,
+        branch_id: m.branch_id,
         outlet_name: m.outlet_name,
         is_active: m.is_active,
       }));

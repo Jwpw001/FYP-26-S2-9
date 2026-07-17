@@ -130,8 +130,8 @@ export default function LeaveRequests() {
       setStaffId(sid || null);
       if (!sid) { setRequests([]); setLoading(false); setLoadingOffDay(false); return; }
 
-      const { data: staffRow } = await supabase.from("staff").select("outlet_id").eq("staff_id", sid).single();
-      const oid = staffRow?.outlet_id;
+      const { data: staffRow } = await supabase.from("staff").select("branch_id").eq("staff_id", sid).single();
+      const oid = staffRow?.branch_id;
 
       const [{ data: leaveData }, { data: offData }, { data: outletRow }] = await Promise.all([
         supabase.from("availability")
@@ -141,7 +141,7 @@ export default function LeaveRequests() {
           .select("id, requested_date, reason, status, created_at, reviewed_at")
           .eq("staff_id", sid).order("created_at", { ascending: false }),
         oid
-          ? supabase.from("outlets").select("working_days").eq("outlet_id", oid).single()
+          ? supabase.from("branches").select("working_days").eq("branch_id", oid).single()
           : Promise.resolve({ data: null }),
       ]);
       if (!cancelled) {

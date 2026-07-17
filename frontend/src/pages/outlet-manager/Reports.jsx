@@ -168,19 +168,19 @@ export default function Reports() {
   // Resolve outlet once
   useEffect(() => {
     if (!userId) return;
-    supabase.from("staff").select("outlet_id, outlets(name)")
+    supabase.from("staff").select("branch_id, branches(name)")
       .eq("user_id", userId).eq("is_active", true).limit(1)
       .then(async ({ data }) => {
         if (data?.[0]) {
-          setOutletId(data[0].outlet_id);
-          setOutletName(data[0].outlets?.name || "");
+          setOutletId(data[0].branch_id);
+          setOutletName(data[0].branches?.name || "");
         } else {
           const { data: omRow } = await supabase
-            .from("outlet_managers").select("outlet_id, outlets(name)")
+            .from("branch_managers").select("branch_id, branches(name)")
             .eq("user_id", userId).limit(1);
           if (omRow?.[0]) {
-            setOutletId(omRow[0].outlet_id);
-            setOutletName(omRow[0].outlets?.name || "");
+            setOutletId(omRow[0].branch_id);
+            setOutletName(omRow[0].branches?.name || "");
           }
         }
       });
@@ -206,19 +206,19 @@ export default function Reports() {
       ] = await Promise.all([
         supabase.from("staff")
           .select("staff_id, staff_type, is_active, users:user_id(full_name)")
-          .eq("outlet_id", outletId),
+          .eq("branch_id", outletId),
         supabase.from("shifts")
           .select("shift_id, status, shift_date")
-          .eq("outlet_id", outletId)
+          .eq("branch_id", outletId)
           .order("shift_date"),
         supabase.from("task_assignments")
-          .select("assignment_id, staff_id, staff:staff_id(users:user_id(full_name)), shifts!inner(shift_date, outlet_id)")
-          .eq("shifts.outlet_id", outletId)
+          .select("assignment_id, staff_id, staff:staff_id(users:user_id(full_name)), shifts!inner(shift_date, branch_id)")
+          .eq("shifts.branch_id", outletId)
           .gte("shifts.shift_date", periodStartStr)
           .lte("shifts.shift_date", todayStr),
         supabase.from("task_assignments")
-          .select("assignment_id, shifts!inner(shift_date, outlet_id)")
-          .eq("shifts.outlet_id", outletId)
+          .select("assignment_id, shifts!inner(shift_date, branch_id)")
+          .eq("shifts.branch_id", outletId)
           .gte("shifts.shift_date", prevStartStr)
           .lt("shifts.shift_date", periodStartStr),
       ]);

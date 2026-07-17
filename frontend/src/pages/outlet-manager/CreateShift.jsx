@@ -68,19 +68,19 @@ export default function CreateShift() {
     let cancelled = false;
     async function load() {
       const [{ data: myStaff }, skillsRes] = await Promise.all([
-        supabase.from("staff").select("outlet_id").eq("user_id", userId).eq("is_active", true).limit(1),
+        supabase.from("staff").select("branch_id").eq("user_id", userId).eq("is_active", true).limit(1),
         api.get("/api/business/skills/assignable").catch(() => ({ skills: [] })),
       ]);
-      let oid = myStaff?.[0]?.outlet_id || null;
+      let oid = myStaff?.[0]?.branch_id || null;
       if (!oid) {
-        const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
-        oid = omRow?.[0]?.outlet_id || null;
+        const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1);
+        oid = omRow?.[0]?.branch_id || null;
       }
       if (!oid || cancelled) return;
       if (!cancelled) { setOutletId(oid); setSkills(skillsRes.skills || []); }
 
       const [{ data: od }, settingsRes] = await Promise.all([
-        supabase.from("outlets").select("open_time, close_time").eq("outlet_id", oid).single(),
+        supabase.from("branches").select("open_time, close_time").eq("branch_id", oid).single(),
         api.get(`/api/business/outlets/${oid}/settings`).catch(() => ({ settings: null })),
       ]);
       if (cancelled) return;
@@ -139,7 +139,7 @@ export default function CreateShift() {
     setSaving(true); setError("");
     try {
       const res = await api.post("/api/shifts", {
-        outlet_id: outletId,
+        branch_id: outletId,
         title: form.title.trim() || null,
         shift_date: form.shift_date,
         start_time: form.start_time,

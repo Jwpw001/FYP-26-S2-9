@@ -26,10 +26,10 @@ function normalizeTask(task) {
 }
 
 async function getCallerOutletId(userId) {
-  const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { outlet_id: true } });
-  if (s?.outlet_id) return s.outlet_id;
-  const om = await prisma.outlet_managers.findFirst({ where: { user_id: userId }, select: { outlet_id: true } }).catch(() => null);
-  return om?.outlet_id || null;
+  const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
+  if (s?.branch_id) return s.branch_id;
+  const om = await prisma.branch_managers.findFirst({ where: { user_id: userId }, select: { branch_id: true } }).catch(() => null);
+  return om?.branch_id || null;
 }
 
 // ── Tasks ──────────────────────────────────────────────────────────────────────
@@ -217,16 +217,16 @@ const getStaffRoster = async (req, res) => {
     const shiftId = Number(req.params.shiftId);
     const shift = await prisma.shifts.findUnique({
       where: { shift_id: shiftId },
-      select: { shift_date: true, outlet_id: true, start_time: true, end_time: true },
+      select: { shift_date: true, branch_id: true, start_time: true, end_time: true },
     });
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found" });
 
     const shiftDateStr = shift.shift_date.toISOString().slice(0, 10);
     const shiftDate    = new Date(shiftDateStr + "T00:00:00Z");
-    const outletId     = shift.outlet_id;
+    const outletId     = shift.branch_id;
 
     const staffList = await prisma.staff.findMany({
-      where: { outlet_id: outletId, is_active: true },
+      where: { branch_id: outletId, is_active: true },
       include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
     });
 

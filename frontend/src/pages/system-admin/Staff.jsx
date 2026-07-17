@@ -35,8 +35,8 @@ export default function AdminStaff() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      supabase.from("staff").select("staff_id,staff_type,is_active,outlet_id,user_id,users(full_name,email,role),outlets(name)").order("staff_id"),
-      supabase.from("outlets").select("outlet_id,name").order("name"),
+      supabase.from("staff").select("staff_id,staff_type,is_active,branch_id,user_id,users(full_name,email,role),branches(name)").order("staff_id"),
+      supabase.from("branches").select("branch_id,name").order("name"),
       supabase.from("user_skill_tags").select("user_id,skills(name)"),
     ]).then(([{ data: staffData }, { data: outletData }, { data: skillData }]) => {
       if (!cancelled) {

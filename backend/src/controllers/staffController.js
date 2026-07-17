@@ -1,8 +1,8 @@
 const prisma = require("../config/prisma");
 
 async function getCallerOutletId(userId) {
-  const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { outlet_id: true } });
-  return s?.outlet_id || null;
+  const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
+  return s?.branch_id || null;
 }
 
 const getStaff = async (req, res) => {
@@ -11,10 +11,10 @@ const getStaff = async (req, res) => {
     if (!outletId) return res.status(403).json({ success: false, message: "No outlet found for your account." });
 
     const staff = await prisma.staff.findMany({
-      where: { outlet_id: outletId },
+      where: { branch_id: outletId },
       include: {
         users: { select: { user_id: true, full_name: true, email: true, role: true } },
-        outlets: true,
+        branches: true,
       },
     });
     res.json({ success: true, staff });
@@ -32,12 +32,12 @@ const getStaffById = async (req, res) => {
       where: { staff_id: staffId },
       include: {
         users: { select: { user_id: true, full_name: true, email: true, role: true } },
-        outlets: true,
+        branches: true,
       },
     });
 
     if (!staff) return res.status(404).json({ success: false, message: "Staff not found" });
-    if (outletId && staff.outlet_id !== outletId)
+    if (outletId && staff.branch_id !== outletId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
     res.json({ success: true, staff });
@@ -57,7 +57,7 @@ const createStaff = async (req, res) => {
       return res.status(403).json({ success: false, message: "Cannot create staff for a different outlet." });
 
     const staff = await prisma.staff.create({
-      data: { user_id, outlet_id: targetOutlet, staff_type, default_work_days, hired_at: hired_at ? new Date(hired_at) : null, is_active },
+      data: { user_id, branch_id: targetOutlet, staff_type, default_work_days, hired_at: hired_at ? new Date(hired_at) : null, is_active },
     });
     res.status(201).json({ success: true, message: "Staff created successfully", staff });
   } catch (error) {
@@ -70,15 +70,15 @@ const updateStaff = async (req, res) => {
     const staffId = Number(req.params.id);
     const outletId = await getCallerOutletId(req.user.user_id);
 
-    const existing = await prisma.staff.findUnique({ where: { staff_id: staffId }, select: { outlet_id: true } });
+    const existing = await prisma.staff.findUnique({ where: { staff_id: staffId }, select: { branch_id: true } });
     if (!existing) return res.status(404).json({ success: false, message: "Staff not found" });
-    if (outletId && existing.outlet_id !== outletId)
+    if (outletId && existing.branch_id !== outletId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
     const { outlet_id, staff_type, default_work_days, hired_at, is_active } = req.body;
     const staff = await prisma.staff.update({
       where: { staff_id: staffId },
-      data: { outlet_id, staff_type, default_work_days, hired_at: hired_at ? new Date(hired_at) : undefined, is_active },
+      data: { branch_id: outlet_id, staff_type, default_work_days, hired_at: hired_at ? new Date(hired_at) : undefined, is_active },
     });
     res.json({ success: true, message: "Staff updated successfully", staff });
   } catch (error) {
@@ -91,9 +91,9 @@ const deleteStaff = async (req, res) => {
     const staffId = Number(req.params.id);
     const outletId = await getCallerOutletId(req.user.user_id);
 
-    const existing = await prisma.staff.findUnique({ where: { staff_id: staffId }, select: { outlet_id: true } });
+    const existing = await prisma.staff.findUnique({ where: { staff_id: staffId }, select: { branch_id: true } });
     if (!existing) return res.status(404).json({ success: false, message: "Staff not found" });
-    if (outletId && existing.outlet_id !== outletId)
+    if (outletId && existing.branch_id !== outletId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
     await prisma.staff.delete({ where: { staff_id: staffId } });

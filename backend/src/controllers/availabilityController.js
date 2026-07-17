@@ -1,8 +1,8 @@
 const prisma = require("../config/prisma");
 
 async function getCallerOutletId(userId) {
-  const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { outlet_id: true } });
-  return s?.outlet_id || null;
+  const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
+  return s?.branch_id || null;
 }
 
 const getAvailability = async (req, res) => {
@@ -11,7 +11,7 @@ const getAvailability = async (req, res) => {
     if (!outletId) return res.status(403).json({ success: false, message: "No outlet found for your account." });
 
     const outletStaff = await prisma.staff.findMany({
-      where: { outlet_id: outletId },
+      where: { branch_id: outletId },
       select: { staff_id: true },
     });
     const staffIds = outletStaff.map(s => s.staff_id);
@@ -37,12 +37,12 @@ const getAvailabilityById = async (req, res) => {
     const availability = await prisma.availability.findUnique({
       where: { request_id: requestId },
       include: {
-        staff: { select: { outlet_id: true, users: { select: { user_id: true, full_name: true, email: true, role: true } } } },
+        staff: { select: { branch_id: true, users: { select: { user_id: true, full_name: true, email: true, role: true } } } },
       },
     });
 
     if (!availability) return res.status(404).json({ success: false, message: "Availability request not found" });
-    if (outletId && availability.staff?.outlet_id !== outletId)
+    if (outletId && availability.staff?.branch_id !== outletId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
     res.json({ success: true, availability });

@@ -48,19 +48,19 @@ export default function StaffList() {
       setLoading(true);
       try {
         const { data: myStaff } = await supabase
-          .from("staff").select("outlet_id")
+          .from("staff").select("branch_id")
           .eq("user_id", userId).eq("is_active", true).limit(1);
-        let oid = myStaff?.[0]?.outlet_id;
+        let oid = myStaff?.[0]?.branch_id;
         if (!oid) {
-          const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
-          oid = omRow?.[0]?.outlet_id;
+          const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1);
+          oid = omRow?.[0]?.branch_id;
         }
         if (!oid || cancelled) return;
 
         const [{ data: staffData }, { data: tagData }] = await Promise.all([
           supabase.from("staff")
-            .select("staff_id, outlet_id, staff_type, is_active, users(user_id, full_name, email, role)")
-            .eq("outlet_id", oid),
+            .select("staff_id, branch_id, staff_type, is_active, users(user_id, full_name, email, role)")
+            .eq("branch_id", oid),
           supabase.from("user_skill_tags").select("user_id, skill_id, skills(name)"),
         ]);
 

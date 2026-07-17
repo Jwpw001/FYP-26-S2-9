@@ -94,11 +94,11 @@ export default function ShiftsList() {
       setLoading(true);
       try {
         const { data: myStaff } = await supabase
-          .from("staff").select("outlet_id").eq("user_id", userId).eq("is_active", true).limit(1);
-        let oid = myStaff?.[0]?.outlet_id;
+          .from("staff").select("branch_id").eq("user_id", userId).eq("is_active", true).limit(1);
+        let oid = myStaff?.[0]?.branch_id;
         if (!oid) {
-          const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
-          oid = omRow?.[0]?.outlet_id;
+          const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1);
+          oid = omRow?.[0]?.branch_id;
         }
         if (!oid || cancelled) return;
 
@@ -113,8 +113,8 @@ export default function ShiftsList() {
 
         const { data: shiftRows } = await supabase
           .from("shifts")
-          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id, shift_tasks ( task_id, status )")
-          .eq("outlet_id", oid)
+          .select("shift_id, title, shift_date, start_time, end_time, status, branch_id, shift_tasks ( task_id, status )")
+          .eq("branch_id", oid)
           .order("shift_date", { ascending: false });
 
         // Auto-complete published shifts whose date has passed
@@ -135,7 +135,7 @@ export default function ShiftsList() {
         const { data: krewbyRows } = await supabase
           .from("krewby_requests")
           .select("shift_id, role_id, status")
-          .eq("outlet_id", oid)
+          .eq("branch_id", oid)
           .in("status", ["assigned", "approved"]);
         if (!cancelled) setKrewbyAssigned(krewbyRows || []);
       } catch (err) {
@@ -204,8 +204,8 @@ export default function ShiftsList() {
       const oid = outletInfo.outlet_id;
       if (oid) {
         const { data } = await supabase.from("shifts")
-          .select("shift_id, title, shift_date, start_time, end_time, status, outlet_id, shift_tasks ( task_id, status )")
-          .eq("outlet_id", oid).order("shift_date", { ascending: false });
+          .select("shift_id, title, shift_date, start_time, end_time, status, branch_id, shift_tasks ( task_id, status )")
+          .eq("branch_id", oid).order("shift_date", { ascending: false });
         if (data) setShifts(data.map(s => ({ ...s, shift_date: s.shift_date?.split("T")[0] ?? s.shift_date })));
       }
       setTimeout(() => setWeeklyAI(null), 2000);

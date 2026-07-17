@@ -479,7 +479,7 @@ export default function ShiftDetail() {
               <div style={s.shiftMetaRow}>
                 <span style={s.metaPill}><Calendar size={11}/> {fmtDate(shift.shift_date)}</span>
                 <span style={s.metaPill}><Clock size={11}/> {toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</span>
-                {shift.outlets?.name && <span style={s.metaPill}><MapPin size={11}/> {shift.outlets.name}</span>}
+                {shift.branches?.name && <span style={s.metaPill}><MapPin size={11}/> {shift.branches.name}</span>}
                 {shift.deadline && <span style={{...s.metaPill,background:"#FFFBEB",color:"#D97706",border:"1px solid #FDE68A"}}><Calendar size={11}/> Due {new Date(shift.deadline).toLocaleDateString("en-SG",{day:"numeric",month:"short"})}</span>}
               </div>
             </div>

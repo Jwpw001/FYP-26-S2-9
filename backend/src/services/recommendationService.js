@@ -29,7 +29,7 @@ async function getShiftRecommendations(shiftId) {
   // 1. Load shift + open tasks
   const { data: shift } = await supabaseAdmin
     .from("shifts")
-    .select("shift_id, title, shift_date, start_time, end_time, outlet_id, outlets(name, open_time, close_time)")
+    .select("shift_id, title, shift_date, start_time, end_time, branch_id, branches(name, open_time, close_time)")
     .eq("shift_id", shiftId)
     .single();
 
@@ -58,7 +58,7 @@ async function getShiftRecommendations(shiftId) {
   const { data: staffRows } = await supabaseAdmin
     .from("staff")
     .select("staff_id, user_id, staff_type, default_work_days, experience_level, years_of_experience")
-    .eq("outlet_id", shift.outlet_id)
+    .eq("branch_id", shift.branch_id)
     .eq("is_active", true);
 
   const userIds = (staffRows || []).map(s => s.user_id);
@@ -189,7 +189,7 @@ async function getShiftRecommendations(shiftId) {
   // 8. Call Groq
   const prompt = `You are a smart workforce scheduling assistant for an F&B outlet.
 
-SHIFT: ${shift.title} on ${shift.shift_date} (${shiftDayName}), ${toHHMM(shift.start_time)}–${toHHMM(shift.end_time)} at ${shift.outlets?.name}
+SHIFT: ${shift.title} on ${shift.shift_date} (${shiftDayName}), ${toHHMM(shift.start_time)}–${toHHMM(shift.end_time)} at ${shift.branches?.name}
 
 TASKS NEEDING STAFF (one person per task):
 ${tasksContext.map(t => `- [ID:${t.task_id}] "${t.title}" ${t.start_time}–${t.end_time} (requires skill: ${t.required_skill || "any"}${t.difficulty ? `, difficulty: ${t.difficulty}` : ""})`).join("\n")}

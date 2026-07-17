@@ -43,7 +43,7 @@ export default function CasualDashboard() {
       // Query staff table directly — same approach as regular-staff dashboard
       const [{ data: staffData }, availRes] = await Promise.all([
         supabase.from("staff")
-          .select("staff_id, is_active, outlet_id, outlets(name, address)")
+          .select("staff_id, is_active, branch_id, branches(name, address)")
           .eq("user_id", userId)
           .maybeSingle(),
         api.get("/api/casual/availability").catch(() => ({ availability: [] })),
@@ -61,7 +61,7 @@ export default function CasualDashboard() {
           .select(`
             assignment_id, acknowledged,
             shifts!inner ( shift_id, title, shift_date, start_time, end_time,
-              outlets ( name )
+              branches ( name )
             )
           `)
           .eq("staff_id", staffData.staff_id)
@@ -80,7 +80,7 @@ export default function CasualDashboard() {
   }, [userId]);
 
   const isActive   = staffRecord?.is_active === true;
-  const outletName = staffRecord?.outlets?.name || null;
+  const outletName = staffRecord?.branches?.name || null;
   const availDone  = avail.length > 0;
 
   const greeting = () => {

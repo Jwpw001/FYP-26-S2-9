@@ -8,10 +8,10 @@ async function resolveBusinessId(user) {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("owner_id", user.user_id).maybeSingle();
     return biz || null;
   }
-  // outlet_manager: find their outlet → business
-  const { data: link } = await supabaseAdmin.from("outlet_managers").select("outlet_id").eq("user_id", user.user_id).limit(1).maybeSingle();
+  // outlet_manager: find their branch → business
+  const { data: link } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", user.user_id).limit(1).maybeSingle();
   if (!link) return null;
-  const outlet = await prisma.outlets.findUnique({ where: { outlet_id: link.outlet_id }, select: { business_id: true } });
+  const outlet = await prisma.branches.findUnique({ where: { branch_id: link.branch_id }, select: { business_id: true } });
   if (!outlet) return null;
   const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, industry").eq("business_id", outlet.business_id).maybeSingle();
   return biz || null;
@@ -26,10 +26,10 @@ const getMyOutlets = async (req, res) => {
     if (!biz) return res.json({ success: true, outlets: [] });
 
     const { data: outlets } = await supabaseAdmin
-      .from("outlets")
-      .select("outlet_id, name, address, business_id, open_time, close_time")
+      .from("branches")
+      .select("branch_id, name, address, business_id, open_time, close_time")
       .eq("business_id", biz.business_id)
-      .order("outlet_id");
+      .order("branch_id");
     return res.json({ success: true, outlets: outlets || [] });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -48,7 +48,7 @@ const createOutlet = async (req, res) => {
     // Enforce outlet limit
     const limits = getLimits(biz.plan);
     if (limits.outlets !== Infinity) {
-      const { count } = await supabaseAdmin.from("outlets").select("*", { count: "exact", head: true }).eq("business_id", biz.business_id);
+      const { count } = await supabaseAdmin.from("branches").select("*", { count: "exact", head: true }).eq("business_id", biz.business_id);
       if ((count || 0) >= limits.outlets) {
         return res.status(403).json({
           success: false,
@@ -61,7 +61,7 @@ const createOutlet = async (req, res) => {
     }
 
     const { data: outlet, error: outletErr } = await supabaseAdmin
-      .from("outlets")
+      .from("branches")
       .insert({ name, address: address || null, business_id: biz.business_id, open_time: open_time || "08:00:00", close_time: close_time || "22:00:00" })
       .select()
       .single();
@@ -72,12 +72,12 @@ const createOutlet = async (req, res) => {
       const allSkills = await prisma.skills.findMany({ select: { skill_id: true, name: true } });
       const skillByName = Object.fromEntries(allSkills.map(s => [s.name.toLowerCase(), s.skill_id]));
       const rows = filtered.map(r => ({
-        outlet_id: outlet.outlet_id,
+        branch_id: outlet.branch_id,
         role_name: r.role_name.trim(),
         skill_id: skillByName[r.role_name.trim().toLowerCase()] || null,
         headcount: Number(r.headcount) || 1,
       }));
-      if (rows.length > 0) await supabaseAdmin.from("outlet_role_templates").insert(rows);
+      if (rows.length > 0) await supabaseAdmin.from("branch_role_templates").insert(rows);
     }
 
     return res.status(201).json({ success: true, outlet });
@@ -92,18 +92,18 @@ const getAllStaff = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.json({ success: true, staff: [] });
 
-    const outlets = await prisma.outlets.findMany({ where: { business_id: biz.business_id }, select: { outlet_id: true, name: true } });
-    const outletIds = outlets.map(o => o.outlet_id);
+    const outlets = await prisma.branches.findMany({ where: { business_id: biz.business_id }, select: { branch_id: true, name: true } });
+    const outletIds = outlets.map(o => o.branch_id);
     if (outletIds.length === 0) return res.json({ success: true, staff: [] });
 
     const staff = await prisma.staff.findMany({
-      where: { outlet_id: { in: outletIds } },
+      where: { branch_id: { in: outletIds } },
       include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
       orderBy: { staff_id: "asc" },
     });
 
-    const outletNameById = Object.fromEntries(outlets.map(o => [o.outlet_id, o.name]));
-    const enriched = staff.map(s => ({ ...s, outlet_name: outletNameById[s.outlet_id] }));
+    const outletNameById = Object.fromEntries(outlets.map(o => [o.branch_id, o.name]));
+    const enriched = staff.map(s => ({ ...s, outlet_name: outletNameById[s.branch_id] }));
 
     return res.json({ success: true, staff: enriched });
   } catch (error) {
@@ -117,11 +117,11 @@ const getAllManagers = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.json({ success: true, managers: [] });
 
-    const outlets = await prisma.outlets.findMany({ where: { business_id: biz.business_id }, select: { outlet_id: true, name: true } });
-    const outletIds = outlets.map(o => o.outlet_id);
+    const outlets = await prisma.branches.findMany({ where: { business_id: biz.business_id }, select: { branch_id: true, name: true } });
+    const outletIds = outlets.map(o => o.branch_id);
     if (outletIds.length === 0) return res.json({ success: true, managers: [] });
 
-    const { data: links } = await supabaseAdmin.from("outlet_managers").select("user_id, outlet_id, is_primary").in("outlet_id", outletIds);
+    const { data: links } = await supabaseAdmin.from("branch_managers").select("user_id, branch_id, is_primary").in("branch_id", outletIds);
     const userIds = [...new Set((links || []).map(l => l.user_id))];
     if (userIds.length === 0) return res.json({ success: true, managers: [] });
 
@@ -130,15 +130,15 @@ const getAllManagers = async (req, res) => {
       select: { user_id: true, full_name: true, email: true, is_active: true },
     });
 
-    const outletNameById = Object.fromEntries(outlets.map(o => [o.outlet_id, o.name]));
+    const outletNameById = Object.fromEntries(outlets.map(o => [o.branch_id, o.name]));
     const usersById = Object.fromEntries(users.map(u => [u.user_id, u]));
 
     const managers = (links || [])
       .filter(l => usersById[l.user_id])
       .map(l => ({
         ...usersById[l.user_id],
-        outlet_id: l.outlet_id,
-        outlet_name: outletNameById[l.outlet_id],
+        branch_id: l.branch_id,
+        outlet_name: outletNameById[l.branch_id],
         is_primary: l.is_primary,
       }));
 
@@ -156,13 +156,13 @@ const getOutletStaff = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.status(404).json({ success: false, message: "Business not found for this owner." });
 
-    const outlet = await prisma.outlets.findUnique({ where: { outlet_id } });
+    const outlet = await prisma.branches.findUnique({ where: { branch_id: outlet_id } });
     if (!outlet || outlet.business_id !== biz.business_id) {
       return res.status(404).json({ success: false, message: "Outlet not found." });
     }
 
     const staff = await prisma.staff.findMany({
-      where: { outlet_id },
+      where: { branch_id: outlet_id },
       include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
       orderBy: { staff_id: "asc" },
     });
@@ -180,12 +180,12 @@ const getOutletManagers = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.status(404).json({ success: false, message: "Business not found for this owner." });
 
-    const outlet = await prisma.outlets.findUnique({ where: { outlet_id } });
+    const outlet = await prisma.branches.findUnique({ where: { branch_id: outlet_id } });
     if (!outlet || outlet.business_id !== biz.business_id) {
       return res.status(404).json({ success: false, message: "Outlet not found." });
     }
 
-    const { data: links } = await supabaseAdmin.from("outlet_managers").select("user_id, is_primary").eq("outlet_id", outlet_id);
+    const { data: links } = await supabaseAdmin.from("branch_managers").select("user_id, is_primary").eq("branch_id", outlet_id);
     const userIds = (links || []).map(l => l.user_id);
     if (userIds.length === 0) return res.json({ success: true, managers: [] });
 
@@ -211,10 +211,10 @@ async function getOwnedManagerLinkOrNull(req, user_id) {
   const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
   if (!biz) return null;
 
-  const { data: link } = await supabaseAdmin.from("outlet_managers").select("outlet_id, is_primary").eq("user_id", user_id).maybeSingle();
+  const { data: link } = await supabaseAdmin.from("branch_managers").select("branch_id, is_primary").eq("user_id", user_id).maybeSingle();
   if (!link) return null;
 
-  const outlet = await prisma.outlets.findUnique({ where: { outlet_id: link.outlet_id } });
+  const outlet = await prisma.branches.findUnique({ where: { branch_id: link.branch_id } });
   if (!outlet || outlet.business_id !== biz.business_id) return null;
 
   return { ...link, outlet };
@@ -289,15 +289,15 @@ const updateOutlet = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.status(404).json({ success: false, message: "Business not found for this owner." });
 
-    const outlet = await prisma.outlets.findUnique({ where: { outlet_id } });
+    const outlet = await prisma.branches.findUnique({ where: { branch_id: outlet_id } });
     if (!outlet || outlet.business_id !== biz.business_id) {
       return res.status(404).json({ success: false, message: "Outlet not found." });
     }
 
     const { data: updated, error } = await supabaseAdmin
-      .from("outlets")
+      .from("branches")
       .update({ name, address: address || null, open_time: open_time || outlet.open_time, close_time: close_time || outlet.close_time, ...(working_days !== undefined && { working_days: Number(working_days) }) })
-      .eq("outlet_id", outlet_id)
+      .eq("branch_id", outlet_id)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -312,9 +312,9 @@ const getRoleTemplates = async (req, res) => {
   try {
     const outlet_id = Number(req.params.outlet_id);
     const { data, error } = await supabaseAdmin
-      .from("outlet_role_templates")
+      .from("branch_role_templates")
       .select("*, skills(skill_id, name)")
-      .eq("outlet_id", outlet_id)
+      .eq("branch_id", outlet_id)
       .order("template_id");
     if (error) throw new Error(error.message);
     return res.json({ success: true, templates: data });
@@ -332,19 +332,19 @@ const upsertRoleTemplates = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
-    await supabaseAdmin.from("outlet_role_templates").delete().eq("outlet_id", outlet_id);
+    await supabaseAdmin.from("branch_role_templates").delete().eq("branch_id", outlet_id);
 
     if (Array.isArray(role_templates) && role_templates.length > 0) {
       const filtered = role_templates.filter(r => r.role_name?.trim());
       const allSkills = await prisma.skills.findMany({ select: { skill_id: true, name: true } });
       const skillByName = Object.fromEntries(allSkills.map(s => [s.name.toLowerCase(), s.skill_id]));
       const rows = filtered.map(r => ({
-        outlet_id,
+        branch_id: outlet_id,
         role_name: r.role_name.trim(),
         skill_id: skillByName[r.role_name.trim().toLowerCase()] || null,
         headcount: Number(r.headcount) || 1,
       }));
-      if (rows.length > 0) await supabaseAdmin.from("outlet_role_templates").insert(rows);
+      if (rows.length > 0) await supabaseAdmin.from("branch_role_templates").insert(rows);
     }
 
     return res.json({ success: true });
@@ -361,12 +361,12 @@ const deleteOutlet = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.status(404).json({ success: false, message: "Business not found for this owner." });
 
-    const outlet = await prisma.outlets.findUnique({ where: { outlet_id } });
+    const outlet = await prisma.branches.findUnique({ where: { branch_id: outlet_id } });
     if (!outlet || outlet.business_id !== biz.business_id) {
       return res.status(404).json({ success: false, message: "Outlet not found." });
     }
 
-    await prisma.outlets.delete({ where: { outlet_id } });
+    await prisma.branches.delete({ where: { branch_id: outlet_id } });
     return res.json({ success: true, message: "Outlet deleted." });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -381,9 +381,9 @@ async function getOwnedStaffOrNull(req, staff_id) {
 
   const staff = await prisma.staff.findUnique({
     where: { staff_id },
-    include: { users: { select: { user_id: true, full_name: true, email: true, role: true } }, outlets: true },
+    include: { users: { select: { user_id: true, full_name: true, email: true, role: true } }, branches: true },
   });
-  if (!staff || staff.outlets.business_id !== biz.business_id) return null;
+  if (!staff || staff.branches.business_id !== biz.business_id) return null;
   return staff;
 }
 
@@ -524,7 +524,7 @@ const getMyBusiness = async (req, res) => {
 const getOutletSkills = async (req, res) => {
   try {
     const outlet_id = Number(req.params.outlet_id);
-    const skills = await prisma.skills.findMany({ where: { outlet_id }, orderBy: { name: "asc" } });
+    const skills = await prisma.skills.findMany({ where: { branch_id: outlet_id }, orderBy: { name: "asc" } });
     return res.json({ success: true, skills });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -538,7 +538,7 @@ const createOutletSkill = async (req, res) => {
     const { name, description } = req.body;
     if (!name) return res.status(400).json({ success: false, message: "Skill name is required." });
 
-    const skill = await prisma.skills.create({ data: { name, description: description || null, outlet_id, created_by: req.user.user_id } });
+    const skill = await prisma.skills.create({ data: { name, description: description || null, branch_id: outlet_id, created_by: req.user.user_id } });
     return res.status(201).json({ success: true, skill });
   } catch (error) {
     if (error.code === "P2002") return res.status(409).json({ success: false, message: "A skill with this name already exists for this outlet." });
@@ -582,12 +582,12 @@ const getBusinessStats = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, name").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.json({ success: true, outlets_count: 0, staff_count: 0, shifts_count: 0, active_invites: 0 });
 
-    const outlets = await prisma.outlets.findMany({ where: { business_id: biz.business_id }, select: { outlet_id: true } });
-    const outletIds = outlets.map(o => o.outlet_id);
+    const outlets = await prisma.branches.findMany({ where: { business_id: biz.business_id }, select: { branch_id: true } });
+    const outletIds = outlets.map(o => o.branch_id);
 
     const [staffCount, shiftCount, inviteCount] = await Promise.all([
-      outletIds.length ? prisma.staff.count({ where: { outlet_id: { in: outletIds }, is_active: true } }) : 0,
-      outletIds.length ? prisma.shifts.count({ where: { outlet_id: { in: outletIds } } }) : 0,
+      outletIds.length ? prisma.staff.count({ where: { branch_id: { in: outletIds }, is_active: true } }) : 0,
+      outletIds.length ? prisma.shifts.count({ where: { branch_id: { in: outletIds } } }) : 0,
       prisma.invitations.count({ where: { invited_by: req.user.user_id, status: "pending" } }),
     ]);
 
@@ -723,12 +723,12 @@ const getOutletSettings = async (req, res) => {
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const outlet_id = req.params.outlet_id;
-    const { data: outlet } = await supabaseAdmin.from("outlets").select("outlet_id").eq("outlet_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
+    const { data: outlet } = await supabaseAdmin.from("branches").select("branch_id").eq("branch_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
     if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found." });
 
     const [{ data: settings }, { data: alloc }] = await Promise.all([
-      supabaseAdmin.from("outlet_settings").select("*").eq("outlet_id", outlet_id).maybeSingle(),
-      supabaseAdmin.from("outlet_allocation_preferences").select("*").eq("outlet_id", outlet_id).maybeSingle(),
+      supabaseAdmin.from("branch_settings").select("*").eq("branch_id", outlet_id).maybeSingle(),
+      supabaseAdmin.from("branch_allocation_preferences").select("*").eq("branch_id", outlet_id).maybeSingle(),
     ]);
 
     return res.json({ success: true, settings: settings || null, allocation: alloc || null });
@@ -743,7 +743,7 @@ const updateOutletSettings = async (req, res) => {
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const outlet_id = req.params.outlet_id;
-    const { data: outlet } = await supabaseAdmin.from("outlets").select("outlet_id").eq("outlet_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
+    const { data: outlet } = await supabaseAdmin.from("branches").select("branch_id").eq("branch_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
     if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found." });
 
     const { operating_days, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment } = req.body;
@@ -753,7 +753,7 @@ const updateOutletSettings = async (req, res) => {
     }
 
     const upsertData = {
-      outlet_id: Number(outlet_id),
+      branch_id: Number(outlet_id),
       ...(operating_days !== undefined && { operating_days }),
       ...(holidays !== undefined && { holidays }),
       ...(work_hours_day !== undefined && { work_hours_day }),
@@ -764,7 +764,7 @@ const updateOutletSettings = async (req, res) => {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabaseAdmin.from("outlet_settings").upsert(upsertData, { onConflict: "outlet_id" }).select("*").single();
+    const { data, error } = await supabaseAdmin.from("branch_settings").upsert(upsertData, { onConflict: "branch_id" }).select("*").single();
     if (error) throw new Error(error.message);
 
     return res.json({ success: true, settings: data });
@@ -779,7 +779,7 @@ const updateOutletAllocationPrefs = async (req, res) => {
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const outlet_id = req.params.outlet_id;
-    const { data: outlet } = await supabaseAdmin.from("outlets").select("outlet_id").eq("outlet_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
+    const { data: outlet } = await supabaseAdmin.from("branches").select("branch_id").eq("branch_id", outlet_id).eq("business_id", biz.business_id).maybeSingle();
     if (!outlet) return res.status(404).json({ success: false, message: "Outlet not found." });
 
     const { weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload } = req.body;
@@ -787,12 +787,12 @@ const updateOutletAllocationPrefs = async (req, res) => {
     if (total !== 100) return res.status(400).json({ success: false, message: "Allocation weights must sum to 100." });
 
     const upsertData = {
-      outlet_id: Number(outlet_id),
+      branch_id: Number(outlet_id),
       weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload,
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabaseAdmin.from("outlet_allocation_preferences").upsert(upsertData, { onConflict: "outlet_id" }).select("*").single();
+    const { data, error } = await supabaseAdmin.from("branch_allocation_preferences").upsert(upsertData, { onConflict: "branch_id" }).select("*").single();
     if (error) throw new Error(error.message);
 
     return res.json({ success: true, allocation: data });

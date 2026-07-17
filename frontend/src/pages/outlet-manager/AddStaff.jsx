@@ -29,14 +29,14 @@ export default function AddStaff() {
     let cancelled = false;
     async function load() {
       const [{ data: myStaff }, skillRes] = await Promise.all([
-        supabase.from("staff").select("outlet_id")
+        supabase.from("staff").select("branch_id")
           .eq("user_id", userId).eq("is_active", true).limit(1),
         api.get("/api/business/skills/assignable").catch(() => ({ skills: [] })),
       ]);
-      let oid = myStaff?.[0]?.outlet_id || null;
+      let oid = myStaff?.[0]?.branch_id || null;
       if (!oid) {
-        const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
-        oid = omRow?.[0]?.outlet_id || null;
+        const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1);
+        oid = omRow?.[0]?.branch_id || null;
       }
       if (!cancelled) {
         setOutletId(oid);
@@ -78,7 +78,7 @@ export default function AddStaff() {
         email: form.email.trim().toLowerCase(),
         password: form.password,
         role: form.staff_type === "regular" ? "regular_staff" : "outlet_casual_staff",
-        outlet_id: outletId,
+        branch_id: outletId,
         staff_type: form.staff_type,
         default_work_days: form.staff_type === "regular" ? form.default_work_days : null,
         hired_at: form.hired_at || null,

@@ -318,7 +318,7 @@ export default function AdminDashboard() {
           { count: bizCount }, { count: outletCount }, { count: mgr }, { count: stf }, { count: skl },
         ] = await Promise.all([
           supabase.from("businesses").select("*", { count: "exact", head: true }),
-          supabase.from("outlets").select("*", { count: "exact", head: true }),
+          supabase.from("branches").select("*", { count: "exact", head: true }),
           supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "outlet_manager"),
           supabase.from("staff").select("*", { count: "exact", head: true }).eq("is_active", true),
           supabase.from("skills").select("*", { count: "exact", head: true }),

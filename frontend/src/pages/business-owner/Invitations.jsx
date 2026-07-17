@@ -52,7 +52,7 @@ export default function BOInvitations() {
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ email: "", role: "outlet_manager", outlet_id: "" });
+  const [form, setForm] = useState({ email: "", role: "outlet_manager", branch_id: "" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successCode, setSuccessCode] = useState(null);
@@ -77,14 +77,14 @@ export default function BOInvitations() {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!form.outlet_id) { setError("Please select a branch."); return; }
+    if (!form.branch_id) { setError("Please select a branch."); return; }
     setSubmitting(true); setError("");
     try {
-      const body = { email: form.email, role: form.role, outlet_id: parseInt(form.outlet_id) };
+      const body = { email: form.email, role: form.role, branch_id: parseInt(form.branch_id) };
       const resp = await api.post("/api/invitations/send", body);
       setSuccessCode({ code: resp.code, email: form.email, link: resp.invite_link });
       setShowForm(false);
-      setForm({ email: "", role: "outlet_manager", outlet_id: "" });
+      setForm({ email: "", role: "outlet_manager", branch_id: "" });
       load();
     } catch (err) {
       if (err.limitReached) {
@@ -235,9 +235,9 @@ export default function BOInvitations() {
                   </div>
                   <div>
                     <label style={sty.label}><Building2 size={12} style={{ marginRight: "4px" }} /> Branch</label>
-                    <select value={form.outlet_id} onChange={e => setForm(p => ({ ...p, outlet_id: e.target.value }))} required style={sty.input}>
+                    <select value={form.branch_id} onChange={e => setForm(p => ({ ...p, branch_id: e.target.value }))} required style={sty.input}>
                       <option value="">Select branch</option>
-                      {outlets.map(o => <option key={o.outlet_id} value={o.outlet_id}>{o.name}</option>)}
+                      {outlets.map(o => <option key={o.branch_id} value={o.branch_id}>{o.name}</option>)}
                     </select>
                   </div>
                 </div>
@@ -352,9 +352,9 @@ export default function BOInvitations() {
                       <span style={{ background: rm.bg, color: rm.text, fontSize: "11px", fontWeight: "600", padding: "2px 10px", borderRadius: "100px" }}>
                         {rm.label}
                       </span>
-                      {inv.outlets?.name && (
+                      {inv.branches?.name && (
                         <span style={{ fontSize: "11px", color: "#94A3B8", display: "flex", alignItems: "center", gap: "3px" }}>
-                          <Building2 size={10} /> {inv.outlets.name}
+                          <Building2 size={10} /> {inv.branches.name}
                         </span>
                       )}
                       {inv.expires_at && (

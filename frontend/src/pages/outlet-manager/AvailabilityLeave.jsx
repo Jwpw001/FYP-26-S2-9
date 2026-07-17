@@ -118,18 +118,18 @@ export default function AvailabilityLeave() {
     let cancelled = false;
     async function loadBase() {
       const { data: myStaff } = await supabase
-        .from("staff").select("outlet_id").eq("user_id", userId).eq("is_active", true).limit(1);
-      let oid = myStaff?.[0]?.outlet_id;
+        .from("staff").select("branch_id").eq("user_id", userId).eq("is_active", true).limit(1);
+      let oid = myStaff?.[0]?.branch_id;
       if (!oid) {
-        const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
-        oid = omRow?.[0]?.outlet_id;
+        const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1);
+        oid = omRow?.[0]?.branch_id;
       }
       if (!oid || cancelled) return;
       setOutletId(oid);
 
       const [{ data: staffRows }, { data: outletRow }] = await Promise.all([
-        supabase.from("staff").select("staff_id, user_id").eq("outlet_id", oid),
-        supabase.from("outlets").select("working_days").eq("outlet_id", oid).single(),
+        supabase.from("staff").select("staff_id, user_id").eq("branch_id", oid),
+        supabase.from("branches").select("working_days").eq("branch_id", oid).single(),
       ]);
       if (!cancelled) setWorkingDays(outletRow?.working_days ?? 7);
       const map = {};
@@ -303,7 +303,7 @@ export default function AvailabilityLeave() {
         const { data: casualStaff } = await supabase
           .from("staff")
           .select("staff_id, user_id, users:user_id(full_name, email)")
-          .eq("outlet_id", outletId)
+          .eq("branch_id", outletId)
           .eq("is_active", true);
 
         if (!casualStaff || casualStaff.length === 0) {
@@ -441,7 +441,7 @@ export default function AvailabilityLeave() {
     const { data: outletStaff } = await supabase
       .from("staff")
       .select("staff_id, user_id, users:user_id(full_name, email)")
-      .eq("outlet_id", outletId)
+      .eq("branch_id", outletId)
       .eq("is_active", true)
       .neq("staff_id", sw.requester_id);
 

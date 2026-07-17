@@ -19,14 +19,14 @@ async function fetchWorkforceContext(userId, role) {
     if (role === "outlet_manager") {
       const staffRecord = await prisma.staff.findFirst({
         where: { user_id: userId },
-        select: { outlet_id: true },
+        select: { branch_id: true },
       });
-      const outletId = staffRecord?.outlet_id;
+      const outletId = staffRecord?.branch_id;
       context.outletId = outletId;
 
       if (outletId) {
         const shifts = await prisma.shifts.findMany({
-          where: { outlet_id: outletId, shift_date: { gte: today, lte: weekFromNow } },
+          where: { branch_id: outletId, shift_date: { gte: today, lte: weekFromNow } },
           include: {
             shift_tasks: { select: { task_id: true } },
             task_assignments: {
@@ -59,7 +59,7 @@ async function fetchWorkforceContext(userId, role) {
         });
 
         const pendingLeave = await prisma.availability.findMany({
-          where: { status: "pending", staff: { outlet_id: outletId } },
+          where: { status: "pending", staff: { branch_id: outletId } },
           include: { staff: { include: { users: { select: { full_name: true } } } } },
         });
         context.pendingLeaveRequests = pendingLeave.map((l) => ({
@@ -72,7 +72,7 @@ async function fetchWorkforceContext(userId, role) {
 
         const pendingSwaps = await prisma.swap_requests
           .findMany({
-            where: { status: "pending", requester_shift: { outlet_id: outletId } },
+            where: { status: "pending", requester_shift: { branch_id: outletId } },
             include: {
               staff_swap_requests_requester_idTostaff: {
                 include: { users: { select: { full_name: true } } },
@@ -82,15 +82,15 @@ async function fetchWorkforceContext(userId, role) {
           .catch(() => []);
         context.pendingSwapRequests = pendingSwaps.length;
 
-        const outlet = await prisma.outlets.findUnique({
-          where: { outlet_id: outletId },
+        const outlet = await prisma.branches.findUnique({
+          where: { branch_id: outletId },
           select: { name: true, address: true },
         });
         context.outlet = outlet;
 
         // Casual staff availability submissions
         const outletStaff = await prisma.staff.findMany({
-          where: { outlet_id: outletId, is_active: true },
+          where: { branch_id: outletId, is_active: true },
           select: { staff_id: true, users: { select: { full_name: true, email: true } } },
         }).catch(() => []);
 

@@ -49,7 +49,7 @@ export default function BusinessDetail() {
     setLoading(true);
     const [{ data: biz }, { data: outletRows }] = await Promise.all([
       supabase.from("businesses").select("business_id, name, description, created_at, plan").eq("business_id", id).single(),
-      supabase.from("outlets").select("outlet_id, name, address, staff(staff_id)").eq("business_id", id).order("name"),
+      supabase.from("branches").select("branch_id, name, address, staff(staff_id)").eq("business_id", id).order("name"),
     ]);
     if (!biz) { navigate("/system-admin/businesses"); return; }
     setBusiness(biz);
@@ -182,8 +182,8 @@ export default function BusinessDetail() {
                     const oColor = avatarColor(outlet.name);
                     const staffCount = outlet.staff?.length ?? 0;
                     return (
-                      <div key={outlet.outlet_id} className="branch-card"
-                        onClick={() => navigate(`/system-admin/outlets/${outlet.outlet_id}`)}
+                      <div key={outlet.branch_id} className="branch-card"
+                        onClick={() => navigate(`/system-admin/outlets/${outlet.branch_id}`)}
                         style={{ display: "flex", alignItems: "center", gap: "14px", padding: "16px 18px", border: "1px solid #E2E8F0", borderRadius: "14px", background: "#FAFAFA", animation: `fadeSlideUp 0.25s ease ${i * 0.04}s both`, cursor: "pointer" }}>
                         <div style={{ width: "42px", height: "42px", borderRadius: "11px", background: oColor, color: "#FFF", fontSize: "16px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           {outlet.name[0]?.toUpperCase()}

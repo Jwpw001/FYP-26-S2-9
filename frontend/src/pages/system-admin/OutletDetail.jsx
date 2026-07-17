@@ -42,8 +42,8 @@ export default function OutletDetail() {
   async function load() {
     setLoading(true);
     const [{ data: outletData }, { data: allStaff }, { data: skillData }] = await Promise.all([
-      supabase.from("outlets").select("outlet_id, name, address, business_id, businesses(name)").eq("outlet_id", id).single(),
-      supabase.from("staff").select("staff_id, staff_type, is_active, user_id, users(user_id, full_name, email, role)").eq("outlet_id", id).order("staff_id"),
+      supabase.from("branches").select("branch_id, name, address, business_id, businesses(name)").eq("branch_id", id).single(),
+      supabase.from("staff").select("staff_id, staff_type, is_active, user_id, users(user_id, full_name, email, role)").eq("branch_id", id).order("staff_id"),
       supabase.from("user_skill_tags").select("user_id, skills(name)"),
     ]);
     if (!outletData) { navigate(-1); return; }

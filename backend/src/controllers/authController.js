@@ -270,7 +270,7 @@ const createStaffAccount = async (req, res) => {
         await prisma.staff.create({
             data: {
                 user_id: newUser.user_id,
-                outlet_id: Number(outlet_id),
+                branch_id: Number(outlet_id),
                 staff_type,
                 default_work_days: staff_type === "regular" ? default_work_days : null,
                 hired_at: hired_at ? new Date(hired_at) : null,
@@ -281,7 +281,7 @@ const createStaffAccount = async (req, res) => {
         // Assign skill tags — write to both tables
         const assignments = skill_assignments || (skill_ids ? skill_ids.map(id => ({ skill_id: id })) : []);
         if (assignments.length > 0) {
-            const newStaff = await prisma.staff.findFirst({ where: { user_id: newUser.user_id, outlet_id: Number(outlet_id) } });
+            const newStaff = await prisma.staff.findFirst({ where: { user_id: newUser.user_id, branch_id: Number(outlet_id) } });
             await prisma.user_skill_tags.createMany({
                 data: assignments.map(a => ({ user_id: newUser.user_id, skill_id: Number(a.skill_id) })),
                 skipDuplicates: true,

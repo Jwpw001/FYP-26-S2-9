@@ -14,15 +14,15 @@ function generateJoinCode() {
 
 async function resolveManagerOutlet(userId) {
   const { data: link } = await supabaseAdmin
-    .from("outlet_managers")
-    .select("outlet_id")
+    .from("branch_managers")
+    .select("branch_id")
     .eq("user_id", userId)
     .limit(1)
     .maybeSingle();
   if (!link) return null;
-  const outlet = await prisma.outlets.findUnique({
-    where: { outlet_id: link.outlet_id },
-    select: { outlet_id: true, business_id: true, name: true },
+  const outlet = await prisma.branches.findUnique({
+    where: { branch_id: link.branch_id },
+    select: { branch_id: true, business_id: true, name: true },
   });
   return outlet || null;
 }
@@ -148,8 +148,8 @@ async function getMyOutlets(req, res) {
     if (!cw) return res.status(404).json({ success: false, message: "Casual worker record not found." });
 
     const { data: outlets } = await supabaseAdmin
-      .from("outlets")
-      .select("outlet_id, name, address")
+      .from("branches")
+      .select("branch_id, name, address")
       .eq("business_id", cw.business_id)
       .order("name");
 
@@ -164,10 +164,10 @@ async function getPreferences(req, res) {
   try {
     const { data: prefs } = await supabaseAdmin
       .from("casual_branch_preferences")
-      .select("outlet_id")
+      .select("branch_id")
       .eq("user_id", req.user.user_id);
 
-    return res.json({ success: true, preferred_outlet_ids: (prefs || []).map(p => p.outlet_id) });
+    return res.json({ success: true, preferred_outlet_ids: (prefs || []).map(p => p.branch_id) });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -193,7 +193,7 @@ async function setPreferences(req, res) {
     await supabaseAdmin.from("casual_branch_preferences").delete().eq("user_id", req.user.user_id);
 
     if (outlet_ids.length > 0) {
-      const rows = outlet_ids.map(id => ({ user_id: req.user.user_id, outlet_id: id }));
+      const rows = outlet_ids.map(id => ({ user_id: req.user.user_id, branch_id: id }));
       const { error } = await supabaseAdmin.from("casual_branch_preferences").insert(rows);
       if (error) throw new Error(error.message);
     }
@@ -260,7 +260,7 @@ async function submitWeeklyAvailability(req, res) {
     // Get staff record for this user
     const { data: staffRecord } = await supabaseAdmin
       .from("staff")
-      .select("staff_id, outlet_id")
+      .select("staff_id, branch_id")
       .eq("user_id", userId)
       .maybeSingle();
     if (!staffRecord) return res.status(404).json({ success: false, message: "Staff record not found." });
@@ -297,11 +297,11 @@ async function submitWeeklyAvailability(req, res) {
 
     // Notify manager
     const user = await prisma.users.findUnique({ where: { user_id: userId }, select: { full_name: true } });
-    if (staffRecord.outlet_id) {
+    if (staffRecord.branch_id) {
       const { data: managerLink } = await supabaseAdmin
-        .from("outlet_managers")
+        .from("branch_managers")
         .select("user_id")
-        .eq("outlet_id", staffRecord.outlet_id)
+        .eq("branch_id", staffRecord.branch_id)
         .maybeSingle();
 
       if (managerLink?.user_id) {
@@ -341,7 +341,7 @@ async function getManagerPool(req, res) {
     const { data: prefs } = await supabaseAdmin
       .from("casual_branch_preferences")
       .select("user_id")
-      .eq("outlet_id", outlet.outlet_id);
+      .eq("branch_id", outlet.branch_id);
 
     const userIds = (prefs || []).map(p => p.user_id);
     if (userIds.length === 0) return res.json({ success: true, workers: [] });
@@ -421,7 +421,7 @@ async function getPool(req, res) {
       // Which branches they prefer
       const { data: prefs } = await supabaseAdmin
         .from("casual_branch_preferences")
-        .select("outlets(outlet_id, name)")
+        .select("branches(branch_id, name)")
         .eq("user_id", w.user_id);
 
       return {
@@ -430,7 +430,7 @@ async function getPool(req, res) {
         email: user?.email,
         username: user?.username,
         skills: (skills || []).map(s => s.skills?.name).filter(Boolean),
-        preferred_branches: (prefs || []).map(p => p.outlets).filter(Boolean),
+        preferred_branches: (prefs || []).map(p => p.branches).filter(Boolean),
       };
     }));
 
@@ -527,10 +527,10 @@ async function autoAssignCasual(req, res) {
     // Get shift details
     const shift = await prisma.shifts.findUnique({
       where: { shift_id: Number(shift_id) },
-      select: { shift_id: true, outlet_id: true, shift_date: true, start_time: true, end_time: true },
+      select: { shift_id: true, branch_id: true, shift_date: true, start_time: true, end_time: true },
     });
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found." });
-    if (shift.outlet_id !== outlet.outlet_id) return res.status(403).json({ success: false, message: "Access denied." });
+    if (shift.branch_id !== outlet.branch_id) return res.status(403).json({ success: false, message: "Access denied." });
 
     // One task = one person: reject if already assigned
     const existingAssignment = await prisma.task_assignments.findFirst({ where: { task_id: Number(task_id) } });
@@ -602,9 +602,9 @@ async function autoAssignCasual(req, res) {
       // Passed all hard filters — compute soft rank score
       const prefMatch = await supabaseAdmin
         .from("casual_branch_preferences")
-        .select("outlet_id", { count: "exact", head: true })
+        .select("branch_id", { count: "exact", head: true })
         .eq("user_id", cw.user_id)
-        .eq("outlet_id", outlet.outlet_id);
+        .eq("branch_id", outlet.branch_id);
 
       const pastAssignments = await prisma.task_assignments.count({
         where: { krewby_worker_id: kw.krewby_worker_id, status: { not: "cancelled" } },

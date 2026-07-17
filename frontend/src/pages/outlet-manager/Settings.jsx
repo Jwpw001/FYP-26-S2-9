@@ -80,10 +80,10 @@ export default function ManagerSettings() {
   useEffect(() => { load(); }, []);
 
   async function resolveOutletId() {
-    const { data: staffRow } = await supabase.from("staff").select("outlet_id").eq("user_id", user?.user_id).eq("is_active", true).limit(1);
-    if (staffRow?.[0]?.outlet_id) return staffRow[0].outlet_id;
-    const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", user?.user_id).limit(1);
-    return omRow?.[0]?.outlet_id || null;
+    const { data: staffRow } = await supabase.from("staff").select("branch_id").eq("user_id", user?.user_id).eq("is_active", true).limit(1);
+    if (staffRow?.[0]?.branch_id) return staffRow[0].branch_id;
+    const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", user?.user_id).limit(1);
+    return omRow?.[0]?.branch_id || null;
   }
 
   async function load() {
@@ -94,7 +94,7 @@ export default function ManagerSettings() {
 
       const [r, { data: outletRow }] = await Promise.all([
         oid ? api.get(`/api/business/outlets/${oid}/settings`) : api.get("/api/business/settings"),
-        oid ? supabase.from("outlets").select("open_time, close_time").eq("outlet_id", oid).maybeSingle() : Promise.resolve({ data: null }),
+        oid ? supabase.from("branches").select("open_time, close_time").eq("branch_id", oid).maybeSingle() : Promise.resolve({ data: null }),
       ]);
 
       // Merge outlet-level open/close times into settings (they live on outlets table, not outlet_settings)

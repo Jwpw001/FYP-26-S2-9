@@ -2,7 +2,7 @@ const { z } = require("zod");
 
 const createStaffSchema = z.object({
     user_id: z.number(),
-    outlet_id: z.number(),
+    branch_id: z.number(),
     staff_type: z.enum(["regular", "part_time", "full_time"]),
     default_work_days: z.string().optional(),
     hired_at: z.string().optional(),
@@ -10,7 +10,7 @@ const createStaffSchema = z.object({
 });
 
 const updateStaffSchema = z.object({
-    outlet_id: z.number().optional(),
+    branch_id: z.number().optional(),
     staff_type: z.enum(["regular", "part_time", "full_time"]).optional(),
     default_work_days: z.string().optional(),
     hired_at: z.string().optional(),

@@ -203,7 +203,7 @@ export default function CoordinatorRequests() {
                         {req.skills?.name && <span style={{ marginLeft: "8px", fontSize: "12px", fontWeight: "500", color: "#64748B" }}>Â· {req.skills.name}</span>}
                       </p>
                       <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-                        {req.outlets?.name || "Unknown outlet"}
+                        {req.branches?.name || "Unknown outlet"}
                         {req.outlet_address && ` Â· ${req.outlet_address}`}
                       </p>
                     </div>
@@ -254,7 +254,7 @@ export default function CoordinatorRequests() {
           <div style={{ position: "relative", background: "#FFF", borderRadius: "16px", padding: "28px", width: "420px", maxWidth: "92vw", boxShadow: "0 20px 60px rgba(0,0,0,0.2)", animation: "pageIn 0.2s ease both" }}>
             <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>Assign Worker</h3>
             <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>
-              {assignModal.request.role_name} Â· {fmtDate(assignModal.request.shift_date)} Â· {assignModal.request.outlets?.name}
+              {assignModal.request.role_name} Â· {fmtDate(assignModal.request.shift_date)} Â· {assignModal.request.branches?.name}
             </p>
 
             <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", display: "block", marginBottom: "6px" }}>Select Krewby Worker</label>

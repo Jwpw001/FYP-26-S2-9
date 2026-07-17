@@ -62,11 +62,11 @@ export default function Attendance() {
 
   useEffect(() => {
     if (!userId) return;
-    supabase.from("staff").select("outlet_id").eq("user_id", userId).eq("is_active", true).limit(1)
+    supabase.from("staff").select("branch_id").eq("user_id", userId).eq("is_active", true).limit(1)
       .then(async ({ data }) => {
-        if (data?.[0]) { setOutletId(data[0].outlet_id); return; }
-        const { data: omRow } = await supabase.from("outlet_managers").select("outlet_id").eq("user_id", userId).limit(1);
-        if (omRow?.[0]) setOutletId(omRow[0].outlet_id);
+        if (data?.[0]) { setOutletId(data[0].branch_id); return; }
+        const { data: omRow } = await supabase.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1);
+        if (omRow?.[0]) setOutletId(omRow[0].branch_id);
       });
   }, [userId]);
 
@@ -133,7 +133,7 @@ function Submissions({ outletId, managerId, showToast }) {
       try {
         const { data: staffRows } = await supabase
           .from("staff").select("staff_id, users(full_name)")
-          .eq("outlet_id", outletId).eq("is_active", true);
+          .eq("branch_id", outletId).eq("is_active", true);
         if (!staffRows?.length || cancelled) { setRows([]); setLoading(false); return; }
 
         const staffIds = staffRows.map(s => s.staff_id);
@@ -536,7 +536,7 @@ function WorkingHours({ outletId }) {
         const { data: staffRows } = await supabase
           .from("staff")
           .select("staff_id, users(full_name)")
-          .eq("outlet_id", outletId)
+          .eq("branch_id", outletId)
           .eq("is_active", true);
 
         if (!staffRows?.length || cancelled) { setStaffData([]); setLoading(false); return; }

@@ -111,7 +111,7 @@ const removeStaffSkill = async (req, res) => {
 const getOutletStaffSkills = async (req, res) => {
   try {
     const outlet_id = Number(req.params.outlet_id);
-    const staffRows = await prisma.staff.findMany({ where: { outlet_id }, select: { staff_id: true, user_id: true } });
+    const staffRows = await prisma.staff.findMany({ where: { branch_id: outlet_id }, select: { staff_id: true, user_id: true } });
     if (staffRows.length === 0) return res.json({ success: true, skills: [] });
     const userToStaff = Object.fromEntries(staffRows.map(s => [s.user_id, s.staff_id]));
     const userIds = staffRows.map(s => s.user_id);
