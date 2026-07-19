@@ -225,11 +225,28 @@ const getStaffRoster = async (req, res) => {
     const shiftDate    = new Date(shiftDateStr + "T00:00:00Z");
     const branchId     = shift.branch_id;
 
-    const staffList = await prisma.staff.findMany({
-      where: { branch_id: branchId, is_active: true },
+    // Regular staff belong to exactly one branch. Casual staff are pool-based — they're a
+    // candidate for a branch only if they've listed it as a preference, regardless of which
+    // branch their staff row was originally created under.
+    const regularStaff = await prisma.staff.findMany({
+      where: { branch_id: branchId, staff_type: "regular", is_active: true },
       include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
     });
 
+    const { data: prefRows } = await supabaseAdmin
+      .from("casual_branch_preferences")
+      .select("user_id")
+      .eq("branch_id", branchId);
+    const preferredUserIds = [...new Set((prefRows || []).map(r => r.user_id))];
+
+    const casualStaff = preferredUserIds.length > 0
+      ? await prisma.staff.findMany({
+          where: { user_id: { in: preferredUserIds }, staff_type: "casual", is_active: true },
+          include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
+        })
+      : [];
+
+    const staffList = [...regularStaff, ...casualStaff];
     const filtered = staffList.filter(s => s.users?.role !== "manager");
 
     // staff.experience_level isn't declared in schema.prisma (only the legacy, never-populated

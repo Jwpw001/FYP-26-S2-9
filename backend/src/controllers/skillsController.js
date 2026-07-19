@@ -111,7 +111,20 @@ const removeStaffSkill = async (req, res) => {
 const getBranchStaffSkills = async (req, res) => {
   try {
     const branch_id = Number(req.params.branch_id);
-    const staffRows = await prisma.staff.findMany({ where: { branch_id: branch_id }, select: { staff_id: true, user_id: true } });
+    // Regular staff belong to exactly one branch; casual staff are pool-based and only belong
+    // to a branch if they've listed it as a preference (their staff.branch_id is just their origin).
+    const regularStaffRows = await prisma.staff.findMany({ where: { branch_id: branch_id, staff_type: "regular" }, select: { staff_id: true, user_id: true } });
+
+    const { data: prefRows } = await supabaseAdmin
+      .from("casual_branch_preferences")
+      .select("user_id")
+      .eq("branch_id", branch_id);
+    const preferredUserIds = [...new Set((prefRows || []).map(r => r.user_id))];
+    const casualStaffRows = preferredUserIds.length > 0
+      ? await prisma.staff.findMany({ where: { user_id: { in: preferredUserIds }, staff_type: "casual" }, select: { staff_id: true, user_id: true } })
+      : [];
+
+    const staffRows = [...regularStaffRows, ...casualStaffRows];
     if (staffRows.length === 0) return res.json({ success: true, skills: [] });
     const userToStaff = Object.fromEntries(staffRows.map(s => [s.user_id, s.staff_id]));
     const userIds = staffRows.map(s => s.user_id);

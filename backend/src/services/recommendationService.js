@@ -54,14 +54,33 @@ async function getShiftRecommendations(shiftId) {
     return { message: "All tasks are already assigned.", recommendations: [] };
   }
 
-  // 2. Load all active non-manager staff for the branch
-  const { data: staffRows } = await supabaseAdmin
+  // 2. Load all active non-manager staff for the branch. Regular staff belong to exactly one
+  // branch; casual staff are pool-based — they're only included here if they've listed this
+  // branch as a preference, regardless of which branch their staff row was created under.
+  const { data: regularStaffRows } = await supabaseAdmin
     .from("staff")
     .select("staff_id, user_id, staff_type, default_work_days, experience_level, years_of_experience")
     .eq("branch_id", shift.branch_id)
+    .eq("staff_type", "regular")
     .eq("is_active", true);
 
-  const userIds = (staffRows || []).map(s => s.user_id);
+  const { data: prefRows } = await supabaseAdmin
+    .from("casual_branch_preferences")
+    .select("user_id")
+    .eq("branch_id", shift.branch_id);
+  const preferredUserIds = [...new Set((prefRows || []).map(r => r.user_id))];
+
+  const { data: casualStaffRows } = preferredUserIds.length > 0
+    ? await supabaseAdmin
+        .from("staff")
+        .select("staff_id, user_id, staff_type, default_work_days, experience_level, years_of_experience")
+        .in("user_id", preferredUserIds)
+        .eq("staff_type", "casual")
+        .eq("is_active", true)
+    : { data: [] };
+
+  const staffRows = [...(regularStaffRows || []), ...(casualStaffRows || [])];
+  const userIds = staffRows.map(s => s.user_id);
 
   const { data: userRows } = await supabaseAdmin
     .from("users")

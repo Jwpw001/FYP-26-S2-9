@@ -19,7 +19,6 @@ model users {
   attendance      attendance[]
   availability    availability[]
   invitations     invitations[]
-  krewby_workers  krewby_workers[]
   notifications   notifications[]
   reports         reports[]
   shifts          shifts[]
@@ -67,17 +66,6 @@ model casual_availability {
   available_to    DateTime? @db.Time(6)
 
   @@unique([staff_id, week_start_date, day_of_week])
-}
-
-model krewby_workers {
-  krewby_worker_id Int                @id @default(autoincrement())
-  user_id          Int
-  preferred_location String?
-  rating           Decimal?           @default(5.00) @db.Decimal(3, 2)
-  total_jobs       Int?               @default(0)
-  is_active        Boolean?           @default(true)
-  users            users              @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
-  task_assignments task_assignments[]
 }
 
 model notifications {
@@ -172,7 +160,6 @@ model task_assignments {
   task_id                                                                   Int
   shift_id                                                                  Int
   staff_id                                                                  Int?
-  krewby_worker_id                                                          Int?
   status                                                                    String           @default("assigned") @db.VarChar(20)
   acknowledged                                                              Boolean?         @default(false)
   assigned_at                                                               DateTime?        @default(now()) @db.Timestamp(6)
@@ -180,7 +167,6 @@ model task_assignments {
   shift_tasks                                                               shift_tasks      @relation(fields: [task_id], references: [task_id], onDelete: Cascade, onUpdate: NoAction)
   shifts                                                                    shifts           @relation(fields: [shift_id], references: [shift_id], onDelete: Cascade, onUpdate: NoAction)
   staff                                                                     staff?           @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  krewby_workers                                                            krewby_workers?  @relation(fields: [krewby_worker_id], references: [krewby_worker_id], onUpdate: NoAction)
   swap_requests_swap_requests_requester_assignTotask_assignments            swap_requests[]  @relation("swap_requests_requester_assignTotask_assignments")
   swap_requests_swap_requests_target_assign_idTotask_assignments            swap_requests[]  @relation("swap_requests_target_assign_idTotask_assignments")
 
@@ -208,7 +194,7 @@ model skills {
 model staff {
   staff_id         Int                @id @default(autoincrement())
   user_id          Int
-  branch_id        Int
+  branch_id        Int?
   staff_type       String             @db.VarChar(20)
   default_work_days String?           @db.VarChar(7)
   hired_at         DateTime?          @db.Date
@@ -216,7 +202,7 @@ model staff {
   is_active        Boolean?           @default(true)
   availability     availability[]
   task_assignments task_assignments[]
-  branches         branches           @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction)
+  branches         branches?          @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction)
   users            users              @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 }
 

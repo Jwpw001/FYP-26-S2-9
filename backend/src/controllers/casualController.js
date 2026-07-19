@@ -95,6 +95,12 @@ async function registerCasualWorker(req, res) {
     });
     if (cwErr) throw new Error(cwErr.message);
 
+    // Give them a staff_id (no branch — pool-based) so scheduling/availability/skills all work
+    // once approved. Stays inactive until a business owner approves them.
+    await prisma.staff.create({
+      data: { user_id: newUser.user_id, branch_id: null, staff_type: "casual", is_active: false },
+    });
+
     const token = generateToken({ user_id: newUser.user_id, email: newUser.email, role: newUser.role });
 
     return res.status(201).json({
@@ -456,6 +462,7 @@ async function approveWorker(req, res) {
 
     const { data: cw } = await supabaseAdmin.from("casual_workers").select("user_id").eq("id", Number(req.params.id)).maybeSingle();
     if (cw?.user_id) {
+      await prisma.staff.updateMany({ where: { user_id: cw.user_id, staff_type: "casual" }, data: { is_active: true } });
       await supabaseAdmin.from("notifications").insert({
         recipient_id: cw.user_id,
         type: "casual_approved",
@@ -551,41 +558,52 @@ async function autoAssignCasual(req, res) {
     const shiftEnd   = toMins(task?.end_time || shift.end_time);
     const shiftDateStr = shiftDate.toISOString().slice(0, 10);
 
-    // All approved casual workers for this business
+    // Casual workers from this business who've listed this branch as a preferred branch
+    const { data: prefs } = await supabaseAdmin
+      .from("casual_branch_preferences")
+      .select("user_id")
+      .eq("branch_id", branch.branch_id);
+    const preferredUserIds = new Set((prefs || []).map(p => p.user_id));
+
     const { data: approvedWorkers } = await supabaseAdmin
       .from("casual_workers")
       .select("id, user_id, status")
       .eq("business_id", branch.business_id)
-      .eq("status", "approved");
+      .eq("status", "approved")
+      .in("user_id", preferredUserIds.size > 0 ? [...preferredUserIds] : [-1]);
 
     if (!approvedWorkers || approvedWorkers.length === 0) {
-      return res.json({ success: false, flagged: true, reason: "No approved casual workers in this business yet." });
+      return res.json({ success: false, flagged: true, reason: "No approved casual workers prefer this branch yet." });
     }
+
+    // week_start_date for the shift's week (Mon-aligned), to match casual_availability's granularity
+    const shiftWeekStart = new Date(shiftDate);
+    shiftWeekStart.setUTCDate(shiftWeekStart.getUTCDate() - dayOfWeek);
 
     const candidates = [];
     const failReasons = { unavailable: 0, double_booked: 0 };
 
     for (const cw of approvedWorkers) {
+      const staffRow = await prisma.staff.findFirst({
+        where: { user_id: cw.user_id, staff_type: "casual" },
+        select: { staff_id: true },
+      });
+      if (!staffRow) { failReasons.unavailable++; continue; }
+
       // Hard filter 1: weekly availability on this day and time overlaps
-      const { data: avail } = await supabaseAdmin
-        .from("casual_weekly_availability")
-        .select("available_from, available_to")
-        .eq("user_id", cw.user_id)
-        .eq("day_of_week", dayOfWeek)
-        .maybeSingle();
+      const avail = await prisma.casual_availability.findFirst({
+        where: { staff_id: staffRow.staff_id, day_of_week: dayOfWeek, week_start_date: shiftWeekStart },
+        select: { available_from: true, available_to: true },
+      });
 
       if (!avail) { failReasons.unavailable++; continue; }
       const availStart = toMins(avail.available_from);
       const availEnd   = toMins(avail.available_to);
       if (availStart > shiftStart || availEnd < shiftEnd) { failReasons.unavailable++; continue; }
 
-      // Get their krewby_worker record
-      const kw = await prisma.krewby_workers.findFirst({ where: { user_id: cw.user_id }, select: { krewby_worker_id: true } });
-      if (!kw) { failReasons.unavailable++; continue; }
-
       // Hard filter 2: not double-booked on same date with overlapping times
       const conflictingShifts = await prisma.task_assignments.findMany({
-        where: { krewby_worker_id: kw.krewby_worker_id, status: { not: "cancelled" } },
+        where: { staff_id: staffRow.staff_id, status: { not: "cancelled" } },
         select: { shifts: { select: { shift_date: true, start_time: true, end_time: true } } },
       });
       const doubleBooked = conflictingShifts.some(a => {
@@ -599,20 +617,12 @@ async function autoAssignCasual(req, res) {
       });
       if (doubleBooked) { failReasons.double_booked++; continue; }
 
-      // Passed all hard filters — compute soft rank score
-      const prefMatch = await supabaseAdmin
-        .from("casual_branch_preferences")
-        .select("branch_id", { count: "exact", head: true })
-        .eq("user_id", cw.user_id)
-        .eq("branch_id", branch.branch_id);
-
+      // Passed all hard filters — compute soft rank score (fewer recent assignments ranks higher)
       const pastAssignments = await prisma.task_assignments.count({
-        where: { krewby_worker_id: kw.krewby_worker_id, status: { not: "cancelled" } },
+        where: { staff_id: staffRow.staff_id, status: { not: "cancelled" } },
       });
 
-      const score = (prefMatch.count > 0 ? 20 : 0) - pastAssignments;
-
-      candidates.push({ cw, kw, score, pastAssignments, prefMatch: prefMatch.count > 0 });
+      candidates.push({ cw, staffId: staffRow.staff_id, score: -pastAssignments, pastAssignments });
     }
 
     if (candidates.length === 0) {
@@ -635,7 +645,7 @@ async function autoAssignCasual(req, res) {
       data: {
         shift_id: Number(shift_id),
         task_id: Number(task_id),
-        krewby_worker_id: winner.kw.krewby_worker_id,
+        staff_id: winner.staffId,
         status: "assigned",
         acknowledged: false,
       },
@@ -658,7 +668,6 @@ async function autoAssignCasual(req, res) {
         assignment_id: assignment.assignment_id,
         full_name: user?.full_name,
         user_id: winner.cw.user_id,
-        preferred_branch: winner.prefMatch,
         past_assignments: winner.pastAssignments,
       },
     });

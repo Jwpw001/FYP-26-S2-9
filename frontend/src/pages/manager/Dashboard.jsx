@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
@@ -161,19 +162,18 @@ export default function ManagerDashboard() {
         if (!cancelled) setBranchName(resolvedBranchName);
         if (!branchId || cancelled) return;
 
-        // Get branch staff IDs first so we can scope leave/swap counts correctly
-        const { data: branchStaffRows } = await supabase
-          .from("staff").select("staff_id").eq("branch_id", branchId).eq("is_active", true);
-        const branchStaffIds = (branchStaffRows || []).map(s => s.staff_id);
+        // Get this branch's full roster (direct staff + preference-matched pool casuals) so
+        // leave/swap counts and the staff total include everyone visible on the Staff page.
+        const branchStaffRes = await api.get("/api/staff").catch(() => ({ staff: [] }));
+        const branchRoster = (branchStaffRes.staff || []).filter(s => s.is_active && s.user_id !== userId);
+        const branchStaffIds = branchRoster.map(s => s.staff_id);
 
-        const [{ data: shifts }, { count: staffCount }, { count: leaveCount }, { count: swapCount }] =
+        const [{ data: shifts }, { count: leaveCount }, { count: swapCount }] =
           await Promise.all([
             supabase.from("shifts")
               .select("shift_id,title,shift_date,start_time,end_time,status")
               .eq("branch_id", branchId).gte("shift_date", today).lte("shift_date", future)
               .order("shift_date", { ascending: true }),
-            supabase.from("staff").select("*", { count: "exact", head: true })
-              .eq("branch_id", branchId).eq("is_active", true).neq("user_id", userId),
             branchStaffIds.length > 0
               ? supabase.from("availability").select("*", { count: "exact", head: true })
                   .eq("status", "pending").in("staff_id", branchStaffIds)
@@ -185,7 +185,7 @@ export default function ManagerDashboard() {
           ]);
 
         if (cancelled) return;
-        setStats({ upcomingShifts: shifts?.length || 0, pendingLeave: leaveCount || 0, pendingSwaps: swapCount || 0, totalStaff: staffCount || 0 });
+        setStats({ upcomingShifts: shifts?.length || 0, pendingLeave: leaveCount || 0, pendingSwaps: swapCount || 0, totalStaff: branchRoster.length });
         setRecentShifts(shifts?.slice(0, 5) || []);
 
         // Compute bar chart: count shifts per weekday (0=Mon..6=Sun)

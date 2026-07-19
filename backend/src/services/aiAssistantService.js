@@ -32,7 +32,6 @@ async function fetchWorkforceContext(userId, role) {
             task_assignments: {
               include: {
                 staff: { include: { users: { select: { full_name: true } } } },
-                krewby_workers: { include: { users: { select: { full_name: true } } } },
               },
             },
           },
@@ -53,7 +52,7 @@ async function fetchWorkforceContext(userId, role) {
             assigned_count: totalAssigned,
             is_understaffed: totalAssigned < totalNeeded,
             assigned_staff: s.task_assignments.map(
-              (a) => a.staff?.users?.full_name || a.krewby_workers?.users?.full_name || "Unknown"
+              (a) => a.staff?.users?.full_name || "Unknown"
             ),
           };
         });

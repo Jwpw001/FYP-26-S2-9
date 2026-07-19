@@ -58,12 +58,11 @@ export default function StaffList() {
         }
         if (!oid || cancelled) return;
 
-        const [{ data: staffData }, skillsRes] = await Promise.all([
-          supabase.from("staff")
-            .select("staff_id, branch_id, staff_type, is_active, users(user_id, full_name, email, role)")
-            .eq("branch_id", oid),
+        const [staffRes, skillsRes] = await Promise.all([
+          api.get("/api/staff").catch(() => ({ staff: [] })),
           api.get(`/api/skills/branch/${oid}`).catch(() => ({ skills: [] })),
         ]);
+        const staffData = staffRes.staff || [];
 
         if (cancelled) return;
 
@@ -211,6 +210,31 @@ export default function StaffList() {
             <div style={{ marginBottom: "10px" }}><Users size={32} color="#64748B" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No staff found</p>
           </div>
+        ) : filterType === "all" ? (
+          <>
+            {["regular", "casual"].map(type => {
+              const group = filtered.filter(m => m.staff_type === type);
+              if (group.length === 0) return null;
+              return (
+                <div key={type} style={{ marginBottom: "28px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+                    <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "700", background: type === "regular" ? "#DBEAFE" : "#F3E8FF", color: type === "regular" ? "#1E40AF" : "#6B21A8" }}>
+                      {type === "regular" ? "Regular" : "Casual"}
+                    </span>
+                    <span style={{ fontSize: "13px", fontWeight: "600", color: "#64748B" }}>({group.length})</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
+                    {group.map((m, i) => (
+                      <StaffCard key={m.staff_id} member={m} index={i} onNav={() => goTo(`/manager/staff/${m.staff_id}`)} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            <p style={{ textAlign: "center", fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>
+              Showing {filtered.length} of {staff.length} staff members
+            </p>
+          </>
         ) : (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>

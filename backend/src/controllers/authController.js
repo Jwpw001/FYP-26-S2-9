@@ -279,6 +279,28 @@ const createStaffAccount = async (req, res) => {
             },
         });
 
+        // Casual staff belong to a business-wide pool, not a single branch — set up their
+        // pool membership and default their preferred branch to the one they were created in.
+        // They can add more preferred branches later from their own account.
+        if (staff_type === "casual") {
+            const branch = await prisma.branches.findUnique({
+                where: { branch_id: Number(resolvedBranchId) },
+                select: { business_id: true },
+            });
+            if (branch?.business_id) {
+                await supabaseAdmin.from("casual_workers").insert({
+                    user_id: newUser.user_id,
+                    business_id: branch.business_id,
+                    status: "approved",
+                    approved_at: new Date().toISOString(),
+                });
+                await supabaseAdmin.from("casual_branch_preferences").insert({
+                    user_id: newUser.user_id,
+                    branch_id: Number(resolvedBranchId),
+                });
+            }
+        }
+
         // Assign skill tags to the user
         const assignments = skill_assignments || (skill_ids ? skill_ids.map(id => ({ skill_id: id })) : []);
         if (assignments.length > 0) {
