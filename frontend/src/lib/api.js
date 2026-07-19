@@ -11,10 +11,11 @@ function getToken() {
 
 async function request(method, path, body = null) {
   const token = getToken();
-  const headers = { "Content-Type": "application/json" };
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const headers = isFormData ? {} : { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
+  if (body) options.body = isFormData ? body : JSON.stringify(body);
   const res = await fetch(`${BASE_URL}${path}`, options);
   const data = await res.json();
   if (!res.ok) {

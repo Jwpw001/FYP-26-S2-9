@@ -5,8 +5,8 @@ import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import StaffLayout from "../../components/layout/StaffLayout";
 import {
-  Calendar, Clock, ChevronDown, ChevronUp, FileText,
-  CheckCircle, AlertCircle, ChevronLeft, ChevronRight, SmilePlus, X, Tag, User
+  Calendar, Clock, FileText,
+  CheckCircle, AlertCircle, ChevronLeft, ChevronRight, SmilePlus, X, Tag, User, Paperclip
 } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-tasks-styles")) {
@@ -120,7 +120,7 @@ export default function MyTasks({ Layout = StaffLayout }) {
   const [timesheets, setTimesheets] = useState({});
   const [loading,    setLoading]    = useState(true);
   const [tab,        setTab]        = useState("schedule"); // "schedule" | "reports"
-  const [openForm,   setOpenForm]   = useState({});
+  const [reportModalFor, setReportModalFor] = useState(null); // the assignment being reported, or null
   const [formData,   setFormData]   = useState({});
   const [submitting, setSubmitting] = useState(null);
   const [toast,      setToast]      = useState(null);
@@ -168,9 +168,8 @@ export default function MyTasks({ Layout = StaffLayout }) {
 
         const { data: tsRows } = await supabase
           .from("timesheets")
-          .select("timesheet_id, log_date, hours_worked, description, status, shift_id")
+          .select("timesheet_id, log_date, hours_worked, description, status, shift_id, evidence_path, evidence_name")
           .eq("staff_id", sid)
-          .is("task_id", null)
           .order("log_date", { ascending: false });
 
         if (!cancelled) {
@@ -219,18 +218,21 @@ export default function MyTasks({ Layout = StaffLayout }) {
 
     setSubmitting(formKey(a));
     try {
-      const { data: inserted, error } = await supabase
-        .from("timesheets")
-        .insert({ staff_id: staffId, log_date: a.shift?.shift_date, hours_worked: hours,
-          description: desc, status: "pending", shift_id: a.shift?.shift_id ?? null })
-        .select().single();
-      if (error) throw error;
+      const body = new FormData();
+      body.append("log_date", a.shift?.shift_date || "");
+      body.append("hours_worked", String(hours));
+      body.append("description", desc);
+      if (a.shift?.shift_id != null) body.append("shift_id", String(a.shift.shift_id));
+      if (d.file) body.append("evidence", d.file);
 
-      setTimesheets(prev => ({ ...prev, [tsKey(a)]: inserted }));
-      setOpenForm(prev => ({ ...prev, [formKey(a)]: false }));
-      setFormData(prev => ({ ...prev, [formKey(a)]: { hours: "", desc: "" } }));
+      const res = await api.post("/api/timesheets", body);
+      if (!res.success) throw new Error(res.message);
+
+      setTimesheets(prev => ({ ...prev, [tsKey(a)]: res.timesheet }));
+      setReportModalFor(null);
+      setFormData(prev => ({ ...prev, [formKey(a)]: { hours: "", desc: "", file: null } }));
       showToast("Report submitted!");
-    } catch { showToast("Failed to submit.", false); }
+    } catch (err) { showToast(err.message || "Failed to submit.", false); }
     finally { setSubmitting(null); }
   }
 
@@ -306,12 +308,8 @@ export default function MyTasks({ Layout = StaffLayout }) {
             timesheets={timesheets}
             tsKey={tsKey}
             formKey={formKey}
-            openForm={openForm}
-            setOpenForm={setOpenForm}
-            formData={formData}
-            setFormData={setFormData}
-            submitting={submitting}
-            submitReport={submitReport}
+            onOpenReport={setReportModalFor}
+            acknowledge={acknowledge}
             reportFilter={reportFilter}
             setReportFilter={setReportFilter}
             month={month}
@@ -320,6 +318,18 @@ export default function MyTasks({ Layout = StaffLayout }) {
         )}
 
       </div>
+
+      {reportModalFor && (
+        <SubmitReportModal
+          assignment={reportModalFor}
+          existing={timesheets[tsKey(reportModalFor)]}
+          form={formData[formKey(reportModalFor)] || { hours: shiftDuration(reportModalFor.shift?.start_time, reportModalFor.shift?.end_time) > 0 ? String(shiftDuration(reportModalFor.shift?.start_time, reportModalFor.shift?.end_time)) : "", desc: "", file: null }}
+          onChange={patch => setFormData(p => ({ ...p, [formKey(reportModalFor)]: { ...(p[formKey(reportModalFor)] || {}), ...patch } }))}
+          submitting={submitting === formKey(reportModalFor)}
+          onSubmit={() => submitReport(reportModalFor)}
+          onClose={() => setReportModalFor(null)}
+        />
+      )}
 
       {toast && (
         <div style={{ position:"fixed", bottom:"28px", right:"28px", zIndex:9999,
@@ -363,17 +373,16 @@ function ShiftWeekCalendar({ weekStart, shifts, onChipClick }) {
       {days.map((d, i) => {
         const dayStr    = toLocalDateStr(d);
         const isToday   = dayStr === todayStr;
-        const isWeekend = i >= 5;
         const dayShifts = (shifts || []).filter(a => a.shift?.shift_date === dayStr);
         return (
-          <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", background: isToday ? "#EFF6FF" : isWeekend ? "#FAFAFA" : "#FFF" }}>
+          <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", background: isToday ? "#EFF6FF" : "#FFF" }}>
             {/* Header */}
             <div style={{ padding:"10px 6px 8px", textAlign:"center", borderBottom:"1px solid #F1F5F9" }}>
-              <p style={{ fontSize:"9px", fontWeight:"700", color: isWeekend ? "#CBD5E1" : "#94A3B8", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"5px" }}>
+              <p style={{ fontSize:"9px", fontWeight:"700", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"5px" }}>
                 {DAY_LABELS[i]}
               </p>
               <div style={{ width:"28px", height:"28px", borderRadius:"50%", margin:"0 auto", background: isToday ? "#2563EB" : "transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <p style={{ fontSize:"13px", fontWeight: isToday ? "800" : "600", color: isToday ? "#FFF" : isWeekend ? "#94A3B8" : "#1E293B" }}>
+                <p style={{ fontSize:"13px", fontWeight: isToday ? "800" : "600", color: isToday ? "#FFF" : "#1E293B" }}>
                   {d.getDate()}
                 </p>
               </div>
@@ -694,7 +703,7 @@ function ShiftTasksModal({ shift, tasks, loading, onClose }) {
 }
 
 // ── Reports Tab ───────────────────────────────────────────────────────────────
-function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey, openForm, setOpenForm, formData, setFormData, submitting, submitReport, reportFilter, setReportFilter, month, setMonth }) {
+function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey, onOpenReport, reportFilter, setReportFilter, month, setMonth, acknowledge }) {
 
   const STATUS_FILTERS = [
     ["all",      "All",           null,       null      ],
@@ -753,9 +762,6 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
             const ts      = timesheets[tsKey(a)];
             const tsMeta  = ts ? REPORT_STATUS[ts.status] : null;
             const duration = shiftDuration(s.start_time, s.end_time);
-            const formOpen = !!openForm[formKey(a)];
-            const form     = formData[formKey(a)] || { hours: duration > 0 ? String(duration) : "", desc: "" };
-            const isSub    = submitting === formKey(a);
 
             return (
               <div key={`${a.source}_${a.assignment_id}`} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", overflow:"hidden",
@@ -776,6 +782,14 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
                         {duration > 0 && <span> · {fmtHours(duration)}</span>}
                       </span>
                     </div>
+                    {!a.acknowledged && (
+                      <button onClick={() => acknowledge(a)}
+                        style={{ display:"inline-flex", alignItems:"center", gap:"5px", marginTop:"8px", padding:"5px 12px", borderRadius:"7px",
+                          background:"#F59E0B", color:"#FFF", border:"none", fontSize:"11px", fontWeight:"700", cursor:"pointer" }}>
+                        <CheckCircle size={12}/>
+                        Acknowledge
+                      </button>
+                    )}
                   </div>
 
                   {/* Right side */}
@@ -788,13 +802,12 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
                       </span>
                     ) : (
                       /* Not submitted */
-                      <button onClick={() => setOpenForm(p => ({ ...p, [formKey(a)]: !formOpen }))}
+                      <button onClick={() => onOpenReport(a)}
                         style={{ display:"flex", alignItems:"center", gap:"6px", padding:"7px 16px", borderRadius:"9px",
                           border:"none", background:"#2563EB", color:"#FFF",
                           fontSize:"12px", fontWeight:"700", cursor:"pointer", transition:"all 0.15s" }}>
                         <FileText size={13} />
                         Submit Report
-                        {formOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                       </button>
                     )}
                   </div>
@@ -812,51 +825,12 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
                       )}
                     </div>
                     {ts.status === "rejected" && (
-                      <button onClick={() => setOpenForm(p => ({ ...p, [formKey(a)]: !formOpen }))}
+                      <button onClick={() => onOpenReport(a)}
                         style={{ padding:"5px 14px", borderRadius:"7px", border:"1.5px solid #FECACA",
                           background:"#FFF5F5", fontSize:"12px", fontWeight:"700", color:"#EF4444", cursor:"pointer", flexShrink:0 }}>
-                        {formOpen ? "Cancel" : "Resubmit"}
+                        Resubmit
                       </button>
                     )}
-                  </div>
-                )}
-
-                {/* Inline submission form */}
-                {formOpen && (
-                  <div style={{ borderTop:"1px solid #E2E8F0", background:"#F8FAFC", padding:"16px 20px" }}>
-                    <p style={{ fontSize:"12px", fontWeight:"700", color:"#1E293B", marginBottom:"12px" }}>
-                      {ts?.status === "rejected" ? "Resubmit Report" : "Submit Work Report"}
-                    </p>
-                    <div style={{ display:"flex", gap:"10px", flexWrap:"wrap", alignItems:"flex-end" }}>
-                      <div>
-                        <label style={{ display:"block", fontSize:"10px", fontWeight:"700", color:"#94A3B8", marginBottom:"4px", letterSpacing:"0.05em" }}>HOURS WORKED</label>
-                        <input type="number" min="0.5" max="24" step="0.5" placeholder="e.g. 6"
-                          value={form.hours}
-                          onChange={e => setFormData(p => ({ ...p, [formKey(a)]: { ...form, hours: e.target.value } }))}
-                          style={{ padding:"8px 10px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"13px",
-                            color:"#1E293B", outline:"none", background:"#FFF", width:"90px", boxSizing:"border-box" }} />
-                      </div>
-                      <div style={{ flex:1, minWidth:"180px" }}>
-                        <label style={{ display:"block", fontSize:"10px", fontWeight:"700", color:"#94A3B8", marginBottom:"4px", letterSpacing:"0.05em" }}>WHAT DID YOU WORK ON?</label>
-                        <input type="text" placeholder="Describe what you did…"
-                          value={form.desc}
-                          onChange={e => setFormData(p => ({ ...p, [formKey(a)]: { ...form, desc: e.target.value } }))}
-                          style={{ padding:"8px 10px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"13px",
-                            color:"#1E293B", outline:"none", background:"#FFF", width:"100%", boxSizing:"border-box" }} />
-                      </div>
-                      <div style={{ display:"flex", gap:"6px" }}>
-                        <button onClick={() => submitReport(a)} disabled={isSub}
-                          style={{ padding:"8px 18px", borderRadius:"8px", background:"#2563EB", color:"#FFF", border:"none",
-                            fontSize:"13px", fontWeight:"700", cursor: isSub ? "not-allowed":"pointer", opacity: isSub ? 0.7:1 }}>
-                          {isSub ? "Submitting…" : "Submit"}
-                        </button>
-                        <button onClick={() => setOpenForm(p => ({ ...p, [formKey(a)]: false }))}
-                          style={{ padding:"8px 12px", borderRadius:"8px", background:"#F1F5F9", color:"#64748B",
-                            border:"none", fontSize:"13px", fontWeight:"600", cursor:"pointer" }}>
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>
@@ -865,6 +839,114 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
         </div>
       )}
     </div>
+  );
+}
+
+// ── Submit Report Modal ────────────────────────────────────────────────────────
+function SubmitReportModal({ assignment: a, existing, form, onChange, submitting, onSubmit, onClose }) {
+  const s = a.shift;
+  const isResubmit = existing?.status === "rejected";
+  const fileInputId = "report-evidence-input";
+
+  return createPortal(
+    <>
+      <div onClick={onClose}
+        style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", zIndex:1000 }} />
+
+      <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:1001,
+        background:"#FFF", borderRadius:"20px", width:"min(480px,92vw)", maxHeight:"88vh",
+        overflow:"hidden", boxShadow:"0 24px 64px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column" }}>
+
+        {/* Header */}
+        <div style={{ padding:"20px 24px 16px", borderBottom:"1px solid #F1F5F9", flexShrink:0 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"12px" }}>
+            <div style={{ minWidth:0 }}>
+              <p style={{ fontSize:"16px", fontWeight:"800", color:"#1E293B", marginBottom:"4px" }}>
+                {isResubmit ? "Resubmit Report" : "Submit Work Report"}
+              </p>
+              <p style={{ fontSize:"13px", color:"#64748B" }}>{a.role_name || s?.title || "Task"}</p>
+              <div style={{ display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap", marginTop:"8px" }}>
+                <span style={{ fontSize:"12px", color:"#94A3B8", display:"flex", alignItems:"center", gap:"4px" }}>
+                  <Calendar size={12} color="#94A3B8" />
+                  {fmtFullDate(s?.shift_date)}
+                </span>
+                <span style={{ fontSize:"12px", color:"#94A3B8", display:"flex", alignItems:"center", gap:"4px" }}>
+                  <Clock size={12} color="#94A3B8" />
+                  {fmtTime(s?.start_time)} – {fmtTime(s?.end_time)}
+                </span>
+              </div>
+            </div>
+            <button onClick={onClose}
+              style={{ background:"#F1F5F9", border:"none", borderRadius:"8px", width:"32px", height:"32px",
+                cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                color:"#64748B", flexShrink:0 }}>
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Form */}
+        <div style={{ padding:"20px 24px", overflowY:"auto", flex:1 }}>
+          <div style={{ marginBottom:"16px" }}>
+            <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>HOURS WORKED</label>
+            <input type="number" min="0.5" max="24" step="0.5" placeholder="e.g. 6"
+              value={form.hours}
+              onChange={e => onChange({ hours: e.target.value })}
+              style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px",
+                color:"#1E293B", outline:"none", background:"#FFF", width:"120px", boxSizing:"border-box" }} />
+          </div>
+
+          <div style={{ marginBottom:"16px" }}>
+            <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>WHAT DID YOU WORK ON?</label>
+            <textarea rows={3} placeholder="Describe what you did…"
+              value={form.desc}
+              onChange={e => onChange({ desc: e.target.value })}
+              style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px",
+                color:"#1E293B", outline:"none", background:"#FFF", width:"100%", boxSizing:"border-box", resize:"vertical", fontFamily:"inherit" }} />
+          </div>
+
+          <div>
+            <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>
+              PROOF OF EVIDENCE <span style={{ fontWeight:"500", textTransform:"none", letterSpacing:"normal" }}>(optional)</span>
+            </label>
+            <input id={fileInputId} type="file" accept="image/*,.pdf,.doc,.docx" style={{ display:"none" }}
+              onChange={e => onChange({ file: e.target.files?.[0] || null })} />
+            {form.file ? (
+              <div style={{ display:"flex", alignItems:"center", gap:"8px", padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", background:"#F8FAFC" }}>
+                <Paperclip size={14} color="#64748B" style={{ flexShrink:0 }} />
+                <span style={{ fontSize:"13px", color:"#1E293B", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{form.file.name}</span>
+                <button onClick={() => onChange({ file: null })}
+                  style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8", display:"flex", flexShrink:0 }}>
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <label htmlFor={fileInputId}
+                style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", padding:"14px 12px",
+                  border:"1.5px dashed #D8D5CE", borderRadius:"9px", cursor:"pointer", color:"#64748B", fontSize:"13px", fontWeight:"600" }}>
+                <Paperclip size={14} />
+                Attach an image or file
+              </label>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding:"16px 24px", borderTop:"1px solid #F1F5F9", display:"flex", gap:"10px", justifyContent:"flex-end", flexShrink:0 }}>
+          <button onClick={onClose}
+            style={{ padding:"9px 18px", borderRadius:"9px", background:"#F1F5F9", color:"#64748B",
+              border:"none", fontSize:"13px", fontWeight:"600", cursor:"pointer" }}>
+            Cancel
+          </button>
+          <button onClick={onSubmit} disabled={submitting}
+            style={{ padding:"9px 20px", borderRadius:"9px", background:"#2563EB", color:"#FFF", border:"none",
+              fontSize:"13px", fontWeight:"700", cursor: submitting ? "not-allowed":"pointer", opacity: submitting ? 0.7:1 }}>
+            {submitting ? "Submitting…" : "Submit"}
+          </button>
+        </div>
+      </div>
+    </>,
+    document.body
   );
 }
 

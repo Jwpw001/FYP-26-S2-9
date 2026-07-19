@@ -187,8 +187,18 @@ const getMyTasks = async (req, res) => {
     const staffRow = await prisma.staff.findFirst({ where: { user_id: userId }, select: { staff_id: true } });
     if (!staffRow) return res.json({ success: true, tasks: [] });
 
+    // Staff should never see shifts that haven't been published yet — a draft is still being
+    // built by the manager and its assignments/tasks may change before it goes live.
     const assignments = await prisma.task_assignments.findMany({
-      where: { staff_id: staffRow.staff_id },
+      where: {
+        staff_id: staffRow.staff_id,
+        shifts: { status: { not: "draft" } },
+        NOT: {
+          swap_requests_swap_requests_requester_assignTotask_assignments: {
+            some: { status: "approved" },
+          },
+        },
+      },
       include: {
         shift_tasks: {
           include: { skills: { select: { skill_id: true, name: true } } },

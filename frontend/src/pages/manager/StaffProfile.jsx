@@ -796,8 +796,7 @@ export default function StaffProfile() {
     try {
       await supabase.from("users").update({ full_name: form.full_name.trim() }).eq("user_id", member.users.user_id);
       await supabase.from("staff").update({
-        staff_type:        form.staff_type,
-        default_work_days: form.staff_type === "regular" ? form.default_work_days : null,
+        default_work_days: member.staff_type === "regular" ? form.default_work_days : null,
         is_active:         form.is_active,
       }).eq("staff_id", id);
       setSuccess("Profile updated successfully.");
@@ -925,22 +924,8 @@ export default function StaffProfile() {
 
             <div style={s.field}>
               <label style={s.label}>Staff Type</label>
-              {editing ? (
-                <div style={{ display:"flex", gap:"8px" }}>
-                  {[{ val:"regular", label:"Regular Staff" }, { val:"casual", label:"Casual Staff" }].map(opt => (
-                    <button key={opt.val} type="button" onClick={() => setForm(p => ({ ...p, staff_type: opt.val }))}
-                      style={{ flex:1, padding:"9px 12px", borderRadius:"10px", cursor:"pointer", fontWeight:"700", fontSize:"12px", transition:"all 0.15s",
-                        background: form.staff_type === opt.val ? "#EEF2FF" : "#F8FAFC",
-                        color:      form.staff_type === opt.val ? "#4338CA" : "#94A3B8",
-                        border:     `2px solid ${form.staff_type === opt.val ? "#6366F1" : "#E2E8F0"}`,
-                      }}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p style={s.value}>{member.staff_type === "regular" ? "Regular Staff" : "Casual Staff"}</p>
-              )}
+              <p style={s.value}>{member.staff_type === "regular" ? "Regular Staff" : "Casual Staff"}</p>
+              {editing && <p style={s.hint}>Staff type can't be changed after creation.</p>}
             </div>
 
             {form.staff_type === "regular" && (

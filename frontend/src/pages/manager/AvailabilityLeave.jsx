@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { ClipboardList, List, GanttChartSquare } from "lucide-react";
@@ -67,11 +68,13 @@ export default function AvailabilityLeave() {
   const [leaveView, setLeaveView]   = useState("timeline");
   const [swapView, setSwapView]     = useState("timeline");
   const [casualView, setCasualView] = useState("timeline");
+  const [offDayView, setOffDayView] = useState("timeline");
 
   // Timeline range (shared 28-day window, navigable per tab)
   const [leaveRangeStart, setLeaveRangeStart]   = useState(() => startOfWeek(new Date()));
   const [swapRangeStart, setSwapRangeStart]     = useState(() => startOfWeek(new Date()));
   const [casualRangeStart, setCasualRangeStart] = useState(() => startOfWeek(new Date()));
+  const [offDayRangeStart, setOffDayRangeStart] = useState(() => startOfWeek(new Date()));
   const TIMELINE_DAYS = 7;
 
   // Detail modal for a clicked Gantt bar — { kind: "leave" | "swap" | "casual", data }
@@ -127,13 +130,13 @@ export default function AvailabilityLeave() {
       if (!oid || cancelled) return;
       setBranchId(oid);
 
-      const [{ data: staffRows }, { data: branchRow }] = await Promise.all([
-        supabase.from("staff").select("staff_id, user_id").eq("branch_id", oid),
+      const [rosterRes, { data: branchRow }] = await Promise.all([
+        api.get("/api/staff").catch(() => ({ staff: [] })),
         supabase.from("branches").select("working_days").eq("branch_id", oid).single(),
       ]);
       if (!cancelled) setWorkingDays(branchRow?.working_days ?? 7);
       const map = {};
-      (staffRows || []).forEach(s => { map[s.staff_id] = s.user_id; });
+      (rosterRes.staff || []).forEach(s => { map[s.staff_id] = s.user_id; });
       if (!cancelled) setStaffUserMap(map);
     }
     loadBase();
@@ -299,12 +302,12 @@ export default function AvailabilityLeave() {
     async function load() {
       setLoadingCasual(true);
       try {
-        // Get all staff for this branch (filter by who has casual_availability records)
-        const { data: casualStaff } = await supabase
-          .from("staff")
-          .select("staff_id, user_id, users:user_id(full_name, email)")
-          .eq("branch_id", branchId)
-          .eq("is_active", true);
+        // Get all casual staff visible on this branch's roster (preference-based, not just
+        // whoever's staff row happens to be homed here — matches the Staff List page).
+        const rosterRes = await api.get("/api/staff").catch(() => ({ staff: [] }));
+        const casualStaff = (rosterRes.staff || [])
+          .filter(s => s.staff_type === "casual" && s.is_active)
+          .map(s => ({ staff_id: s.staff_id, user_id: s.user_id, users: { full_name: s.users?.full_name, email: s.users?.email } }));
 
         if (!casualStaff || casualStaff.length === 0) {
           if (!cancelled) { setCasualData([]); setLoadingCasual(false); }
@@ -543,6 +546,12 @@ export default function AvailabilityLeave() {
     emergency: { bg: "#FEE2E2", color: "#991B1B", border: "#FECACA" },
   };
 
+  const OFFDAY_STATUS_BAR = {
+    pending:  { bg: "#F0F9FF", color: "#0369A1", border: "#BAE6FD" },
+    approved: { bg: "#DCFCE7", color: "#166534", border: "#BBF7D0" },
+    rejected: { bg: "#FEE2E2", color: "#991B1B", border: "#FECACA" },
+  };
+
   // ── Timeline row builders ────────────────────────────────────────────────
   function buildLeaveGanttRows() {
     const byStaff = {};
@@ -598,6 +607,24 @@ export default function AvailabilityLeave() {
           bg: "#F0FDF4", color: "#166534", border: "#BBF7D0",
           onClick: () => setDetailModal({ kind: "casual", data: { name, dateStr, from: d.available_from, to: d.available_to } }),
         });
+      });
+    });
+    return Object.values(byStaff);
+  }
+
+  function buildOffDayGanttRows() {
+    const byStaff = {};
+    filteredOffDays.forEach(r => {
+      const name = r.staff?.users?.full_name || r.staff?.users?.email || "Unknown";
+      const key = r.staff_id;
+      if (!byStaff[key]) byStaff[key] = { id: key, name, avatarColor: avatarColor(name), bars: [] };
+      const tc = OFFDAY_STATUS_BAR[r.status] || { bg: "#F0F9FF", color: "#0369A1", border: "#BAE6FD" };
+      byStaff[key].bars.push({
+        id: r.id, start: r.requested_date, end: r.requested_date,
+        label: `Off day · ${r.status}`,
+        title: `Off day request — ${fmtDate(r.requested_date)} (${r.status})`,
+        bg: tc.bg, color: tc.color, border: tc.border, faded: r.status === "rejected",
+        onClick: () => setDetailModal({ kind: "offday", data: r }),
       });
     });
     return Object.values(byStaff);
@@ -826,27 +853,35 @@ export default function AvailabilityLeave() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "6px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content", marginBottom: "20px" }}>
-              {[
-                { value: "pending",  label: "Pending" },
-                { value: "approved", label: "Approved" },
-                { value: "rejected", label: "Rejected" },
-                { value: "all",      label: "All" },
-              ].map(tab => (
-                <FilterTab
-                  key={tab.value}
-                  label={tab.label}
-                  active={offDayFilter === tab.value}
-                  badge={tab.value === "pending" && pendingOffDay > 0 ? pendingOffDay : null}
-                  onClick={() => setOffDayFilter(tab.value)}
-                />
-              ))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "20px" }}>
+              <div style={{ display: "flex", gap: "6px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+                {[
+                  { value: "pending",  label: "Pending" },
+                  { value: "approved", label: "Approved" },
+                  { value: "rejected", label: "Rejected" },
+                  { value: "all",      label: "All" },
+                ].map(tab => (
+                  <FilterTab
+                    key={tab.value}
+                    label={tab.label}
+                    active={offDayFilter === tab.value}
+                    badge={tab.value === "pending" && pendingOffDay > 0 ? pendingOffDay : null}
+                    onClick={() => setOffDayFilter(tab.value)}
+                  />
+                ))}
+              </div>
+              <ViewToggle view={offDayView} onChange={setOffDayView} />
             </div>
 
             {loadingOffDay ? (
               <ShimmerCards />
             ) : filteredOffDays.length === 0 ? (
               <EmptyState label={`No ${offDayFilter === "all" ? "" : offDayFilter} off day requests`} />
+            ) : offDayView === "timeline" ? (
+              <FullscreenPanel title="Off Day Requests">
+                <RangeNav rangeStart={offDayRangeStart} numDays={TIMELINE_DAYS} onChange={setOffDayRangeStart} />
+                <GanttChart rangeStart={offDayRangeStart} numDays={TIMELINE_DAYS} rows={buildOffDayGanttRows()} emptyLabel="No off day requests in this date range." />
+              </FullscreenPanel>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {filteredOffDays.map(r => {
@@ -922,6 +957,7 @@ export default function AvailabilityLeave() {
             if (action === "rejected") { handleSwapAction(id, action); setDetailModal(null); }
             else { setDetailModal(null); handleSwapAction(id, action); }
           }}
+          onOffDayAction={(id, action) => { handleOffDay(id, action); setDetailModal(null); }}
         />
       )}
 
@@ -1009,7 +1045,7 @@ export default function AvailabilityLeave() {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function DetailModal({ modal, processing, onClose, onLeaveAction, onSwapAction }) {
+function DetailModal({ modal, processing, onClose, onLeaveAction, onSwapAction, onOffDayAction }) {
   const { kind, data } = modal;
 
   let title, name, email, meta, reason, status, actions;
@@ -1054,6 +1090,27 @@ function DetailModal({ modal, processing, onClose, onLeaveAction, onSwapAction }
           </button>
           <button onClick={() => onSwapAction(data.swap_id, "approved")} disabled={processing === data.swap_id} style={approveBtnStyle}>
             {processing === data.swap_id ? "…" : "Approve"}
+          </button>
+        </>
+      );
+    }
+  } else if (kind === "offday") {
+    name  = data.staff?.users?.full_name || data.staff?.users?.email || "Unknown";
+    email = data.staff?.users?.email || "";
+    title = "Off Day Request";
+    meta  = [
+      { label: "Requested Off", value: fmtDate(data.requested_date) },
+    ];
+    reason = data.reason;
+    status = data.status;
+    if (status === "pending") {
+      actions = (
+        <>
+          <button onClick={() => onOffDayAction(data.id, "rejected")} disabled={processing === data.id} style={rejectBtnStyle}>
+            {processing === data.id ? "…" : "Reject"}
+          </button>
+          <button onClick={() => onOffDayAction(data.id, "approved")} disabled={processing === data.id} style={approveBtnStyle}>
+            {processing === data.id ? "…" : "Approve"}
           </button>
         </>
       );

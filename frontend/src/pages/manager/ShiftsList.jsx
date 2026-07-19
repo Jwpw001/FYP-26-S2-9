@@ -84,6 +84,7 @@ export default function ShiftsList() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected]     = useState(new Set());
   const [deleting, setDeleting]     = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   // AI Weekly Schedule state — step: 'generating' | 'preview' | 'creating' | 'done'
   const [weeklyAI, setWeeklyAI] = useState(null);
@@ -181,6 +182,23 @@ export default function ShiftsList() {
     }
   }
 
+  async function publishSelected() {
+    const draftIds = shifts.filter(s => selected.has(s.shift_id) && s.status === "draft").map(s => s.shift_id);
+    if (draftIds.length === 0) return;
+    setPublishing(true);
+    try {
+      const { error } = await supabase.from("shifts").update({ status: "published" }).in("shift_id", draftIds);
+      if (error) throw error;
+      setShifts(prev => prev.map(s => draftIds.includes(s.shift_id) ? { ...s, status: "published" } : s));
+      setSelected(new Set());
+      setSelectMode(false);
+    } catch (err) {
+      alert("Failed to publish some shifts: " + err.message);
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   async function generateWeeklySchedule(weekDates) {
     const weekStart = weekDates[0].toISOString().split("T")[0];
     const weekEnd   = weekDates[6].toISOString().split("T")[0];
@@ -271,12 +289,23 @@ export default function ShiftsList() {
           </div>
 
           <div style={{ marginLeft: "auto", display: "flex", gap: "8px", alignItems: "center" }}>
-            {selectMode && selected.size > 0 && (
-              <button onClick={deleteSelected} disabled={deleting}
-                style={{ padding: "7px 14px", borderRadius: "9px", border: "none", background: "#EF4444", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
-                {deleting ? "Deleting…" : <><Trash2 size={13} /> Delete ({selected.size})</>}
-              </button>
-            )}
+            {selectMode && selected.size > 0 && (() => {
+              const draftCount = shifts.filter(s => selected.has(s.shift_id) && s.status === "draft").length;
+              return (
+                <>
+                  {draftCount > 0 && (
+                    <button onClick={publishSelected} disabled={publishing}
+                      style={{ padding: "7px 14px", borderRadius: "9px", border: "none", background: "#F59E0B", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+                      {publishing ? "Publishing…" : <><Check size={13} /> Publish ({draftCount})</>}
+                    </button>
+                  )}
+                  <button onClick={deleteSelected} disabled={deleting}
+                    style={{ padding: "7px 14px", borderRadius: "9px", border: "none", background: "#EF4444", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+                    {deleting ? "Deleting…" : <><Trash2 size={13} /> Delete ({selected.size})</>}
+                  </button>
+                </>
+              );
+            })()}
             <button onClick={() => { setSelectMode(p => !p); setSelected(new Set()); }}
               style={{ padding: "7px 14px", borderRadius: "9px", border: `1.5px solid ${selectMode ? "#6366F1" : "#E2E8F0"}`, background: selectMode ? "#EEF2FF" : "#fff", color: selectMode ? "#6366F1" : "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
               {selectMode ? "Cancel" : "Select"}

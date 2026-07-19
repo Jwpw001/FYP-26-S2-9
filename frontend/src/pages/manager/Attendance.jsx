@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 
@@ -141,8 +142,8 @@ function Submissions({ branchId, managerId, showToast }) {
 
         const { data: ts } = await supabase
           .from("timesheets")
-          .select("timesheet_id, staff_id, log_date, hours_worked, description, status, reviewed_at")
-          .in("staff_id", staffIds).is("task_id", null)
+          .select("timesheet_id, staff_id, log_date, hours_worked, description, status, reviewed_at, evidence_path, evidence_name")
+          .in("staff_id", staffIds)
           .order("log_date", { ascending: false });
         if (cancelled) return;
 
@@ -417,6 +418,20 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
   const st      = TS_STYLE[ts.status] || TS_STYLE.pending;
   const initial = ts.staffName?.[0]?.toUpperCase() || "?";
   const isPending = ts.status === "pending";
+  const [downloading, setDownloading] = useState(false);
+
+  async function downloadEvidence() {
+    setDownloading(true);
+    try {
+      const res = await api.get(`/api/timesheets/${ts.timesheet_id}/evidence`);
+      if (!res.success) throw new Error(res.message);
+      window.open(res.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      alert(err.message || "Failed to download evidence.");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   return (
     <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", overflow:"hidden",
@@ -456,6 +471,20 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
           <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", letterSpacing:"0.05em", marginBottom:"8px" }}>DESCRIPTION</p>
           <p style={{ fontSize:"14px", color:"#334155", lineHeight:1.65 }}>{ts.description || "No description provided."}</p>
         </div>
+
+        {/* Evidence */}
+        {ts.evidence_path && (
+          <button onClick={downloadEvidence} disabled={downloading}
+            style={{ display:"flex", alignItems:"center", gap:"8px", width:"100%", padding:"12px 14px", marginBottom:"22px",
+              border:"1.5px solid #E2E8F0", borderRadius:"12px", background:"#FFF", cursor: downloading ? "not-allowed":"pointer",
+              opacity: downloading ? 0.6:1, fontSize:"13px", fontWeight:"600", color:"#1E293B", textAlign:"left" }}>
+            <span style={{ fontSize:"16px" }}>📎</span>
+            <span style={{ flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+              {ts.evidence_name || "Evidence file"}
+            </span>
+            <span style={{ fontSize:"12px", fontWeight:"700", color:"#2563EB" }}>{downloading ? "Opening…" : "Download"}</span>
+          </button>
+        )}
 
         {/* Reviewed info */}
         {ts.reviewed_at && !isPending && (
@@ -550,7 +579,6 @@ function WorkingHours({ branchId }) {
           .select("timesheet_id, staff_id, log_date, hours_worked, description")
           .in("staff_id", staffIds)
           .eq("status", "approved")
-          .is("task_id", null)
           .gte("log_date", startDate)
           .lte("log_date", endDate)
           .order("log_date", { ascending: false });

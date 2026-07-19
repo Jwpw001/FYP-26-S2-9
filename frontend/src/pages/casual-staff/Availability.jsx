@@ -285,7 +285,6 @@ export default function CasualAvailability() {
             {DAYS.map(day => {
               const s = schedule[day.value];
               const date = getDayDate(weekStart, day.value);
-              const isWeekend = day.value >= 5;
               return (
                 <button key={day.value} onClick={() => openModal(day)}
                   style={{
@@ -297,7 +296,7 @@ export default function CasualAvailability() {
                     minHeight: "130px", transition: "all 0.15s",
                   }}>
                   {/* Day name */}
-                  <span style={{ fontSize: "13px", fontWeight: "800", color: s ? "#1E40AF" : isWeekend ? "#CBD5E1" : "#64748B" }}>
+                  <span style={{ fontSize: "13px", fontWeight: "800", color: s ? "#1E40AF" : "#64748B" }}>
                     {day.short}
                   </span>
                   {/* Date */}

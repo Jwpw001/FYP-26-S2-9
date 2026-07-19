@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import StaffLayout from "../../components/layout/StaffLayout";
-import { RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { RefreshCw, AlertCircle, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-swaps-styles")) {
   const style = document.createElement("style");
@@ -13,6 +13,9 @@ if (typeof document !== "undefined" && !document.getElementById("staff-swaps-sty
     @keyframes pageIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     @keyframes popIn { 0%{opacity:0;transform:scale(0.93)} 60%{transform:scale(1.02)} 100%{opacity:1;transform:scale(1)} }
     @keyframes toastIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .swap-shift-row:hover { background: #F8FAFC !important; }
+    .swap-req-btn:hover { background: #1D4ED8 !important; }
   `;
   document.head.appendChild(style);
 }
@@ -22,10 +25,10 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
 }
 
 const STATUS_COLORS = {
-  pending:  { bg: "#FFFBEB", color: "#D97706", border: "#FDE68A" },
-  approved: { bg: "#DCFCE7", color: "#166534", border: "#BBF7D0" },
-  rejected: { bg: "#FEE2E2", color: "#991B1B", border: "#FECACA" },
-  cancelled:{ bg: "#F3F4F6", color: "#6B7280", border: "#E5E7EB" },
+  pending:   { bg: "#FFFBEB", color: "#D97706", border: "#FDE68A" },
+  approved:  { bg: "#DCFCE7", color: "#166534", border: "#BBF7D0" },
+  rejected:  { bg: "#FEE2E2", color: "#991B1B", border: "#FECACA" },
+  cancelled: { bg: "#F3F4F6", color: "#6B7280", border: "#E5E7EB" },
 };
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -45,40 +48,51 @@ function fmtWeekRange(start) {
   return `${s} – ${e}`;
 }
 
-function WeekCalendar({ weekStart, requests }) {
-  const todayStr = new Date().toISOString().slice(0, 10);
+function toLocalDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function fmtDate(d) {
+  if (!d) return "—";
+  return new Date(d + "T00:00:00").toLocaleDateString("en-SG", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function WeekCalendar({ weekStart, requests, shifts = [] }) {
+  const todayStr = toLocalDateStr(new Date());
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart); d.setDate(weekStart.getDate() + i); return d;
   });
 
-  // Build events: one per request, keyed by shift_date
   const events = requests.map(r => {
-    const shift = r.task_assignments_swap_requests_requester_assignTotask_assignments?.shifts;
+    const shift = r._shifts;
     return { id: r.swap_id, date: shift?.shift_date, title: shift?.title || (r.request_type === "swap" ? "Swap" : "Replace"), status: r.status, type: r.request_type };
   }).filter(e => e.date);
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", border: "1px solid #F1F5F9", borderRadius: "12px", overflow: "hidden" }}>
       {days.map((d, i) => {
-        const dayStr    = d.toISOString().slice(0, 10);
+        const dayStr    = toLocalDateStr(d);
         const isToday   = dayStr === todayStr;
-        const isWeekend = i >= 5;
-        const hits = events.filter(e => e.date === dayStr);
+        const hits      = events.filter(e => e.date === dayStr);
+        const dayShifts = shifts.filter(s => s.shifts?.shift_date === dayStr);
         return (
-          <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", background: isToday ? "#EFF6FF" : isWeekend ? "#FAFAFA" : "#FFF" }}>
-            {/* Header */}
+          <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", background: isToday ? "#EFF6FF" : "#FFF" }}>
             <div style={{ padding: "10px 6px 8px", textAlign: "center", borderBottom: "1px solid #F1F5F9" }}>
-              <p style={{ fontSize: "9px", fontWeight: "700", color: isWeekend ? "#CBD5E1" : "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "5px" }}>
-                {DAY_LABELS[i]}
-              </p>
+              <p style={{ fontSize: "9px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "5px" }}>{DAY_LABELS[i]}</p>
               <div style={{ width: "28px", height: "28px", borderRadius: "50%", margin: "0 auto", background: isToday ? "#2563EB" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <p style={{ fontSize: "13px", fontWeight: isToday ? "800" : "600", color: isToday ? "#FFF" : isWeekend ? "#94A3B8" : "#1E293B" }}>
-                  {d.getDate()}
-                </p>
+                <p style={{ fontSize: "13px", fontWeight: isToday ? "800" : "600", color: isToday ? "#FFF" : "#1E293B" }}>{d.getDate()}</p>
               </div>
             </div>
-            {/* Events */}
-            <div style={{ padding: "5px 3px", minHeight: "56px", display: "flex", flexDirection: "column", gap: "3px" }}>
+            <div style={{ padding: "5px 3px", minHeight: "64px", display: "flex", flexDirection: "column", gap: "3px" }}>
+              {dayShifts.map(s => (
+                <div key={s.assignment_id}
+                  style={{ borderLeft: "3px solid #7C3AED", background: "#EDE9FE", borderRadius: "0 5px 5px 0", padding: "3px 5px", overflow: "hidden" }}>
+                  <p style={{ fontSize: "9px", fontWeight: "700", color: "#4C1D95", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {s.shifts?.title || "Shift"}
+                  </p>
+                  <p style={{ fontSize: "8px", color: "#7C3AED" }}>{s.shifts?.start_time?.slice(0,5)}</p>
+                </div>
+              ))}
               {hits.map(e => {
                 const sc = STATUS_COLORS[e.status] || STATUS_COLORS.pending;
                 return (
@@ -100,17 +114,20 @@ export default function SwapRequests() {
   const user   = getUser();
   const userId = user?.user_id;
 
-  const [myShifts,  setMyShifts]  = useState([]);
-  const [requests,  setRequests]  = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [filter,    setFilter]    = useState("all");
-  const [showing,   setShowing]   = useState(false);
-  const [saving,    setSaving]    = useState(false);
-  const [error,     setError]     = useState("");
-  const [toast,     setToast]     = useState(null);
-  const [staffId,   setStaffId]   = useState(null);
-  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
-  const [form, setForm] = useState({ requester_assign: "", request_type: "swap", reason: "" });
+  const [myShifts,       setMyShifts]       = useState([]);
+  const [calendarShifts, setCalendarShifts] = useState([]);
+  const [requests,       setRequests]       = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [filter,         setFilter]         = useState("all");
+  const [saving,         setSaving]         = useState(false);
+  const [error,          setError]          = useState("");
+  const [toast,          setToast]          = useState(null);
+  const [staffId,        setStaffId]        = useState(null);
+  const [weekStart,      setWeekStart]      = useState(() => getWeekStart(new Date()));
+
+  // Swap modal
+  const [swapModal, setSwapModal] = useState(null); // selected assignment object
+  const [swapForm,  setSwapForm]  = useState({ request_type: "swap", reason: "" });
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
@@ -122,7 +139,7 @@ export default function SwapRequests() {
     async function load() {
       setLoading(true);
       try {
-        const today = new Date().toISOString().split("T")[0];
+        const today = toLocalDateStr(new Date());
         const { data: myStaff } = await supabase.from("staff").select("staff_id").eq("user_id", userId).limit(1);
         const sid = myStaff?.[0]?.staff_id;
         if (cancelled) return;
@@ -131,21 +148,50 @@ export default function SwapRequests() {
 
         const [{ data: assignments }, { data: reqs }] = await Promise.all([
           supabase.from("task_assignments")
-            .select(`assignment_id, shifts!inner ( shift_id, title, shift_date, start_time, end_time, status )`)
-            .eq("staff_id", sid).gte("shifts.shift_date", today).eq("shifts.status", "published"),
+            .select("assignment_id, shift_id, shifts ( shift_id, title, shift_date, start_time, end_time, status )")
+            .eq("staff_id", sid),
           supabase.from("swap_requests")
-            .select(`
-              swap_id, request_type, reason, status, responded_at, requester_assign,
-              task_assignments_swap_requests_requester_assignTotask_assignments (
-                shifts ( title, shift_date, start_time, end_time )
-              )
-            `)
+            .select("swap_id, request_type, reason, status, responded_at, requester_assign")
             .eq("requester_id", sid).order("swap_id", { ascending: false }),
         ]);
 
         if (!cancelled) {
-          setMyShifts((assignments || []).filter(a => a.shifts));
-          setRequests(reqs || []);
+          const allAssignments = assignments || [];
+
+          // Build a lookup map so we can attach shift details without a broken join
+          const assignMap = {};
+          allAssignments.forEach(a => { assignMap[a.assignment_id] = a; });
+
+          const enrichedReqs = (reqs || []).map(r => ({
+            ...r,
+            _shifts: assignMap[r.requester_assign]?.shifts || null,
+          }));
+
+          // Assignment IDs whose swap/replacement was approved — hide from calendar + upcoming list
+          const approvedAssignIds = new Set(
+            enrichedReqs.filter(r => r.status === "approved").map(r => r.requester_assign)
+          );
+
+          const visibleAssignments = allAssignments.filter(a => !approvedAssignIds.has(a.assignment_id));
+          setCalendarShifts(visibleAssignments);
+
+          const now = new Date();
+          const upcomingPublished = visibleAssignments.filter(a => {
+            if (!a.shifts || a.shifts.status !== "published") return false;
+            const d = a.shifts.shift_date;
+            if (!d) return false;
+            if (d > today) return true;
+            if (d < today) return false;
+            // Same day — only include if shift hasn't ended yet
+            const endTime = a.shifts.end_time?.slice(0, 5);
+            if (!endTime) return true;
+            const [eh, em] = endTime.split(":").map(Number);
+            const shiftEnd = new Date();
+            shiftEnd.setHours(eh, em, 0, 0);
+            return now < shiftEnd;
+          });
+          setMyShifts(upcomingPublished);
+          setRequests(enrichedReqs);
         }
       } catch (err) {
         console.error(err);
@@ -158,22 +204,21 @@ export default function SwapRequests() {
   }, [userId]);
 
   async function handleSubmit() {
-    if (!form.requester_assign) { setError("Please select a shift."); return; }
-    if (!staffId) { setError("No staff record found for your account."); return; }
+    if (!swapModal || !staffId) return;
     const duplicate = requests.find(r =>
       r.status !== "rejected" && r.status !== "cancelled" &&
-      String(r.requester_assign) === String(form.requester_assign)
+      String(r.requester_assign) === String(swapModal.assignment_id)
     );
     if (duplicate) { setError("You already have an active request for this shift."); return; }
     setSaving(true); setError("");
     try {
       const { data, error: err } = await supabase.from("swap_requests")
-        .insert({ requester_id: staffId, requester_assign: Number(form.requester_assign), request_type: form.request_type, reason: form.reason.trim() || null, status: "pending" })
+        .insert({ requester_id: staffId, requester_assign: Number(swapModal.assignment_id), request_type: swapForm.request_type, reason: swapForm.reason.trim() || null, status: "pending" })
         .select().single();
       if (err) throw err;
-      setRequests(prev => [data, ...prev]);
-      setForm({ requester_assign: "", request_type: "swap", reason: "" });
-      setShowing(false);
+      const enriched = { ...data, _shifts: swapModal.shifts };
+      setRequests(prev => [enriched, ...prev]);
+      setSwapModal(null);
       showToast("Request submitted successfully.");
     } catch (err) {
       setError(err.message || "Failed to submit request.");
@@ -195,55 +240,76 @@ export default function SwapRequests() {
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
-          <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Swap & Replacement Requests</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {pendingCount > 0 ? `${pendingCount} pending` : "No pending requests"}
-            </p>
-          </div>
-          <button onClick={() => { setShowing(!showing); setError(""); }}
-            style={{ background: "#2563EB", color: "#FFF", border: "none", padding: "10px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}>
-            {showing ? "Cancel" : "+ New Request"}
-          </button>
+        <div style={{ marginBottom: "24px" }}>
+          <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Swap & Replacement Requests</h2>
+          <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+            {pendingCount > 0 ? `${pendingCount} pending` : "No pending requests"} · tap a shift below to request a swap or replacement
+          </p>
         </div>
 
-        {/* Form */}
-        {showing && (
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "26px", marginBottom: "24px", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", animation: "popIn 0.2s ease both" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B", marginBottom: "20px" }}>New Swap / Replacement Request</h3>
-            {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "9px", fontSize: "13px", marginBottom: "16px" }}>{error}</div>}
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "22px" }}>
-              <div>
-                <label style={lbl}>Select Shift *</label>
-                <select style={inp} value={form.requester_assign} onChange={e => setForm(p => ({ ...p, requester_assign: e.target.value }))}>
-                  <option value="">Choose a shift…</option>
-                  {myShifts.map(a => (
-                    <option key={a.assignment_id} value={a.assignment_id}>
-                      {a.shifts?.title || "Shift"} · {fmtDate(a.shifts?.shift_date)} · {a.shifts?.start_time?.slice(0,5)}
-                    </option>
-                  ))}
-                </select>
-                {myShifts.length === 0 && <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "6px" }}>No upcoming published shifts to request swap for.</p>}
-              </div>
-              <div>
-                <label style={lbl}>Request Type</label>
-                <select style={inp} value={form.request_type} onChange={e => setForm(p => ({ ...p, request_type: e.target.value }))}>
-                  <option value="swap">Swap — find someone to trade with</option>
-                  <option value="replacement">Replacement — find cover</option>
-                </select>
-              </div>
-              <div>
-                <label style={lbl}>Reason (optional)</label>
-                <textarea style={{ ...inp, minHeight: "80px", resize: "vertical" }} value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} />
-              </div>
+        {/* Your Upcoming Shifts — task-style list */}
+        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 22px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+          <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "14px" }}>Your Upcoming Shifts</h3>
+
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ display: "flex", gap: "14px", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #F1F5F9" }}>
+                  <Shimmer w="50px" h="50px" r="10px" />
+                  <div style={{ flex: 1 }}><Shimmer w="55%" h="14px" r="5px" /><div style={{ marginTop: "7px" }}><Shimmer w="38%" h="11px" r="5px" /></div></div>
+                  <Shimmer w="110px" h="34px" r="8px" />
+                </div>
+              ))}
             </div>
-            <button onClick={handleSubmit} disabled={saving}
-              style={{ background: saving ? "#93C5FD" : "#2563EB", color: "#FFF", border: "none", padding: "11px 24px", borderRadius: "10px", fontSize: "14px", fontWeight: "700", cursor: saving ? "default" : "pointer" }}>
-              {saving ? "Submitting…" : "Submit Request"}
-            </button>
-          </div>
-        )}
+          ) : myShifts.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "28px 0" }}>
+              <RefreshCw size={28} color="#CBD5E1" style={{ margin: "0 auto 10px" }} />
+              <p style={{ fontSize: "14px", color: "#94A3B8" }}>No upcoming published shifts to request a swap for.</p>
+            </div>
+          ) : (
+            myShifts.map((a, idx) => {
+              const shift = a.shifts;
+              const d = new Date((shift?.shift_date || "") + "T00:00:00");
+              const dayAbbr = shift?.shift_date ? d.toLocaleDateString("en-SG", { weekday: "short" }).toUpperCase() : "—";
+              const dayNum  = shift?.shift_date ? d.getDate() : "—";
+              const hasExisting = requests.some(r =>
+                r.status !== "rejected" && r.status !== "cancelled" &&
+                String(r.requester_assign) === String(a.assignment_id)
+              );
+              return (
+                <div key={a.assignment_id} className="swap-shift-row"
+                  style={{ display: "flex", alignItems: "center", gap: "16px", padding: "13px 0", borderBottom: "1px solid #F1F5F9", cursor: "default", borderRadius: "6px", transition: "background 0.12s", animation: `fadeSlideUp 0.3s ease ${idx * 0.06}s both` }}>
+                  {/* Date block */}
+                  <div style={{ minWidth: "50px", textAlign: "center", background: "#EFF6FF", borderRadius: "10px", padding: "8px 4px", flexShrink: 0 }}>
+                    <p style={{ fontSize: "10px", fontWeight: "700", color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.04em" }}>{dayAbbr}</p>
+                    <p style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", lineHeight: 1.1 }}>{dayNum}</p>
+                  </div>
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B", marginBottom: "2px" }}>{shift?.title || "Shift"}</p>
+                    <p style={{ fontSize: "12px", color: "#64748B" }}>
+                      {shift?.start_time?.slice(0, 5)} – {shift?.end_time?.slice(0, 5)}
+                      <span style={{ marginLeft: "10px", color: "#CBD5E1" }}>·</span>
+                      <span style={{ marginLeft: "8px" }}>{fmtDate(shift?.shift_date)}</span>
+                    </p>
+                  </div>
+                  {/* Action */}
+                  {hasExisting ? (
+                    <span style={{ padding: "5px 14px", background: "#FFFBEB", color: "#D97706", border: "1px solid #FDE68A", borderRadius: "100px", fontSize: "12px", fontWeight: "600", flexShrink: 0 }}>
+                      Requested
+                    </span>
+                  ) : (
+                    <button className="swap-req-btn"
+                      onClick={() => { setSwapModal(a); setSwapForm({ request_type: "swap", reason: "" }); setError(""); }}
+                      style={{ padding: "8px 18px", background: "#2563EB", color: "#FFF", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: "600", cursor: "pointer", flexShrink: 0, transition: "background 0.15s" }}>
+                      ↔ Request Swap
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
 
         {/* Week Calendar */}
         <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "16px 20px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
@@ -258,7 +324,11 @@ export default function SwapRequests() {
           </div>
 
           {/* Legend */}
-          <div style={{ display: "flex", gap: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "14px", marginBottom: "12px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <div style={{ width: "10px", height: "10px", borderRadius: "3px", background: "#EDE9FE", border: "1px solid #7C3AED" }} />
+              <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>Your Shift</span>
+            </div>
             {[["pending", "Pending"], ["approved", "Approved"], ["rejected", "Rejected"]].map(([key, label]) => {
               const sc = STATUS_COLORS[key];
               return (
@@ -270,11 +340,7 @@ export default function SwapRequests() {
             })}
           </div>
 
-          {loading ? (
-            <Shimmer h="120px" r="12px" />
-          ) : (
-            <WeekCalendar weekStart={weekStart} requests={requests} />
-          )}
+          {loading ? <Shimmer h="120px" r="12px" /> : <WeekCalendar weekStart={weekStart} requests={requests} shifts={calendarShifts} />}
         </div>
 
         {/* Filter tabs */}
@@ -290,7 +356,7 @@ export default function SwapRequests() {
         {/* Requests list */}
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {Array.from({ length: 3 }).map((_, i) => (
+            {[0, 1, 2].map(i => (
               <div key={i} style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "14px" }}>
                   <Shimmer w="160px" h="16px" r="6px" /><Shimmer w="70px" h="24px" r="100px" />
@@ -301,19 +367,19 @@ export default function SwapRequests() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ marginBottom: "12px" }}><RefreshCw size={36} color="#64748B" /></div>
+            <div style={{ marginBottom: "12px" }}><RefreshCw size={36} color="#CBD5E1" /></div>
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No {filter === "all" ? "" : filter + " "}swap requests</p>
-            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "6px" }}>Submit a request when you need to swap or find cover for a shift.</p>
+            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "6px" }}>Tap a shift above when you need to swap or find cover.</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {filtered.map((r, i) => {
-              const shift = r.task_assignments_swap_requests_requester_assignTotask_assignments?.shifts;
+              const shift = r._shifts;
               const typeColor = r.request_type === "swap" ? { bg: "#EFF6FF", color: "#1D4ED8" } : { bg: "#F5F3FF", color: "#6D28D9" };
               return (
                 <div key={r.swap_id}
-                  style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${i * 0.06}s both` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${i * 0.06}s both` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
                     <span style={{ padding: "5px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", background: typeColor.bg, color: typeColor.color }}>
                       {r.request_type === "swap"
                         ? <><RefreshCw size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />Shift Swap</>
@@ -324,7 +390,7 @@ export default function SwapRequests() {
                     </span>
                   </div>
                   {shift && (
-                    <div style={{ display: "flex", gap: "28px", flexWrap: "wrap", padding: "14px 0", borderTop: "1px solid #F1F5F9", borderBottom: r.reason ? "1px solid #F1F5F9" : "none" }}>
+                    <div style={{ display: "flex", gap: "28px", flexWrap: "wrap", padding: "12px 0", borderTop: "1px solid #F1F5F9", borderBottom: r.reason ? "1px solid #F1F5F9" : "none" }}>
                       <InfoItem label="Shift" value={shift.title || "Shift"} />
                       <InfoItem label="Date"  value={fmtDate(shift.shift_date)} />
                       <InfoItem label="Time"  value={`${shift.start_time?.slice(0,5)} – ${shift.end_time?.slice(0,5)}`} />
@@ -337,6 +403,82 @@ export default function SwapRequests() {
           </div>
         )}
       </div>
+
+      {/* Swap request modal */}
+      {swapModal && (
+        <div onClick={e => e.target === e.currentTarget && setSwapModal(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.15s ease both" }}>
+          <div style={{ background: "#FFF", borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "420px", boxShadow: "0 24px 60px rgba(0,0,0,0.2)", animation: "popIn 0.2s ease both" }}>
+
+            {/* Shift info header */}
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "24px" }}>
+              {(() => {
+                const shift = swapModal.shifts;
+                const d = shift?.shift_date ? new Date(shift.shift_date + "T00:00:00") : null;
+                return (
+                  <>
+                    <div style={{ minWidth: "54px", textAlign: "center", background: "#EFF6FF", borderRadius: "10px", padding: "9px 6px", flexShrink: 0 }}>
+                      <p style={{ fontSize: "10px", fontWeight: "700", color: "#2563EB", textTransform: "uppercase" }}>{d ? d.toLocaleDateString("en-SG", { weekday: "short" }).toUpperCase() : "—"}</p>
+                      <p style={{ fontSize: "20px", fontWeight: "900", color: "#1E293B", lineHeight: 1 }}>{d ? d.getDate() : "—"}</p>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", lineHeight: 1.2 }}>{shift?.title || "Shift"}</h3>
+                      <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px" }}>
+                        {fmtDate(shift?.shift_date)} · {shift?.start_time?.slice(0,5)} – {shift?.end_time?.slice(0,5)}
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
+              <button onClick={() => setSwapModal(null)}
+                style={{ background: "#F1F5F9", border: "none", borderRadius: "8px", padding: "7px", cursor: "pointer", flexShrink: 0, display: "flex" }}>
+                <X size={15} color="#64748B" />
+              </button>
+            </div>
+
+            {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "9px", fontSize: "13px", marginBottom: "16px" }}>{error}</div>}
+
+            {/* Request type */}
+            <div style={{ marginBottom: "18px" }}>
+              <p style={lbl}>Request Type</p>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {[
+                  { value: "swap",        label: "↔  Swap",        activeBg: "#EFF6FF", activeColor: "#1E40AF", activeBorder: "#2563EB" },
+                  { value: "replacement", label: "▲ Replacement",  activeBg: "#F5F3FF", activeColor: "#5B21B6", activeBorder: "#7C3AED" },
+                ].map(opt => {
+                  const active = swapForm.request_type === opt.value;
+                  return (
+                    <button key={opt.value} onClick={() => setSwapForm(p => ({ ...p, request_type: opt.value }))}
+                      style={{ flex: 1, padding: "10px 8px", border: `2px solid ${active ? opt.activeBorder : "#E2E8F0"}`, background: active ? opt.activeBg : "#FFF", borderRadius: "10px", fontSize: "13px", fontWeight: "700", color: active ? opt.activeColor : "#94A3B8", cursor: "pointer", transition: "all 0.15s" }}>
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div style={{ marginBottom: "24px" }}>
+              <p style={lbl}>Reason <span style={{ fontWeight: "400", color: "#CBD5E1" }}>(optional)</span></p>
+              <textarea value={swapForm.reason} onChange={e => setSwapForm(p => ({ ...p, reason: e.target.value }))}
+                placeholder="e.g. Family commitment, medical appointment…"
+                style={{ ...inp, minHeight: "80px", resize: "vertical" }} />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={() => setSwapModal(null)}
+                style={{ flex: 1, padding: "11px", background: "#F1F5F9", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={handleSubmit} disabled={saving}
+                style={{ flex: 2, padding: "11px", background: saving ? "#93C5FD" : "#2563EB", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", color: "#FFF", cursor: saving ? "default" : "pointer", transition: "background 0.15s" }}>
+                {saving ? "Submitting…" : "Submit Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both" }}>
@@ -356,17 +498,12 @@ function InfoItem({ label, value }) {
   );
 }
 
-function fmtDate(d) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-SG", { month: "short", day: "numeric", year: "numeric" });
-}
-
 function statusStyle(status) {
   const map = {
-    pending:  { background: "#FFFBEB", color: "#D97706" },
-    approved: { background: "#DCFCE7", color: "#166534" },
-    rejected: { background: "#FEE2E2", color: "#991B1B" },
-    cancelled:{ background: "#F3F4F6", color: "#6B7280" },
+    pending:   { background: "#FFFBEB", color: "#D97706" },
+    approved:  { background: "#DCFCE7", color: "#166534" },
+    rejected:  { background: "#FEE2E2", color: "#991B1B" },
+    cancelled: { background: "#F3F4F6", color: "#6B7280" },
   };
   return map[status] || map.pending;
 }

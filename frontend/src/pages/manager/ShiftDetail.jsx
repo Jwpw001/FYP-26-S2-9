@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import {
-  Sparkles, X, AlertTriangle, Trash2, Calendar, Clock, MapPin,
+  X, AlertTriangle, Trash2, Calendar, Clock, MapPin,
   Tag, Check, Users, GripVertical, Search, Pencil,
 } from "lucide-react";
 import { api } from "../../lib/api";
@@ -17,7 +17,6 @@ if (typeof document !== "undefined" && !document.getElementById("sd2-styles")) {
     @keyframes shimmer { from{background-position:-600px 0}to{background-position:600px 0} }
     @keyframes modalIn { from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)} }
     @keyframes toastIn { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
-    @keyframes aiPulse { 0%,100%{opacity:1}50%{opacity:0.45} }
     @keyframes panelIn { from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)} }
     @keyframes aiNoteIn { from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)} }
     @keyframes spin { to{transform:rotate(360deg)} }
@@ -130,10 +129,6 @@ export default function ShiftDetail() {
   const [editTaskForm, setEditTaskForm] = useState({});
   const [savingTaskEdit, setSavingTaskEdit] = useState(false);
 
-  // ── AI Recommend panel ─────────────────────────────────────────────────────
-  const [aiPanel, setAiPanel]       = useState(null);
-  const [aiAssigning, setAiAssigning] = useState(null);
-
   function showToast(msg, type="success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
@@ -216,14 +211,16 @@ export default function ShiftDetail() {
     async function load() {
       setLoading(true);
       try {
-        const [res, { data: skills }] = await Promise.all([
-          api.get(`/api/shifts/${id}`),
-          supabase.from("skills").select("skill_id,name").order("name"),
-        ]);
-        if (!cancelled && res.success) {
-          setShift(res.shift);
-          setTasks(res.shift?.shift_tasks || []);
-          setSkillOptions(skills || []);
+        const res = await api.get(`/api/shifts/${id}`);
+        if (cancelled || !res.success) return;
+        setShift(res.shift);
+        setTasks(res.shift?.shift_tasks || []);
+
+        // Only offer skills actually assigned to this shift's branch (Skill Tags), not the
+        // entire global skill catalog.
+        if (res.shift?.branch_id) {
+          const skillsRes = await api.get(`/api/business/branches/${res.shift.branch_id}/skills`).catch(() => ({ skills: [] }));
+          if (!cancelled) setSkillOptions(skillsRes.skills || []);
         }
       } catch(e) { console.error(e); }
       finally { if (!cancelled) setLoading(false); }
@@ -342,26 +339,6 @@ export default function ShiftDetail() {
     if (shift.status === "published") {
       setConfirmModal({ title:"Remove assignment?", body:<span><strong>{name}</strong> may have already seen their schedule.</span>, confirmLabel:"Remove", danger:true, onConfirm:doIt });
     } else { doIt(); }
-  }
-
-  // ── AI Recommend ───────────────────────────────────────────────────────────
-  async function runAiRecommend() {
-    setAiPanel({ loading: true });
-    try {
-      const result = await api.post(`/api/recommendations/shift/${id}`);
-      setAiPanel({ recommendations: result.recommendations || [] });
-    } catch { showToast("AI recommendation failed.", "error"); setAiPanel(null); }
-  }
-  async function aiAssignStaff(staffId, taskId, staffName) {
-    setAiAssigning(Number(staffId));
-    try {
-      const res = await api.post(`/api/shifts/tasks/${taskId}/assign`, { staff_id: Number(staffId) });
-      if (!res.success) throw new Error(res.message);
-      await reloadTasks(); await refreshRoster();
-      setAiPanel(null);
-      showToast(`${staffName} assigned.`);
-    } catch(err) { showToast(err.message || "Failed.", "error"); }
-    finally { setAiAssigning(null); }
   }
 
   // ── Publish ────────────────────────────────────────────────────────────────
@@ -486,15 +463,6 @@ export default function ShiftDetail() {
             <div style={s.shiftActions}>
               {shift.status==="draft" && <button style={s.deleteIconBtn} onClick={handleDelete} title="Delete"><Trash2 size={15}/></button>}
               {canAssign && <button style={s.editIconBtn} onClick={openEditShift} title="Edit shift"><Pencil size={15}/></button>}
-              {canAssign && (
-                <button style={s.aiBtn} onClick={aiPanel ? ()=>setAiPanel(null) : runAiRecommend} disabled={aiPanel?.loading}>
-                  {aiPanel?.loading
-                    ? <span style={{animation:"aiPulse 1.2s ease infinite"}}><Sparkles size={14} style={{verticalAlign:"middle",marginRight:4}}/>Thinking…</span>
-                    : aiPanel
-                      ? <span><X size={14} style={{verticalAlign:"middle",marginRight:4}}/>Close AI</span>
-                      : <span><Sparkles size={14} style={{verticalAlign:"middle",marginRight:4}}/>Smart Recommend</span>}
-                </button>
-              )}
               {shift.status==="draft" && (
                 <>
                   <button style={{...s.publishBtn,...(!isFullyStaffed&&totalTasks>0?{background:"#D97706"}:{})}} onClick={handlePublish} disabled={publishing}>
@@ -518,45 +486,6 @@ export default function ShiftDetail() {
             <span style={s.staffingText}>{assignedTasks}/{totalTasks} tasks filled{isFullyStaffed&&totalTasks>0?" · Ready ✓":""}</span>
           </div>
         </div>
-
-        {/* AI Recommend panel */}
-        {aiPanel && !aiPanel.loading && (
-          <div style={s.aiPanel}>
-            <div style={s.aiPanelHeader}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                <span style={{fontSize:"16px",color:"#6366F1"}}>✦</span>
-                <span style={{fontSize:"15px",fontWeight:"700",color:"#4338CA"}}>AI Staff Recommendations</span>
-              </div>
-              <span style={{fontSize:"11px",color:"#7C3AED",opacity:.7}}>Powered by Groq</span>
-            </div>
-            {(aiPanel.recommendations||[]).length===0
-              ? <p style={{fontSize:"13px",color:"#64748B",padding:"12px 0"}}>All tasks are staffed.</p>
-              : (aiPanel.recommendations||[]).map(rec => (
-                <div key={rec.task_id||rec.role_id} style={{marginBottom:"16px"}}>
-                  <p style={{fontSize:"12px",fontWeight:"700",color:"#6D28D9",textTransform:"uppercase",letterSpacing:".05em",marginBottom:"8px"}}>{rec.task_name||rec.role_name}</p>
-                  {(rec.suggestions||[]).map((sug,i) => (
-                    <div key={sug.staff_id} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",borderRadius:"10px",border:`1px solid ${i===0?"#A5B4FC":"#E2E8F0"}`,background:i===0?"#F5F3FF":"#FAFAFA",marginBottom:"6px"}}>
-                      <div style={{width:"22px",height:"22px",borderRadius:"50%",background:i===0?"#6366F1":"#CBD5E1",color:"#FFF",fontSize:"11px",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{i+1}</div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}}>
-                          <p style={{fontSize:"13px",fontWeight:"600",color:"#1E293B"}}>{sug.name}</p>
-                          <span style={{fontSize:"10px",fontWeight:"700",padding:"2px 6px",borderRadius:"100px",background:sug.confidence==="high"?"#DCFCE7":sug.confidence==="medium"?"#FFFBEB":"#FEE2E2",color:sug.confidence==="high"?"#166534":sug.confidence==="medium"?"#92400E":"#991B1B"}}>{sug.confidence}</span>
-                        </div>
-                        <p style={{fontSize:"12px",color:"#64748B",marginTop:"2px",lineHeight:1.4}}>{sug.reason}</p>
-                      </div>
-                      <button
-                        style={{background:i===0?"#6366F1":"#2563EB",border:"none",borderRadius:"7px",padding:"7px 14px",fontSize:"12px",fontWeight:"700",color:"#FFF",cursor:"pointer",flexShrink:0,opacity:aiAssigning===sug.staff_id?.6:1}}
-                        disabled={!!aiAssigning}
-                        onClick={()=>aiAssignStaff(sug.staff_id,rec.task_id||rec.role_id,sug.name)}
-                      >
-                        {aiAssigning===sug.staff_id?"…":"Assign"}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ))}
-          </div>
-        )}
 
         {/* Tasks header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px"}}>
@@ -979,7 +908,7 @@ export default function ShiftDetail() {
                           </span>
                         </>
                       )}
-                      {staff.staff_type==="casual" && staff.casual_available_today && staff.casual_avail_from && (
+                      {staff.staff_type==="casual" && staff.casual_avail_from && (
                         <>
                           <span style={{fontSize:"10px",color:"#94A3B8"}}>·</span>
                           <span style={{fontSize:"9px",fontWeight:"600",color:"#0369A1",background:"#F0F9FF",border:"1px solid #BAE6FD",padding:"1px 6px",borderRadius:"100px"}}>
@@ -998,8 +927,8 @@ export default function ShiftDetail() {
                         {underQualified         && <span style={{fontSize:"9px",fontWeight:"700",color:"#991B1B",background:"#FEE2E2",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FECACA"}}>⚠ Below required level</span>}
                         {isCanConsider          && (
                           <span style={{fontSize:"9px",fontWeight:"700",color:"#92400E",background:"#FEF3C7",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FDE68A"}}>
-                            ⚡ Can Consider · {staff.casual_available_today
-                              ? `Available ${staff.casual_avail_from||"?"}–${staff.casual_avail_to||"?"}, task needs ${toHHMM(activeTask?.start_time)}–${toHHMM(activeTask?.end_time)}`
+                            ⚡ Can Consider · {staff.casual_avail_from
+                              ? `Available ${staff.casual_avail_from}–${staff.casual_avail_to}, task needs ${toHHMM(activeTask?.start_time)}–${toHHMM(activeTask?.end_time)}`
                               : "No avail. declared"}
                           </span>
                         )}
@@ -1210,9 +1139,6 @@ const s = {
   removeBtn: {background:"none",border:"none",fontSize:"13px",color:"#94A3B8",cursor:"pointer",padding:"2px 5px",lineHeight:1},
   emptyAssignee: {fontSize:"12px",color:"#94A3B8",padding:"8px 0 2px",fontStyle:"italic"},
   aiNote: {marginTop:"10px",padding:"10px 12px",borderRadius:"10px",border:"1px solid #E2E8F0"},
-  aiPanel: {background:"linear-gradient(135deg,#F5F3FF,#EEF2FF)",border:"1.5px solid #C4B5FD",borderRadius:"14px",padding:"20px",marginBottom:"24px"},
-  aiPanelHeader: {display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"6px"},
-  aiBtn: {background:"linear-gradient(135deg,#6366F1,#8B5CF6)",border:"none",borderRadius:"9px",padding:"8px 16px",fontSize:"13px",fontWeight:"700",color:"#FFF",cursor:"pointer"},
   overlay: {position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px"},
   modal: {background:"#FFF",borderRadius:"16px",padding:"28px",width:"100%",maxWidth:"560px",maxHeight:"80vh",overflowY:"auto",animation:"modalIn 0.25s ease both",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"},
   modalHeader: {display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"},
