@@ -5,6 +5,7 @@ import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
 import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings2 } from "lucide-react";
 import ProfileModal from "../ProfileModal";
+import AIAssistantWidget from "../AIAssistantWidget";
 
 const NAV = [
   { label: "Dashboard",   path: "/business-owner/dashboard",    Icon: LayoutDashboard },
@@ -112,6 +113,7 @@ export default function BusinessOwnerLayout({ children, title }) {
         <div style={s.content}>{children}</div>
       </div>
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+      <AIAssistantWidget />
     </div>
   );
 }

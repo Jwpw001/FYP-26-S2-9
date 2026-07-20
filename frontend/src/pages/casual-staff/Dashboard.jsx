@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import CasualLayout from "../../components/layout/CasualLayout";
 import { supabase } from "../../lib/supabaseClient";
-import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import { useNavigate } from "react-router-dom";
 import { Building2, CalendarClock, CheckCircle, Clock, ChevronRight, Calendar } from "lucide-react";
@@ -40,36 +39,48 @@ export default function CasualDashboard() {
     async function load() {
       const today = new Date().toISOString().slice(0, 10);
 
-      // Query staff table directly — same approach as regular-staff dashboard
-      const [{ data: staffData }, availRes] = await Promise.all([
-        supabase.from("staff")
-          .select("staff_id, is_active, branch_id, branches(name, address)")
-          .eq("user_id", userId)
-          .maybeSingle(),
-        api.get("/api/casual/availability").catch(() => ({ availability: [] })),
-      ]);
+      const { data: staffData } = await supabase
+        .from("staff")
+        .select("staff_id, is_active, branch_id, branches(name, address)")
+        .eq("user_id", userId)
+        .maybeSingle();
 
       if (cancelled) return;
-
       setStaffRecord(staffData || null);
-      setAvail(availRes?.availability || []);
 
-      // Fetch upcoming shifts once we have staff_id
       if (staffData?.staff_id) {
-        const { data: shifts } = await supabase
-          .from("task_assignments")
-          .select(`
-            assignment_id, acknowledged,
-            shifts!inner ( shift_id, title, shift_date, start_time, end_time,
-              branches ( name )
-            )
-          `)
-          .eq("staff_id", staffData.staff_id)
-          .gte("shifts.shift_date", today)
-          .order("shifts.shift_date", { referencedTable: "shifts", ascending: true })
-          .limit(5);
+        const [{ data: shifts }, { data: availRows }] = await Promise.all([
+          supabase
+            .from("task_assignments")
+            .select(`
+              assignment_id, acknowledged,
+              shifts!inner ( shift_id, title, shift_date, start_time, end_time,
+                branches ( name )
+              )
+            `)
+            .eq("staff_id", staffData.staff_id)
+            .gte("shifts.shift_date", today)
+            .order("shifts.shift_date", { referencedTable: "shifts", ascending: true })
+            .limit(5),
+          supabase
+            .from("casual_availability")
+            .select("day_of_week, available_from, available_to, week_start_date")
+            .eq("staff_id", staffData.staff_id)
+            .gte("week_start_date", today)
+            .order("week_start_date", { ascending: true }),
+        ]);
 
-        if (!cancelled) setUpcomingShifts((shifts || []).filter(a => a.shifts));
+        if (!cancelled) {
+          setUpcomingShifts((shifts || []).filter(a => a.shifts));
+          // Show days from the nearest upcoming submitted week
+          const rows = availRows || [];
+          if (rows.length > 0) {
+            const nearestWeek = rows[0].week_start_date;
+            setAvail(rows.filter(r => r.week_start_date === nearestWeek));
+          } else {
+            setAvail([]);
+          }
+        }
       }
 
       if (!cancelled) setLoading(false);

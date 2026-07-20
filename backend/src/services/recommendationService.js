@@ -1,7 +1,7 @@
 const supabaseAdmin = require("../config/supabaseAdmin");
-const Groq = require("groq-sdk");
+const OpenAI = require("openai");
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 function toMinutes(t) {
   if (!t) return null;
@@ -242,8 +242,8 @@ Respond ONLY with valid JSON in this exact format:
 
 Include up to 3 suggestions per task, ordered best-first. Only include staff from that task's available-staff list above.`;
 
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
     max_tokens: 1500,
     temperature: 0.3,

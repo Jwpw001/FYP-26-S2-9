@@ -551,8 +551,8 @@ const validateAssignment = async (req, res) => {
       });
     }
 
-    const Groq = require("groq-sdk");
-    const groq  = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const OpenAI = require("openai");
+    const openai  = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const prompt = `You are a smart F&B workforce scheduling AI. Evaluate this staff assignment and respond in JSON only.
 
@@ -579,8 +579,8 @@ IMPORTANT: Never suggest a casual staff member as an alternative unless their av
 Respond ONLY with this JSON (no other text):
 { "suitable": true or false, "message": "1-2 sentence assessment", "alternative": null or { "name": "Name", "reason": "why they are a better fit in one sentence" } }`;
 
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 250,
       temperature: 0.15,

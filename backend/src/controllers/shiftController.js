@@ -222,8 +222,8 @@ const deleteShift = async (req, res) => {
 
 // ── AI Weekly Schedule ─────────────────────────────────────────────────────────
 
-const Groq = require("groq-sdk");
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const OpenAI = require("openai");
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const generateWeeklySchedule = async (req, res) => {
   try {
@@ -363,8 +363,8 @@ EXAMPLE FORMAT (follow exactly):
 
 Generate ALL 14 shifts now (2 per day × 7 days):`;
 
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 5000,
       temperature: 0.3,
