@@ -2,6 +2,7 @@ const prisma = require("../config/prisma");
 const generateToken = require("../utils/generateToken");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const bcrypt = require("bcryptjs");
+const { notifyUsers, getSystemAdminUserIds } = require("../utils/notify");
 
 const login = async (req, res) => {
     try {
@@ -156,6 +157,7 @@ const registerBusiness = async (req, res) => {
         if (authErr) return res.status(400).json({ success: false, message: authErr.message });
 
         let newUser;
+        let businessId;
         try {
             newUser = await prisma.users.create({
                 data: { full_name: owner_name, username, email, role: "business_owner", is_active: true },
@@ -172,7 +174,7 @@ const registerBusiness = async (req, res) => {
             }).select("business_id").single();
             if (bizErr) throw new Error(bizErr.message);
 
-            const businessId = bizData.business_id;
+            businessId = bizData.business_id;
 
             const settingsDefaults = {
                 operating_days: "1111100", open_time: "09:00", close_time: "18:00",
@@ -207,6 +209,17 @@ const registerBusiness = async (req, res) => {
         }
 
         const token = generateToken({ user_id: newUser.user_id, email: newUser.email, role: newUser.role });
+
+        try {
+            const adminIds = await getSystemAdminUserIds();
+            await notifyUsers(adminIds, {
+                type: "business_registered",
+                title: "New Business Registered",
+                message: `${business_name} just signed up (${selectedPlan} plan), owned by ${owner_name}.`,
+                relatedEntity: "businesses",
+                relatedId: businessId,
+            });
+        } catch { /* notification failure shouldn't block registration */ }
 
         return res.status(201).json({
             success: true,

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import {
   X, AlertTriangle, Trash2, Calendar, Clock, MapPin,
@@ -518,20 +519,27 @@ export default function ShiftDetail() {
               </div>
               <div>
                 <label style={s.formLabel}>Required Skill</label>
-                <select style={s.formInput} value={taskForm.skill_id} onChange={e=>setTaskForm(p=>({...p,skill_id:e.target.value}))}>
-                  <option value="">No specific skill</option>
-                  {skillOptions.map(sk=><option key={sk.skill_id} value={sk.skill_id}>{sk.name}</option>)}
-                </select>
+                <SearchableSelect
+                  options={skillOptions.map(sk => ({ value: sk.skill_id, label: sk.name }))}
+                  value={taskForm.skill_id}
+                  onChange={v => setTaskForm(p => ({ ...p, skill_id: v }))}
+                  placeholder="No specific skill"
+                />
               </div>
               <div>
                 <label style={s.formLabel}>Difficulty</label>
-                <select style={s.formInput} value={taskForm.difficulty} onChange={e=>setTaskForm(p=>({...p,difficulty:e.target.value}))}>
-                  <option value="">Not set</option>
-                  <option value="junior">Junior</option>
-                  <option value="mid">Mid</option>
-                  <option value="senior">Senior</option>
-                  <option value="expert">Expert</option>
-                </select>
+                <SearchableSelect
+                  options={[
+                    { value: "junior", label: "Junior" },
+                    { value: "mid", label: "Mid" },
+                    { value: "senior", label: "Senior" },
+                    { value: "expert", label: "Expert" },
+                  ]}
+                  value={taskForm.difficulty}
+                  onChange={v => setTaskForm(p => ({ ...p, difficulty: v }))}
+                  placeholder="Not set"
+                  searchable={false}
+                />
               </div>
               <div>
                 <label style={s.formLabel}>Start</label>
@@ -594,20 +602,27 @@ export default function ShiftDetail() {
                     </div>
                     <div>
                       <label style={s.formLabel}>Required Skill</label>
-                      <select style={s.formInput} value={editTaskForm.skill_id} onChange={e=>setEditTaskForm(p=>({...p,skill_id:e.target.value}))}>
-                        <option value="">No specific skill</option>
-                        {skillOptions.map(sk=><option key={sk.skill_id} value={sk.skill_id}>{sk.name}</option>)}
-                      </select>
+                      <SearchableSelect
+                        options={skillOptions.map(sk => ({ value: sk.skill_id, label: sk.name }))}
+                        value={editTaskForm.skill_id}
+                        onChange={v => setEditTaskForm(p => ({ ...p, skill_id: v }))}
+                        placeholder="No specific skill"
+                      />
                     </div>
                     <div>
                       <label style={s.formLabel}>Difficulty</label>
-                      <select style={s.formInput} value={editTaskForm.difficulty} onChange={e=>setEditTaskForm(p=>({...p,difficulty:e.target.value}))}>
-                        <option value="">Not set</option>
-                        <option value="junior">Junior</option>
-                        <option value="mid">Mid</option>
-                        <option value="senior">Senior</option>
-                        <option value="expert">Expert</option>
-                      </select>
+                      <SearchableSelect
+                        options={[
+                          { value: "junior", label: "Junior" },
+                          { value: "mid", label: "Mid" },
+                          { value: "senior", label: "Senior" },
+                          { value: "expert", label: "Expert" },
+                        ]}
+                        value={editTaskForm.difficulty}
+                        onChange={v => setEditTaskForm(p => ({ ...p, difficulty: v }))}
+                        placeholder="Not set"
+                        searchable={false}
+                      />
                     </div>
                     <div>
                       <label style={s.formLabel}>Start</label>
@@ -815,15 +830,19 @@ export default function ShiftDetail() {
                   </button>
                 ))}
               </div>
-              <select
+              <SearchableSelect
+                options={[
+                  { value: "match", label: "Best Match" },
+                  { value: "name", label: "Name A–Z" },
+                  { value: "hours_asc", label: "Least Hours" },
+                  { value: "hours_desc", label: "Most Hours" },
+                ]}
                 value={rosterSort}
-                onChange={e=>setRosterSort(e.target.value)}
-                style={{fontSize:"11px",fontWeight:"600",padding:"4px 6px",border:"1px solid #E2E8F0",borderRadius:"7px",color:"#64748B",background:"#FAFAFA",cursor:"pointer",outline:"none"}}>
-                <option value="match">Best Match</option>
-                <option value="name">Name A–Z</option>
-                <option value="hours_asc">Least Hours</option>
-                <option value="hours_desc">Most Hours</option>
-              </select>
+                onChange={setRosterSort}
+                clearable={false}
+                searchable={false}
+                style={{ width: "140px" }}
+              />
             </div>
 
             <div style={{borderBottom:"1px solid #F1F5F9",margin:"0 -18px 0"}}/>
@@ -922,7 +941,23 @@ export default function ShiftDetail() {
                     {(isUnavailable || isAssigned || underQualified || isCanConsider) && (
                       <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginTop:"4px"}}>
                         {staff.is_on_leave      && <span style={s.badgeRed}>On Leave</span>}
-                        {staff.is_double_booked && <span style={s.badgeRed}>Double-booked</span>}
+                        {staff.is_double_booked && (
+                          <span style={s.badgeRed}>
+                            Double-booked
+                            {staff.double_booked_shift && (
+                              <span style={{fontWeight:"500",marginLeft:"4px"}}>
+                                · {staff.double_booked_shift.title}
+                                {staff.double_booked_shift.start_time && ` ${staff.double_booked_shift.start_time}–${staff.double_booked_shift.end_time}`}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                        {staff.other_shift_today && (
+                          <span style={{fontSize:"9px",fontWeight:"700",color:"#92400E",background:"#FEF3C7",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FDE68A"}}>
+                            Also working today · {staff.other_shift_today.title}
+                            {staff.other_shift_today.start_time && ` ${staff.other_shift_today.start_time}–${staff.other_shift_today.end_time}`}
+                          </span>
+                        )}
                         {isAssigned             && <span style={s.badgeGray}>Already Assigned</span>}
                         {underQualified         && <span style={{fontSize:"9px",fontWeight:"700",color:"#991B1B",background:"#FEE2E2",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FECACA"}}>⚠ Below required level</span>}
                         {isCanConsider          && (

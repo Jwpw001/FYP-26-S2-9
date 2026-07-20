@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import { Trash2, X } from "lucide-react";
 
@@ -176,11 +177,12 @@ function SkillSetsSection({ staffId }) {
                     {library.length === 0 ? "No skills in library yet — add some via Skill Settings." : "All library skills are already assigned."}
                   </p>
                 ) : (
-                  <select value={form.skill_id} onChange={e => setForm(p => ({ ...p, skill_id: e.target.value }))}
-                    style={{ width: "100%", padding: "8px 10px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "13px", color: "#1E293B", background: "#FFF", boxSizing: "border-box" }}>
-                    <option value="">Select a skill…</option>
-                    {available.map(s => <option key={s.skill_id} value={s.skill_id}>{s.name}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={available.map(s => ({ value: s.skill_id, label: s.name }))}
+                    value={form.skill_id}
+                    onChange={v => setForm(p => ({ ...p, skill_id: v }))}
+                    placeholder="Select a skill…"
+                  />
                 )}
               </div>
 
@@ -801,11 +803,13 @@ export default function BOStaffDetail() {
             <div style={s.field}>
               <label style={s.label}>Staff Type</label>
               {editing ? (
-                <select style={s.input} value={form.staff_type}
-                  onChange={e => setForm(p => ({ ...p, staff_type: e.target.value }))}>
-                  <option value="regular">Regular Staff</option>
-                  <option value="casual">Casual Staff</option>
-                </select>
+                <SearchableSelect
+                  options={[{ value: "regular", label: "Regular Staff" }, { value: "casual", label: "Casual Staff" }]}
+                  value={form.staff_type}
+                  onChange={v => setForm(p => ({ ...p, staff_type: v }))}
+                  clearable={false}
+                  searchable={false}
+                />
               ) : (
                 <p style={s.value}>{member.staff_type === "regular" ? "Regular Staff" : "Casual Staff"}</p>
               )}

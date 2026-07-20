@@ -1,145 +1,47 @@
 const prisma = require("../config/prisma");
 
 const getReports = async (req, res) => {
-    try {
-        const reports = await prisma.reports.findMany({
-            orderBy: {
-                report_id: "asc"
-            }
-        });
+  try {
+    const { user_id, role } = req.user;
 
-        res.json({
-            success: true,
-            reports
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
+    const where = role === "system_admin"
+      ? {}
+      : { generated_by: user_id };
 
-const getReportById = async (req, res) => {
-    try {
-        const reportId = Number(req.params.id);
+    const reports = await prisma.reports.findMany({
+      where,
+      include: { users: { select: { full_name: true, email: true } } },
+      orderBy: { created_at: "desc" },
+      take: 50,
+    });
 
-        const report = await prisma.reports.findUnique({
-            where: {
-                report_id: reportId
-            }
-        });
-
-        if (!report) {
-            return res.status(404).json({
-                success: false,
-                message: "Report not found"
-            });
-        }
-
-        res.json({
-            success: true,
-            report
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+    res.json({ success: true, reports });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 const createReport = async (req, res) => {
-    try {
-        const {
-            user_id,
-            title,
-            report_type,
-            content
-        } = req.body;
+  try {
+    const { user_id } = req.user;
+    const { branch_id, report_type, format, title, period_start, period_end } = req.body;
 
-        const report = await prisma.reports.create({
-            data: {
-                user_id,
-                title,
-                report_type,
-                content
-            }
-        });
+    const report = await prisma.reports.create({
+      data: {
+        generated_by: user_id,
+        branch_id:    branch_id ?? null,
+        report_type,
+        format,
+        title,
+        period_start: new Date(period_start),
+        period_end:   new Date(period_end),
+      },
+    });
 
-        res.status(201).json({
-            success: true,
-            message: "Report created successfully",
-            report
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+    res.status(201).json({ success: true, report });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
-const updateReport = async (req, res) => {
-    try {
-        const reportId = Number(req.params.id);
-
-        const {
-            title,
-            report_type,
-            content
-        } = req.body;
-
-        const report = await prisma.reports.update({
-            where: {
-                report_id: reportId
-            },
-            data: {
-                title,
-                report_type,
-                content
-            }
-        });
-
-        res.json({
-            success: true,
-            message: "Report updated successfully",
-            report
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-const deleteReport = async (req, res) => {
-    try {
-        const reportId = Number(req.params.id);
-
-        await prisma.reports.delete({
-            where: {
-                report_id: reportId
-            }
-        });
-
-        res.json({
-            success: true,
-            message: "Report deleted successfully"
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-module.exports = {
-    getReports,
-    getReportById,
-    createReport,
-    updateReport,
-    deleteReport
-};
+module.exports = { getReports, createReport };

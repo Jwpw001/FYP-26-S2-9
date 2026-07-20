@@ -3,7 +3,7 @@ import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
-import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag } from "lucide-react";
+import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings2 } from "lucide-react";
 import ProfileModal from "../ProfileModal";
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { label: "Invitations", path: "/business-owner/invitations",  Icon: UserPlus },
   { label: "Skill Tags",  path: "/business-owner/skills",       Icon: Tag },
   { label: "Reports",     path: "/business-owner/reports",      Icon: BarChart2 },
+  { label: "Settings",    path: "/business-owner/settings",     Icon: Settings2 },
 ];
 
 const PLAN_BADGE = {

@@ -1,19 +1,12 @@
 const { z } = require("zod");
 
 const createReportSchema = z.object({
-    user_id: z.number(),
-    title: z.string().min(2, "Title is required"),
-    report_type: z.enum(["attendance", "shift", "staff", "performance"]),
-    content: z.string().min(2, "Content is required")
+  branch_id:    z.number().nullable().optional(),
+  report_type:  z.enum(["manager", "business_owner", "system_admin"]),
+  format:       z.enum(["csv", "pdf"]),
+  title:        z.string().min(1),
+  period_start: z.string(),
+  period_end:   z.string(),
 });
 
-const updateReportSchema = z.object({
-    title: z.string().min(2).optional(),
-    report_type: z.enum(["attendance", "shift", "staff", "performance"]).optional(),
-    content: z.string().min(2).optional()
-});
-
-module.exports = {
-    createReportSchema,
-    updateReportSchema
-};
+module.exports = { createReportSchema };

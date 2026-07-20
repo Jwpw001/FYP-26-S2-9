@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Users, MapPin } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-staff-kf")) {
@@ -112,11 +113,13 @@ export default function AdminStaff() {
           </div>
 
           {/* Branch filter */}
-          <select value={branch} onChange={e => setBranch(e.target.value)}
-            style={{ padding:"8px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"13px", color:"#1E293B", background:"#FFF", outline:"none", cursor:"pointer" }}>
-            <option value="">All Branches</option>
-            {branches.map(o => <option key={o.branch_id} value={String(o.branch_id)}>{o.name}</option>)}
-          </select>
+          <SearchableSelect
+            options={branches.map(o => ({ value: String(o.branch_id), label: o.name }))}
+            value={branch}
+            onChange={setBranch}
+            placeholder="All Branches"
+            style={{ minWidth: "170px" }}
+          />
 
           {/* Search */}
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…"

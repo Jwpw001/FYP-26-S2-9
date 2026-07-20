@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import { Search } from "lucide-react";
 
@@ -183,11 +184,13 @@ export default function AddStaff() {
             </div>
             <div style={s.field}>
               <label style={s.label}>Staff Type</label>
-              <select style={s.input} value={form.staff_type}
-                onChange={e => setForm(p => ({ ...p, staff_type: e.target.value }))}>
-                <option value="regular">Regular Staff</option>
-                <option value="casual">Casual Staff</option>
-              </select>
+              <SearchableSelect
+                options={[{ value: "regular", label: "Regular Staff" }, { value: "casual", label: "Casual Staff" }]}
+                value={form.staff_type}
+                onChange={v => setForm(p => ({ ...p, staff_type: v }))}
+                clearable={false}
+                searchable={false}
+              />
             </div>
             {form.staff_type === "regular" && (
               <div style={s.field}>

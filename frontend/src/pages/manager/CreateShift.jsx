@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
 import ManagerLayout from "../../components/layout/ManagerLayout";
-import { Plus, Trash2, Clock, Calendar, Tag, Search, ChevronDown, X, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
+import SearchableSelect from "../../components/SearchableSelect";
+import { Plus, Trash2, Clock, Calendar, Tag, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_FULL  = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
@@ -352,19 +353,22 @@ export default function CreateShift() {
                     </div>
                     <div>
                       <label style={s.miniLabel}>Required Skill</label>
-                      <SkillSelect skills={skills} value={task.skill_id}
-                        onChange={v => updateTask(idx, "skill_id", v)} />
+                      <SearchableSelect
+                        options={skills.map(sk => ({ value: String(sk.skill_id), label: sk.name }))}
+                        value={task.skill_id ? String(task.skill_id) : ""}
+                        onChange={v => updateTask(idx, "skill_id", v)}
+                        placeholder="Any skill"
+                      />
                     </div>
                     <div>
                       <label style={s.miniLabel}>Difficulty</label>
-                      <select style={{ ...s.input, color: task.difficulty ? DIFF_LEVELS.find(d => d.value === task.difficulty)?.color : "#94A3B8", fontWeight: task.difficulty ? "700" : "400" }}
+                      <SearchableSelect
+                        options={DIFF_LEVELS.map(d => ({ value: d.value, label: d.label }))}
                         value={task.difficulty}
-                        onChange={e => updateTask(idx, "difficulty", e.target.value)}>
-                        <option value="">Any level</option>
-                        {DIFF_LEVELS.map(d => (
-                          <option key={d.value} value={d.value}>{d.label}</option>
-                        ))}
-                      </select>
+                        onChange={v => updateTask(idx, "difficulty", v)}
+                        placeholder="Any level"
+                        searchable={false}
+                      />
                     </div>
                     <div>
                       <label style={s.miniLabel}>Start (opt.)</label>
@@ -407,71 +411,6 @@ export default function CreateShift() {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function SkillSelect({ skills, value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef(null);
-  const inputRef = useRef(null);
-  const selected = skills.find(sk => String(sk.skill_id) === String(value));
-  const filtered = query.trim()
-    ? skills.filter(sk => sk.name.toLowerCase().includes(query.toLowerCase()))
-    : skills;
-
-  useEffect(() => {
-    if (!open) return;
-    function onDown(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-  useEffect(() => { if (open) { setQuery(""); setTimeout(() => inputRef.current?.focus(), 0); } }, [open]);
-
-  function pick(skillId) { onChange(skillId); setOpen(false); setQuery(""); }
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button type="button" onClick={() => setOpen(o => !o)}
-        style={{ ...s.input, display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", gap: "6px" }}>
-        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: selected ? "#1C1B18" : "#94A3B8", fontSize: "13px" }}>
-          {selected ? selected.name : "Any skill"}
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
-          {value && (
-            <span onMouseDown={e => { e.stopPropagation(); pick(""); }}
-              style={{ color: "#94A3B8", display: "flex", alignItems: "center" }}>
-              <X size={11} />
-            </span>
-          )}
-          <ChevronDown size={12} color="#94A3B8" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
-        </div>
-      </button>
-      {open && (
-        <div style={s.dropdown}>
-          <div style={s.searchWrap}>
-            <Search size={12} color="#94A3B8" />
-            <input ref={inputRef} style={s.searchInput} placeholder="Search…"
-              value={query} onChange={e => setQuery(e.target.value)} />
-          </div>
-          <div style={s.optionList}>
-            <div style={{ ...s.option, color: !value ? "#3B82F6" : "#64748B", fontStyle: "italic" }}
-              onMouseDown={() => pick("")}>Any skill{!value && <span style={{ fontSize: "10px", color: "#3B82F6" }}>✓</span>}</div>
-            {filtered.map(sk => {
-              const active = String(sk.skill_id) === String(value);
-              return (
-                <div key={sk.skill_id}
-                  style={{ ...s.option, color: active ? "#3B82F6" : "#1C1B18", background: active ? "#EFF6FF" : "transparent", fontWeight: active ? "700" : "500" }}
-                  onMouseDown={() => pick(String(sk.skill_id))}>
-                  {sk.name}{active && <span style={{ fontSize: "10px", color: "#3B82F6" }}>✓</span>}
-                </div>
-              );
-            })}
-            {filtered.length === 0 && <div style={{ padding: "10px 12px", fontSize: "12px", color: "#94A3B8", textAlign: "center" }}>No matches</div>}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function Field({ label, required, children }) {
   return (
     <div>
@@ -509,9 +448,4 @@ const s = {
   cancelBtn: { background: "none", border: "none", fontSize: "13px", fontWeight: "600", color: "#94A3B8", cursor: "pointer", padding: "8px 12px" },
   draftBtn: { background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", padding: "10px 20px", fontSize: "13px", fontWeight: "700", color: "#1C1B18", cursor: "pointer" },
   publishBtn: { background: "#1C1B18", border: "none", borderRadius: "10px", padding: "10px 22px", fontSize: "13px", fontWeight: "700", color: "#FFF", cursor: "pointer" },
-  dropdown: { position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "#FFF", border: "1.5px solid #E2E8F0", borderRadius: "11px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", zIndex: 100, overflow: "hidden" },
-  searchWrap: { display: "flex", alignItems: "center", gap: "8px", padding: "7px 10px", borderBottom: "1px solid #F1F5F9" },
-  searchInput: { flex: 1, border: "none", outline: "none", fontSize: "12px", color: "#1C1B18", background: "transparent", fontFamily: "inherit" },
-  optionList: { maxHeight: "160px", overflowY: "auto" },
-  option: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", fontSize: "12px", cursor: "pointer" },
 };

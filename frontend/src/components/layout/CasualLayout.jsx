@@ -3,15 +3,16 @@ import SignOutButton from "../SignOutButton";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
-import { LayoutDashboard, Building2, CalendarClock, CalendarDays } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarClock, CalendarDays, ArrowLeftRight } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 
 const NAV = [
   { label: "Dashboard",    path: "/casual-staff/dashboard",    Icon: LayoutDashboard },
   { label: "Tasks",        path: "/casual-staff/shifts",       Icon: CalendarDays },
-  { label: "Availability", path: "/casual-staff/availability", Icon: CalendarClock },
-  { label: "Branches",     path: "/casual-staff/branches",     Icon: Building2 },
+  { label: "Availability",  path: "/casual-staff/availability",   Icon: CalendarClock },
+  { label: "Swap Requests", path: "/casual-staff/swap-requests", Icon: ArrowLeftRight },
+  { label: "Branches",      path: "/casual-staff/branches",      Icon: Building2 },
 ];
 
 export default function CasualLayout({ children, title }) {

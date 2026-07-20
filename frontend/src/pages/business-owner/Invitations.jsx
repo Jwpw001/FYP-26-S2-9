@@ -4,6 +4,7 @@ import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { api } from "../../lib/api";
 import { Plus, Copy, Check, Clock, UserCheck, XCircle, RefreshCw, Mail, X, Send, Users, LinkIcon, Building2 } from "lucide-react";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
+import SearchableSelect from "../../components/SearchableSelect";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-invite-styles")) {
   const style = document.createElement("style");
@@ -229,16 +230,22 @@ export default function BOInvitations() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
                   <div>
                     <label style={sty.label}><Users size={12} style={{ marginRight: "4px" }} /> Role</label>
-                    <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} style={sty.input}>
-                      {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                    </select>
+                    <SearchableSelect
+                      options={ROLES.map(r => ({ value: r.value, label: r.label }))}
+                      value={form.role}
+                      onChange={v => setForm(p => ({ ...p, role: v }))}
+                      clearable={false}
+                      searchable={false}
+                    />
                   </div>
                   <div>
                     <label style={sty.label}><Building2 size={12} style={{ marginRight: "4px" }} /> Branch</label>
-                    <select value={form.branch_id} onChange={e => setForm(p => ({ ...p, branch_id: e.target.value }))} required style={sty.input}>
-                      <option value="">Select branch</option>
-                      {branches.map(o => <option key={o.branch_id} value={o.branch_id}>{o.name}</option>)}
-                    </select>
+                    <SearchableSelect
+                      options={branches.map(o => ({ value: o.branch_id, label: o.name }))}
+                      value={form.branch_id}
+                      onChange={v => setForm(p => ({ ...p, branch_id: v }))}
+                      placeholder="Select branch"
+                    />
                   </div>
                 </div>
 

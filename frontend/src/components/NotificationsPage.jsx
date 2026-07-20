@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { getUser } from "../utils/auth";
-import { ClipboardList, CheckCircle2, XCircle, Bell, CalendarDays, RefreshCw, Megaphone } from "lucide-react";
+import { ClipboardList, CheckCircle2, XCircle, Bell, CalendarDays, RefreshCw, Megaphone, FileText, Building2, ClipboardCheck, UserCheck, UserX, CalendarX, CalendarClock } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("shared-notif-styles")) {
   const style = document.createElement("style");
@@ -52,17 +52,34 @@ function fmtTime(ts) {
 }
 
 const TYPE_ICONS = {
-  leave_decision:   ClipboardList,
-  leave_approved:   CheckCircle2,
-  leave_rejected:   XCircle,
-  shift_published:  Megaphone,
-  assignment:       CalendarDays,
-  shift_assigned:   CalendarDays,
-  swap_decision:    RefreshCw,
-  swap_approved:    CheckCircle2,
-  swap_rejected:    XCircle,
-  attendance:       ClipboardList,
-  general:          Bell,
+  leave_decision:       ClipboardList,
+  leave_approved:       CheckCircle2,
+  leave_rejected:       XCircle,
+  leave_request:        ClipboardList,
+  off_day_request:      CalendarClock,
+  off_day_decision:     CalendarClock,
+  shift_published:      Megaphone,
+  assignment:           CalendarDays,
+  shift_assigned:       CalendarDays,
+  shift_unassigned:     CalendarX,
+  shift_updated:        CalendarClock,
+  shift_cancelled:      CalendarX,
+  shift_acknowledged:   UserCheck,
+  swap_decision:        RefreshCw,
+  swap_request:         RefreshCw,
+  swap_approved:        CheckCircle2,
+  swap_rejected:        XCircle,
+  attendance:           ClipboardList,
+  report_submitted:     FileText,
+  report_decision:      ClipboardCheck,
+  report_reminder:      FileText,
+  casual_availability:  CalendarClock,
+  availability_reminder: CalendarClock,
+  casual_approved:      UserCheck,
+  casual_rejected:      UserX,
+  casual_assigned:      CalendarDays,
+  business_registered:  Building2,
+  general:              Bell,
 };
 
 export default function NotificationsPage({ Layout }) {

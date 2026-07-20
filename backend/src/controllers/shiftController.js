@@ -1,5 +1,14 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const { notifyUsers } = require("../utils/notify");
+
+async function getAssignedStaffUserIds(shiftId) {
+  const assignments = await prisma.task_assignments.findMany({
+    where: { shift_id: shiftId, staff_id: { not: null } },
+    include: { staff: { select: { user_id: true } } },
+  });
+  return assignments.map(a => a.staff?.user_id).filter(Boolean);
+}
 
 async function getCallerBranchId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
@@ -126,7 +135,7 @@ const updateShift = async (req, res) => {
     const shiftId = Number(req.params.id);
     const branchId = await getCallerBranchId(req.user.user_id);
 
-    const existing = await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { branch_id: true } });
+    const existing = await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { branch_id: true, status: true, shift_date: true, start_time: true, end_time: true } });
     if (!existing) return res.status(404).json({ success: false, message: "Shift not found" });
     if (branchId && existing.branch_id !== branchId)
       return res.status(403).json({ success: false, message: "Access denied." });
@@ -143,6 +152,37 @@ const updateShift = async (req, res) => {
         status,
       },
     });
+
+    try {
+      const wasVisible = existing.status !== "draft";
+      const justPublished = existing.status === "draft" && status && status !== "draft";
+      const dateOrTimeChanged = shift_date || start_time || end_time;
+      const cancelled = status === "cancelled" && existing.status !== "cancelled";
+      const dateStr = shift.shift_date ? new Date(shift.shift_date).toISOString().slice(0, 10) : "";
+
+      if (justPublished) {
+        const staffUserIds = await getAssignedStaffUserIds(shiftId);
+        await notifyUsers(staffUserIds, {
+          type: "shift_assigned",
+          title: "New Shift Assignment",
+          message: `You've been assigned to ${shift.title || "a shift"} on ${dateStr}.`,
+          relatedEntity: "shifts",
+          relatedId: shiftId,
+        });
+      } else if (wasVisible && (dateOrTimeChanged || cancelled)) {
+        const staffUserIds = await getAssignedStaffUserIds(shiftId);
+        await notifyUsers(staffUserIds, {
+          type: cancelled ? "shift_cancelled" : "shift_updated",
+          title: cancelled ? "Shift Cancelled" : "Shift Updated",
+          message: cancelled
+            ? `${shift.title || "Your shift"} on ${dateStr} has been cancelled.`
+            : `${shift.title || "Your shift"} on ${dateStr} has been updated. Please check the new details.`,
+          relatedEntity: "shifts",
+          relatedId: shiftId,
+        });
+      }
+    } catch { /* notification failure shouldn't block the update */ }
+
     res.json({ success: true, message: "Shift updated successfully", shift });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -154,12 +194,26 @@ const deleteShift = async (req, res) => {
     const shiftId = Number(req.params.id);
     const branchId = await getCallerBranchId(req.user.user_id);
 
-    const existing = await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { branch_id: true } });
+    const existing = await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { branch_id: true, status: true, title: true, shift_date: true } });
     if (!existing) return res.status(404).json({ success: false, message: "Shift not found" });
     if (branchId && existing.branch_id !== branchId)
       return res.status(403).json({ success: false, message: "Access denied." });
 
+    const staffUserIds = existing.status !== "draft" ? await getAssignedStaffUserIds(shiftId) : [];
+
     await prisma.shifts.delete({ where: { shift_id: shiftId } });
+
+    try {
+      const dateStr = existing.shift_date ? new Date(existing.shift_date).toISOString().slice(0, 10) : "";
+      await notifyUsers(staffUserIds, {
+        type: "shift_cancelled",
+        title: "Shift Cancelled",
+        message: `${existing.title || "Your shift"} on ${dateStr} has been cancelled.`,
+        relatedEntity: "shifts",
+        relatedId: shiftId,
+      });
+    } catch { /* notification failure shouldn't block the deletion */ }
+
     res.json({ success: true, message: "Shift deleted successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

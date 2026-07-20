@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import { supabase } from "../../lib/supabaseClient";
@@ -194,9 +195,13 @@ export default function OMInvitations() {
                 </div>
                 <div>
                   <label style={s.label}>Staff Type *</label>
-                  <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} style={s.input}>
-                    {STAFF_ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={STAFF_ROLES.map(r => ({ value: r.value, label: r.label }))}
+                    value={form.role}
+                    onChange={v => setForm(p => ({ ...p, role: v }))}
+                    clearable={false}
+                    searchable={false}
+                  />
                 </div>
               </div>
               {error && <p style={{ color: "#EF4444", fontSize: "13px", marginBottom: "12px" }}>{error}</p>}

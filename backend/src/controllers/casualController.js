@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const generateToken = require("../utils/generateToken");
+const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -301,30 +302,21 @@ async function submitWeeklyAvailability(req, res) {
       await supabaseAdmin.from("casual_weekly_availability").insert(weeklyRows);
     }
 
-    // Notify manager
+    // Notify manager(s)
     const user = await prisma.users.findUnique({ where: { user_id: userId }, select: { full_name: true } });
     if (staffRecord.branch_id) {
-      const { data: managerLink } = await supabaseAdmin
-        .from("branch_managers")
-        .select("user_id")
-        .eq("branch_id", staffRecord.branch_id)
-        .maybeSingle();
-
-      if (managerLink?.user_id) {
-        const DN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-        const summary = availability.length > 0
-          ? availability.map(a => `${DN[a.day_of_week]} ${a.available_from?.slice(0,5)}–${a.available_to?.slice(0,5)}`).join(", ")
-          : "No availability set";
-        await supabaseAdmin.from("notifications").insert({
-          recipient_id:   managerLink.user_id,
-          type:           "casual_availability",
-          title:          `${user?.full_name || "Casual worker"} submitted availability`,
-          message:        `Week of ${week_start_date}: ${summary}`,
-          related_entity: "casual_availability",
-          related_id:     String(staffRecord.staff_id),
-          is_read:        false,
-        });
-      }
+      const managerIds = await getBranchManagerUserIds(staffRecord.branch_id);
+      const DN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const summary = availability.length > 0
+        ? availability.map(a => `${DN[a.day_of_week]} ${a.available_from?.slice(0,5)}–${a.available_to?.slice(0,5)}`).join(", ")
+        : "No availability set";
+      await notifyUsers(managerIds, {
+        type:           "casual_availability",
+        title:          `${user?.full_name || "Casual worker"} submitted availability`,
+        message:        `Week of ${week_start_date}: ${summary}`,
+        relatedEntity:  "casual_availability",
+        relatedId:      staffRecord.staff_id,
+      });
     }
 
     return res.json({ success: true, message: "Availability submitted." });
@@ -485,13 +477,27 @@ async function rejectWorker(req, res) {
     const biz = await resolveOwnerBusiness(req.user.user_id);
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
-    const { error } = await supabaseAdmin
+    const { data: cw, error } = await supabaseAdmin
       .from("casual_workers")
       .update({ status: "rejected" })
       .eq("id", Number(req.params.id))
-      .eq("business_id", biz.business_id);
+      .eq("business_id", biz.business_id)
+      .select("user_id")
+      .maybeSingle();
 
     if (error) throw new Error(error.message);
+
+    if (cw?.user_id) {
+      await notifyUser({
+        recipientId: cw.user_id,
+        type: "casual_rejected",
+        title: "Application Update",
+        message: `Your application to join ${biz.name} as a casual worker was not approved.`,
+        relatedEntity: "casual_worker",
+        relatedId: req.params.id,
+      });
+    }
+
     return res.json({ success: true, message: "Worker rejected." });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

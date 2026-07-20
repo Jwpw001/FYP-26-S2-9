@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { useNavigate } from "react-router-dom";
-import { Building2, MapPin, ChevronRight, Search, ArrowUpDown, X } from "lucide-react";
+import { Building2, MapPin, ChevronRight, Search, X } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-biz-kf")) {
   const st = document.createElement("style");
@@ -138,15 +139,14 @@ export default function Businesses() {
               </button>
             )}
           </div>
-          <div style={{ position: "relative" }}>
-            <ArrowUpDown size={13} color="#64748B" style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-            <select
-              value={sort}
-              onChange={e => setSort(e.target.value)}
-              style={{ paddingLeft: "30px", paddingRight: "28px", paddingTop: "10px", paddingBottom: "10px", border: "1.5px solid #E2E8F0", borderRadius: "11px", fontSize: "13px", color: "#1E293B", background: "#FFFFFF", outline: "none", cursor: "pointer", appearance: "none", minWidth: "170px" }}>
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
+          <SearchableSelect
+            options={SORT_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+            value={sort}
+            onChange={setSort}
+            clearable={false}
+            searchable={false}
+            style={{ minWidth: "170px" }}
+          />
         </div>
 
         {/* Plan filter chips */}

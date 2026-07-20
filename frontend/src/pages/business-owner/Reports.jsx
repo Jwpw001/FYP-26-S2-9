@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
-import { Users, CalendarDays, CalendarClock, Download, TrendingUp, TrendingDown } from "lucide-react";
+import { useGoTo } from "../../components/PageTransition";
+import { Users, CalendarDays, CalendarClock, Download, History, TrendingUp, TrendingDown } from "lucide-react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -150,7 +151,8 @@ function StatusTable({ rows, loading }) {
 }
 
 export default function BOReports() {
-  const user = getUser();
+  const user    = getUser();
+  const goTo    = useGoTo();
   const [period, setPeriod] = useState(1);
   const [loading, setLoading] = useState(true);
   const [businessName, setBusinessName] = useState("");
@@ -164,6 +166,19 @@ export default function BOReports() {
   const [staffByType, setStaffByType] = useState([]);
 
   const days = PERIODS[period].days;
+
+  function logDownload(format) {
+    const now   = new Date();
+    const start = new Date(now); start.setDate(now.getDate() - days);
+    api.post("/api/reports", {
+      branch_id:    null,
+      report_type:  "business_owner",
+      format,
+      title:        `${businessName || "Business"} — Staffing Report (${PERIODS[period].label})`,
+      period_start: start.toISOString().slice(0, 10),
+      period_end:   now.toISOString().slice(0, 10),
+    }).catch(() => {});
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -304,6 +319,7 @@ export default function BOReports() {
     const a = document.createElement("a"); a.href = url;
     a.download = `${businessName.toLowerCase().replace(/\s+/g, "-")}-report-${PERIODS[period].label}-${today}.csv`;
     a.click(); URL.revokeObjectURL(url);
+    logDownload("csv");
   }
 
   function downloadPDF() {
@@ -372,6 +388,7 @@ export default function BOReports() {
     y = doc.lastAutoTable.finalY + 8;
 
     doc.save(`${businessName.toLowerCase().replace(/\s+/g, "-")}-report-${PERIODS[period].label}-${new Date().toISOString().slice(0, 10)}.pdf`);
+    logDownload("pdf");
   }
 
   const maxBranchStaff = Math.max(...branchRows.map(o => o.totalStaff), 1);
@@ -404,6 +421,10 @@ export default function BOReports() {
             <button onClick={downloadPDF} disabled={loading}
               style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
               <Download size={14} strokeWidth={2} /> PDF
+            </button>
+            <button onClick={() => goTo("/business-owner/report-history")}
+              style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+              <History size={14} strokeWidth={2} /> History
             </button>
           </div>
         </div>
@@ -484,3 +505,4 @@ export default function BOReports() {
     </BusinessOwnerLayout>
   );
 }
+

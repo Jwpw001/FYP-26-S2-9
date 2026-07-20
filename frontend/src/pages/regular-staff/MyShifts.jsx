@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
+import { notifyUsers, getBranchManagerUserIds } from "../../lib/notify";
 import StaffLayout from "../../components/layout/StaffLayout";
 import {
   Calendar, Clock, FileText,
@@ -206,6 +207,16 @@ export default function MyTasks({ Layout = StaffLayout }) {
       setShifts(prev => prev.map(s =>
         s.assignment_id === a.assignment_id ? { ...s, acknowledged: true } : s
       ));
+
+      if (a.shift?.branch_id) {
+        getBranchManagerUserIds(a.shift.branch_id).then(managerIds => notifyUsers(managerIds, {
+          type: "shift_acknowledged",
+          title: "Shift Acknowledged",
+          message: `${user?.full_name || "A staff member"} acknowledged ${a.role_name || "a task"} on ${a.shift?.shift_date}${a.shift?.title ? ` (${a.shift.title})` : ""}.`,
+          relatedEntity: "task_assignments",
+          relatedId: a.shift?.shift_id,
+        })).catch(() => {});
+      }
     } catch (err) { console.error("Acknowledge failed:", err); showToast("Failed to acknowledge.", false); }
   }
 

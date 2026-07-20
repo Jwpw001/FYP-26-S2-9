@@ -2,8 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
-import { Users, CalendarDays, ClipboardCheck, CalendarClock, Download, TrendingUp, TrendingDown } from "lucide-react";
+import { api } from "../../lib/api";
+import { useGoTo } from "../../components/PageTransition";
+import { Users, CalendarDays, ClipboardCheck, CalendarClock, Download, History } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 if (typeof document !== "undefined" && !document.getElementById("mgr-reports-styles")) {
   const el = document.createElement("style");
@@ -142,6 +147,7 @@ function StatusTable({ rows, loading }) {
 export default function Reports() {
   const user    = getUser();
   const userId  = user?.user_id;
+  const goTo    = useGoTo();
 
   const [period,     setPeriod]     = useState(1);
   const [loading,    setLoading]    = useState(true);
@@ -164,6 +170,19 @@ export default function Reports() {
   const [showAllKpiModal,    setShowAllKpiModal]    = useState(false);
 
   const days = PERIODS[period].days;
+
+  function logDownload(format) {
+    const now   = new Date();
+    const start = new Date(now); start.setDate(now.getDate() - days);
+    api.post("/api/reports", {
+      branch_id:    branchId,
+      report_type:  "manager",
+      format,
+      title:        `${branchName || "Branch"} — Manager Report (${PERIODS[period].label})`,
+      period_start: start.toISOString().slice(0, 10),
+      period_end:   now.toISOString().slice(0, 10),
+    }).catch(() => {});
+  }
 
   // Resolve branch once
   useEffect(() => {
@@ -406,6 +425,121 @@ export default function Reports() {
     const a    = document.createElement("a");
     a.href = url; a.download = `branch-report-${PERIODS[period].label}-${today}.csv`; a.click();
     URL.revokeObjectURL(url);
+    logDownload("csv");
+  }
+
+  function downloadPDF() {
+    const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, pageW, 24, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13); doc.setFont("helvetica", "bold");
+    doc.text(`${branchName || "Branch"} — Manager Report`, 14, 13);
+    doc.setFontSize(9); doc.setFont("helvetica", "normal");
+    doc.text(`Period: ${PERIODS[period].label}   Generated: ${today}`, pageW - 14, 13, { align: "right" });
+    y = 34;
+
+    doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(15, 23, 42);
+    doc.text("KPI Summary", 14, y); y += 3;
+    autoTable(doc, {
+      startY: y,
+      head: [["Metric", "Value"]],
+      body: [
+        ["Active Staff",           `${kpis.staff} (${kpis.regularStaff} regular · ${kpis.casualStaff} casual)`],
+        ["Shifts (period)",        kpis.shifts],
+        ["TS Approval Rate",       `${kpis.tsApprovalRate ?? 0}%`],
+        ["Pending Leave (period)", kpis.pendingLeave],
+      ],
+      headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 8 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: "right" } },
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    if (workload.length > 0) {
+      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(15, 23, 42);
+      doc.text("Staff Workload", 14, y); y += 3;
+      autoTable(doc, {
+        startY: y,
+        head: [["Staff", "Shifts"]],
+        body: workload.map(w => [w.name, w.count]),
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: { 1: { halign: "right" } },
+        margin: { left: 14, right: 14 },
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    if (y > 210) { doc.addPage(); y = 20; }
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Shifts by Status", "Count"]],
+      body: shiftsByStatus.map(s => [s.status, s.count]),
+      headStyles: { fillColor: [217, 119, 6], textColor: 255, fontSize: 8 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: "right" } },
+      margin: { left: 14, right: pageW / 2 + 2 },
+    });
+    autoTable(doc, {
+      startY: y,
+      head: [["Timesheet Status", "Count"]],
+      body: timesheetBreakdown.map(t => [t.status, t.count]),
+      headStyles: { fillColor: [124, 58, 237], textColor: 255, fontSize: 8 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: "right" } },
+      margin: { left: pageW / 2 + 2, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    if (leaveByStatus.length > 0) {
+      if (y > 240) { doc.addPage(); y = 20; }
+      autoTable(doc, {
+        startY: y,
+        head: [["Leave by Status", "Count"]],
+        body: leaveByStatus.map(l => [l.status, l.count]),
+        headStyles: { fillColor: [8, 145, 178], textColor: 255, fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: { 1: { halign: "right" } },
+        margin: { left: 14, right: pageW / 2 + 2 },
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    if (staffKpis.length > 0) {
+      doc.addPage(); y = 20;
+      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(15, 23, 42);
+      doc.text("Staff KPI", 14, y); y += 3;
+      autoTable(doc, {
+        startY: y,
+        head: [["Staff", "Type", "Shifts", "Hours", "TS ✓", "TS ⏳", "TS ✗", "Leave", "Score"]],
+        body: staffKpis.map(s => {
+          const tsTotal = s.tsApproved + s.tsPending + s.tsRejected;
+          const approvalRate = tsTotal > 0 ? (s.tsApproved / tsTotal) : null;
+          const score = Math.round(
+            Math.min(s.shifts * 8, 25) +
+            Math.min(s.hoursLogged / 2, 25) +
+            (approvalRate != null ? approvalRate * 35 : 17.5) +
+            Math.max(0, 15 - s.leaveCount * 3)
+          );
+          return [s.name, s.staff_type, s.shifts, s.hoursLogged.toFixed(1), s.tsApproved, s.tsPending, s.tsRejected, s.leaveCount, score];
+        }),
+        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 7 },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" }, 8: { halign: "right" } },
+        margin: { left: 14, right: 14 },
+      });
+    }
+
+    const safeName = (branchName || "branch").toLowerCase().replace(/\s+/g, "-");
+    doc.save(`${safeName}-report-${PERIODS[period].label}-${new Date().toISOString().slice(0, 10)}.pdf`);
+    logDownload("pdf");
   }
 
   const maxWorkload = workload[0]?.count || 1;
@@ -433,7 +567,15 @@ export default function Reports() {
             </div>
             <button onClick={downloadCSV} disabled={loading}
               style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Download size={14} strokeWidth={2} /> Export CSV
+              <Download size={14} strokeWidth={2} /> CSV
+            </button>
+            <button onClick={downloadPDF} disabled={loading}
+              style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+              <Download size={14} strokeWidth={2} /> PDF
+            </button>
+            <button onClick={() => goTo("/manager/report-history")}
+              style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+              <History size={14} strokeWidth={2} /> History
             </button>
           </div>
         </div>

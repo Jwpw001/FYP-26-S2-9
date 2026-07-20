@@ -1,79 +1,19 @@
-﻿const express = require("express");
-
+const express = require("express");
 const router = express.Router();
-
-const {
-    getReports,
-    getReportById,
-    createReport,
-    updateReport,
-    deleteReport
-} = require("../controllers/reportController");
-
+const { getReports, createReport } = require("../controllers/reportController");
 const validate = require("../middleware/validateMiddleware");
 const verifyToken = require("../middleware/authMiddleware");
 const allowRoles = require("../middleware/roleMiddleware");
 const ROLES = require("../constants/roles");
+const { createReportSchema } = require("../validators/reportValidator");
 
-const {
-    createReportSchema,
-    updateReportSchema
-} = require("../validators/reportValidator");
-
-router.get(
-    "/",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.BRANCH_MANAGER,
-        ROLES.SYSTEM_ADMIN
-    ),
-    getReports
+const allowed = allowRoles(
+  ROLES.SYSTEM_ADMIN,
+  ROLES.BUSINESS_OWNER,
+  ROLES.BRANCH_MANAGER
 );
 
-router.get(
-    "/:id",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.BRANCH_MANAGER,
-        ROLES.SYSTEM_ADMIN
-    ),
-    getReportById
-);
-
-router.post(
-    "/",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.BRANCH_MANAGER,
-        ROLES.SYSTEM_ADMIN
-    ),
-    validate(createReportSchema),
-    createReport
-);
-
-router.patch(
-    "/:id",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.BRANCH_MANAGER,
-        ROLES.SYSTEM_ADMIN
-    ),
-    validate(updateReportSchema),
-    updateReport
-);
-
-router.delete(
-    "/:id",
-    verifyToken,
-    allowRoles(
-        ROLES.SYSTEM_ADMIN,
-        ROLES.BRANCH_MANAGER
-    ),
-    deleteReport
-);
+router.get("/",  verifyToken, allowed, getReports);
+router.post("/", verifyToken, allowed, validate(createReportSchema), createReport);
 
 module.exports = router;

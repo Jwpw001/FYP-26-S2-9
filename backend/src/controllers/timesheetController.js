@@ -1,5 +1,6 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const { notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 
 const EVIDENCE_BUCKET = "report-evidence";
 const MANAGER_ROLES = ["manager", "business_owner", "system_admin"];
@@ -79,6 +80,21 @@ const submitReport = async (req, res) => {
       if (error) throw new Error(error.message);
       result = data;
     }
+
+    try {
+      const shift = shiftId ? await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { branch_id: true, title: true } }) : null;
+      const staffUser = await prisma.staff.findUnique({ where: { staff_id: staffRow.staff_id }, select: { users: { select: { full_name: true } } } });
+      if (shift?.branch_id) {
+        const managerIds = await getBranchManagerUserIds(shift.branch_id);
+        await notifyUsers(managerIds, {
+          type: "report_submitted",
+          title: "New Work Report Submitted",
+          message: `${staffUser?.users?.full_name || "A staff member"} submitted a report for ${shift.title || "a shift"} on ${log_date}.`,
+          relatedEntity: "timesheets",
+          relatedId: result.timesheet_id,
+        });
+      }
+    } catch { /* notification failure shouldn't block submission */ }
 
     res.json({ success: true, timesheet: result });
   } catch (error) {

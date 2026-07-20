@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
 import { Users, Building2, Search, ShieldCheck, LayoutList, Network, ChevronDown, ChevronRight, Briefcase } from "lucide-react";
@@ -325,11 +326,13 @@ export default function BOStaff() {
                   placeholder="Search by name or email…"
                   style={{ width: "100%", padding: "9px 13px 9px 36px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#FFF", color: "#1E293B", outline: "none", boxSizing: "border-box" }} />
               </div>
-              <select value={filterBranch} onChange={e => setFilterBranch(e.target.value)}
-                style={{ padding: "9px 13px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#FFF", color: "#1E293B", cursor: "pointer" }}>
-                <option value="all">All branches</option>
-                {branches.map(([id, name]) => <option key={id} value={String(id)}>{name}</option>)}
-              </select>
+              <SearchableSelect
+                options={branches.map(([id, name]) => ({ value: String(id), label: name }))}
+                value={filterBranch === "all" ? "" : filterBranch}
+                onChange={v => setFilterBranch(v === "" ? "all" : v)}
+                placeholder="All branches"
+                style={{ minWidth: "180px" }}
+              />
             </div>
           </>
         )}

@@ -3,8 +3,10 @@ import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
+import { notifyUser } from "../../lib/notify";
 import ManagerLayout from "../../components/layout/ManagerLayout";
-import { ClipboardList, List, GanttChartSquare } from "lucide-react";
+import SearchableSelect from "../../components/SearchableSelect";
+import { ClipboardList, List, GanttChartSquare, Search, X } from "lucide-react";
 import GanttChart, { RangeNav, startOfWeek, toDateStr, FullscreenPanel } from "../../components/GanttChart";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
@@ -107,9 +109,12 @@ export default function AvailabilityLeave() {
   const [toast, setToast]               = useState(null);
 
   // Staff picker modal for swap approval
-  const [swapApproveModal, setSwapApproveModal] = useState(null); // { sw, availableStaff }
+  const [swapApproveModal, setSwapApproveModal] = useState(null); // { sw, roster, rosterLoading }
   const [pickedStaffId, setPickedStaffId]       = useState("");
   const [approving, setApproving]               = useState(false);
+  const [coverRosterSearch, setCoverRosterSearch] = useState("");
+  const [coverRosterFilter, setCoverRosterFilter] = useState("all");
+  const [coverRosterSort, setCoverRosterSort]     = useState("match");
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
@@ -286,6 +291,7 @@ export default function AvailabilityLeave() {
     setProcessing(id);
     const myStaff = await supabase.from("staff").select("staff_id").eq("user_id", userId).limit(1);
     const mgrId = myStaff.data?.[0]?.staff_id;
+    const req = offDays.find(r => r.id === id);
     const { error } = await supabase.from("off_day_requests")
       .update({ status: action, reviewed_at: new Date().toISOString(), reviewed_by: mgrId })
       .eq("id", id);
@@ -293,6 +299,20 @@ export default function AvailabilityLeave() {
     if (error) { showToast("Failed to update.", "error"); return; }
     setOffDays(prev => prev.map(r => r.id === id ? { ...r, status: action, reviewed_at: new Date().toISOString() } : r));
     showToast(action === "approved" ? "Off day approved." : "Off day rejected.");
+
+    if (req?.staff?.user_id) {
+      const isApproved = action === "approved";
+      notifyUser({
+        recipientId: req.staff.user_id,
+        type: "off_day_decision",
+        title: isApproved ? "Off Day Request Approved" : "Off Day Request Rejected",
+        message: isApproved
+          ? `Your off day request for ${fmtDate(req.requested_date)} has been approved.`
+          : `Your off day request for ${fmtDate(req.requested_date)} was rejected.`,
+        relatedEntity: "off_day_requests",
+        relatedId: id,
+      }).catch(() => {});
+    }
   }
 
   // ── Load casual availability ───────────────────────────────────────────────
@@ -418,6 +438,7 @@ export default function AvailabilityLeave() {
       // Reject immediately, no staff picker needed
       setProcessing(swapId);
       try {
+        const sw = swaps.find(s => s.swap_id === swapId);
         await supabase.from("swap_requests").update({
           status: "rejected",
           manager_id: userId,
@@ -427,6 +448,18 @@ export default function AvailabilityLeave() {
           s.swap_id === swapId ? { ...s, status: "rejected" } : s
         ));
         showToast("Request rejected.", "error");
+
+        const requesterUserId = sw && staffUserMap[sw.requester_id];
+        if (requesterUserId) {
+          notifyUser({
+            recipientId: requesterUserId,
+            type: "swap_decision",
+            title: "Swap Request Rejected",
+            message: `Your ${sw.request_type === "swap" ? "swap" : "replacement"} request was rejected.`,
+            relatedEntity: "swap_requests",
+            relatedId: swapId,
+          }).catch(() => {});
+        }
       } catch (err) {
         console.error(err);
         showToast("Action failed. Please try again.", "error");
@@ -436,20 +469,44 @@ export default function AvailabilityLeave() {
       return;
     }
 
-    // Approve — fetch available staff (same branch, active, not the requester)
+    // Approve — open modal immediately with loading state, then fetch roster
     const sw = swaps.find(s => s.swap_id === swapId);
     if (!sw) return;
 
-    // Get all branch staff except the requester
-    const { data: branchStaff } = await supabase
-      .from("staff")
-      .select("staff_id, user_id, users:user_id(full_name, email)")
-      .eq("branch_id", branchId)
-      .eq("is_active", true)
-      .neq("staff_id", sw.requester_id);
-
     setPickedStaffId("");
-    setSwapApproveModal({ sw, availableStaff: branchStaff || [] });
+    setCoverRosterSearch("");
+    setCoverRosterFilter("all");
+    setCoverRosterSort("match");
+    setSwapApproveModal({ sw, roster: [], rosterLoading: true, shiftId: null });
+
+    try {
+      const { data: assignRow } = await supabase
+        .from("task_assignments").select("shift_id, task_id")
+        .eq("assignment_id", sw.requester_assign).single();
+      const shiftId = assignRow?.shift_id;
+      if (shiftId) {
+        const res = await api.get(`/api/shifts/${shiftId}/staff-roster`);
+        let roster = (res.roster || []).filter(s => s.staff_id !== sw.requester_id);
+
+        // Auto-remove stale cover assignments: any non-requester staff flagged as already_assigned
+        // on this shift are leftovers from a previous swap approval and should not block the modal.
+        const stale = roster.filter(s => s.already_assigned);
+        if (stale.length > 0) {
+          await supabase.from("task_assignments")
+            .delete()
+            .eq("shift_id", shiftId)
+            .in("staff_id", stale.map(s => s.staff_id));
+          roster = roster.map(s => s.already_assigned ? { ...s, already_assigned: false } : s);
+        }
+
+        setSwapApproveModal(prev => prev ? { ...prev, roster, rosterLoading: false, shiftId } : null);
+      } else {
+        setSwapApproveModal(prev => prev ? { ...prev, rosterLoading: false } : null);
+      }
+    } catch (err) {
+      console.error(err);
+      setSwapApproveModal(prev => prev ? { ...prev, rosterLoading: false } : null);
+    }
   }
 
   async function confirmSwapApproval() {
@@ -466,24 +523,35 @@ export default function AvailabilityLeave() {
 
       if (!assignRow) throw new Error("Original assignment not found");
 
-      // 1. Delete requester's original assignment first — one task = one person, so the slot
-      // must be freed before the cover staff can take it.
+      // 1. Delete ALL assignments on this exact shift+task slot (the requester's original
+      //    assignment plus any stale cover assignments from previous swap approvals that were
+      //    never cleaned up when the requester was manually re-assigned back).
       await supabase.from("task_assignments")
-        .delete().eq("assignment_id", sw.requester_assign);
+        .delete()
+        .eq("shift_id", assignRow.shift_id)
+        .eq("task_id", assignRow.task_id);
 
-      // 2. Create new assignment for the cover staff
-      const { error: insertErr } = await supabase.from("task_assignments").insert({
+      // 2. Also remove any stale cover assignment the picked staff has on this shift (different task)
+      await supabase.from("task_assignments")
+        .delete()
+        .eq("shift_id", assignRow.shift_id)
+        .eq("staff_id", Number(pickedStaffId));
+
+      // 3. Create new assignment for the cover staff (is_cover=true enables future auto-cleanup)
+      const { data: newAssign, error: insertErr } = await supabase.from("task_assignments").insert({
         shift_id: assignRow.shift_id,
         task_id: assignRow.task_id,
         staff_id: Number(pickedStaffId),
         status: "assigned",
-      });
+        is_cover: true,
+      }).select("assignment_id").single();
       if (insertErr) throw insertErr;
 
-      // 3. Update swap request status
+      // 4. Update swap request status (save target_assign_id so future cleanup can find it by ID)
       await supabase.from("swap_requests").update({
         status: "approved",
         target_staff_id: Number(pickedStaffId),
+        target_assign_id: newAssign?.assignment_id || null,
         manager_id: userId,
         manager_decided_at: new Date().toISOString(),
       }).eq("swap_id", sw.swap_id);
@@ -491,8 +559,8 @@ export default function AvailabilityLeave() {
       // 4. Notify requester
       const requesterUserId = staffUserMap[sw.requester_id];
       if (requesterUserId) {
-        const coverStaff = swapApproveModal.availableStaff.find(s => String(s.staff_id) === String(pickedStaffId));
-        const coverName = coverStaff?.users?.full_name || "a colleague";
+        const coverStaff = swapApproveModal.roster.find(s => String(s.staff_id) === String(pickedStaffId));
+        const coverName = coverStaff?.full_name || "a colleague";
         await supabase.from("notifications").insert({
           recipient_id: requesterUserId,
           type: "swap_decision",
@@ -963,65 +1031,239 @@ export default function AvailabilityLeave() {
 
       {/* Staff picker modal for swap approval */}
       {swapApproveModal && createPortal(
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
-          zIndex: 25000, display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "20px",
-        }}>
-          <div style={{
-            background: "#FFFFFF", borderRadius: "18px", padding: "28px",
-            width: "100%", maxWidth: "440px", boxShadow: "0 24px 60px rgba(0,0,0,0.2)",
-            animation: "popIn 0.2s ease both",
-          }}>
-            <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "6px" }}>
-              Choose Cover Staff
-            </h3>
-            <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>
-              Select a staff member to take over the shift from{" "}
-              <strong>{swapApproveModal.sw.requesterUser?.full_name || "the requester"}</strong>.
-              Their original shift assignment will be removed.
-            </p>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 25000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          {(() => {
+            const { sw, roster, rosterLoading } = swapApproveModal;
 
-            {swapApproveModal.sw.requesterShift && (
-              <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "10px", padding: "12px 14px", marginBottom: "16px" }}>
-                <p style={{ fontSize: "11px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", marginBottom: "4px" }}>Shift to cover</p>
-                <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>
-                  {swapApproveModal.sw.requesterShift.title || "Shift"} · {fmtDate(swapApproveModal.sw.requesterShift.shift_date)}
-                </p>
+            const rosterScore = s => {
+              if (s.is_on_leave || s.is_double_booked || s.already_assigned) return -1;
+              return 100 - (s.hours_this_week || 0);
+            };
+            const availCount = roster.filter(s => !s.is_on_leave && !s.is_double_booked && !s.already_assigned).length;
+            const filteredRoster = roster
+              .filter(s => {
+                if (coverRosterSearch && !s.full_name.toLowerCase().includes(coverRosterSearch.toLowerCase())) return false;
+                if (coverRosterFilter === "available" && (s.is_on_leave || s.is_double_booked || s.already_assigned)) return false;
+                return true;
+              })
+              .sort((a, b) => {
+                if (coverRosterSort === "name")       return a.full_name.localeCompare(b.full_name);
+                if (coverRosterSort === "hours_asc")  return (a.hours_this_week||0) - (b.hours_this_week||0);
+                if (coverRosterSort === "hours_desc") return (b.hours_this_week||0) - (a.hours_this_week||0);
+                return rosterScore(b) - rosterScore(a) || (a.hours_this_week||0) - (b.hours_this_week||0);
+              });
+
+            return (
+              <div style={{ background: "#FFF", borderRadius: "18px", width: "100%", maxWidth: "540px", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 60px rgba(0,0,0,0.22)", animation: "popIn 0.2s ease both" }}>
+
+                {/* Header */}
+                <div style={{ padding: "24px 24px 0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B" }}>Choose Cover Staff</h3>
+                    <button onClick={() => setSwapApproveModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", display: "flex", padding: "2px" }}>
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "14px" }}>
+                    Select who will take over the shift from <strong>{sw.requesterUser?.full_name || "the requester"}</strong>.
+                  </p>
+
+                  {sw.requesterShift && (
+                    <div style={{ background: "#F0F7FF", border: "1px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px", marginBottom: "14px", display: "flex", gap: "10px", alignItems: "center" }}>
+                      <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#2563EB", flexShrink: 0 }} />
+                      <div>
+                        <p style={{ fontSize: "11px", fontWeight: "600", color: "#1D4ED8", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "2px" }}>Shift to Cover</p>
+                        <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>
+                          {sw.requesterShift.title || "Shift"} · {fmtDate(sw.requesterShift.shift_date)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stats row */}
+                  {!rosterLoading && roster.length > 0 && (
+                    <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                      {[
+                        { label: "Available", val: availCount, color: "#059669", bg: "#F0FDF4" },
+                        { label: "On Leave",  val: roster.filter(s => s.is_on_leave).length, color: "#DC2626", bg: "#FEF2F2" },
+                        { label: "Total",     val: roster.length, color: "#475569", bg: "#F8FAFC" },
+                      ].map(stat => (
+                        <div key={stat.label} style={{ flex: 1, background: stat.bg, borderRadius: "8px", padding: "6px 8px", textAlign: "center" }}>
+                          <p style={{ fontSize: "15px", fontWeight: "800", color: stat.color, lineHeight: 1 }}>{stat.val}</p>
+                          <p style={{ fontSize: "9px", fontWeight: "600", color: stat.color, opacity: .7, marginTop: "2px", textTransform: "uppercase", letterSpacing: ".04em" }}>{stat.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Search */}
+                  <div style={{ position: "relative", marginBottom: "8px" }}>
+                    <Search size={13} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }} />
+                    <input
+                      placeholder="Search by name…"
+                      value={coverRosterSearch}
+                      onChange={e => setCoverRosterSearch(e.target.value)}
+                      style={{ width: "100%", padding: "8px 10px 8px 30px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "13px", color: "#1E293B", background: "#F8FAFC", boxSizing: "border-box", outline: "none" }}
+                    />
+                    {coverRosterSearch && (
+                      <button onClick={() => setCoverRosterSearch("")} style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: "2px", display: "flex" }}>
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter + Sort row */}
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "12px" }}>
+                    <div style={{ display: "flex", gap: "4px", flex: 1 }}>
+                      {[
+                        { v: "all",       l: `All (${roster.length})` },
+                        { v: "available", l: `Available (${availCount})` },
+                      ].map(f => (
+                        <button key={f.v} onClick={() => setCoverRosterFilter(f.v)}
+                          style={{ fontSize: "11px", fontWeight: "600", padding: "4px 10px", borderRadius: "100px", border: "none", cursor: "pointer", background: coverRosterFilter === f.v ? "#0F172A" : "#F1F5F9", color: coverRosterFilter === f.v ? "#FFF" : "#64748B", transition: "background 0.15s" }}>
+                          {f.l}
+                        </button>
+                      ))}
+                    </div>
+                    <SearchableSelect
+                      options={[
+                        { value: "match", label: "Best Match" },
+                        { value: "name", label: "Name A–Z" },
+                        { value: "hours_asc", label: "Least Hours" },
+                        { value: "hours_desc", label: "Most Hours" },
+                      ]}
+                      value={coverRosterSort}
+                      onChange={setCoverRosterSort}
+                      clearable={false}
+                      searchable={false}
+                      style={{ width: "140px" }}
+                    />
+                  </div>
+                  <div style={{ borderBottom: "1px solid #F1F5F9", margin: "0 -24px" }} />
+                </div>
+
+                {/* Staff list */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "10px 14px" }}>
+                  {rosterLoading ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {[1,2,3,4].map(i => <Shimmer key={i} h="68px" r="10px" />)}
+                    </div>
+                  ) : filteredRoster.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "32px 0", color: "#94A3B8", fontSize: "13px" }}>
+                      {roster.length === 0 ? "No staff found for this shift." : "No staff match this filter."}
+                    </div>
+                  ) : filteredRoster.map((s, idx) => {
+                    const unavailable = s.is_on_leave || s.is_double_booked;
+                    const isSelected  = String(pickedStaffId) === String(s.staff_id);
+                    const isBest      = !unavailable && !s.already_assigned && idx === 0 && coverRosterSort === "match";
+                    const overHours   = (s.hours_this_week || 0) >= 40;
+
+                    return (
+                      <div key={s.staff_id}
+                        onClick={() => setPickedStaffId(String(s.staff_id))}
+                        style={{
+                          display: "flex", alignItems: "flex-start", gap: "10px",
+                          padding: "10px 12px", borderRadius: "10px", marginBottom: "6px",
+                          border: isSelected ? "2px solid #2563EB" : `1.5px solid ${isBest ? "#A5B4FC" : unavailable ? "#F1F5F9" : "#E2E8F0"}`,
+                          background: isSelected ? "#EFF6FF" : isBest ? "#F5F3FF" : unavailable ? "#F8FAFC" : "#FFF",
+                          opacity: unavailable ? 0.55 : 1,
+                          cursor: "pointer",
+                          transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
+                        }}
+                        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.08)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; }}
+                      >
+                        {/* Avatar */}
+                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", flexShrink: 0, background: isSelected ? "#2563EB" : isBest ? "#6366F1" : unavailable ? "#94A3B8" : avatarColor(s.full_name), color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "700" }}>
+                          {s.full_name?.[0]?.toUpperCase()}
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {/* Row 1: Name + badge */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                            <p style={{ fontSize: "13px", fontWeight: "700", color: "#0F172A" }}>{s.full_name}</p>
+                            {isSelected && <span style={{ fontSize: "9px", fontWeight: "800", color: "#1D4ED8", background: "#DBEAFE", padding: "2px 6px", borderRadius: "100px" }}>Selected</span>}
+                            {isBest && !isSelected && <span style={{ fontSize: "9px", fontWeight: "800", color: "#6366F1", background: "#EDE9FE", padding: "2px 6px", borderRadius: "100px" }}>★ Best Match</span>}
+                          </div>
+
+                          {/* Row 2: Type · Hours · Exp */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap", marginTop: "3px" }}>
+                            <span style={{ fontSize: "10px", fontWeight: "600", padding: "1px 6px", borderRadius: "100px", background: s.staff_type === "casual" ? "#FFF7ED" : "#F1F5F9", color: s.staff_type === "casual" ? "#C2410C" : "#475569" }}>
+                              {s.staff_type === "casual" ? "Casual" : "Regular"}
+                            </span>
+                            <span style={{ fontSize: "10px", color: "#94A3B8" }}>·</span>
+                            <span style={{ fontSize: "10px", fontWeight: "600", color: overHours ? "#DC2626" : "#64748B" }}>
+                              {s.hours_this_week || 0}h/wk{overHours ? " ⚠" : ""}
+                            </span>
+                            {s.exp_level && (
+                              <>
+                                <span style={{ fontSize: "10px", color: "#94A3B8" }}>·</span>
+                                <span style={{ fontSize: "9px", fontWeight: "600", color: "#6D28D9", background: "#EDE9FE", padding: "1px 6px", borderRadius: "100px" }}>
+                                  {s.exp_level.charAt(0).toUpperCase() + s.exp_level.slice(1)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Row 3: Status alerts */}
+                          {(unavailable || s.already_assigned) && (
+                            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px" }}>
+                              {s.is_on_leave      && <span style={{ fontSize: "9px", fontWeight: "700", color: "#991B1B", background: "#FEE2E2", padding: "1px 6px", borderRadius: "100px", border: "1px solid #FECACA" }}>On Leave</span>}
+                              {s.is_double_booked && <span style={{ fontSize: "9px", fontWeight: "700", color: "#991B1B", background: "#FEE2E2", padding: "1px 6px", borderRadius: "100px", border: "1px solid #FECACA" }}>Double-booked</span>}
+                              {s.already_assigned && (
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                  <span style={{ fontSize: "9px", fontWeight: "700", color: "#64748B", background: "#F1F5F9", padding: "1px 6px", borderRadius: "100px", border: "1px solid #E2E8F0" }}>Already Assigned</span>
+                                  <button
+                                    onClick={async e => {
+                                      e.stopPropagation();
+                                      const sid = swapApproveModal?.shiftId;
+                                      if (!sid) return;
+                                      await supabase.from("task_assignments").delete().eq("shift_id", sid).eq("staff_id", s.staff_id);
+                                      setSwapApproveModal(prev => prev ? { ...prev, roster: prev.roster.map(r => r.staff_id === s.staff_id ? { ...r, already_assigned: false } : r) } : null);
+                                    }}
+                                    style={{ fontSize: "9px", fontWeight: "700", color: "#EF4444", background: "#FEF2F2", padding: "1px 6px", borderRadius: "100px", border: "1px solid #FECACA", cursor: "pointer" }}>
+                                    Remove
+                                  </button>
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Row 4: Skills */}
+                          {s.skills?.length > 0 && (
+                            <div style={{ display: "flex", gap: "3px", flexWrap: "wrap", marginTop: "5px" }}>
+                              {s.skills.map(sk => (
+                                <span key={sk.skill_id} style={{ fontSize: "9px", fontWeight: "500", padding: "2px 6px", borderRadius: "100px", background: "#F1F5F9", color: "#64748B" }}>{sk.name}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Footer */}
+                <div style={{ padding: "14px 24px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#FAFAFA", borderRadius: "0 0 18px 18px" }}>
+                  <p style={{ fontSize: "11px", color: "#94A3B8" }}>
+                    {pickedStaffId
+                      ? `Selected: ${roster.find(s => String(s.staff_id) === pickedStaffId)?.full_name || "—"}`
+                      : "No staff selected"}
+                  </p>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button onClick={() => setSwapApproveModal(null)} disabled={approving}
+                      style={{ padding: "9px 18px", background: "#F1F5F9", border: "none", borderRadius: "9px", fontSize: "13px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
+                      Cancel
+                    </button>
+                    <button onClick={confirmSwapApproval} disabled={approving || !pickedStaffId}
+                      style={{ padding: "9px 20px", background: pickedStaffId ? "#22C55E" : "#A7F3D0", border: "none", borderRadius: "9px", fontSize: "13px", fontWeight: "700", color: "#FFF", cursor: pickedStaffId ? "pointer" : "default", transition: "background 0.15s" }}>
+                      {approving ? "Approving…" : "Confirm Approval"}
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
-
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "6px" }}>
-              Select Cover Staff *
-            </label>
-            <select
-              value={pickedStaffId}
-              onChange={e => setPickedStaffId(e.target.value)}
-              style={{ width: "100%", padding: "10px 13px", border: "1.5px solid #D8D5CE", borderRadius: "9px", fontSize: "14px", color: "#1E293B", background: "#FFFFFF", marginBottom: "20px", boxSizing: "border-box" }}
-            >
-              <option value="">Choose a staff member…</option>
-              {swapApproveModal.availableStaff.map(s => (
-                <option key={s.staff_id} value={s.staff_id}>
-                  {s.users?.full_name || s.users?.email || `Staff #${s.staff_id}`}
-                </option>
-              ))}
-            </select>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-              <button
-                onClick={() => setSwapApproveModal(null)}
-                disabled={approving}
-                style={{ padding: "9px 18px", background: "#F1F5F9", border: "none", borderRadius: "9px", fontSize: "13px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
-                Cancel
-              </button>
-              <button
-                onClick={confirmSwapApproval}
-                disabled={approving || !pickedStaffId}
-                style={{ padding: "9px 18px", background: pickedStaffId ? "#22C55E" : "#A7F3D0", border: "none", borderRadius: "9px", fontSize: "13px", fontWeight: "700", color: "#FFFFFF", cursor: pickedStaffId ? "pointer" : "default", transition: "background 0.15s" }}>
-                {approving ? "Approving…" : "Confirm Approval"}
-              </button>
-            </div>
-          </div>
+            );
+          })()}
         </div>,
         document.body
       )}

@@ -22,6 +22,7 @@ import ShiftDetail        from "./pages/manager/ShiftDetail";
 import AvailabilityLeave  from "./pages/manager/AvailabilityLeave";
 import Attendance         from "./pages/manager/Attendance";
 import Reports            from "./pages/manager/Reports";
+import ReportHistory      from "./pages/manager/ReportHistory";
 import ManagerNotifications from "./pages/manager/Notifications";
 import SkillSettings       from "./pages/manager/SkillSettings";
 import ManagerSettings     from "./pages/manager/Settings";
@@ -36,6 +37,7 @@ import BranchDetail        from "./pages/system-admin/BranchDetail";
 import AdminStaff          from "./pages/system-admin/Staff";
 import AdminStaffDetail    from "./pages/system-admin/StaffDetail";
 import AdminReports        from "./pages/system-admin/Reports";
+import AdminReportHistory  from "./pages/system-admin/ReportHistory";
 
 // Regular Staff
 import StaffDashboard from "./pages/regular-staff/Dashboard";
@@ -47,7 +49,8 @@ import SwapRequests   from "./pages/regular-staff/SwapRequests";
 import CasualDashboard    from "./pages/casual-staff/Dashboard";
 import CasualBranches      from "./pages/casual-staff/Branches";
 import CasualAvailability  from "./pages/casual-staff/Availability";
-import CasualMyShifts     from "./pages/casual-staff/MyShifts";
+import CasualMyShifts      from "./pages/casual-staff/MyShifts";
+import CasualSwapRequests  from "./pages/casual-staff/SwapRequests";
 import RegisterCasual     from "./pages/RegisterCasual";
 
 // Business Owner
@@ -59,7 +62,8 @@ import BOStaffDetail  from "./pages/business-owner/StaffDetail";
 import BOManagerDetail from "./pages/business-owner/ManagerDetail";
 import BOInvitations from "./pages/business-owner/Invitations";
 import BOSkills      from "./pages/business-owner/Skills";
-import BOReports     from "./pages/business-owner/Reports";
+import BOReports        from "./pages/business-owner/Reports";
+import BOReportHistory  from "./pages/business-owner/ReportHistory";
 import BOSettings    from "./pages/business-owner/Settings";
 import BusinessOwnerLayout from "./components/layout/BusinessOwnerLayout";
 import AcceptInvite  from "./pages/AcceptInvite";
@@ -74,6 +78,7 @@ import AdminRequests      from "./pages/system-admin/Requests";
 // Layouts
 import StaffLayout   from "./components/layout/StaffLayout";
 import CasualLayout  from "./components/layout/CasualLayout";
+import AdminLayout   from "./components/layout/AdminLayout";
 
 function PR({ roles, children }) {
   return <ProtectedRoute allowedRoles={roles}>{children}</ProtectedRoute>;
@@ -106,7 +111,8 @@ function App() {
         <Route path="/business-owner/managers/:id" element={<PR roles={["business_owner"]}><BOManagerDetail /></PR>} />
         <Route path="/business-owner/invitations" element={<PR roles={["business_owner"]}><BOInvitations /></PR>} />
         <Route path="/business-owner/skills"      element={<PR roles={["business_owner"]}><BOSkills /></PR>} />
-        <Route path="/business-owner/reports"     element={<PR roles={["business_owner"]}><BOReports /></PR>} />
+        <Route path="/business-owner/reports"        element={<PR roles={["business_owner"]}><BOReports /></PR>} />
+        <Route path="/business-owner/report-history" element={<PR roles={["business_owner"]}><BOReportHistory /></PR>} />
         <Route path="/business-owner/settings"     element={<PR roles={["business_owner"]}><BOSettings /></PR>} />
         <Route path="/business-owner/notifications" element={<PR roles={["business_owner"]}>
           <NotificationsPage Layout={BusinessOwnerLayout} />
@@ -120,9 +126,13 @@ function App() {
         <Route path="/system-admin/skills"                element={<PR roles={["system_admin"]}><SkillTags /></PR>} />
         <Route path="/system-admin/staff"                 element={<PR roles={["system_admin"]}><AdminStaff /></PR>} />
         <Route path="/system-admin/staff/:id"             element={<PR roles={["system_admin"]}><AdminStaffDetail /></PR>} />
-        <Route path="/system-admin/reports"              element={<PR roles={["system_admin"]}><AdminReports /></PR>} />
+        <Route path="/system-admin/reports"               element={<PR roles={["system_admin"]}><AdminReports /></PR>} />
+        <Route path="/system-admin/report-history"        element={<PR roles={["system_admin"]}><AdminReportHistory /></PR>} />
         <Route path="/system-admin/applications"          element={<PR roles={["system_admin"]}><AdminApplications /></PR>} />
         <Route path="/system-admin/requests"              element={<PR roles={["system_admin"]}><AdminRequests /></PR>} />
+        <Route path="/system-admin/notifications" element={<PR roles={["system_admin"]}>
+          <NotificationsPage Layout={AdminLayout} />
+        </PR>} />
 
         {/* ── Manager ───────────────────────────── */}
         <Route path="/manager/dashboard"    element={<PR roles={["manager"]}><ManagerDashboard /></PR>} />
@@ -134,7 +144,8 @@ function App() {
         <Route path="/manager/shifts/:id"   element={<PR roles={["manager"]}><ShiftDetail /></PR>} />
         <Route path="/manager/availability" element={<PR roles={["manager"]}><AvailabilityLeave /></PR>} />
         <Route path="/manager/attendance"   element={<PR roles={["manager"]}><Attendance /></PR>} />
-        <Route path="/manager/reports"        element={<PR roles={["manager"]}><Reports /></PR>} />
+        <Route path="/manager/reports"         element={<PR roles={["manager"]}><Reports /></PR>} />
+        <Route path="/manager/report-history"  element={<PR roles={["manager"]}><ReportHistory /></PR>} />
         <Route path="/manager/notifications" element={<PR roles={["manager"]}><ManagerNotifications /></PR>} />
         <Route path="/manager/skills"        element={<PR roles={["manager"]}><SkillSettings /></PR>} />
         <Route path="/manager/invitations"           element={<PR roles={["manager"]}><OMInvitations /></PR>} />
@@ -155,6 +166,7 @@ function App() {
         <Route path="/casual-staff/shifts"           element={<PR roles={["casual_staff"]}><CasualMyShifts /></PR>} />
         <Route path="/casual-staff/availability"      element={<PR roles={["casual_staff"]}><CasualAvailability /></PR>} />
         <Route path="/casual-staff/branches"          element={<PR roles={["casual_staff"]}><CasualBranches /></PR>} />
+        <Route path="/casual-staff/swap-requests"    element={<PR roles={["casual_staff"]}><CasualSwapRequests /></PR>} />
         <Route path="/casual-staff/notifications"    element={<PR roles={["casual_staff"]}>
           <NotificationsPage Layout={CasualLayout} />
         </PR>} />

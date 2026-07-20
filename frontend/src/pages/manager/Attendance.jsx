@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
+import { notifyUser } from "../../lib/notify";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 
 if (typeof document !== "undefined" && !document.getElementById("mgr-attend-styles")) {
@@ -125,6 +126,7 @@ function Submissions({ branchId, managerId, showToast }) {
   const [acting,      setActing]      = useState(null);   // single-card acting id
   const [bulkActing,  setBulkActing]  = useState(false);
   const [checked,     setChecked]     = useState(new Set()); // selected timesheet_ids
+  const [staffUserMap, setStaffUserMap] = useState({}); // staff_id -> user_id
 
   useEffect(() => {
     if (!branchId) return;
@@ -133,12 +135,13 @@ function Submissions({ branchId, managerId, showToast }) {
       setLoading(true);
       try {
         const { data: staffRows } = await supabase
-          .from("staff").select("staff_id, users(full_name)")
+          .from("staff").select("staff_id, user_id, users(full_name)")
           .eq("branch_id", branchId).eq("is_active", true);
         if (!staffRows?.length || cancelled) { setRows([]); setLoading(false); return; }
 
         const staffIds = staffRows.map(s => s.staff_id);
         const staffMap = Object.fromEntries(staffRows.map(s => [s.staff_id, s.users?.full_name || "Staff"]));
+        setStaffUserMap(Object.fromEntries(staffRows.map(s => [s.staff_id, s.user_id])));
 
         const { data: ts } = await supabase
           .from("timesheets")
@@ -180,6 +183,7 @@ function Submissions({ branchId, managerId, showToast }) {
   async function decide(tsId, status) {
     setActing(tsId);
     try {
+      const row = rows.find(r => r.timesheet_id === tsId);
       const { error } = await supabase.from("timesheets")
         .update({ status, reviewed_by: managerId, reviewed_at: new Date().toISOString() })
         .eq("timesheet_id", tsId);
@@ -189,6 +193,20 @@ function Submissions({ branchId, managerId, showToast }) {
       if (detail?.timesheet_id === tsId) setDetail(prev => ({ ...prev, status, reviewed_at: now }));
       setChecked(prev => { const n = new Set(prev); n.delete(tsId); return n; });
       showToast(status === "approved" ? "Approved!" : "Rejected.");
+
+      const recipientId = row && staffUserMap[row.staff_id];
+      if (recipientId) {
+        notifyUser({
+          recipientId,
+          type: "report_decision",
+          title: status === "approved" ? "Report Approved" : "Report Rejected",
+          message: status === "approved"
+            ? `Your report for ${row.shiftTitle || "your shift"} on ${row.log_date} has been approved.`
+            : `Your report for ${row.shiftTitle || "your shift"} on ${row.log_date} was rejected.`,
+          relatedEntity: "timesheets",
+          relatedId: tsId,
+        }).catch(() => {});
+      }
     } catch { showToast("Failed to update.", false); }
     finally { setActing(null); }
   }
@@ -199,6 +217,7 @@ function Submissions({ branchId, managerId, showToast }) {
     try {
       const now = new Date().toISOString();
       const idSet = new Set(ids);
+      const targetRows = rows.filter(r => idSet.has(r.timesheet_id));
       const { error } = await supabase.from("timesheets")
         .update({ status, reviewed_by: managerId, reviewed_at: now })
         .in("timesheet_id", ids);
@@ -207,6 +226,21 @@ function Submissions({ branchId, managerId, showToast }) {
       if (detail && idSet.has(detail.timesheet_id)) setDetail(prev => ({ ...prev, status, reviewed_at: now }));
       setChecked(new Set());
       showToast(`${ids.length} submission${ids.length > 1 ? "s" : ""} ${status}.`);
+
+      targetRows.forEach(row => {
+        const recipientId = staffUserMap[row.staff_id];
+        if (!recipientId) return;
+        notifyUser({
+          recipientId,
+          type: "report_decision",
+          title: status === "approved" ? "Report Approved" : "Report Rejected",
+          message: status === "approved"
+            ? `Your report for ${row.shiftTitle || "your shift"} on ${row.log_date} has been approved.`
+            : `Your report for ${row.shiftTitle || "your shift"} on ${row.log_date} was rejected.`,
+          relatedEntity: "timesheets",
+          relatedId: row.timesheet_id,
+        }).catch(() => {});
+      });
     } catch { showToast("Bulk action failed.", false); }
     finally { setBulkActing(false); }
   }

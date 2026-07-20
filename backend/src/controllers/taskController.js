@@ -1,5 +1,6 @@
 const prisma        = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 
 // Prisma returns date/time columns as JS Date objects, which Express serializes to full ISO
 // strings (e.g. "1970-01-01T09:00:00.000Z" for a `time` column, "2026-07-18T00:00:00.000Z" for
@@ -152,11 +153,25 @@ const assignStaff = async (req, res) => {
       },
       include: {
         staff: { include: { users: { select: { user_id: true, full_name: true, email: true } } } },
+        shift_tasks: { select: { title: true } },
       },
     });
 
     // Update task status to assigned
     await prisma.shift_tasks.update({ where: { task_id: taskId }, data: { status: "assigned" } });
+
+    try {
+      const shift = await prisma.shifts.findUnique({ where: { shift_id: task.shift_id }, select: { shift_date: true, title: true } });
+      const dateStr = shift?.shift_date ? new Date(shift.shift_date).toISOString().slice(0, 10) : "";
+      await notifyUser({
+        recipientId: assignment.staff?.users?.user_id,
+        type: "shift_assigned",
+        title: "New Shift Assignment",
+        message: `You've been assigned to ${assignment.shift_tasks?.title || "a task"} on ${dateStr}${shift?.title ? ` (${shift.title})` : ""}.`,
+        relatedEntity: "task_assignments",
+        relatedId: task.shift_id,
+      });
+    } catch { /* notification failure shouldn't block assignment */ }
 
     res.status(201).json({ success: true, assignment });
   } catch (error) {
@@ -168,17 +183,37 @@ const unassignStaff = async (req, res) => {
   try {
     const taskId = Number(req.params.taskId);
 
-    const assignment = await prisma.task_assignments.findFirst({ where: { task_id: taskId } });
+    const assignment = await prisma.task_assignments.findFirst({
+      where: { task_id: taskId },
+      include: {
+        staff: { include: { users: { select: { user_id: true } } } },
+        shift_tasks: { select: { title: true } },
+      },
+    });
     if (!assignment) return res.status(404).json({ success: false, message: "No assignment found for this task." });
 
     await prisma.task_assignments.delete({ where: { assignment_id: assignment.assignment_id } });
     await prisma.shift_tasks.update({ where: { task_id: taskId }, data: { status: "open" } });
+
+    try {
+      const shift = await prisma.shifts.findUnique({ where: { shift_id: assignment.shift_id }, select: { shift_date: true } });
+      const dateStr = shift?.shift_date ? new Date(shift.shift_date).toISOString().slice(0, 10) : "";
+      await notifyUser({
+        recipientId: assignment.staff?.users?.user_id,
+        type: "shift_unassigned",
+        title: "Shift Assignment Removed",
+        message: `You've been removed from ${assignment.shift_tasks?.title || "a task"} on ${dateStr}.`,
+        relatedEntity: "task_assignments",
+        relatedId: assignment.shift_id,
+      });
+    } catch { /* notification failure shouldn't block unassignment */ }
 
     res.json({ success: true, message: "Staff unassigned from task." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // Staff: get my tasks for a shift
 const getMyTasks = async (req, res) => {
@@ -203,7 +238,7 @@ const getMyTasks = async (req, res) => {
         shift_tasks: {
           include: { skills: { select: { skill_id: true, name: true } } },
         },
-        shifts: { select: { shift_id: true, title: true, shift_date: true, start_time: true, end_time: true, status: true } },
+        shifts: { select: { shift_id: true, branch_id: true, title: true, shift_date: true, start_time: true, end_time: true, status: true } },
       },
       orderBy: { shifts: { shift_date: "asc" } },
     });
@@ -293,23 +328,71 @@ const getStaffRoster = async (req, res) => {
       skillMap[st.user_id].push({ skill_id: st.skill_id, name, experience_level: st.experience_level || null });
     });
 
-    // Leave
+    // Leave (approved leave requests)
     const leaveRows = await prisma.availability.findMany({
       where: { staff_id: { in: staffIds }, status: "approved", start_date: { lte: shiftDate }, end_date: { gte: shiftDate } },
       select: { staff_id: true },
     });
-    const onLeaveIds = new Set(leaveRows.map(l => l.staff_id));
+    // Off day requests approved for this exact date (Supabase-only table)
+    const { data: offDayRows = [] } = await supabaseAdmin
+      .from("off_day_requests")
+      .select("staff_id")
+      .in("staff_id", staffIds)
+      .eq("status", "approved")
+      .eq("requested_date", shiftDateStr);
+    const onLeaveIds = new Set([
+      ...leaveRows.map(l => l.staff_id),
+      ...offDayRows.map(o => o.staff_id),
+    ]);
 
     // Double-booked on same date (other shifts)
     const otherAssignments = await prisma.task_assignments.findMany({
       where: { staff_id: { in: staffIds }, shift_id: { not: shiftId } },
-      include: { shifts: { select: { shift_date: true } } },
+      include: { shifts: { select: { shift_id: true, shift_date: true, title: true, start_time: true, end_time: true } } },
     });
-    const doubleBookedIds = new Set(
-      otherAssignments
-        .filter(a => a.shifts?.shift_date?.toISOString().slice(0, 10) === shiftDateStr)
-        .map(a => a.staff_id)
+    const toMinsFromISO = t => {
+      if (!t) return null;
+      const hhmm = new Date(t).toISOString().slice(11, 16);
+      const [h, m] = hhmm.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const thisStart = toMinsFromISO(shift.start_time);
+    const thisEnd   = toMinsFromISO(shift.end_time);
+
+    const sameDayAssignments = otherAssignments.filter(
+      a => a.shifts?.shift_date?.toISOString().slice(0, 10) === shiftDateStr
     );
+
+    const conflictingOnDate = sameDayAssignments.filter(a => {
+      const otherStart = toMinsFromISO(a.shifts?.start_time);
+      const otherEnd   = toMinsFromISO(a.shifts?.end_time);
+      if (thisStart == null || thisEnd == null || otherStart == null || otherEnd == null) return true;
+      return thisStart < otherEnd && thisEnd > otherStart;
+    });
+    const doubleBookedIds = new Set(conflictingOnDate.map(a => a.staff_id));
+    const doubleBookedShiftMap = {};
+    conflictingOnDate.forEach(a => {
+      if (!doubleBookedShiftMap[a.staff_id] && a.shifts) {
+        doubleBookedShiftMap[a.staff_id] = {
+          title:      a.shifts.title || "Shift",
+          start_time: a.shifts.start_time ? new Date(a.shifts.start_time).toISOString().slice(11, 16) : null,
+          end_time:   a.shifts.end_time   ? new Date(a.shifts.end_time).toISOString().slice(11, 16)   : null,
+        };
+      }
+    });
+
+    // Same day but no time conflict
+    const otherShiftIds = new Set(conflictingOnDate.map(a => a.staff_id));
+    const otherShiftMap = {};
+    sameDayAssignments.forEach(a => {
+      if (!otherShiftIds.has(a.staff_id) && !otherShiftMap[a.staff_id] && a.shifts) {
+        otherShiftMap[a.staff_id] = {
+          title:      a.shifts.title || "Shift",
+          start_time: a.shifts.start_time ? new Date(a.shifts.start_time).toISOString().slice(11, 16) : null,
+          end_time:   a.shifts.end_time   ? new Date(a.shifts.end_time).toISOString().slice(11, 16)   : null,
+        };
+      }
+    });
 
     // Already assigned to this shift
     const alreadyAssigned = await prisma.task_assignments.findMany({
@@ -371,6 +454,8 @@ const getStaffRoster = async (req, res) => {
       skills:                skillMap[s.user_id] || [],
       is_on_leave:           onLeaveIds.has(s.staff_id),
       is_double_booked:      doubleBookedIds.has(s.staff_id),
+      double_booked_shift:   doubleBookedShiftMap[s.staff_id] || null,
+      other_shift_today:     otherShiftMap[s.staff_id] || null,
       already_assigned:      assignedIds.has(s.staff_id),
       assigned_task_id:      assignedTaskMap[s.staff_id] || null,
       hours_this_week:       Math.round((hoursMap[s.staff_id] || 0) * 10) / 10,

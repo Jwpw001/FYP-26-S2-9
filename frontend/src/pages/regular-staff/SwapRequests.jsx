@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
+import { notifyUsers, getBranchManagerUserIds } from "../../lib/notify";
 import StaffLayout from "../../components/layout/StaffLayout";
+// Layout is injected by the casual wrapper so the same component serves both roles
 import { RefreshCw, AlertCircle, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("staff-swaps-styles")) {
@@ -63,10 +65,12 @@ function WeekCalendar({ weekStart, requests, shifts = [] }) {
     const d = new Date(weekStart); d.setDate(weekStart.getDate() + i); return d;
   });
 
-  const events = requests.map(r => {
-    const shift = r._shifts;
-    return { id: r.swap_id, date: shift?.shift_date, title: shift?.title || (r.request_type === "swap" ? "Swap" : "Replace"), status: r.status, type: r.request_type };
-  }).filter(e => e.date);
+  const events = requests
+    .filter(r => r.status !== "approved")
+    .map(r => {
+      const shift = r._shifts;
+      return { id: r.swap_id, date: shift?.shift_date, title: shift?.title || (r.request_type === "swap" ? "Swap" : "Replace"), status: r.status, type: r.request_type };
+    }).filter(e => e.date);
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", border: "1px solid #F1F5F9", borderRadius: "12px", overflow: "hidden" }}>
@@ -110,7 +114,7 @@ function WeekCalendar({ weekStart, requests, shifts = [] }) {
   );
 }
 
-export default function SwapRequests() {
+export default function SwapRequests({ Layout = StaffLayout }) {
   const user   = getUser();
   const userId = user?.user_id;
 
@@ -123,6 +127,7 @@ export default function SwapRequests() {
   const [error,          setError]          = useState("");
   const [toast,          setToast]          = useState(null);
   const [staffId,        setStaffId]        = useState(null);
+  const [branchId,       setBranchId]       = useState(null);
   const [weekStart,      setWeekStart]      = useState(() => getWeekStart(new Date()));
 
   // Swap modal
@@ -140,10 +145,11 @@ export default function SwapRequests() {
       setLoading(true);
       try {
         const today = toLocalDateStr(new Date());
-        const { data: myStaff } = await supabase.from("staff").select("staff_id").eq("user_id", userId).limit(1);
+        const { data: myStaff } = await supabase.from("staff").select("staff_id, branch_id").eq("user_id", userId).limit(1);
         const sid = myStaff?.[0]?.staff_id;
         if (cancelled) return;
         setStaffId(sid || null);
+        setBranchId(myStaff?.[0]?.branch_id || null);
         if (!sid) { setMyShifts([]); setRequests([]); setLoading(false); return; }
 
         const [{ data: assignments }, { data: reqs }] = await Promise.all([
@@ -206,12 +212,25 @@ export default function SwapRequests() {
   async function handleSubmit() {
     if (!swapModal || !staffId) return;
     const duplicate = requests.find(r =>
-      r.status !== "rejected" && r.status !== "cancelled" &&
+      r.status === "pending" &&
       String(r.requester_assign) === String(swapModal.assignment_id)
     );
-    if (duplicate) { setError("You already have an active request for this shift."); return; }
+    if (duplicate) { setError("You already have a pending request for this shift."); return; }
     setSaving(true); setError("");
     try {
+      // The DB trigger blocks new requests if there's an approved one on the same date.
+      // When a manager re-assigns the staff back to the shift, the old approved request
+      // is now superseded — cancel it first so the insert can proceed.
+      const shiftDate = swapModal.shifts?.shift_date;
+      const superseded = shiftDate
+        ? requests.filter(r => r.status === "approved" && r._shifts?.shift_date === shiftDate)
+        : [];
+      if (superseded.length > 0) {
+        const ids = superseded.map(r => r.swap_id);
+        await supabase.from("swap_requests").update({ status: "cancelled" }).in("swap_id", ids);
+        setRequests(prev => prev.map(r => ids.includes(r.swap_id) ? { ...r, status: "cancelled" } : r));
+      }
+
       const { data, error: err } = await supabase.from("swap_requests")
         .insert({ requester_id: staffId, requester_assign: Number(swapModal.assignment_id), request_type: swapForm.request_type, reason: swapForm.reason.trim() || null, status: "pending" })
         .select().single();
@@ -220,6 +239,14 @@ export default function SwapRequests() {
       setRequests(prev => [enriched, ...prev]);
       setSwapModal(null);
       showToast("Request submitted successfully.");
+
+      getBranchManagerUserIds(branchId).then(managerIds => notifyUsers(managerIds, {
+        type: "swap_request",
+        title: data.request_type === "swap" ? "New Swap Request" : "New Replacement Request",
+        message: `${user?.full_name || "A staff member"} requested a ${data.request_type} for ${swapModal.shifts?.title || "a shift"} on ${fmtDate(swapModal.shifts?.shift_date)}.`,
+        relatedEntity: "swap_requests",
+        relatedId: data.swap_id,
+      })).catch(() => {});
     } catch (err) {
       setError(err.message || "Failed to submit request.");
       console.error(err);
@@ -236,7 +263,7 @@ export default function SwapRequests() {
   const pendingCount = requests.filter(r => r.status === "pending").length;
 
   return (
-    <StaffLayout title="Swap Requests">
+    <Layout title="Swap Requests">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
@@ -485,7 +512,7 @@ export default function SwapRequests() {
           {toast.msg}
         </div>
       )}
-    </StaffLayout>
+    </Layout>
   );
 }
 

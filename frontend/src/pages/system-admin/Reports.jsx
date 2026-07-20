@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
-import { User, Calendar, CheckSquare, Users } from "lucide-react";
+import { User, Calendar, Building2, Users, History } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { api } from "../../lib/api";
+import { useGoTo } from "../../components/PageTransition";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-reports-kf")) {
   const s = document.createElement("style");
@@ -48,6 +50,9 @@ const STATUS_COLORS = {
   cancelled: "#EF4444", assigned: "#0891B2", open: "#D97706",
   approved:  "#16A34A", pending:  "#D97706", rejected: "#EF4444",
 };
+
+const PLAN_LABELS = { free: "Free", premium: "Premium", enterprise: "Enterprise" };
+const PLAN_COLORS = { free: "#64748B", premium: "#2563EB", enterprise: "#7C3AED" };
 
 function Shimmer({ w = "100%", h = "16px", r = "6px" }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear", flexShrink: 0 }} />;
@@ -236,15 +241,29 @@ function DonutCard({ title, sub, segments, loading, shimmerRows = 4 }) {
 export default function AdminReports() {
   const [period, setPeriod] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [kpis, setKpis] = useState({ users: 0, usersPrev: 0, businesses: 0, bizPrev: 0, shifts: 0, shiftsPrev: 0, leave: 0, leavePrev: 0 });
+  const [kpis, setKpis] = useState({ users: 0, usersPrev: 0, businesses: 0, bizPrev: 0, shifts: 0, shiftsPrev: 0, paidBiz: 0, totalBiz: 0 });
   const [chartLabels, setChartLabels] = useState([]);
   const [chartSeries, setChartSeries] = useState([]);
   const [shiftsByStatus, setShiftStatus] = useState([]);
   const [usersByRole, setUsersByRole]     = useState([]);
-  const [leaveStats, setLeaveStats]       = useState([]);
+  const [planStats, setPlanStats]         = useState([]);
   const [rawData, setRawData] = useState({});
 
   const days = PERIODS[period].days;
+  const goTo  = useGoTo();
+
+  function logDownload(format) {
+    const now   = new Date();
+    const start = new Date(now); start.setDate(now.getDate() - days);
+    api.post("/api/reports", {
+      branch_id:    null,
+      report_type:  "system_admin",
+      format,
+      title:        `Krewby — Platform Report (${PERIODS[period].label})`,
+      period_start: start.toISOString().slice(0, 10),
+      period_end:   now.toISOString().slice(0, 10),
+    }).catch(() => {});
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -256,18 +275,15 @@ export default function AdminReports() {
       { data: usersAll },
       { data: bizAll },
       { data: shiftsAll },
-      { data: leaveAll },
     ] = await Promise.all([
       supabase.from("users").select("user_id, role, created_at, is_active"),
-      supabase.from("businesses").select("business_id, created_at"),
+      supabase.from("businesses").select("business_id, created_at, plan"),
       supabase.from("shifts").select("shift_id, status, shift_date"),
-      supabase.from("availability").select("request_id, status, leave_type, start_date, created_at"),
     ]);
 
     const users  = usersAll  || [];
     const biz    = bizAll    || [];
     const shifts = shiftsAll || [];
-    const leave  = leaveAll  || [];
 
     const inPeriod = ts => ts && new Date(ts) >= periodStart;
     const inPrev   = ts => ts && new Date(ts) >= prevStart && new Date(ts) < periodStart;
@@ -278,10 +294,9 @@ export default function AdminReports() {
     const prevBiz    = biz.filter(b => inPrev(b.created_at)).length;
     const newShifts  = shifts.filter(s => inPeriod(s.shift_date ? s.shift_date + "T00:00:00" : null)).length;
     const prevShifts = shifts.filter(s => inPrev(s.shift_date ? s.shift_date + "T00:00:00" : null)).length;
-    const newLeave   = leave.filter(l => inPeriod(l.created_at)).length;
-    const prevLeave  = leave.filter(l => inPrev(l.created_at)).length;
+    const paidBiz    = biz.filter(b => b.plan && b.plan !== "free").length;
 
-    setKpis({ users: newUsers, usersPrev: prevUsers, businesses: newBiz, bizPrev: prevBiz, shifts: newShifts, shiftsPrev: prevShifts, leave: newLeave, leavePrev: prevLeave });
+    setKpis({ users: newUsers, usersPrev: prevUsers, businesses: newBiz, bizPrev: prevBiz, shifts: newShifts, shiftsPrev: prevShifts, paidBiz, totalBiz: biz.length });
 
     // Daily chart
     const dayCount = Math.min(days, 30);
@@ -300,9 +315,9 @@ export default function AdminReports() {
     }
     setChartLabels(dayLabels);
     setChartSeries([
-      { label: "New Users", data: dailyCount(users,  u => u.created_at), color: "#2563EB" },
-      { label: "Shifts",    data: dailyCount(shifts, s => s.shift_date),  color: "#D97706" },
-      { label: "Leave",     data: dailyCount(leave,  l => l.created_at),  color: "#8B5CF6" },
+      { label: "New Users",      data: dailyCount(users,  u => u.created_at), color: "#2563EB" },
+      { label: "Shifts",         data: dailyCount(shifts, s => s.shift_date),  color: "#D97706" },
+      { label: "New Businesses", data: dailyCount(biz,    b => b.created_at), color: "#8B5CF6" },
     ]);
 
     // Shifts donut
@@ -324,16 +339,16 @@ export default function AdminReports() {
     });
     setUsersByRole(Object.entries(roleMap).map(([role, v]) => ({ role, ...v })).sort((a, b) => b.total - a.total));
 
-    // Leave donut
-    const leaveMap = {};
-    leave.forEach(l => { leaveMap[l.status] = (leaveMap[l.status] || 0) + 1; });
-    setLeaveStats(
-      Object.entries(leaveMap)
-        .map(([s, c]) => ({ label: s, value: c, color: STATUS_COLORS[s] || "#94A3B8" }))
+    // Business plan donut
+    const planMap = {};
+    biz.forEach(b => { const p = b.plan || "free"; planMap[p] = (planMap[p] || 0) + 1; });
+    setPlanStats(
+      Object.entries(planMap)
+        .map(([p, c]) => ({ label: PLAN_LABELS[p] || p, value: c, color: PLAN_COLORS[p] || "#94A3B8" }))
         .sort((a, b) => b.value - a.value)
     );
 
-    setRawData({ users, shifts, leave, period: PERIODS[period].label });
+    setRawData({ users, shifts, biz, period: PERIODS[period].label });
     setLoading(false);
   }, [days, period]);
 
@@ -350,7 +365,7 @@ export default function AdminReports() {
     lines.push(`New Users,${kpis.users},${kpis.usersPrev},${delta(kpis.users, kpis.usersPrev)}%`);
     lines.push(`New Businesses,${kpis.businesses},${kpis.bizPrev},${delta(kpis.businesses, kpis.bizPrev)}%`);
     lines.push(`Shifts,${kpis.shifts},${kpis.shiftsPrev},${delta(kpis.shifts, kpis.shiftsPrev)}%`);
-    lines.push(`Leave Requests,${kpis.leave},${kpis.leavePrev},${delta(kpis.leave, kpis.leavePrev)}%`);
+    lines.push(`Paid Businesses,${kpis.paidBiz},${kpis.totalBiz},${kpis.totalBiz > 0 ? Math.round((kpis.paidBiz / kpis.totalBiz) * 100) : 0}%`);
     lines.push("");
     lines.push("USERS BY ROLE");
     lines.push("Role,Total,Active");
@@ -360,13 +375,14 @@ export default function AdminReports() {
     lines.push("Status,Count");
     shiftsByStatus.forEach(s => lines.push(`${s.label},${s.value}`));
     lines.push("");
-    lines.push("LEAVE BY STATUS");
-    lines.push("Status,Count");
-    leaveStats.forEach(l => lines.push(`${l.label},${l.value}`));
+    lines.push("BUSINESS PLANS");
+    lines.push("Plan,Count");
+    planStats.forEach(p => lines.push(`${p.label},${p.value}`));
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = `krewby-report-${PERIODS[period].label}-${today}.csv`; a.click();
     URL.revokeObjectURL(url);
+    logDownload("csv");
   }
 
   function downloadPDF() {
@@ -388,7 +404,7 @@ export default function AdminReports() {
         ["New Users",       kpis.users,      kpis.usersPrev,  `${delta(kpis.users, kpis.usersPrev)}%`],
         ["New Businesses",  kpis.businesses, kpis.bizPrev,    `${delta(kpis.businesses, kpis.bizPrev)}%`],
         ["Shifts",          kpis.shifts,     kpis.shiftsPrev, `${delta(kpis.shifts, kpis.shiftsPrev)}%`],
-        ["Leave Requests",  kpis.leave,      kpis.leavePrev,  `${delta(kpis.leave, kpis.leavePrev)}%`],
+        ["Paid Businesses", kpis.paidBiz,    kpis.totalBiz,   `${kpis.totalBiz > 0 ? Math.round((kpis.paidBiz / kpis.totalBiz) * 100) : 0}%`],
       ],
       headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 8 },
       bodyStyles: { fontSize: 8 },
@@ -419,14 +435,15 @@ export default function AdminReports() {
     });
     autoTable(doc, {
       startY: y,
-      head: [["Leave by Status", "Count"]],
-      body: leaveStats.map(l => [l.label, l.value]),
+      head: [["Business Plan", "Count"]],
+      body: planStats.map(p => [p.label, p.value]),
       headStyles: { fillColor: [139, 92, 246], textColor: 255, fontSize: 8 },
       bodyStyles: { fontSize: 8 },
       columnStyles: { 1: { halign: "right" } },
       margin: { left: pageW / 2 + 2, right: 14 },
     });
     doc.save(`krewby-report-${PERIODS[period].label}-${new Date().toISOString().slice(0, 10)}.pdf`);
+    logDownload("pdf");
   }
 
   const maxRole = Math.max(...usersByRole.map(r => r.total), 1);
@@ -458,6 +475,10 @@ export default function AdminReports() {
               style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1 }}>
               ⬇ PDF
             </button>
+            <button onClick={() => goTo("/system-admin/report-history")}
+              style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+              <History size={14} strokeWidth={2} /> History
+            </button>
           </div>
         </div>
 
@@ -466,7 +487,7 @@ export default function AdminReports() {
           <KpiCard loading={loading} icon={<User size={17} />}        label="New Users"      value={kpis.users}      pct={delta(kpis.users, kpis.usersPrev)}       sub={`vs prev ${PERIODS[period].label}`} color="#2563EB" bg="#EFF6FF" />
           <KpiCard loading={loading} icon={<Users size={17} />}       label="New Businesses" value={kpis.businesses} pct={delta(kpis.businesses, kpis.bizPrev)}     sub={`vs prev ${PERIODS[period].label}`} color="#059669" bg="#ECFDF5" />
           <KpiCard loading={loading} icon={<Calendar size={17} />}    label="Shifts"         value={kpis.shifts}     pct={delta(kpis.shifts, kpis.shiftsPrev)}      sub={`vs prev ${PERIODS[period].label}`} color="#D97706" bg="#FFFBEB" />
-          <KpiCard loading={loading} icon={<CheckSquare size={17} />} label="Leave Requests" value={kpis.leave}      pct={delta(kpis.leave, kpis.leavePrev)}        sub={`vs prev ${PERIODS[period].label}`} color="#8B5CF6" bg="#F5F3FF" />
+          <KpiCard loading={loading} icon={<Building2 size={17} />}    label="Paid Businesses" value={kpis.paidBiz}   pct={null}                                     sub={`of ${kpis.totalBiz} total`}        color="#8B5CF6" bg="#F5F3FF" />
         </div>
 
         {/* Daily Activity Chart — full width, tall */}
@@ -494,7 +515,7 @@ export default function AdminReports() {
           )}
         </div>
 
-        {/* Shifts + Leave donut row */}
+        {/* Shifts + Business Plans donut row */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
           <DonutCard
             title="Shifts by Status"
@@ -504,9 +525,9 @@ export default function AdminReports() {
             shimmerRows={4}
           />
           <DonutCard
-            title="Leave Requests"
-            sub="All time, by approval status"
-            segments={leaveStats}
+            title="Business Plans"
+            sub="All businesses, by subscription tier"
+            segments={planStats}
             loading={loading}
             shimmerRows={3}
           />
@@ -533,3 +554,4 @@ export default function AdminReports() {
     </AdminLayout>
   );
 }
+

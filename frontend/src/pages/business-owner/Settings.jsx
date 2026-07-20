@@ -1,13 +1,23 @@
 import { useState, useEffect } from "react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { api } from "../../lib/api";
+import { supabase } from "../../lib/supabaseClient";
+import { getUser } from "../../utils/auth";
+import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 import { SG_HOLIDAYS } from "../../data/sgHolidays";
 import {
   Clock, Calendar, Save, RotateCcw, Check, Minus, Plus,
-  Users, Award, TrendingUp, BarChart3, Scale, Loader2, Settings2, Zap, Pencil, X, ChevronDown, Building2,
+  Users, Award, TrendingUp, BarChart3, Scale, Loader2, Settings2, Zap, Pencil, X, Building2, CreditCard,
 } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const PLAN_BADGE = {
+  free:       { label: "Free",       color: "#64748B", bg: "#F1F5F9" },
+  premium:    { label: "Premium",    color: "#2563EB", bg: "#EFF6FF" },
+  enterprise: { label: "Enterprise", color: "#7C3AED", bg: "#F5F3FF" },
+};
 
 const WEIGHTS = [
   { key: "weight_availability", label: "Availability", icon: Users, color: "#2563EB" },
@@ -93,12 +103,20 @@ export default function BOSettings() {
   const [editingSetup, setEditingSetup] = useState(false);
   const [editingAlloc, setEditingAlloc] = useState(false);
 
+  const [plan, setPlan] = useState(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+
   useEffect(() => {
     api.get("/api/business/branches").then(r => {
       const list = r.branches || [];
       setBranches(list);
       if (list.length > 0) setSelectedId(list[0].branch_id);
     });
+    const user = getUser();
+    if (user?.user_id) {
+      supabase.from("businesses").select("plan").eq("owner_id", user.user_id).maybeSingle()
+        .then(({ data }) => setPlan(data?.plan || "free"));
+    }
   }, []);
 
   useEffect(() => {
@@ -214,20 +232,41 @@ export default function BOSettings() {
       <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)", overflow: "hidden" }}>
 
         {/* Branch selector bar */}
-        <div style={{ padding: "16px 32px", borderBottom: "1px solid #F1F5F9", background: "#fff", display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
-          <Building2 size={16} color="#64748B" />
-          <span style={{ fontSize: "13px", fontWeight: "600", color: "#64748B" }}>Branch:</span>
-          <div style={{ position: "relative" }}>
-            <select
+        <div style={{ padding: "16px 32px", borderBottom: "1px solid #F1F5F9", background: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexShrink: 0, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <Building2 size={16} color="#64748B" />
+            <span style={{ fontSize: "13px", fontWeight: "600", color: "#64748B" }}>Branch:</span>
+            <SearchableSelect
+              options={branches.map(o => ({ value: o.branch_id, label: o.name }))}
               value={selectedId || ""}
-              onChange={e => setSelectedId(Number(e.target.value))}
-              style={{ padding: "8px 36px 8px 14px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#1E293B", background: "#fff", appearance: "none", WebkitAppearance: "none", cursor: "pointer", outline: "none", minWidth: "200px" }}>
-              {branches.map(o => <option key={o.branch_id} value={o.branch_id}>{o.name}</option>)}
-            </select>
-            <ChevronDown size={14} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }} />
+              onChange={v => setSelectedId(Number(v))}
+              clearable={false}
+              style={{ minWidth: "200px" }}
+            />
+            {branches.length === 0 && <span style={{ fontSize: "13px", color: "#94A3B8" }}>No branches yet</span>}
           </div>
-          {branches.length === 0 && <span style={{ fontSize: "13px", color: "#94A3B8" }}>No branches yet</span>}
+
+          {/* Billing & Plan */}
+          {plan && (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: PLAN_BADGE[plan]?.color || "#64748B", background: PLAN_BADGE[plan]?.bg || "#F1F5F9", padding: "4px 11px", borderRadius: "100px", letterSpacing: "0.03em", textTransform: "uppercase" }}>
+                {PLAN_BADGE[plan]?.label || plan} Plan
+              </span>
+              <button onClick={() => setShowUpgrade(true)}
+                style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#fff", fontSize: "13px", fontWeight: "600", color: "#334155", cursor: "pointer" }}>
+                <CreditCard size={14} /> Manage Plan
+              </button>
+            </div>
+          )}
         </div>
+
+        {showUpgrade && (
+          <UpgradePlanModal
+            currentPlan={plan}
+            onClose={() => setShowUpgrade(false)}
+            onUpgraded={newPlan => setPlan(newPlan)}
+          />
+        )}
 
         {loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1 }}>

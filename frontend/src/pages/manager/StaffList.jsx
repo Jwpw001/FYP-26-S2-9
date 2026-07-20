@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import { Users } from "lucide-react";
 
@@ -58,9 +59,10 @@ export default function StaffList() {
         }
         if (!oid || cancelled) return;
 
-        const [staffRes, skillsRes] = await Promise.all([
+        const [staffRes, skillsRes, branchSkillsRes] = await Promise.all([
           api.get("/api/staff").catch(() => ({ staff: [] })),
           api.get(`/api/skills/branch/${oid}`).catch(() => ({ skills: [] })),
+          api.get(`/api/business/branches/${oid}/skills`).catch(() => ({ skills: [] })),
         ]);
         const staffData = staffRes.staff || [];
 
@@ -78,16 +80,15 @@ export default function StaffList() {
           skillTags: tagsByStaffId[s.staff_id] || [],
         }));
 
-        // Derive unique skills only from what's actually assigned to this branch's staff
-        const seenIds = new Set();
-        const uniqueSkills = [];
-        enriched.forEach(s => s.skillTags.forEach(t => {
-          if (!seenIds.has(t.id)) { seenIds.add(t.id); uniqueSkills.push({ skill_id: t.id, name: t.name }); }
-        }));
-        uniqueSkills.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        // Filter options should reflect this branch's own assigned skill catalog — not whatever
+        // tags happen to be on the listed staff, which can include skills from another branch
+        // for a pool-based casual worker who's only here via a cross-branch preference.
+        const branchSkills = (branchSkillsRes.skills || [])
+          .map(s => ({ skill_id: s.skill_id, name: s.name }))
+          .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
         setStaff(enriched);
-        setSkills(uniqueSkills);
+        setSkills(branchSkills);
       } catch (err) {
         console.error(err);
       } finally {
@@ -175,11 +176,13 @@ export default function StaffList() {
               placeholder="Search by name or email…"
               style={{ width: "100%", padding: "9px 13px 9px 36px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#FFF", color: "#1E293B", outline: "none", boxSizing: "border-box" }} />
           </div>
-          <select value={filterSkill} onChange={e => setFilterSkill(e.target.value)}
-            style={{ padding: "9px 13px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#FFF", color: "#1E293B", cursor: "pointer" }}>
-            <option value="all">All skills</option>
-            {skills.map(sk => <option key={sk.skill_id} value={String(sk.skill_id)}>{sk.name}</option>)}
-          </select>
+          <SearchableSelect
+            options={skills.map(sk => ({ value: String(sk.skill_id), label: sk.name }))}
+            value={filterSkill === "all" ? "" : filterSkill}
+            onChange={v => setFilterSkill(v === "" ? "all" : v)}
+            placeholder="All skills"
+            style={{ minWidth: "170px" }}
+          />
         </div>
 
         {/* Cards grid */}

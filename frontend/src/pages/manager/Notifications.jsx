@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
-import { Bell, ClipboardList, Calendar, CheckCircle, RefreshCw } from "lucide-react";
+import { Bell, ClipboardList, Calendar, CheckCircle, RefreshCw, FileText, CalendarClock, UserCheck, CalendarX } from "lucide-react";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-notif-styles")) {
@@ -230,9 +230,16 @@ export default function Notifications() {
 function NotifRow({ notif, onRead, idx }) {
   const typeIconMap = {
     leave_decision:   <ClipboardList size={20} color="#64748B" />,
+    leave_request:    <ClipboardList size={20} color="#64748B" />,
+    off_day_request:  <CalendarClock size={20} color="#64748B" />,
     shift_published:  <Calendar size={20} color="#64748B" />,
     assignment:       <CheckCircle size={20} color="#64748B" />,
     swap_decision:    <RefreshCw size={20} color="#64748B" />,
+    swap_request:     <RefreshCw size={20} color="#64748B" />,
+    report_submitted: <FileText size={20} color="#64748B" />,
+    casual_availability: <CalendarClock size={20} color="#64748B" />,
+    shift_acknowledged: <UserCheck size={20} color="#64748B" />,
+    shift_cancelled:  <CalendarX size={20} color="#64748B" />,
   };
   const icon = typeIconMap[notif.type] || <Bell size={20} color="#64748B" />;
 

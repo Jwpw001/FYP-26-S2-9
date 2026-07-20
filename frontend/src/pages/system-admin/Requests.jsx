@@ -3,6 +3,7 @@ import { ClipboardList } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import AdminLayout from "../../components/layout/AdminLayout";
+import SearchableSelect from "../../components/SearchableSelect";
 import { createPortal } from "react-dom";
 
 if (typeof document !== "undefined" && !document.getElementById("coord-req-styles")) {
@@ -258,17 +259,18 @@ export default function CoordinatorRequests() {
             </p>
 
             <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", display: "block", marginBottom: "6px" }}>Select Krewby Worker</label>
-            <select value={pickedWorker} onChange={e => setPickedWorker(e.target.value)}
-              style={{ width: "100%", padding: "10px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "13px", color: "#1E293B", background: "#FAFAFA", marginBottom: "20px" }}>
-              <option value="">â€” Choose a worker â€”</option>
-              {workers.filter(w => w.is_active).map(w => (
-                <option key={w.krewby_worker_id} value={w.krewby_worker_id}>
-                  {w.user?.full_name || w.user?.email || `Worker #${w.krewby_worker_id}`}
-                  {w.preferred_location ? ` Â· ${w.preferred_location}` : ""}
-                  {w.rating ? ` · ★ ${Number(w.rating).toFixed(1)}` : ""}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              options={workers.filter(w => w.is_active).map(w => ({
+                value: w.krewby_worker_id,
+                label: `${w.user?.full_name || w.user?.email || `Worker #${w.krewby_worker_id}`}`
+                  + `${w.preferred_location ? ` · ${w.preferred_location}` : ""}`
+                  + `${w.rating ? ` · ★ ${Number(w.rating).toFixed(1)}` : ""}`,
+              }))}
+              value={pickedWorker}
+              onChange={setPickedWorker}
+              placeholder="— Choose a worker —"
+              style={{ marginBottom: "20px" }}
+            />
 
             <div style={{ display: "flex", gap: "10px" }}>
               <button onClick={() => setAssignModal(null)} disabled={assigning}

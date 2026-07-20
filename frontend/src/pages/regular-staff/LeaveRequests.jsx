@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
+import { notifyUsers, getBranchManagerUserIds } from "../../lib/notify";
 import StaffLayout from "../../components/layout/StaffLayout";
 import { TreePalm, ChevronLeft, ChevronRight, X } from "lucide-react";
 
@@ -217,6 +218,7 @@ export default function LeaveRequests() {
   // Common
   const [myShifts,    setMyShifts]    = useState([]);
   const [staffId,     setStaffId]     = useState(null);
+  const [branchId,    setBranchId]    = useState(null);
   const [loading,     setLoading]     = useState(true);
   const [toast,       setToast]       = useState(null);
   const [workingDays, setWorkingDays] = useState(7);
@@ -258,6 +260,7 @@ export default function LeaveRequests() {
 
       const { data: staffRow } = await supabase.from("staff").select("branch_id").eq("staff_id", sid).single();
       const oid = staffRow?.branch_id;
+      setBranchId(oid || null);
 
       const [{ data: leaveData }, { data: offData }, { data: branchRow }, { data: assignments }, { data: approvedSwaps }] = await Promise.all([
         supabase.from("availability")
@@ -332,6 +335,14 @@ export default function LeaveRequests() {
     setRangeStart(null); setRangeEnd(null);
     setLeaveForm({ leave_type: "annual", reason: "" });
     showToast("Leave request submitted.");
+
+    getBranchManagerUserIds(branchId).then(managerIds => notifyUsers(managerIds, {
+      type: "leave_request",
+      title: "New Leave Request",
+      message: `${user?.full_name || "A staff member"} requested ${data.leave_type} leave (${fmtDate(data.start_date)} – ${fmtDate(data.end_date)}).`,
+      relatedEntity: "availability",
+      relatedId: data.request_id,
+    })).catch(() => {});
   }
 
   // ── Off day logic ───────────────────────────────────────────────────────────
@@ -351,6 +362,14 @@ export default function LeaveRequests() {
     setSelectedOffDate(null);
     setOffDayReason("");
     showToast("Off day request submitted.");
+
+    getBranchManagerUserIds(branchId).then(managerIds => notifyUsers(managerIds, {
+      type: "off_day_request",
+      title: "New Off Day Request",
+      message: `${user?.full_name || "A staff member"} requested ${fmtDate(data.requested_date)} off.`,
+      relatedEntity: "off_day_requests",
+      relatedId: data.id,
+    })).catch(() => {});
   }
 
   const FILTER_TABS = [
