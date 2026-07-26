@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
 import { Users, Building2, Tag } from "lucide-react";
+import UserAvatar from "../../components/UserAvatar";
 
 export default function CasualPool() {
   const [workers, setWorkers] = useState([]);
@@ -80,8 +81,6 @@ export default function CasualPool() {
 }
 
 function WorkerCard({ worker }) {
-  const initials = worker.full_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "?";
-
   return (
     <div style={{
       background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px",
@@ -89,14 +88,7 @@ function WorkerCard({ worker }) {
       boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
     }}>
       {/* Avatar */}
-      <div style={{
-        width: "44px", height: "44px", borderRadius: "12px",
-        background: "#EFF6FF", color: "#2563EB",
-        fontSize: "15px", fontWeight: "700",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      }}>
-        {initials}
-      </div>
+      <UserAvatar name={worker.full_name || ""} avatar_url={worker.avatar_url} size={44} />
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>

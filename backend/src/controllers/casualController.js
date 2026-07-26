@@ -355,7 +355,7 @@ async function getManagerPool(req, res) {
     const enriched = await Promise.all((approved || []).map(async (w) => {
       const user = await prisma.users.findUnique({
         where: { user_id: w.user_id },
-        select: { full_name: true, email: true, username: true },
+        select: { full_name: true, email: true, username: true, avatar_url: true },
       });
       const { data: skills } = await supabaseAdmin
         .from("user_skill_tags")
@@ -373,6 +373,7 @@ async function getManagerPool(req, res) {
         full_name: user?.full_name,
         email: user?.email,
         username: user?.username,
+        avatar_url: user?.avatar_url || "/avatars/default.png",
         skills: (skills || []).map(s => s.skills?.name).filter(Boolean),
         branch_count: branchCount || 1,
       };

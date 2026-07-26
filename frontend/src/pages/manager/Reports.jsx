@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
 import { useGoTo } from "../../components/PageTransition";
-import { Users, CalendarDays, ClipboardCheck, CalendarClock, Download, History } from "lucide-react";
+import { Download, History } from "lucide-react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import UserAvatar from "../../components/UserAvatar";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -29,6 +29,13 @@ const PERIODS = [
   { label: "90D", days: 90 },
 ];
 
+const STATUS_BAR_COLOR = {
+  completed: "#16A34A", published: "#2563EB", draft: "#94A3B8",
+  cancelled: "#EF4444", assigned: "#0891B2", open: "#D97706",
+  approved: "#16A34A", pending: "#D97706", rejected: "#EF4444",
+  present: "#16A34A", absent: "#EF4444", late: "#D97706", pending_review: "#D97706",
+};
+
 function Shimmer({ w = "100%", h = "16px", r = "6px" }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear", flexShrink: 0 }} />;
 }
@@ -49,23 +56,59 @@ function TrendBadge({ pct }) {
   );
 }
 
-function KpiCard({ label, value, sub, pct, color = "#2563EB", bg = "#EFF6FF", Icon, loading }) {
+function StatStrip({ stats, loading }) {
   return (
-    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
-        <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: bg, color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          {Icon && <Icon size={18} strokeWidth={2} />}
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 8px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", flexWrap: "wrap" }}>
+      {stats.map((s, i) => (
+        <div key={s.label} style={{ flex: "1 1 0", padding: "0 24px", borderLeft: i === 0 ? "none" : "1px solid #E2E8F0", minWidth: "160px" }}>
+          {loading ? (
+            <><Shimmer w="60px" h="30px" r="6px" /><div style={{ marginTop: "8px" }}><Shimmer w="80px" h="11px" r="5px" /></div></>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "30px", fontWeight: "800", color: "#0F172A", lineHeight: 1 }}>{s.value}</span>
+                {s.pct !== null && s.pct !== undefined && <TrendBadge pct={s.pct} />}
+              </div>
+              <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", margin: "8px 0 2px" }}>{s.label}</p>
+              <p style={{ fontSize: "11px", color: "#94A3B8", margin: 0 }}>{s.sub}</p>
+            </>
+          )}
         </div>
-        {!loading && <TrendBadge pct={pct} />}
-      </div>
+      ))}
+    </div>
+  );
+}
+
+function BarMeterSection({ title, sub, rows, loading }) {
+  const total = rows.reduce((s, r) => s + r.count, 0);
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: 0 }}>{title}</h3>
+      <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 16px" }}>{sub}</p>
       {loading ? (
-        <><Shimmer w="60px" h="26px" r="6px" /><div style={{ marginTop: "6px" }}><Shimmer w="90px" h="11px" r="5px" /></div></>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {[1, 2, 3].map(i => <Shimmer key={i} h="30px" />)}
+        </div>
+      ) : rows.length === 0 ? (
+        <p style={{ fontSize: "13px", color: "#94A3B8", textAlign: "center", padding: "16px 0" }}>No data</p>
       ) : (
-        <>
-          <p style={{ fontSize: "26px", fontWeight: "800", color: "#0F172A", lineHeight: 1, marginBottom: "4px" }}>{value}</p>
-          <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B" }}>{label}</p>
-          {sub && <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "2px" }}>{sub}</p>}
-        </>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {rows.map(r => {
+            const pct = total > 0 ? Math.round((r.count / total) * 100) : 0;
+            const color = STATUS_BAR_COLOR[r.status] || "#94A3B8";
+            return (
+              <div key={r.status}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "5px" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: "600", color: "#374151", textTransform: "capitalize" }}>{r.status?.replace(/_/g, " ")}</span>
+                  <span style={{ fontSize: "12px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{r.count}</strong> · {pct}%</span>
+                </div>
+                <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: "100px", background: color, width: `${pct}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -82,11 +125,6 @@ function LineChart({ series, labels, height = 180 }) {
   const px = i => PAD.left + (i / Math.max(n - 1, 1)) * chartW;
   const py = v => PAD.top + (1 - v / maxV) * chartH;
   const linePath = data => data.length === 0 ? "" : data.map((v, i) => `${i === 0 ? "M" : "L"}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
-  const area = (data, color) => {
-    if (!data.length) return null;
-    const close = ` L${px(data.length-1).toFixed(1)},${(PAD.top+chartH).toFixed(1)} L${PAD.left.toFixed(1)},${(PAD.top+chartH).toFixed(1)} Z`;
-    return <path d={linePath(data) + close} fill={color} fillOpacity="0.08" stroke="none" />;
-  };
   const ticks = [0, 0.25, 0.5, 0.75, 1].map(t => ({ v: Math.round(t * maxV), y: PAD.top + (1 - t) * chartH }));
   const xShow = n <= 14 ? labels.map((l, i) => ({ l, i })) : Array.from({ length: 7 }, (_, k) => { const i = Math.round(k * (n-1) / 6); return { l: labels[i], i }; });
   return (
@@ -94,53 +132,14 @@ function LineChart({ series, labels, height = 180 }) {
       {ticks.map((t, idx) => <line key={`tl-${idx}`} x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y} stroke="#F1F5F9" strokeWidth="1" />)}
       {ticks.map((t, idx) => <text key={`tt-${idx}`} x={PAD.left - 4} y={t.y + 4} textAnchor="end" fontSize="14" fill="#94A3B8">{t.v}</text>)}
       {xShow.map(({ l, i }) => <text key={`xl-${i}`} x={px(i)} y={H - 4} textAnchor="middle" fontSize="14" fill="#94A3B8">{l}</text>)}
-      {series.map((s, si) => { const el = area(s.data, s.color); return el ? <path key={`area-${si}`} d={el.props.d} fill={s.color} fillOpacity="0.08" stroke="none" /> : null; })}
+      {series.map((s, si) => {
+        if (!s.data.length) return null;
+        const close = ` L${px(s.data.length-1).toFixed(1)},${(PAD.top+chartH).toFixed(1)} L${PAD.left.toFixed(1)},${(PAD.top+chartH).toFixed(1)} Z`;
+        return <path key={`area-${si}`} d={linePath(s.data) + close} fill={s.color} fillOpacity="0.08" stroke="none" />;
+      })}
       {series.map(s => <path key={`line-${s.label}`} d={linePath(s.data)} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />)}
       {series.map(s => s.data.length > 0 && <circle key={`dot-${s.label}`} cx={px(s.data.length-1)} cy={py(s.data[s.data.length-1])} r="4" fill={s.color} />)}
     </svg>
-  );
-}
-
-const STATUS_STYLE = {
-  completed: { bg: "#F0FDF4", color: "#16A34A" },
-  published: { bg: "#EFF6FF", color: "#2563EB" },
-  draft:     { bg: "#F8FAFC", color: "#64748B" },
-  cancelled: { bg: "#FEF2F2", color: "#DC2626" },
-  approved:  { bg: "#F0FDF4", color: "#16A34A" },
-  pending:   { bg: "#FFFBEB", color: "#D97706" },
-  rejected:  { bg: "#FEF2F2", color: "#DC2626" },
-  present:   { bg: "#F0FDF4", color: "#16A34A" },
-  absent:    { bg: "#FEF2F2", color: "#DC2626" },
-  late:      { bg: "#FFFBEB", color: "#D97706" },
-};
-function StatusBadge({ status }) {
-  const st = STATUS_STYLE[status] || { bg: "#F8FAFC", color: "#64748B" };
-  return <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "700", background: st.bg, color: st.color, textTransform: "capitalize" }}>{status?.replace(/_/g, " ")}</span>;
-}
-
-function StatusTable({ rows, loading }) {
-  if (loading) return <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>{Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="36px" />)}</div>;
-  const total = rows.reduce((s, r) => s + r.count, 0);
-  return (
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-      <thead><tr style={{ borderBottom: "2px solid #F1F5F9" }}>
-        <th style={{ padding: "8px 0", textAlign: "left",  fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-        <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Count</th>
-        <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Share</th>
-      </tr></thead>
-      <tbody>
-        {rows.length === 0
-          ? <tr><td colSpan={3} style={{ padding: "24px 0", textAlign: "center", color: "#94A3B8" }}>No data</td></tr>
-          : rows.map(r => (
-            <tr key={r.status} className="mgr-rpt-row" style={{ borderBottom: "1px solid #F8FAFC" }}>
-              <td style={{ padding: "10px 0" }}><StatusBadge status={r.status} /></td>
-              <td style={{ padding: "10px 0", textAlign: "right", fontWeight: "700", color: "#0F172A" }}>{r.count}</td>
-              <td style={{ padding: "10px 0", textAlign: "right", color: "#64748B", fontSize: "12px" }}>{total ? Math.round((r.count / total) * 100) : 0}%</td>
-            </tr>
-          ))
-        }
-      </tbody>
-    </table>
   );
 }
 
@@ -153,6 +152,9 @@ export default function Reports() {
   const [loading,    setLoading]    = useState(true);
   const [branchId,   setBranchId]   = useState(null);
   const [branchName, setBranchName] = useState("");
+  const [showHistory,    setShowHistory]    = useState(false);
+  const [historyRows,    setHistoryRows]    = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const [kpis, setKpis] = useState({
     staff: 0, regularStaff: 0, casualStaff: 0,
@@ -162,12 +164,10 @@ export default function Reports() {
   });
   const [chartLabels,        setChartLabels]        = useState([]);
   const [chartSeries,        setChartSeries]        = useState([]);
-  const [workload,           setWorkload]           = useState([]);
   const [shiftsByStatus,     setShiftsByStatus]     = useState([]);
   const [timesheetBreakdown, setTimesheetBreakdown] = useState([]);
   const [leaveByStatus,      setLeaveByStatus]      = useState([]);
   const [staffKpis,          setStaffKpis]          = useState([]);
-  const [showAllKpiModal,    setShowAllKpiModal]    = useState(false);
 
   const days = PERIODS[period].days;
 
@@ -184,7 +184,15 @@ export default function Reports() {
     }).catch(() => {});
   }
 
-  // Resolve branch once
+  function openHistory() {
+    setShowHistory(true);
+    setHistoryLoading(true);
+    api.get("/api/reports")
+      .then(r => setHistoryRows(r.reports || []))
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
+  }
+
   useEffect(() => {
     if (!userId) return;
     supabase.from("staff").select("branch_id, branches(name)")
@@ -216,7 +224,6 @@ export default function Reports() {
       const periodStartStr = periodStart.toISOString().slice(0, 10);
       const prevStartStr   = prevStart.toISOString().slice(0, 10);
 
-      // ── Parallel fetch ─────────────────────────────────────────────────────
       const [
         { data: staffData },
         { data: shiftsAll },
@@ -224,7 +231,7 @@ export default function Reports() {
         { data: assignPrev },
       ] = await Promise.all([
         supabase.from("staff")
-          .select("staff_id, staff_type, is_active, users:user_id(full_name)")
+          .select("staff_id, staff_type, is_active, users:user_id(full_name, avatar_url)")
           .eq("branch_id", branchId),
         supabase.from("shifts")
           .select("shift_id, status, shift_date")
@@ -245,9 +252,7 @@ export default function Reports() {
       const staff   = staffData  || [];
       const shifts  = shiftsAll  || [];
       const currA   = assignCurr || [];
-      const prevA   = assignPrev || [];
 
-      // Leave requests + timesheets (need staff IDs)
       const staffIds = staff.map(s => s.staff_id);
       const [{ data: leaveAll }, { data: timesheetRows }] = await Promise.all([
         staffIds.length > 0
@@ -260,7 +265,6 @@ export default function Reports() {
       ]);
       const leave = leaveAll || [];
 
-      // ── KPIs ───────────────────────────────────────────────────────────────
       const activeStaff  = staff.filter(s => s.is_active);
       const periodShifts = shifts.filter(s => s.shift_date >= periodStartStr && s.shift_date <= todayStr);
       const prevShifts   = shifts.filter(s => s.shift_date >= prevStartStr   && s.shift_date <  periodStartStr);
@@ -283,7 +287,6 @@ export default function Reports() {
         pendingLeavePrev:    prevLeave.filter(l => l.status === "pending").length,
       });
 
-      // ── Daily chart ────────────────────────────────────────────────────────
       const dayCount  = Math.min(days, 30);
       const dayKeys   = Array.from({ length: dayCount }, (_, i) => {
         const d = new Date(now); d.setDate(now.getDate() - (dayCount - 1 - i));
@@ -301,54 +304,27 @@ export default function Reports() {
         { label: "Leave Requests", data: toDailyCount(leave,  l => l.start_date), color: "#D97706" },
       ]);
 
-      // ── Staff workload ──────────────────────────────────────────────────────
-      const wmap = {};
-      currA.forEach(a => {
-        const name = a.staff?.users?.full_name || `Staff #${a.staff_id}`;
-        wmap[a.staff_id] = { name, count: (wmap[a.staff_id]?.count || 0) + 1 };
-      });
-      setWorkload(Object.values(wmap).sort((a, b) => b.count - a.count).slice(0, 8));
-
-      // ── Shifts by status (all time) ─────────────────────────────────────────
       const smap = {};
       shifts.forEach(s => { smap[s.status] = (smap[s.status] || 0) + 1; });
       setShiftsByStatus(Object.entries(smap).map(([s, c]) => ({ status: s, count: c })).sort((a, b) => b.count - a.count));
 
-      // ── Timesheet breakdown (period) ───────────────────────────────────────
       const tmap = {};
-      (timesheetRows || []).forEach(t => {
-        tmap[t.status] = (tmap[t.status] || 0) + 1;
-      });
+      (timesheetRows || []).forEach(t => { tmap[t.status] = (tmap[t.status] || 0) + 1; });
       setTimesheetBreakdown(Object.entries(tmap).map(([s, c]) => ({ status: s, count: c })).sort((a, b) => b.count - a.count));
 
-      // ── Leave by status (all time) ──────────────────────────────────────────
       const lmap = {};
       leave.forEach(l => { lmap[l.status] = (lmap[l.status] || 0) + 1; });
       setLeaveByStatus(Object.entries(lmap).map(([s, c]) => ({ status: s, count: c })).sort((a, b) => b.count - a.count));
 
-      // ── Per-staff KPIs ──────────────────────────────────────────────────────
       const kpiMap = {};
       staff.filter(s => s.users && s.users.full_name).forEach(s => {
         kpiMap[s.staff_id] = {
-          staff_id:   s.staff_id,
-          name:       s.users.full_name,
-          staff_type: s.staff_type,
-          is_active:  s.is_active,
-          shifts: 0,
-          hoursLogged: 0,
-          tsApproved: 0, tsPending: 0, tsRejected: 0,
-          leaveCount: 0,
+          staff_id: s.staff_id, name: s.users.full_name, avatar_url: s.users.avatar_url || null,
+          staff_type: s.staff_type, is_active: s.is_active,
+          shifts: 0, hoursLogged: 0, tsApproved: 0, tsPending: 0, tsRejected: 0, leaveCount: 0,
         };
       });
-
-      // shifts from currA
-      currA.forEach(a => {
-        const row = kpiMap[a.staff_id];
-        if (!row) return;
-        row.shifts++;
-      });
-
-      // timesheets
+      currA.forEach(a => { const row = kpiMap[a.staff_id]; if (row) row.shifts++; });
       (timesheetRows || []).forEach(t => {
         const row = kpiMap[t.staff_id];
         if (!row) return;
@@ -356,31 +332,16 @@ export default function Reports() {
         if (t.status === "pending")   row.tsPending++;
         if (t.status === "rejected")  row.tsRejected++;
       });
-
-      // leave (period)
-      const leaveByStaff = {};
-      leave.filter(l => l.start_date >= periodStartStr && l.start_date <= todayStr)
-           .forEach(l => { leaveByStaff[l.staff_id] = (leaveByStaff[l.staff_id] || 0) + 1; });
-
-      // need staff_id on leave — re-fetch with staff_id included
       const { data: leaveWithStaff } = staffIds.length > 0
         ? await supabase.from("availability").select("staff_id, start_date")
             .in("staff_id", staffIds).gte("start_date", periodStartStr).lte("start_date", todayStr)
         : { data: [] };
-      (leaveWithStaff || []).forEach(l => {
-        const row = kpiMap[l.staff_id];
-        if (row) row.leaveCount++;
-      });
+      (leaveWithStaff || []).forEach(l => { const row = kpiMap[l.staff_id]; if (row) row.leaveCount++; });
 
-      // Sort by computed score descending so top performers appear first
       const scored = Object.values(kpiMap).map(s => {
         const tsTotal = s.tsApproved + s.tsPending + s.tsRejected;
         const approvalRate = tsTotal > 0 ? (s.tsApproved / tsTotal) : null;
-        const shiftScore = Math.min(s.shifts * 8, 25);
-        const hoursScore = Math.min(s.hoursLogged / 2, 25);
-        const tsScore    = approvalRate != null ? approvalRate * 35 : 17.5;
-        const leaveScore = Math.max(0, 15 - s.leaveCount * 3);
-        return { ...s, _score: Math.round(shiftScore + hoursScore + tsScore + leaveScore) };
+        return { ...s, _score: Math.round(Math.min(s.shifts * 8, 25) + Math.min(s.hoursLogged / 2, 25) + (approvalRate != null ? approvalRate * 35 : 17.5) + Math.max(0, 15 - s.leaveCount * 3)) };
       });
       setStaffKpis(scored.sort((a, b) => b._score - a._score));
 
@@ -405,8 +366,6 @@ export default function Reports() {
     lines.push(`Shifts (period),${kpis.shifts}`);
     lines.push(`TS Approval Rate,${kpis.tsApprovalRate ?? 0}%`);
     lines.push(`Pending Leave (period),${kpis.pendingLeave}`);
-    lines.push(""); lines.push("STAFF WORKLOAD"); lines.push("Staff,Shifts");
-    workload.forEach(w => lines.push(`"${w.name}",${w.count}`));
     lines.push(""); lines.push("SHIFTS BY STATUS"); lines.push("Status,Count");
     shiftsByStatus.forEach(s => lines.push(`${s.status},${s.count}`));
     lines.push(""); lines.push("TIMESHEET BREAKDOWN"); lines.push("Status,Count");
@@ -434,10 +393,8 @@ export default function Reports() {
     const pageW = doc.internal.pageSize.getWidth();
     let y = 15;
 
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, pageW, 24, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(13); doc.setFont("helvetica", "bold");
+    doc.setFillColor(15, 23, 42); doc.rect(0, 0, pageW, 24, "F");
+    doc.setTextColor(255, 255, 255); doc.setFontSize(13); doc.setFont("helvetica", "bold");
     doc.text(`${branchName || "Branch"} — Manager Report`, 14, 13);
     doc.setFontSize(9); doc.setFont("helvetica", "normal");
     doc.text(`Period: ${PERIODS[period].label}   Generated: ${today}`, pageW - 14, 13, { align: "right" });
@@ -460,58 +417,30 @@ export default function Reports() {
       margin: { left: 14, right: 14 },
     });
     y = doc.lastAutoTable.finalY + 8;
-
-    if (workload.length > 0) {
-      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(15, 23, 42);
-      doc.text("Staff Workload", 14, y); y += 3;
-      autoTable(doc, {
-        startY: y,
-        head: [["Staff", "Shifts"]],
-        body: workload.map(w => [w.name, w.count]),
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontSize: 8 },
-        bodyStyles: { fontSize: 8 },
-        columnStyles: { 1: { halign: "right" } },
-        margin: { left: 14, right: 14 },
-      });
-      y = doc.lastAutoTable.finalY + 8;
-    }
-
     if (y > 210) { doc.addPage(); y = 20; }
-
     autoTable(doc, {
-      startY: y,
-      head: [["Shifts by Status", "Count"]],
+      startY: y, head: [["Shifts by Status", "Count"]],
       body: shiftsByStatus.map(s => [s.status, s.count]),
-      headStyles: { fillColor: [217, 119, 6], textColor: 255, fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
-      columnStyles: { 1: { halign: "right" } },
-      margin: { left: 14, right: pageW / 2 + 2 },
+      headStyles: { fillColor: [217, 119, 6], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: "right" } }, margin: { left: 14, right: pageW / 2 + 2 },
     });
     autoTable(doc, {
-      startY: y,
-      head: [["Timesheet Status", "Count"]],
+      startY: y, head: [["Timesheet Status", "Count"]],
       body: timesheetBreakdown.map(t => [t.status, t.count]),
-      headStyles: { fillColor: [124, 58, 237], textColor: 255, fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
-      columnStyles: { 1: { halign: "right" } },
-      margin: { left: pageW / 2 + 2, right: 14 },
+      headStyles: { fillColor: [124, 58, 237], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: "right" } }, margin: { left: pageW / 2 + 2, right: 14 },
     });
     y = doc.lastAutoTable.finalY + 8;
-
     if (leaveByStatus.length > 0) {
       if (y > 240) { doc.addPage(); y = 20; }
       autoTable(doc, {
-        startY: y,
-        head: [["Leave by Status", "Count"]],
+        startY: y, head: [["Leave by Status", "Count"]],
         body: leaveByStatus.map(l => [l.status, l.count]),
-        headStyles: { fillColor: [8, 145, 178], textColor: 255, fontSize: 8 },
-        bodyStyles: { fontSize: 8 },
-        columnStyles: { 1: { halign: "right" } },
-        margin: { left: 14, right: pageW / 2 + 2 },
+        headStyles: { fillColor: [8, 145, 178], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+        columnStyles: { 1: { halign: "right" } }, margin: { left: 14, right: pageW / 2 + 2 },
       });
       y = doc.lastAutoTable.finalY + 8;
     }
-
     if (staffKpis.length > 0) {
       doc.addPage(); y = 20;
       doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(15, 23, 42);
@@ -522,187 +451,166 @@ export default function Reports() {
         body: staffKpis.map(s => {
           const tsTotal = s.tsApproved + s.tsPending + s.tsRejected;
           const approvalRate = tsTotal > 0 ? (s.tsApproved / tsTotal) : null;
-          const score = Math.round(
-            Math.min(s.shifts * 8, 25) +
-            Math.min(s.hoursLogged / 2, 25) +
-            (approvalRate != null ? approvalRate * 35 : 17.5) +
-            Math.max(0, 15 - s.leaveCount * 3)
-          );
+          const score = Math.round(Math.min(s.shifts * 8, 25) + Math.min(s.hoursLogged / 2, 25) + (approvalRate != null ? approvalRate * 35 : 17.5) + Math.max(0, 15 - s.leaveCount * 3));
           return [s.name, s.staff_type, s.shifts, s.hoursLogged.toFixed(1), s.tsApproved, s.tsPending, s.tsRejected, s.leaveCount, score];
         }),
-        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 7 },
-        bodyStyles: { fontSize: 7 },
+        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 7 }, bodyStyles: { fontSize: 7 },
         columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" }, 8: { halign: "right" } },
         margin: { left: 14, right: 14 },
       });
     }
-
     const safeName = (branchName || "branch").toLowerCase().replace(/\s+/g, "-");
     doc.save(`${safeName}-report-${PERIODS[period].label}-${new Date().toISOString().slice(0, 10)}.pdf`);
     logDownload("pdf");
   }
 
-  const maxWorkload = workload[0]?.count || 1;
-
   return (
     <ManagerLayout title="Reports">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
-        {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+        {showHistory ? (
+          /* ── History View ── */
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>Reports</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {branchName ? `${branchName} — ` : ""}Branch performance overview
-            </p>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", background: "#F1F5F9", borderRadius: "10px", padding: "3px", gap: "2px" }}>
-              {PERIODS.map((p, i) => (
-                <button key={p.label} onClick={() => setPeriod(i)} className="mgr-rpt-tab"
-                  style={{ padding: "6px 16px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "background 0.15s", background: period === i ? "#FFF" : "transparent", color: period === i ? "#0F172A" : "#64748B", boxShadow: period === i ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
-                  {p.label}
-                </button>
-              ))}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "22px" }}>
+              <button onClick={() => setShowHistory(false)}
+                style={{ width: "34px", height: "34px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: "pointer", color: "#64748B", fontSize: "16px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+              <div>
+                <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Report History</h2>
+                <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0" }}>All reports you have exported</p>
+              </div>
             </div>
-            <button onClick={downloadCSV} disabled={loading}
-              style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Download size={14} strokeWidth={2} /> CSV
-            </button>
-            <button onClick={downloadPDF} disabled={loading}
-              style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Download size={14} strokeWidth={2} /> PDF
-            </button>
-            <button onClick={() => goTo("/manager/report-history")}
-              style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
-              <History size={14} strokeWidth={2} /> History
-            </button>
-          </div>
-        </div>
-
-        {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: "14px", marginBottom: "20px" }}>
-          <KpiCard loading={loading} Icon={Users}         color="#2563EB" bg="#EFF6FF"
-            label="Active Staff"    value={kpis.staff}              pct={null}
-            sub={`${kpis.regularStaff} regular · ${kpis.casualStaff} casual`} />
-          <KpiCard loading={loading} Icon={CalendarDays}  color="#059669" bg="#ECFDF5"
-            label="Shifts"          value={kpis.shifts}             pct={pctDelta(kpis.shifts, kpis.shiftsPrev)}
-            sub={`vs prev ${PERIODS[period].label}`} />
-          <KpiCard loading={loading} Icon={ClipboardCheck} color="#7C3AED" bg="#F5F3FF"
-            label="TS Approval Rate" value={`${kpis.tsApprovalRate ?? 0}%`} pct={null}
-            sub="approved timesheets (period)" />
-          <KpiCard loading={loading} Icon={CalendarClock} color="#D97706" bg="#FFFBEB"
-            label="Pending Leave"   value={kpis.pendingLeave}       pct={pctDelta(kpis.pendingLeave, kpis.pendingLeavePrev)}
-            sub={`vs prev ${PERIODS[period].label}`} />
-        </div>
-
-        {/* ── Daily Activity Chart ───────────────────────────────────────────── */}
-        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-            <div>
-              <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A" }}>Daily Activity</h3>
-              <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>Last {Math.min(days, 30)} days</p>
-            </div>
-            <div style={{ display: "flex", gap: "16px" }}>
-              {chartSeries.map(s => (
-                <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{ width: "10px", height: "3px", borderRadius: "2px", background: s.color }} />
-                  <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>{s.label}</span>
+            <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              {historyLoading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {[1,2,3].map(i => <Shimmer key={i} h="44px" />)}
                 </div>
-              ))}
+              ) : historyRows.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                  <History size={36} color="#CBD5E1" style={{ marginBottom: "12px" }} />
+                  <p style={{ fontSize: "14px", fontWeight: "600", color: "#94A3B8" }}>No exports yet</p>
+                  <p style={{ fontSize: "13px", color: "#CBD5E1", marginTop: "4px" }}>Download a CSV or PDF from the Reports page to see history here.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "500px" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #F1F5F9" }}>
+                        {["Title", "Format", "Period", "Downloaded"].map(h => (
+                          <th key={h} style={{ padding: "10px 12px", textAlign: h === "Format" || h === "Downloaded" ? "center" : "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyRows.map(r => (
+                        <tr key={r.report_id} style={{ borderBottom: "1px solid #F8FAFC" }}>
+                          <td style={{ padding: "12px", fontWeight: "600", color: "#1E293B" }}>{r.title || "Report"}</td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>
+                            <span style={{ fontSize: "11px", fontWeight: "700", padding: "2px 10px", borderRadius: "100px", background: r.format === "pdf" ? "#FEF2F2" : "#F0FDF4", color: r.format === "pdf" ? "#DC2626" : "#16A34A", textTransform: "uppercase" }}>{r.format}</span>
+                          </td>
+                          <td style={{ padding: "12px", color: "#64748B", fontSize: "12px" }}>{r.period_start} – {r.period_end}</td>
+                          <td style={{ padding: "12px", textAlign: "center", color: "#94A3B8", fontSize: "12px" }}>{r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
-          {loading
-            ? <div style={{ height: "180px", background: "linear-gradient(90deg,#F8FAFC 25%,#F1F5F9 50%,#F8FAFC 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear", borderRadius: "8px" }} />
-            : <LineChart series={chartSeries} labels={chartLabels} height={180} />}
-        </div>
-
-        {/* ── Staff Workload + Timesheet Breakdown ───────────────────────────── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
-
-          {/* Staff Workload */}
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Staff Workload</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>Shifts worked per staff member (period)</p>
-            {loading ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} h="36px" />)}
+        ) : (
+          /* ── Reports View ── */
+          <div>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "22px", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Reports</h2>
+                <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0" }}>
+                  {branchName ? `${branchName} — ` : ""}Branch performance overview
+                </p>
               </div>
-            ) : workload.length === 0 ? (
-              <p style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", padding: "24px 0" }}>No shift assignments in this period.</p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {workload.map((w, i) => (
-                  <div key={w.name} style={{ animation: `fadeUp 0.3s ease ${i * 0.06}s both` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
-                      <span style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>{w.name}</span>
-                      <span style={{ fontSize: "13px", fontWeight: "700", color: "#2563EB" }}>{w.count}</span>
-                    </div>
-                    <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
-                      <div style={{ height: "100%", borderRadius: "100px", background: "linear-gradient(90deg,#3B82F6,#2563EB)", width: `${(w.count / maxWorkload) * 100}%`, transition: "width 0.7s ease" }} />
-                    </div>
-                  </div>
-                ))}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", background: "#F1F5F9", borderRadius: "10px", padding: "3px", gap: "2px" }}>
+                  {PERIODS.map((p, i) => (
+                    <button key={p.label} onClick={() => setPeriod(i)} className="mgr-rpt-tab"
+                      style={{ padding: "6px 16px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "background 0.15s", background: period === i ? "#FFF" : "transparent", color: period === i ? "#0F172A" : "#64748B", boxShadow: period === i ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={downloadCSV} disabled={loading}
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Download size={14} strokeWidth={2} /> CSV
+                </button>
+                <button onClick={downloadPDF} disabled={loading}
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Download size={14} strokeWidth={2} /> PDF
+                </button>
+                <button onClick={openHistory}
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  History
+                </button>
               </div>
-            )}
-          </div>
-
-          {/* Timesheet Breakdown */}
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Timesheet</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>Submission status for the period</p>
-            <StatusTable rows={timesheetBreakdown} loading={loading} />
-          </div>
-        </div>
-
-        {/* ── Shifts by Status + Leave by Status ────────────────────────────── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Shifts</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By status (all time)</p>
-            <StatusTable rows={shiftsByStatus} loading={loading} />
-          </div>
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Leave Requests</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By approval status (all time)</p>
-            <StatusTable rows={leaveByStatus} loading={loading} />
-          </div>
-        </div>
-
-        {/* ── Staff KPI Table ─────────────────────────────────────────────────── */}
-        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px", flexWrap: "wrap", gap: "8px" }}>
-            <div>
-              <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A" }}>Top Staff KPI</h3>
-              <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>Top 3 performers this period</p>
             </div>
-            {!loading && staffKpis.length > 3 && (
-              <button onClick={() => setShowAllKpiModal(true)}
-                style={{ padding: "7px 14px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#2563EB", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
-                View all {staffKpis.length} staff →
-              </button>
-            )}
-          </div>
-          {loading ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="48px" />)}
-            </div>
-          ) : staffKpis.length === 0 ? (
-            <p style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", padding: "32px 0" }}>No staff data available.</p>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <StaffKpiTable rows={staffKpis.slice(0, 3)} />
-              <p style={{ fontSize: "11px", color: "#CBD5E1", marginTop: "14px", textAlign: "right" }}>
-                Score = Shifts (25) + Hours (25) + Timesheets (35) + Leave (15) · max 100
-              </p>
-            </div>
-          )}
-        </div>
 
-        {showAllKpiModal && (
-          <AllStaffKpiModal staffKpis={staffKpis} onClose={() => setShowAllKpiModal(false)} />
+            {/* Stats Strip */}
+            <StatStrip loading={loading} stats={[
+              { label: "ACTIVE STAFF",      value: kpis.staff,            sub: `${kpis.regularStaff} regular · ${kpis.casualStaff} casual`, pct: null },
+              { label: "SHIFTS",            value: kpis.shifts,           sub: `vs prev ${PERIODS[period].label}`, pct: pctDelta(kpis.shifts, kpis.shiftsPrev) },
+              { label: "TS APPROVAL RATE",  value: `${kpis.tsApprovalRate ?? 0}%`, sub: "approved timesheets", pct: null },
+              { label: "PENDING LEAVE",     value: kpis.pendingLeave,     sub: `vs prev ${PERIODS[period].label}`, pct: pctDelta(kpis.pendingLeave, kpis.pendingLeavePrev) },
+            ]} />
+
+            {/* Daily Activity Chart */}
+            <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+                <div>
+                  <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Daily Activity</h3>
+                  <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 0" }}>Last {Math.min(days, 30)} days</p>
+                </div>
+                <div style={{ display: "flex", gap: "16px" }}>
+                  {chartSeries.map(s => (
+                    <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <div style={{ width: "10px", height: "3px", borderRadius: "2px", background: s.color }} />
+                      <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {loading
+                ? <div style={{ height: "180px", background: "linear-gradient(90deg,#F8FAFC 25%,#F1F5F9 50%,#F8FAFC 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear", borderRadius: "8px" }} />
+                : <LineChart series={chartSeries} labels={chartLabels} height={180} />}
+            </div>
+
+            {/* Staff Performance Table */}
+            <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              <div style={{ marginBottom: "18px" }}>
+                <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Staff Performance</h3>
+                <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 0" }}>All staff · sorted by score · period: {PERIODS[period].label}</p>
+              </div>
+              {loading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} h="48px" />)}
+                </div>
+              ) : staffKpis.length === 0 ? (
+                <p style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", padding: "32px 0" }}>No staff data available.</p>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <StaffKpiTable rows={staffKpis} />
+                  <p style={{ fontSize: "11px", color: "#CBD5E1", marginTop: "14px", textAlign: "right" }}>
+                    Score = Shifts (25) + Hours (25) + Timesheets (35) + Leave (15) · max 100
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Breakdowns — 3-col grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "20px" }}>
+              <BarMeterSection title="Shifts by Status"     sub="All shifts (all time)"             rows={shiftsByStatus}     loading={loading} />
+              <BarMeterSection title="Timesheet Status"     sub="Submissions for the period"        rows={timesheetBreakdown} loading={loading} />
+              <BarMeterSection title="Leave Requests"       sub="By approval status (all time)"     rows={leaveByStatus}      loading={loading} />
+            </div>
+          </div>
         )}
-
       </div>
     </ManagerLayout>
   );
@@ -713,8 +621,8 @@ function StaffKpiTable({ rows }) {
     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "720px" }}>
       <thead>
         <tr style={{ borderBottom: "2px solid #F1F5F9" }}>
-          {["#", "Staff", "Type", "Shifts", "Hours Logged", "Timesheets", "Leave Taken", "Score"].map(h => (
-            <th key={h} style={{ padding: "10px 12px", textAlign: h === "Staff" || h === "#" ? "left" : "center", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+          {["Staff", "Type", "Shifts", "Hours", "Timesheets", "Leave", "Score"].map(h => (
+            <th key={h} style={{ padding: "10px 12px", textAlign: h === "Staff" ? "left" : "center", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
           ))}
         </tr>
       </thead>
@@ -722,29 +630,17 @@ function StaffKpiTable({ rows }) {
         {rows.map((s, i) => {
           const tsTotal      = s.tsApproved + s.tsPending + s.tsRejected;
           const approvalRate = tsTotal > 0 ? Math.round((s.tsApproved / tsTotal) * 100) : null;
-          const shiftScore   = Math.min(s.shifts * 8, 25);
-          const hoursScore   = Math.min(s.hoursLogged / 2, 25);
-          const tsScore      = approvalRate != null ? (approvalRate / 100) * 35 : 17.5;
-          const leaveScore   = Math.max(0, 15 - s.leaveCount * 3);
-          const score        = Math.round(shiftScore + hoursScore + tsScore + leaveScore);
+          const score        = Math.round(Math.min(s.shifts * 8, 25) + Math.min(s.hoursLogged / 2, 25) + (approvalRate != null ? (approvalRate / 100) * 35 : 17.5) + Math.max(0, 15 - s.leaveCount * 3));
           const scoreColor   = score >= 80 ? "#16A34A" : score >= 55 ? "#D97706" : "#DC2626";
           const scoreBg      = score >= 80 ? "#F0FDF4" : score >= 55 ? "#FFFBEB" : "#FEF2F2";
-          const rankColors   = ["#F59E0B", "#94A3B8", "#CD7C3E"];
-          const rankEmoji    = ["🥇", "🥈", "🥉"];
-
           return (
-            <tr key={s.staff_id} className="mgr-rpt-row" style={{ borderBottom: "1px solid #F8FAFC", animation: `fadeUp 0.3s ease ${i * 0.05}s both` }}>
-              <td style={{ padding: "13px 12px", fontWeight: "800", fontSize: "16px", color: rankColors[i] ?? "#CBD5E1", width: "32px" }}>
-                {rankEmoji[i] ?? `${i + 1}`}
-              </td>
+            <tr key={s.staff_id} className="mgr-rpt-row" style={{ borderBottom: "1px solid #F8FAFC", animation: `fadeUp 0.3s ease ${Math.min(i,8) * 0.05}s both` }}>
               <td style={{ padding: "13px 12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#EFF6FF", color: "#2563EB", fontSize: "13px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    {s.name[0]?.toUpperCase()}
-                  </div>
+                  <UserAvatar name={s.name} avatar_url={s.avatar_url} size={32} />
                   <div>
-                    <p style={{ fontWeight: "600", color: "#0F172A", whiteSpace: "nowrap" }}>{s.name}</p>
-                    {!s.is_active && <p style={{ fontSize: "10px", color: "#DC2626", fontWeight: "600" }}>Inactive</p>}
+                    <p style={{ fontWeight: "600", color: "#0F172A", margin: 0, whiteSpace: "nowrap" }}>{s.name}</p>
+                    {!s.is_active && <p style={{ fontSize: "10px", color: "#DC2626", fontWeight: "600", margin: 0 }}>Inactive</p>}
                   </div>
                 </div>
               </td>
@@ -776,40 +672,5 @@ function StaffKpiTable({ rows }) {
         })}
       </tbody>
     </table>
-  );
-}
-
-function AllStaffKpiModal({ staffKpis, onClose }) {
-  return createPortal(
-    <div
-      onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", zIndex: 99999, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "32px 16px", overflowY: "auto", backdropFilter: "blur(2px)" }}>
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ background: "#FFF", borderRadius: "20px", width: "100%", maxWidth: "920px", boxShadow: "0 32px 80px rgba(0,0,0,0.22)", animation: "fadeUp 0.2s cubic-bezier(0.34,1.26,0.64,1) both", flexShrink: 0 }}>
-
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "22px 28px", borderBottom: "1px solid #F1F5F9" }}>
-          <div>
-            <h2 style={{ fontSize: "16px", fontWeight: "800", color: "#0F172A" }}>All Staff KPI</h2>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>{staffKpis.length} staff · sorted by score</p>
-          </div>
-          <button onClick={onClose}
-            style={{ width: "34px", height: "34px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", color: "#64748B", lineHeight: 1 }}>
-            ×
-          </button>
-        </div>
-
-        {/* Table */}
-        <div style={{ padding: "20px 28px", overflowX: "auto" }}>
-          <StaffKpiTable rows={staffKpis} />
-          <p style={{ fontSize: "11px", color: "#CBD5E1", marginTop: "14px", textAlign: "right" }}>
-            Score = Shifts (25) + Hours (25) + Timesheets (35) + Leave (15) · max 100
-          </p>
-        </div>
-
-      </div>
-    </div>,
-    document.body
   );
 }

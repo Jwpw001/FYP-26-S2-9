@@ -32,7 +32,7 @@ const getStaff = async (req, res) => {
     const regularStaff = await prisma.staff.findMany({
       where: { branch_id: branchId, staff_type: "regular" },
       include: {
-        users: { select: { user_id: true, full_name: true, email: true, role: true } },
+        users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } },
         branches: true,
       },
     });
@@ -47,7 +47,7 @@ const getStaff = async (req, res) => {
       ? await prisma.staff.findMany({
           where: { user_id: { in: preferredUserIds }, staff_type: "casual" },
           include: {
-            users: { select: { user_id: true, full_name: true, email: true, role: true } },
+            users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } },
             branches: true,
           },
         })
@@ -67,7 +67,7 @@ const getStaffById = async (req, res) => {
     const staff = await prisma.staff.findUnique({
       where: { staff_id: staffId },
       include: {
-        users: { select: { user_id: true, full_name: true, email: true, role: true } },
+        users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } },
         branches: true,
       },
     });

@@ -50,7 +50,7 @@ const getShifts = async (req, res) => {
       where: { branch_id: branchId },
       include: {
         branches: true,
-        users: { select: { user_id: true, full_name: true, email: true, role: true } },
+        users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } },
         shift_tasks: {
           include: {
             skills: { select: { skill_id: true, name: true } },
@@ -79,7 +79,7 @@ const getShiftById = async (req, res) => {
       where: { shift_id: shiftId },
       include: {
         branches: true,
-        users: { select: { user_id: true, full_name: true, email: true, role: true } },
+        users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } },
         shift_tasks: {
           include: {
             skills: { select: { skill_id: true, name: true } },

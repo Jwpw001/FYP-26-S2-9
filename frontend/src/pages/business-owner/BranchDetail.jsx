@@ -7,6 +7,7 @@ import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star, Settings2, Calendar, Zap, Pencil, X, Save, Loader2, Check, Minus, Scale, Award, TrendingUp, BarChart3, RotateCcw } from "lucide-react";
 import { SG_HOLIDAYS } from "../../data/sgHolidays";
+import UserAvatar from "../../components/UserAvatar";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-branchdetail-styles")) {
   const style = document.createElement("style");
@@ -408,7 +409,7 @@ export default function BranchDetail() {
             ) : (
               managers.map(m => (
                 <div key={m.user_id} className="bo-manager-row" style={{ ...s.managerRow, cursor: "pointer" }} onClick={() => goTo(`/business-owner/managers/${m.user_id}`)}>
-                  <div style={s.managerAvatar}>{m.full_name?.[0]?.toUpperCase() || "?"}</div>
+                  <UserAvatar name={m.full_name || "?"} avatar_url={m.avatar_url} size={34} />
                   <div style={{ minWidth: 0, textAlign: "left" }}>
                     <p style={s.managerName}>{m.full_name}</p>
                     <p style={s.managerEmail}>{m.email}</p>
@@ -614,12 +615,10 @@ export default function BranchDetail() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
             {staff.filter(m => m.users?.role !== "manager").map((m, i) => {
               const name = m.users?.full_name || "—";
-              const initials = name[0]?.toUpperCase() || "?";
-              const color = avatarColor(name);
               return (
                 <div key={m.staff_id} className="bo-staff-card" style={{ ...s.staffCard, animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both`, cursor: "pointer" }} onClick={() => goTo(`/business-owner/staff/${m.staff_id}`)}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-                    <div style={{ ...s.staffAvatar, background: color }}>{initials}</div>
+                    <UserAvatar name={name} avatar_url={m.users?.avatar_url} size={44} />
                     <div style={{ minWidth: 0 }}>
                       <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
                       <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.users?.email || "—"}</p>

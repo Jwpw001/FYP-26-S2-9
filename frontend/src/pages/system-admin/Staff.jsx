@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
+import UserAvatar from "../../components/UserAvatar";
 
 if (typeof document !== "undefined" && !document.getElementById("sa-staff-kf")) {
   const s = document.createElement("style");
@@ -36,7 +37,7 @@ export default function AdminStaff() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      supabase.from("staff").select("staff_id,staff_type,is_active,branch_id,user_id,users(full_name,email,role),branches(name)").order("staff_id"),
+      supabase.from("staff").select("staff_id,staff_type,is_active,branch_id,user_id,users(full_name,email,role,avatar_url),branches(name)").order("staff_id"),
       supabase.from("branches").select("branch_id,name").order("name"),
       supabase.from("user_skill_tags").select("user_id,skills(name)"),
     ]).then(([{ data: staffData }, { data: branchData }, { data: skillData }]) => {
@@ -161,10 +162,7 @@ export default function AdminStaff() {
                     onClick={() => goTo(`/system-admin/staff/${s.staff_id}`)}>
 
                     <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"14px" }}>
-                      <div style={{ width:"44px", height:"44px", borderRadius:"50%", background:avatarColor(name), color:"#FFF",
-                        fontSize:"16px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                        {name[0]?.toUpperCase()||"?"}
-                      </div>
+                      <UserAvatar name={name} avatar_url={s.users?.avatar_url} size={44} />
                       <div style={{ minWidth:0 }}>
                         <p style={{ fontSize:"14px", fontWeight:"700", color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{name}</p>
                         <p style={{ fontSize:"12px", color:"#64748B", marginTop:"2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</p>

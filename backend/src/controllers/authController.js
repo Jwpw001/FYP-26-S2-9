@@ -33,7 +33,8 @@ const login = async (req, res) => {
                 user_id: user.user_id,
                 full_name: user.full_name,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                avatar_url: user.avatar_url || "/avatars/default.png"
             }
         });
 
@@ -101,7 +102,7 @@ const register = async (req, res) => {
             success: true,
             message: "Account created successfully.",
             token,
-            user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role },
+            user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role, avatar_url: newUser.avatar_url || "/avatars/default.png" },
         });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -225,7 +226,7 @@ const registerBusiness = async (req, res) => {
             success: true,
             message: "Business registered successfully.",
             token,
-            user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role },
+            user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role, avatar_url: newUser.avatar_url || "/avatars/default.png" },
         });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -459,7 +460,7 @@ const createManagerAccount = async (req, res) => {
         return res.status(201).json({
             success: true,
             message: "Manager account created successfully.",
-            user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role },
+            user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role, avatar_url: newUser.avatar_url || "/avatars/default.png" },
         });
     } catch (error) {
         console.error("createManagerAccount error:", error);

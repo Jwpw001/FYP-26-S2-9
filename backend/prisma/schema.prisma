@@ -16,6 +16,7 @@ model users {
   is_active       Boolean           @default(true)
   created_at      DateTime          @default(now()) @db.Timestamp(6)
   full_name       String?           @db.VarChar(100)
+  avatar_url      String?           @default("/avatars/default.png") @db.VarChar(255)
   attendance      attendance[]
   availability    availability[]
   invitations     invitations[]

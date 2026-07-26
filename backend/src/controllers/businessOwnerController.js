@@ -112,7 +112,7 @@ const getAllStaff = async (req, res) => {
 
     const staff = await prisma.staff.findMany({
       where: { branch_id: { in: branchIds } },
-      include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
+      include: { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } },
       orderBy: { staff_id: "asc" },
     });
 
@@ -141,7 +141,7 @@ const getAllManagers = async (req, res) => {
 
     const users = await prisma.users.findMany({
       where: { user_id: { in: userIds } },
-      select: { user_id: true, full_name: true, email: true, is_active: true },
+      select: { user_id: true, full_name: true, email: true, is_active: true, avatar_url: true },
     });
 
     const branchNameById = Object.fromEntries(branches.map(o => [o.branch_id, o.name]));
@@ -177,7 +177,7 @@ const getBranchStaff = async (req, res) => {
 
     const staff = await prisma.staff.findMany({
       where: { branch_id: branch_id },
-      include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
+      include: { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } },
       orderBy: { staff_id: "asc" },
     });
     return res.json({ success: true, staff });
@@ -205,7 +205,7 @@ const getBranchManagers = async (req, res) => {
 
     const users = await prisma.users.findMany({
       where: { user_id: { in: userIds } },
-      select: { user_id: true, full_name: true, email: true },
+      select: { user_id: true, full_name: true, email: true, avatar_url: true },
     });
 
     const managers = users.map(u => ({
@@ -243,7 +243,7 @@ const getManagerDetail = async (req, res) => {
 
     const manager = await prisma.users.findUnique({
       where: { user_id },
-      select: { user_id: true, full_name: true, email: true, is_active: true, created_at: true },
+      select: { user_id: true, full_name: true, email: true, is_active: true, created_at: true, avatar_url: true },
     });
     if (!manager) return res.status(404).json({ success: false, message: "Manager not found." });
 
@@ -267,7 +267,7 @@ const updateManagerDetail = async (req, res) => {
         ...(full_name && full_name.trim() ? { full_name: full_name.trim() } : {}),
         ...(is_active !== undefined ? { is_active } : {}),
       },
-      select: { user_id: true, full_name: true, email: true, is_active: true, created_at: true },
+      select: { user_id: true, full_name: true, email: true, is_active: true, created_at: true, avatar_url: true },
     });
 
     return res.json({ success: true, manager: updated });
@@ -395,7 +395,7 @@ async function getOwnedStaffOrNull(req, staff_id) {
 
   const staff = await prisma.staff.findUnique({
     where: { staff_id },
-    include: { users: { select: { user_id: true, full_name: true, email: true, role: true } }, branches: true },
+    include: { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } }, branches: true },
   });
   if (!staff || staff.branches.business_id !== biz.business_id) return null;
   return staff;
@@ -486,7 +486,7 @@ const updateStaffDetail = async (req, res) => {
         ...(default_work_days !== undefined ? { default_work_days } : {}),
         ...(is_active !== undefined ? { is_active } : {}),
       },
-      include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
+      include: { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } },
     });
 
     if (Array.isArray(skill_ids)) {

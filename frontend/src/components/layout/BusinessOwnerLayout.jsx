@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings2 } from "lucide-react";
 import ProfileModal from "../ProfileModal";
 import AIAssistantWidget from "../AIAssistantWidget";
+import UserAvatar from "../UserAvatar";
 
 const NAV = [
   { label: "Dashboard",   path: "/business-owner/dashboard",    Icon: LayoutDashboard },
@@ -49,8 +50,8 @@ export default function BusinessOwnerLayout({ children, title }) {
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
         <div style={{ ...s.sidebarTop }}>
           <Link to="/business-owner/dashboard" style={s.logoRow}>
-            <div style={{ height: "34px", width: expanded ? "auto" : "34px", maxWidth: expanded ? "160px" : "34px", background: "#fff", borderRadius: "9px", overflow: "hidden", display: "flex", alignItems: "center", transition: "max-width 0.25s ease, width 0.25s ease", flexShrink: 0, padding: expanded ? "0 8px" : "0" }}>
-              <img src="/krewby-logo.png" alt="Krewby" style={{ height: expanded ? "22px" : "34px", width: expanded ? "auto" : "34px", objectFit: expanded ? "contain" : "cover", objectPosition: "left center", display: "block" }} />
+            <div style={{ height: "34px", width: "34px", background: "#fff", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <img src="/logo_noText.png" alt="Krewby" style={{ height: "26px", width: "26px", objectFit: "contain", display: "block" }} />
             </div>
           </Link>
           <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "30px" : "0px", transition: "opacity 0.25s, max-height 0.25s", overflow: "hidden", marginTop: "8px" }}>
@@ -87,7 +88,7 @@ export default function BusinessOwnerLayout({ children, title }) {
 
           <button onClick={() => setShowProfile(true)} title="View profile"
             style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
-            <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "B"}</div>
+            <UserAvatar name={user?.full_name || "B"} avatar_url={user?.avatar_url} size={34} />
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s, max-width 0.25s", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Business Owner"}</p>
               <p style={s.userRole}>Business Owner</p>

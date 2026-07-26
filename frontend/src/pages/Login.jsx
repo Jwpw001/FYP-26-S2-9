@@ -260,7 +260,7 @@ export default function Login() {
         >
           {/* Logo */}
           <Link to="/" style={s.logoRow}>
-            <img src="/krewby-logo.png" alt="Krewby" style={{ height: "38px", objectFit: "contain" }} />
+            <img src="/logo_noText.png" alt="Krewby" style={{ height: "38px", objectFit: "contain" }} />
           </Link>
 
           <h2 style={s.cardTitle}>Welcome back</h2>

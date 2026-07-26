@@ -6,6 +6,7 @@ import ManagerLayout from "../../components/layout/ManagerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import { Users } from "lucide-react";
+import UserAvatar from "../../components/UserAvatar";
 
 if (typeof document !== "undefined" && !document.getElementById("mgr-staff-styles")) {
   const style = document.createElement("style");
@@ -257,10 +258,8 @@ export default function StaffList() {
 }
 
 function StaffCard({ member: m, index, onNav }) {
-  const name     = m.users?.full_name || "—";
-  const email    = m.users?.email    || "—";
-  const initials = name[0]?.toUpperCase() || "?";
-  const bgColor  = avatarColor(name);
+  const name  = m.users?.full_name || "—";
+  const email = m.users?.email    || "—";
 
   return (
     <div className="staff-card"
@@ -269,9 +268,7 @@ function StaffCard({ member: m, index, onNav }) {
 
       {/* Avatar + name */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-        <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: bgColor, color: "#FFF", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          {initials}
-        </div>
+        <UserAvatar name={name} avatar_url={m.users?.avatar_url} size={44} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
           <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>

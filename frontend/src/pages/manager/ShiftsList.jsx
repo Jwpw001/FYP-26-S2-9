@@ -85,6 +85,9 @@ export default function ShiftsList() {
   const [selected, setSelected]     = useState(new Set());
   const [deleting, setDeleting]     = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [calendarScope, setCalendarScope] = useState("week");
+  const [dayOffset, setDayOffset]   = useState(0);
+  const [monthOffset, setMonthOffset] = useState(0);
 
   // AI Weekly Schedule state — step: 'config' | 'generating' | 'preview' | 'creating' | 'done'
   const [weeklyAI, setWeeklyAI] = useState(null);
@@ -290,6 +293,78 @@ export default function ShiftsList() {
 
   const filtered = shifts.filter(s => filterStatus === "all" || s.status === filterStatus);
 
+  function buildDayDate(offset) {
+    const d = new Date(); d.setDate(d.getDate() + offset); return d;
+  }
+
+  function buildMonthCells(offset) {
+    const base = new Date();
+    const anchor = new Date(base.getFullYear(), base.getMonth() + offset, 1);
+    const firstDow = (anchor.getDay() + 6) % 7;
+    const gridStart = new Date(anchor); gridStart.setDate(1 - firstDow);
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(gridStart); d.setDate(gridStart.getDate() + i);
+      cells.push({ date: d, inMonth: d.getMonth() === anchor.getMonth() });
+    }
+    return { label: MONTH_NAMES[anchor.getMonth()] + " " + anchor.getFullYear(), cells };
+  }
+
+  const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const STATUS_COLORS = {
+    draft:     { bg:"#F4F5F8", border:"#C9CDD6", dot:"#8B95A8", pillBg:"#E8EBF0", pillText:"#4B5563" },
+    published: { bg:"#EFF3FF", border:"#B3C5F5", dot:"#2563EB", pillBg:"#DBE4FF", pillText:"#1D4ED8" },
+    completed: { bg:"#ECFDF5", border:"#86EFAC", dot:"#22C55E", pillBg:"#D1FAE5", pillText:"#166534" },
+    cancelled: { bg:"#FEF2F2", border:"#FECACA", dot:"#EF4444", pillBg:"#FFE0E0", pillText:"#991B1B" },
+  };
+
+  // Week stats
+  let totalWeekShifts = 0, scheduledMinutes = 0, openSlots = 0, assignedTaskSlots = 0;
+  weekDates.forEach((date, i) => {
+    const dateStr = localDateStr(date);
+    const dayShifts = shifts.filter(s => s.shift_date?.slice(0,10) === dateStr && s.status !== "cancelled");
+    const isOff = operatingDays !== null && !operatingDays[i];
+    if (!isOff && dayShifts.length === 0) openSlots++;
+    dayShifts.forEach(sh => {
+      totalWeekShifts++;
+      const st = toHHMM(sh.start_time), et = toHHMM(sh.end_time);
+      if (st && et) {
+        const [sh2, sm2] = st.split(":").map(Number);
+        const [eh2, em2] = et.split(":").map(Number);
+        scheduledMinutes += Math.max(0, (eh2*60+em2) - (sh2*60+sm2));
+      }
+      assignedTaskSlots += (sh.shift_tasks||[]).filter(t => t.status === "assigned" || t.status === "done").length;
+    });
+  });
+  const weekStats = [
+    { label:"Total shifts",     value: String(totalWeekShifts) },
+    { label:"Scheduled hours",  value: (Math.round(scheduledMinutes/6)/10)+"h" },
+    { label:"Open slots",       value: String(openSlots) },
+    { label:"Staff assigned",   value: String(assignedTaskSlots) },
+  ];
+
+  // Period navigation
+  let periodLabel, onPrevPeriod, onNextPeriod, generateLabel;
+  if (view === "list" || calendarScope === "week") {
+    const ws = weekDates[0], we = weekDates[6];
+    periodLabel = MONTH_NAMES[ws.getMonth()]+" "+ws.getDate()+" – "+(we.getMonth()!==ws.getMonth()?MONTH_NAMES[we.getMonth()]+" ":"")+we.getDate();
+    onPrevPeriod = () => setWeekOffset(p => p-1);
+    onNextPeriod = () => setWeekOffset(p => p+1);
+    generateLabel = "Generate Week";
+  } else if (calendarScope === "day") {
+    const dd = buildDayDate(dayOffset);
+    periodLabel = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dd.getDay()]+", "+MONTH_NAMES[dd.getMonth()]+" "+dd.getDate();
+    onPrevPeriod = () => setDayOffset(p => p-1);
+    onNextPeriod = () => setDayOffset(p => p+1);
+    generateLabel = "Generate Day";
+  } else {
+    const mi = buildMonthCells(monthOffset);
+    periodLabel = mi.label;
+    onPrevPeriod = () => setMonthOffset(p => p-1);
+    onNextPeriod = () => setMonthOffset(p => p+1);
+    generateLabel = "Generate Month";
+  }
+
   function getFillStatus(shift) {
     const tasks = shift.shift_tasks || [];
     if (tasks.length === 0) return null;
@@ -317,143 +392,238 @@ export default function ShiftsList() {
     <ManagerLayout title="Tasks">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+        {/* ── Header ── */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"20px", flexWrap:"wrap", gap:"16px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Shifts</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>{filtered.length} total shifts</p>
+            <div style={{ fontSize:"28px", fontWeight:"800", letterSpacing:"-0.01em", color:"#1E293B" }}>Shifts</div>
+            <div style={{ display:"flex", gap:"10px", marginTop:"12px", flexWrap:"wrap" }}>
+              {weekStats.map(s => (
+                <div key={s.label} style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"10px", padding:"9px 14px", minWidth:"96px" }}>
+                  <div style={{ fontSize:"18px", fontWeight:"800", lineHeight:"1.1", color:"#1E293B" }}>{s.value}</div>
+                  <div style={{ fontSize:"11px", color:"#64748B", fontWeight:"600", marginTop:"2px" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <CreateShiftBtn onClick={() => goTo("/manager/shifts/new")} />
+          <button onClick={() => goTo("/manager/shifts/new")}
+            style={{ background:"#2563EB", color:"#fff", border:"none", borderRadius:"10px", padding:"11px 18px", fontSize:"14px", fontWeight:"700", cursor:"pointer", display:"flex", alignItems:"center", gap:"7px", boxShadow:"0 4px 14px rgba(37,99,235,0.25)", flexShrink:0 }}>
+            <span style={{ fontSize:"16px", lineHeight:"1" }}>+</span> Create Shift
+          </button>
         </div>
 
-        {/* Controls */}
-        <div style={{ display: "flex", gap: "10px", marginBottom: "18px", flexWrap: "wrap", alignItems: "center" }}>
-          {/* View toggle */}
-          <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px" }}>
-            {["list", "calendar"].map(v => (
-              <ViewToggleBtn key={v} label={v === "list" ? "List" : "Calendar"} active={view === v} onClick={() => { setView(v); setSelectMode(false); setSelected(new Set()); }} />
+        {/* ── Controls ── */}
+        <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"14px", flexWrap:"wrap" }}>
+          {/* Calendar/List toggle */}
+          <div style={{ display:"flex", background:"#EFF1F4", borderRadius:"9px", padding:"3px", gap:"2px" }}>
+            {[{v:"calendar",l:"Calendar"},{v:"list",l:"List"}].map(({v,l}) => (
+              <button key={v} onClick={() => { setView(v); setSelectMode(false); setSelected(new Set()); }}
+                style={{ padding:"6px 14px", borderRadius:"7px", fontSize:"12.5px", fontWeight:"700", border:"none", cursor:"pointer", transition:"all 0.15s",
+                  background: view === v ? "#fff" : "transparent",
+                  color: view === v ? "#1E293B" : "#64748B",
+                  boxShadow: view === v ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
+                {l}
+              </button>
             ))}
           </div>
+          {/* Scope buttons (calendar only) */}
+          {view === "calendar" && (
+            <div style={{ display:"flex", background:"#EFF1F4", borderRadius:"9px", padding:"3px", gap:"2px" }}>
+              {[{v:"day",l:"Day"},{v:"week",l:"Week"},{v:"month",l:"Month"}].map(({v,l}) => (
+                <button key={v} onClick={() => setCalendarScope(v)}
+                  style={{ padding:"6px 14px", borderRadius:"7px", fontSize:"12.5px", fontWeight:"700", border:"none", cursor:"pointer", transition:"all 0.15s",
+                    background: calendarScope === v ? "#fff" : "transparent",
+                    color: calendarScope === v ? "#1E293B" : "#64748B",
+                    boxShadow: calendarScope === v ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Divider */}
+          <div style={{ width:"1px", height:"22px", background:"#E2E8F0", margin:"0 2px" }} />
+          {/* Status filters */}
+          {STATUS_CHIPS.map(chip => (
+            <button key={chip.value} onClick={() => setFilter(chip.value)}
+              style={{ padding:"7px 13px", borderRadius:"20px", fontSize:"12.5px", fontWeight:"700", cursor:"pointer", border:"1px solid", transition:"filter 0.15s",
+                background: filterStatus === chip.value ? "#2563EB" : "#fff",
+                color: filterStatus === chip.value ? "#fff" : "#4B5563",
+                borderColor: filterStatus === chip.value ? "#2563EB" : "#E2E8F0" }}>
+              {chip.label}
+            </button>
+          ))}
+          {/* Select button */}
+          <button onClick={() => { setSelectMode(p => !p); setSelected(new Set()); }}
+            style={{ marginLeft:"auto", padding:"8px 14px", borderRadius:"9px", fontSize:"12.5px", fontWeight:"700", cursor:"pointer", border:"1px solid", transition:"all 0.15s",
+              background: selectMode ? "#2563EB" : "#fff",
+              color: selectMode ? "#fff" : "#4B5563",
+              borderColor: selectMode ? "#2563EB" : "#E2E8F0" }}>
+            {selectMode ? "Cancel" : "Select"}
+          </button>
+        </div>
 
-          {/* Status chips */}
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-            {STATUS_CHIPS.map(chip => (
-              <StatusChip key={chip.value} label={chip.label} active={filterStatus === chip.value} onClick={() => setFilter(chip.value)} status={chip.value} />
-            ))}
+        {/* ── Select mode bulk bar ── */}
+        {selectMode && (
+          <div style={{ marginBottom:"12px", background:"#EEF2FF", border:"1px solid #C7D2FE", borderRadius:"10px", padding:"10px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div style={{ fontSize:"13px", fontWeight:"700", color:"#4338CA" }}>{selected.size} selected</div>
+            <div style={{ display:"flex", gap:"8px", opacity: selected.size > 0 ? 1 : 0.4, pointerEvents: selected.size > 0 ? "auto" : "none" }}>
+              <button onClick={publishSelected} disabled={publishing}
+                style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"12.5px", fontWeight:"700", background:"#fff", border:"1px solid #C7D2FE", cursor:"pointer" }}>
+                {publishing ? "Publishing…" : "Publish"}
+              </button>
+              <button onClick={deleteSelected} disabled={deleting}
+                style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"12.5px", fontWeight:"700", background:"#FEF2F2", color:"#DC2626", border:"1px solid #FECACA", cursor:"pointer" }}>
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </div>
           </div>
+        )}
 
-          <div style={{ marginLeft: "auto", display: "flex", gap: "8px", alignItems: "center" }}>
-            {selectMode && selected.size > 0 && (() => {
-              const draftCount = shifts.filter(s => selected.has(s.shift_id) && s.status === "draft").length;
-              return (
-                <>
-                  {draftCount > 0 && (
-                    <button onClick={publishSelected} disabled={publishing}
-                      style={{ padding: "7px 14px", borderRadius: "9px", border: "none", background: "#F59E0B", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
-                      {publishing ? "Publishing…" : <><Check size={13} /> Publish ({draftCount})</>}
-                    </button>
-                  )}
-                  <button onClick={deleteSelected} disabled={deleting}
-                    style={{ padding: "7px 14px", borderRadius: "9px", border: "none", background: "#EF4444", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
-                    {deleting ? "Deleting…" : <><Trash2 size={13} /> Delete ({selected.size})</>}
-                  </button>
-                </>
-              );
-            })()}
-            <button onClick={() => { setSelectMode(p => !p); setSelected(new Set()); }}
-              style={{ padding: "7px 14px", borderRadius: "9px", border: `1.5px solid ${selectMode ? "#6366F1" : "#E2E8F0"}`, background: selectMode ? "#EEF2FF" : "#fff", color: selectMode ? "#6366F1" : "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
-              {selectMode ? "Cancel" : "Select"}
+        {/* ── Period navigation ── */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
+          <button onClick={onPrevPeriod}
+            style={{ width:"34px", height:"34px", borderRadius:"9px", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", color:"#64748B", transition:"background 0.15s" }}>
+            ←
+          </button>
+          <div style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B" }}>{periodLabel}</div>
+          <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+            {(view === "list" || calendarScope === "week") && (
+              <button onClick={() => openGenerateConfig(weekDates)}
+                style={{ background:"linear-gradient(135deg,#8B5CF6,#6D28D9)", color:"#fff", padding:"8px 14px", borderRadius:"9px", fontSize:"13px", fontWeight:"700", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:"6px", transition:"filter 0.15s" }}>
+                <Sparkles size={13} /> Generate Week
+              </button>
+            )}
+            <button onClick={onNextPeriod}
+              style={{ width:"34px", height:"34px", borderRadius:"9px", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", color:"#64748B", transition:"background 0.15s" }}>
+              →
             </button>
           </div>
         </div>
 
+        {/* ── Main content ── */}
         {loading ? (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 2fr 1.2fr 1.2fr 1fr 80px", padding: "11px 18px", background: "#F8FAFC", fontSize: "12px", fontWeight: "600", color: "#64748B", gap: "8px", borderBottom: "1px solid #E2E8F0" }}>
-              <span>Date</span><span>Title</span><span>Time</span><span>Roles</span><span>Status</span><span></span>
-            </div>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "1.5fr 2fr 1.2fr 1.2fr 1fr 80px", padding: "14px 18px", gap: "8px", borderBottom: "1px solid #F1F5F9", alignItems: "center" }}>
-                <Shimmer w="80%" h="14px" r="6px" />
-                <Shimmer w="60%" h="14px" r="6px" />
-                <Shimmer w="70%" h="14px" r="6px" />
-                <Shimmer w="50px" h="20px" r="100px" />
+          <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"32px" }}>
+            {Array.from({length:5}).map((_,i) => (
+              <div key={i} style={{ display:"flex", gap:"12px", marginBottom:"16px", alignItems:"center" }}>
+                <Shimmer w="32px" h="32px" r="50%" />
+                <div style={{ flex:1 }}>
+                  <Shimmer w="60%" h="13px" r="6px" style={{ marginBottom:"6px" }} />
+                  <Shimmer w="40%" h="11px" r="6px" />
+                </div>
                 <Shimmer w="70px" h="22px" r="100px" />
-                <Shimmer w="58px" h="28px" r="7px" />
               </div>
             ))}
           </div>
         ) : view === "list" ? (
-          filtered.length === 0 ? (
-            <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px 40px", textAlign: "center" }}>
-              <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}><Calendar size={40} color="#CBD5E1" /></div>
-              <p style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", marginBottom: "8px" }}>No tasks yet</p>
-              <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "24px" }}>Create your first task to get started.</p>
-              <CreateShiftBtn onClick={() => goTo("/manager/shifts/new")} />
-            </div>
-          ) : (
-            <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1.5fr 2fr 1.2fr 1.2fr 1fr 80px", padding: "11px 18px", background: "#F8FAFC", fontSize: "12px", fontWeight: "600", color: "#64748B", gap: "8px", borderBottom: "1px solid #E2E8F0" }}>
-                <span>Date</span><span>Title</span><span>Time</span><span>Roles</span><span>Status</span><span></span>
-              </div>
-              {filtered.map(shift => (
-                <ShiftRow key={shift.shift_id} shift={shift} fill={getFillStatus(shift)} onNav={() => goTo(`/manager/shifts/${shift.shift_id}`)} />
-              ))}
-            </div>
-          )
-        ) : (
-          /* Calendar view */
-          <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #E2E8F0" }}>
-              <WeekNavBtn label="←" onClick={() => setWeekOffset(p => p - 1)} />
-              <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>
-                {fmtDateShort(weekDates[0])} – {fmtDateShort(weekDates[6])}
-              </span>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <button onClick={() => openGenerateConfig(weekDates)}
-                  style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", borderRadius: "9px", border: "none", background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", fontSize: "12px", fontWeight: "700", cursor: "pointer", whiteSpace: "nowrap" }}>
-                  <Sparkles size={12} /> Generate Week
-                </button>
-                <WeekNavBtn label="→" onClick={() => setWeekOffset(p => p + 1)} />
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", minHeight: "400px" }}>
+          /* ── List view ── */
+          <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"6px" }}>
+            {weekDates.map((date, di) => {
+              const dayShifts = getShiftsForDate(date).filter(s => filterStatus === "all" || s.status === filterStatus);
+              if (dayShifts.length === 0) return null;
+              return (
+                <div key={di}>
+                  <div style={{ padding:"12px 16px 4px", fontSize:"12px", fontWeight:"800", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.05em" }}>
+                    {DAYS[di]} {date.getDate()}
+                  </div>
+                  {dayShifts.map(shift => {
+                    const c = STATUS_COLORS[shift.status] || STATUS_COLORS.draft;
+                    const isSelected = selected.has(shift.shift_id);
+                    return (
+                      <div key={shift.shift_id}
+                        onClick={() => selectMode ? toggleSelect(shift.shift_id) : goTo(`/manager/shifts/${shift.shift_id}`)}
+                        style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 16px", borderRadius:"10px", cursor:"pointer", transition:"background 0.15s", background: isSelected ? "#EEF2FF" : "transparent" }}
+                        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background="#F8FAFC"; }}
+                        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background="transparent"; }}>
+                        <div style={{ width:"8px", height:"8px", borderRadius:"50%", background:c.dot, flexShrink:0 }} />
+                        {selectMode && (
+                          <div style={{ width:"16px", height:"16px", borderRadius:"4px", border:`1.5px solid ${isSelected?"#2563EB":"#D1D5DB"}`, background:isSelected?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                            {isSelected && <Check size={10} color="#fff" strokeWidth={3} />}
+                          </div>
+                        )}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B" }}>{shift.title || "Shift"}</div>
+                          <div style={{ fontSize:"11.5px", color:"#64748B" }}>{(shift.shift_tasks||[]).length} task{(shift.shift_tasks||[]).length!==1?"s":""}</div>
+                        </div>
+                        <div style={{ fontSize:"12.5px", fontWeight:"600", color:"#4B5563" }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</div>
+                        <div style={{ fontSize:"10px", fontWeight:"800", textTransform:"uppercase", letterSpacing:"0.04em", color:c.pillText, background:c.pillBg, padding:"3px 8px", borderRadius:"6px" }}>
+                          {shift.status}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+            {weekDates.every(date => getShiftsForDate(date).filter(s => filterStatus==="all"||s.status===filterStatus).length===0) && (
+              <div style={{ padding:"48px 16px", textAlign:"center", color:"#94A3B8", fontSize:"13px" }}>No shifts scheduled this week.</div>
+            )}
+          </div>
+        ) : calendarScope === "week" ? (
+          /* ── Week calendar view ── */
+          <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"14px", overflow:"hidden" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)" }}>
               {weekDates.map((date, i) => {
-                const dayShifts = getShiftsForDate(date);
+                const dayShifts = getShiftsForDate(date).filter(s => filterStatus==="all"||s.status===filterStatus);
                 const isToday = date.toDateString() === new Date().toDateString();
                 const isOff = operatingDays !== null && !operatingDays[i];
                 return (
-                  <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", padding: "10px", minHeight: "140px", background: isOff ? "#F8F9FA" : isToday ? "#F0F7FF" : "transparent" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "8px" }}>
-                      <span style={{ fontSize: "10px", fontWeight: "700", color: isOff ? "#D1D5DB" : "#94A3B8", textTransform: "uppercase", marginBottom: "3px" }}>{DAYS[i]}</span>
-                      <div style={{ width: "26px", height: "26px", borderRadius: "50%", background: isToday && !isOff ? "#2563EB" : "transparent", color: isOff ? "#D1D5DB" : isToday ? "#fff" : "#1E293B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "700" }}>
+                  <div key={i} style={{ borderRight: i < 6 ? "1px solid #F0F2F5" : "none", minHeight:"420px", padding:"12px 9px",
+                    background: isToday ? "color-mix(in srgb,#2563EB 7%,white)" : "transparent" }}>
+                    <div onClick={() => { setCalendarScope("day"); const off = Math.round((new Date(date.getFullYear(),date.getMonth(),date.getDate()) - new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()))/86400000); setDayOffset(off); }}
+                      style={{ textAlign:"center", marginBottom:"12px", cursor:"pointer" }}>
+                      <div style={{ fontSize:"10.5px", fontWeight:"700", letterSpacing:"0.06em", color:"#64748B", textTransform:"uppercase" }}>{DAYS[i]}</div>
+                      <div style={{ width:"28px", height:"28px", borderRadius:"50%", margin:"4px auto 0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", fontWeight:"800",
+                        background: isToday ? "#2563EB" : "transparent",
+                        color: isToday ? "#fff" : "#1E293B" }}>
                         {date.getDate()}
                       </div>
-                      {isOff && <span style={{ fontSize: "9px", fontWeight: "600", color: "#D1D5DB", marginTop: "2px", letterSpacing: "0.3px" }}>OFF</span>}
+                      {isOff && <div style={{ fontSize:"10px", fontWeight:"700", color:"#94A3B8", letterSpacing:"0.06em", marginTop:"3px" }}>OFF</div>}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                    <div style={{ display:"flex", flexDirection:"column", gap:"7px" }}>
                       {dayShifts.map(shift => {
+                        const c = STATUS_COLORS[shift.status] || STATUS_COLORS.draft;
                         const isSelected = selected.has(shift.shift_id);
+                        const initials = (shift.title||"S").slice(0,2).toUpperCase();
+                        const tasks = shift.shift_tasks || [];
+                        const doneTasks = tasks.filter(t => t.status==="done").length;
                         return (
                           <div key={shift.shift_id}
-                            style={{ padding: "4px 6px", borderRadius: "6px", cursor: "pointer", fontSize: "11px", display: "flex", alignItems: "flex-start", gap: "5px", outline: isSelected ? "2px solid #6366F1" : "none", opacity: isOff ? 0.55 : 1, ...STATUS_STYLES[shift.status] }}
-                            onClick={() => selectMode ? toggleSelect(shift.shift_id) : goTo(`/manager/shifts/${shift.shift_id}`)}>
+                            onClick={() => selectMode ? toggleSelect(shift.shift_id) : goTo(`/manager/shifts/${shift.shift_id}`)}
+                            style={{ position:"relative", background:c.bg, border:`1.5px solid ${isSelected?"#2563EB":c.border}`, borderRadius:"10px", padding:"9px 10px", cursor:"pointer", transition:"box-shadow 0.15s,transform 0.15s", animation:"fadeSlideUp 0.25s ease" }}
+                            onMouseEnter={e => { e.currentTarget.style.boxShadow="0 6px 14px rgba(20,20,30,0.1)"; e.currentTarget.style.transform="translateY(-1px)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.transform="translateY(0)"; }}>
                             {selectMode && (
-                              <div style={{ width: "13px", height: "13px", borderRadius: "3px", border: `2px solid ${isSelected ? "#6366F1" : "rgba(0,0,0,0.25)"}`, background: isSelected ? "#6366F1" : "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}>
-                                {isSelected && <Check size={9} color="#fff" strokeWidth={4} />}
+                              <div onClick={e => { e.stopPropagation(); toggleSelect(shift.shift_id); }}
+                                style={{ position:"absolute", top:"7px", right:"7px", width:"15px", height:"15px", borderRadius:"4px", border:`1.5px solid ${isSelected?"#2563EB":"#CBD5E1"}`, background:isSelected?"#2563EB":"transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                {isSelected && <Check size={9} color="#fff" strokeWidth={3.5} />}
                               </div>
                             )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "1px" }}>{shift.title || "Task"}</p>
-                              <p style={{ opacity: 0.75 }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</p>
+                            <div style={{ fontSize:"9px", fontWeight:"800", letterSpacing:"0.05em", textTransform:"uppercase", color:c.pillText, background:c.pillBg, display:"inline-block", padding:"2px 6px", borderRadius:"5px", marginBottom:"6px" }}>
+                              {shift.status}
                             </div>
+                            <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+                              <div style={{ width:"19px", height:"19px", borderRadius:"50%", background:c.dot, color:"#fff", fontSize:"8px", fontWeight:"800", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{initials}</div>
+                              <div style={{ minWidth:0 }}>
+                                <div style={{ fontSize:"12px", fontWeight:"700", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", color:"#1E293B" }}>{shift.title || "Shift"}</div>
+                                <div style={{ fontSize:"10.5px", color:"#64748B", whiteSpace:"nowrap" }}>{tasks.length} task{tasks.length!==1?"s":""}</div>
+                              </div>
+                            </div>
+                            <div style={{ fontSize:"10.5px", fontWeight:"600", color:"#4B5563", marginTop:"6px" }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</div>
+                            {tasks.length > 0 && (
+                              <div style={{ marginTop:"7px" }}>
+                                <div style={{ fontSize:"9px", fontWeight:"700", color:"#64748B", marginBottom:"3px" }}>{doneTasks}/{tasks.length} done</div>
+                                <div style={{ height:"4px", borderRadius:"2px", background:"#E2E8F0", overflow:"hidden" }}>
+                                  <div style={{ height:"100%", width:`${tasks.length>0?Math.round(doneTasks/tasks.length*100):0}%`, background:c.dot }} />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                       {!isOff && (
-                        <div
-                          style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", cursor: "pointer", padding: "3px", borderRadius: "6px", border: "1px dashed #E2E8F0", marginTop: dayShifts.length > 0 ? "2px" : 0 }}
-                          onClick={() => goTo(`/manager/shifts/new?date=${date.toISOString().split("T")[0]}`)}>
+                        <div onClick={() => goTo(`/manager/shifts/new?date=${localDateStr(date)}`)}
+                          style={{ textAlign:"center", padding:"7px", borderRadius:"8px", border:"1.5px dashed #D1D5DB", color:"#94A3B8", fontSize:"14px", cursor:"pointer", transition:"background 0.15s,border-color 0.15s" }}
+                          onMouseEnter={e => { e.currentTarget.style.background="#F8FAFC"; e.currentTarget.style.borderColor="#94A3B8"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.borderColor="#D1D5DB"; }}>
                           +
                         </div>
                       )}
@@ -463,7 +633,142 @@ export default function ShiftsList() {
               })}
             </div>
           </div>
-        )}
+        ) : calendarScope === "day" ? (() => {
+          /* ── Day timeline view ── */
+          const dayDate = buildDayDate(dayOffset);
+          const dayDateStr = localDateStr(dayDate);
+          const dayShifts = shifts.filter(s => s.shift_date?.slice(0,10) === dayDateStr && s.status !== "cancelled")
+            .filter(s => filterStatus==="all"||s.status===filterStatus);
+          const isToday = dayDate.toDateString() === new Date().toDateString();
+          const isOff = operatingDays !== null && !operatingDays[(dayDate.getDay()+6)%7];
+          const DAY_START = 6, DAY_END = 23, HOUR_W = 130;
+          const toMin = t => { const [h,m] = (toHHMM(t)||"06:00").split(":").map(Number); return h*60+m; };
+          const sorted = [...dayShifts].map(sh => {
+            const sm = Math.max(0, toMin(sh.start_time) - DAY_START*60);
+            const em = Math.min((DAY_END-DAY_START)*60, Math.max(sm+15, toMin(sh.end_time) - DAY_START*60));
+            return { sh, sm, em };
+          }).sort((a,b) => a.sm - b.sm);
+          const laneEnds = [];
+          sorted.forEach(item => {
+            let lane = laneEnds.findIndex(end => end <= item.sm);
+            if (lane === -1) { lane = laneEnds.length; laneEnds.push(item.em); }
+            else laneEnds[lane] = item.em;
+            item.lane = lane;
+          });
+          const laneCount = Math.max(1, laneEnds.length);
+          const LANE_H = 68, LANE_GAP = 10;
+          const timelineH = laneCount*(LANE_H+LANE_GAP)-LANE_GAP;
+          const hours = [];
+          for (let h = DAY_START; h < DAY_END; h++) {
+            const disp = h%12===0?12:h%12, ap = h<12?"AM":"PM";
+            hours.push(disp+" "+ap);
+          }
+          return (
+            <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"20px" }}>
+              <div style={{ textAlign:"center", marginBottom:"16px" }}>
+                <div style={{ fontSize:"11px", fontWeight:"700", letterSpacing:"0.06em", color:"#64748B", textTransform:"uppercase" }}>
+                  {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dayDate.getDay()]}
+                </div>
+                <div style={{ width:"38px", height:"38px", borderRadius:"50%", margin:"5px auto 0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"17px", fontWeight:"800",
+                  background: isToday ? "#2563EB" : "transparent", color: isToday ? "#fff" : "#1E293B", border: isToday ? "none" : "1px solid #E2E8F0" }}>
+                  {dayDate.getDate()}
+                </div>
+                {isOff && <div style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", letterSpacing:"0.06em", marginTop:"5px" }}>OFF</div>}
+              </div>
+              <div style={{ overflowX:"auto", paddingBottom:"8px" }}>
+                <div style={{ width: (DAY_END-DAY_START)*HOUR_W+"px" }}>
+                  <div style={{ display:"flex", borderBottom:"1px solid #F0F2F5", paddingBottom:"6px", marginBottom:"0" }}>
+                    {hours.map(hr => (
+                      <div key={hr} style={{ width:HOUR_W+"px", flexShrink:0, textAlign:"center", fontSize:"11px", fontWeight:"700", color:"#94A3B8", borderRight:"1px solid #F0F2F5" }}>{hr}</div>
+                    ))}
+                  </div>
+                  <div style={{ position:"relative", height:timelineH+"px", minHeight:"68px",
+                    backgroundImage:"linear-gradient(to right,#F0F2F5 1px,transparent 1px)",
+                    backgroundSize:HOUR_W+"px 100%", marginTop:"8px" }}>
+                    {sorted.map(({sh, sm, em, lane}) => {
+                      const c = STATUS_COLORS[sh.status] || STATUS_COLORS.draft;
+                      const widthPx = Math.max(46, (em-sm)/60*HOUR_W - 4);
+                      const leftPx = sm/60*HOUR_W;
+                      const topPx = lane*(LANE_H+LANE_GAP);
+                      const tasks = sh.shift_tasks || [];
+                      const doneTasks = tasks.filter(t=>t.status==="done").length;
+                      return (
+                        <div key={sh.shift_id}
+                          onClick={() => goTo(`/manager/shifts/${sh.shift_id}`)}
+                          style={{ position:"absolute", left:leftPx+"px", top:topPx+"px", width:widthPx+"px", height:LANE_H+"px",
+                            background:c.bg, border:`1.5px solid ${c.border}`, borderRadius:"9px", padding:"7px 9px",
+                            cursor:"pointer", overflow:"hidden", transition:"box-shadow 0.15s", zIndex:2 }}
+                          onMouseEnter={e => { e.currentTarget.style.boxShadow="0 6px 14px rgba(20,20,30,0.14)"; e.currentTarget.style.zIndex=6; }}
+                          onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.zIndex=2; }}>
+                          <div style={{ fontSize:"9px", fontWeight:"800", letterSpacing:"0.04em", textTransform:"uppercase", color:c.pillText }}>{sh.status}</div>
+                          <div style={{ fontSize:"12px", fontWeight:"700", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", marginTop:"2px", color:"#1E293B" }}>{sh.title || "Shift"}</div>
+                          <div style={{ fontSize:"10.5px", color:"#64748B", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{toHHMM(sh.start_time)} – {toHHMM(sh.end_time)}</div>
+                          {tasks.length > 0 && (
+                            <div style={{ fontSize:"10px", fontWeight:"700", color:"#64748B", marginTop:"3px" }}>{doneTasks}/{tasks.length} tasks</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              {!isOff && (
+                <div onClick={() => goTo(`/manager/shifts/new?date=${dayDateStr}`)}
+                  style={{ marginTop:"14px", textAlign:"center", padding:"9px", borderRadius:"9px", border:"1.5px dashed #D1D5DB", color:"#94A3B8", cursor:"pointer", fontSize:"13px", fontWeight:"600" }}>
+                  + Add shift
+                </div>
+              )}
+            </div>
+          );
+        })() : (() => {
+          /* ── Month calendar view ── */
+          const { cells } = buildMonthCells(monthOffset);
+          const DOW_HEADERS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+          return (
+            <div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", marginBottom:"6px" }}>
+                {DOW_HEADERS.map(d => (
+                  <div key={d} style={{ textAlign:"center", fontSize:"11px", fontWeight:"700", letterSpacing:"0.05em", color:"#64748B", padding:"6px 0" }}>{d}</div>
+                ))}
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"5px" }}>
+                {cells.map((cell, ci) => {
+                  const dateStr = localDateStr(cell.date);
+                  const cellShifts = shifts.filter(s => s.shift_date?.slice(0,10)===dateStr && s.status!=="cancelled")
+                    .filter(s => filterStatus==="all"||s.status===filterStatus);
+                  const isToday = cell.date.toDateString() === new Date().toDateString();
+                  const preview = cellShifts.slice(0,2);
+                  const moreCount = Math.max(0, cellShifts.length - 2);
+                  return (
+                    <div key={ci}
+                      onClick={() => { const off = Math.round((new Date(cell.date.getFullYear(),cell.date.getMonth(),cell.date.getDate())-new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()))/86400000); setCalendarScope("day"); setDayOffset(off); }}
+                      style={{ minHeight:"86px", border:"1px solid #E2E8F0", borderRadius:"10px", padding:"7px", cursor:"pointer",
+                        opacity: cell.inMonth ? 1 : 0.35, background:"#fff", transition:"box-shadow 0.15s" }}
+                      onMouseEnter={e => { e.currentTarget.style.boxShadow="0 4px 10px rgba(0,0,0,0.08)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; }}>
+                      <div style={{ width:"22px", height:"22px", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", fontWeight:"800",
+                        background: isToday ? "#2563EB" : "transparent", color: isToday ? "#fff" : "#1E293B" }}>
+                        {cell.date.getDate()}
+                      </div>
+                      {preview.map((sh, pi) => {
+                        const c = STATUS_COLORS[sh.status] || STATUS_COLORS.draft;
+                        return (
+                          <div key={pi} style={{ display:"flex", alignItems:"center", gap:"4px", marginTop:"4px" }}>
+                            <div style={{ width:"5px", height:"5px", borderRadius:"50%", background:c.dot, flexShrink:0 }} />
+                            <div style={{ fontSize:"9.5px", fontWeight:"600", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", color:"#1E293B" }}>{sh.title || "Shift"}</div>
+                          </div>
+                        );
+                      })}
+                      {moreCount > 0 && (
+                        <div style={{ fontSize:"8.5px", fontWeight:"700", color:"#64748B", marginTop:"2px" }}>+{moreCount} more</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── AI Weekly Schedule Modal ───────────────────────────────────────── */}

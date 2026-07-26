@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import { notifyUser } from "../../lib/notify";
 import ManagerLayout from "../../components/layout/ManagerLayout";
+import UserAvatar from "../../components/UserAvatar";
 
 if (typeof document !== "undefined" && !document.getElementById("mgr-attend-styles")) {
   const style = document.createElement("style");
@@ -135,12 +136,13 @@ function Submissions({ branchId, managerId, showToast }) {
       setLoading(true);
       try {
         const { data: staffRows } = await supabase
-          .from("staff").select("staff_id, user_id, users(full_name)")
+          .from("staff").select("staff_id, user_id, users(full_name, avatar_url)")
           .eq("branch_id", branchId).eq("is_active", true);
         if (!staffRows?.length || cancelled) { setRows([]); setLoading(false); return; }
 
         const staffIds = staffRows.map(s => s.staff_id);
         const staffMap = Object.fromEntries(staffRows.map(s => [s.staff_id, s.users?.full_name || "Staff"]));
+        const avatarMap = Object.fromEntries(staffRows.map(s => [s.staff_id, s.users?.avatar_url || "/avatars/default.png"]));
         setStaffUserMap(Object.fromEntries(staffRows.map(s => [s.staff_id, s.user_id])));
 
         const { data: ts } = await supabase
@@ -166,8 +168,9 @@ function Submissions({ branchId, managerId, showToast }) {
         if (!cancelled) {
           setRows((ts || []).map(t => ({
             ...t,
-            staffName:  staffMap[t.staff_id] || "Staff",
-            shiftTitle: shiftTitleMap[`${t.staff_id}_${t.log_date}`] || "Shift",
+            staffName:   staffMap[t.staff_id] || "Staff",
+            staffAvatar: avatarMap[t.staff_id] || "/avatars/default.png",
+            shiftTitle:  shiftTitleMap[`${t.staff_id}_${t.log_date}`] || "Shift",
           })));
         }
       } catch (err) { console.error(err); }
@@ -401,10 +404,7 @@ function Submissions({ branchId, managerId, showToast }) {
                   <button onClick={() => setDetail(isDetail ? null : r)}
                     style={{ flex:1, textAlign:"left", background:"none", border:"none", cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:"12px" }}>
                     {/* Avatar */}
-                    <div style={{ width:"42px", height:"42px", borderRadius:"50%", background:avatarColor(r.staffName), color:"#FFF",
-                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", fontWeight:"800", flexShrink:0 }}>
-                      {initial}
-                    </div>
+                    <UserAvatar name={r.staffName} avatar_url={r.staffAvatar} size={42} />
 
                     {/* Main info */}
                     <div style={{ flex:1, minWidth:0 }}>
@@ -483,10 +483,7 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
       <div style={{ padding:"22px" }}>
         {/* Staff */}
         <div style={{ display:"flex", alignItems:"center", gap:"14px", marginBottom:"22px" }}>
-          <div style={{ width:"52px", height:"52px", borderRadius:"50%", background:avatarColor(ts.staffName), color:"#FFF",
-            display:"flex", alignItems:"center", justifyContent:"center", fontSize:"20px", fontWeight:"800", flexShrink:0 }}>
-            {initial}
-          </div>
+          <UserAvatar name={ts.staffName} avatar_url={ts.staffAvatar} size={52} />
           <div>
             <p style={{ fontSize:"17px", fontWeight:"800", color:"#1E293B" }}>{ts.staffName}</p>
             <span style={{ padding:"3px 9px", borderRadius:"100px", fontSize:"11px", fontWeight:"700", background:st.bg, color:st.color }}>{st.label}</span>
@@ -598,7 +595,7 @@ function WorkingHours({ branchId }) {
         // Get staff in branch
         const { data: staffRows } = await supabase
           .from("staff")
-          .select("staff_id, users(full_name)")
+          .select("staff_id, users(full_name, avatar_url)")
           .eq("branch_id", branchId)
           .eq("is_active", true);
 
@@ -606,6 +603,7 @@ function WorkingHours({ branchId }) {
 
         const staffIds = staffRows.map(s => s.staff_id);
         const staffMap = Object.fromEntries(staffRows.map(s => [s.staff_id, s.users?.full_name || "Staff"]));
+        const staffAvatarMap = Object.fromEntries(staffRows.map(s => [s.staff_id, s.users?.avatar_url || "/avatars/default.png"]));
 
         // Get approved timesheets for this period
         const { data: ts } = await supabase
@@ -636,7 +634,7 @@ function WorkingHours({ branchId }) {
         // Group by staff
         const grouped = {};
         for (const t of (ts || [])) {
-          if (!grouped[t.staff_id]) grouped[t.staff_id] = { staffId:t.staff_id, name:staffMap[t.staff_id], totalHours:0, records:[] };
+          if (!grouped[t.staff_id]) grouped[t.staff_id] = { staffId:t.staff_id, name:staffMap[t.staff_id], avatar_url:staffAvatarMap[t.staff_id], totalHours:0, records:[] };
           const hours = parseFloat(t.hours_worked || 0);
           grouped[t.staff_id].totalHours += hours;
           grouped[t.staff_id].records.push({
@@ -719,16 +717,12 @@ function WorkingHours({ branchId }) {
         <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
           {staffData.map((s, i) => {
             const isOpen = !!expanded[s.staffId];
-            const initials = s.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
             return (
               <div key={s.staffId} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"12px", overflow:"hidden" }}>
                 <div onClick={() => setExpanded(p => ({ ...p, [s.staffId]: !isOpen }))}
                   style={{ display:"flex", alignItems:"center", gap:"14px", padding:"14px 18px", cursor:"pointer" }}>
                   <span style={{ fontSize:"11px", fontWeight:"700", color:"#CBD5E1", minWidth:"20px" }}>#{i+1}</span>
-                  <div style={{ width:"40px", height:"40px", borderRadius:"50%", background:avatarColor(s.name), color:"#FFF",
-                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:"15px", fontWeight:"700", flexShrink:0 }}>
-                    {initials}
-                  </div>
+                  <UserAvatar name={s.name} avatar_url={s.avatar_url} size={40} />
                   <div style={{ flex:1, minWidth:0 }}>
                     <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>{s.name}</p>
                     <p style={{ fontSize:"12px", color:"#64748B", marginTop:"1px" }}>{s.records.length} approved submission{s.records.length !== 1 ? "s" : ""}</p>

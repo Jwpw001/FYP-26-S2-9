@@ -84,7 +84,7 @@ export default function GetStarted() {
       {/* Navbar */}
       <nav style={{ height: "64px", background: "rgba(255,255,255,0.93)", backdropFilter: "blur(12px)", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 60px", boxSizing: "border-box", position: "sticky", top: 0, zIndex: 100 }}>
         <button onClick={() => goTo("/")} style={{ display: "flex", alignItems: "center", gap: "10px", background: "none", border: "none", cursor: "pointer" }}>
-          <img src="/krewby-logo.png" alt="Krewby" style={{ height: "30px", objectFit: "contain" }} />
+          <img src="/logo_noText.png" alt="Krewby" style={{ height: "30px", objectFit: "contain" }} />
         </button>
         <button onClick={() => goTo("/login")} style={{ background: "none", border: "1.5px solid #E2E8F0", color: "#64748B", padding: "8px 18px", borderRadius: "9px", fontWeight: "600", fontSize: "14px", cursor: "pointer" }}>
           Already have an account? Log in

@@ -275,7 +275,7 @@ const getStaffRoster = async (req, res) => {
     // branch their staff row was originally created under.
     const regularStaff = await prisma.staff.findMany({
       where: { branch_id: branchId, staff_type: "regular", is_active: true },
-      include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
+      include: { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } },
     });
 
     const { data: prefRows } = await supabaseAdmin
@@ -287,7 +287,7 @@ const getStaffRoster = async (req, res) => {
     const casualStaff = preferredUserIds.length > 0
       ? await prisma.staff.findMany({
           where: { user_id: { in: preferredUserIds }, staff_type: "casual", is_active: true },
-          include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } },
+          include: { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } },
         })
       : [];
 

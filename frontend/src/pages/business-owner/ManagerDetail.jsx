@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { Building2, Trash2 } from "lucide-react";
+import UserAvatar from "../../components/UserAvatar";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-managerdetail-styles")) {
   const style = document.createElement("style");
@@ -102,8 +103,6 @@ export default function BOManagerDetail() {
   }
 
   const name = manager.full_name || "?";
-  const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
-  const color = avatarColor(name);
 
   return (
     <BusinessOwnerLayout title="Manager Profile">
@@ -112,7 +111,7 @@ export default function BOManagerDetail() {
       <div style={s.layout}>
         {/* ── Left: profile card ── */}
         <div style={s.profileCard}>
-          <div style={{ ...s.avatarLg, background: color }}>{initials}</div>
+          <UserAvatar name={name} avatar_url={manager.avatar_url} size={72} style={{ margin: "0 auto 14px" }} />
           <h2 style={s.profileName}>{manager.full_name}</h2>
           <p style={s.profileEmail}>{manager.email}</p>
           <span style={s.typeBadge}>Manager</span>

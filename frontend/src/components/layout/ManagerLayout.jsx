@@ -7,6 +7,7 @@ import AIAssistantWidget from "../AIAssistantWidget";
 import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, Mail, Tag, Settings } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
+import UserAvatar from "../UserAvatar";
 
 const NAV = [
   { label: "Dashboard",    path: "/manager/dashboard",       Icon: LayoutDashboard },
@@ -48,8 +49,8 @@ export default function ManagerLayout({ children, title }) {
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
         <div style={{ ...s.sidebarTop, padding: "20px 14px 16px" }}>
           <Link to="/manager/dashboard" style={s.logoRow}>
-            <div style={{ height: "34px", width: expanded ? "auto" : "34px", maxWidth: expanded ? "160px" : "34px", background: "#fff", borderRadius: "9px", overflow: "hidden", display: "flex", alignItems: "center", transition: "max-width 0.25s ease, width 0.25s ease", flexShrink: 0, padding: expanded ? "0 8px" : "0" }}>
-              <img src="/krewby-logo.png" alt="Krewby" style={{ height: expanded ? "22px" : "34px", width: expanded ? "auto" : "34px", objectFit: expanded ? "contain" : "cover", objectPosition: "left center", display: "block" }} />
+            <div style={{ height: "34px", width: "34px", background: "#fff", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <img src="/logo_noText.png" alt="Krewby" style={{ height: "26px", width: "26px", objectFit: "contain", display: "block" }} />
             </div>
           </Link>
         </div>
@@ -78,7 +79,7 @@ export default function ManagerLayout({ children, title }) {
         <div style={{ ...s.sidebarBottom, padding: "12px" }}>
           <button onClick={() => setShowProfile(true)} title="View profile"
             style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
-            <div style={{ ...s.avatar, flexShrink: 0 }}>{user?.full_name?.[0]?.toUpperCase() || "M"}</div>
+            <UserAvatar name={user?.full_name || "M"} avatar_url={user?.avatar_url} size={34} />
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Manager"}</p>
               <p style={s.userRole}>Manager</p>

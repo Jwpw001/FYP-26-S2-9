@@ -88,7 +88,7 @@ export default function CreateAccount() {
         <div>
           <button onClick={() => goTo("/")} style={{ display: "flex", alignItems: "center", gap: "10px", background: "none", border: "none", cursor: "pointer", marginBottom: "64px" }}>
             <div style={{ background: "#fff", borderRadius: "9px", padding: "5px 10px", display: "inline-flex", alignItems: "center" }}>
-              <img src="/krewby-logo.png" alt="Krewby" style={{ height: "22px", objectFit: "contain", display: "block" }} />
+              <img src="/logo_noText.png" alt="Krewby" style={{ height: "22px", objectFit: "contain", display: "block" }} />
             </div>
           </button>
 

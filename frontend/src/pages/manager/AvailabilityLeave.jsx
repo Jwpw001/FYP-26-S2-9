@@ -8,6 +8,7 @@ import ManagerLayout from "../../components/layout/ManagerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { ClipboardList, List, GanttChartSquare, Search, X } from "lucide-react";
 import GanttChart, { RangeNav, startOfWeek, toDateStr, FullscreenPanel } from "../../components/GanttChart";
+import UserAvatar from "../../components/UserAvatar";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-leave-styles")) {
@@ -165,7 +166,7 @@ export default function AvailabilityLeave() {
             reason, status, reviewed_at, staff_id,
             staff:staff_id (
               staff_id, user_id,
-              users:user_id ( full_name, email )
+              users:user_id ( full_name, email, avatar_url )
             )
           `)
           .in("staff_id", staffIds)
@@ -270,7 +271,7 @@ export default function AvailabilityLeave() {
         if (staffIds.length === 0) { if (!cancelled) setLoadingOffDay(false); return; }
         const { data, error } = await supabase
           .from("off_day_requests")
-          .select("id, staff_id, requested_date, reason, status, created_at, reviewed_at, staff:staff_id(staff_id, user_id, staff_type, users:user_id(full_name, email))")
+          .select("id, staff_id, requested_date, reason, status, created_at, reviewed_at, staff:staff_id(staff_id, user_id, staff_type, users:user_id(full_name, email, avatar_url))")
           .in("staff_id", staffIds)
           .order("created_at", { ascending: false });
         if (error) console.error("off_day_requests fetch:", error);
@@ -701,6 +702,7 @@ export default function AvailabilityLeave() {
   function getStaffName(req) { return req.staff?.users?.full_name || req.staff?.users?.email || "Unknown"; }
   function getStaffEmail(req) { return req.staff?.users?.email || ""; }
   function getInitial(req) { return getStaffName(req)?.[0]?.toUpperCase() || "?"; }
+  function getStaffAvatar(req) { return req.staff?.users?.avatar_url || null; }
 
   const LEAVE_FILTER_TABS = [
     { value: "pending",  label: "Pending" },
@@ -962,9 +964,7 @@ export default function AvailabilityLeave() {
                   return (
                     <div key={r.id} style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", animation: "fadeSlideUp 0.25s ease both" }}>
                       {/* Avatar */}
-                      <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: avatarColor(name), color: "#FFF", fontSize: "15px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {name[0]?.toUpperCase()}
-                      </div>
+                      <UserAvatar name={name} avatar_url={r.staff?.users?.avatar_url} size={42} />
                       {/* Info */}
                       <div style={{ flex: 1, minWidth: "160px" }}>
                         <p style={{ fontWeight: "700", fontSize: "14px", color: "#0F172A" }}>{name}</p>
@@ -1492,9 +1492,7 @@ function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, o
     <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px", animation: "fadeSlideUp 0.3s ease both" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: avatarColor(name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", fontWeight: "700", flexShrink: 0 }}>
-            {getInitial(req)}
-          </div>
+          <UserAvatar name={name} avatar_url={getStaffAvatar(req)} size={40} />
           <div>
             <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{name}</p>
             <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{getStaffEmail(req)}</p>
@@ -1570,9 +1568,7 @@ function SwapCard({ sw, processing, onAction }) {
     <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px", animation: "fadeSlideUp 0.3s ease both" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: avatarColor(requesterName), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", fontWeight: "700", flexShrink: 0 }}>
-            {requesterName[0]?.toUpperCase() || "?"}
-          </div>
+          <UserAvatar name={requesterName} avatar_url={sw.requesterUser?.avatar_url} size={40} />
           <div>
             <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{requesterName}</p>
             <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{sw.requesterUser?.email || ""}</p>
@@ -1681,9 +1677,7 @@ function CasualAvailCard({ entry }) {
     <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "22px", animation: "fadeSlideUp 0.3s ease both" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: avatarColor(name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", fontWeight: "700", flexShrink: 0 }}>
-            {initial}
-          </div>
+          <UserAvatar name={name} avatar_url={entry.staffInfo?.users?.avatar_url} size={40} />
           <div>
             <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{name}</p>
             <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{entry.staffInfo?.users?.email || ""}</p>

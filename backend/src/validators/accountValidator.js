@@ -13,6 +13,13 @@ const updateAccountSchema = z.object({
         "regular_staff",
         "casual_staff",
         "krewby_casual_worker"
+    ]).optional(),
+
+    avatar_url: z.enum([
+        "/avatars/default.png",
+        "/avatars/Untitled design (1).png",
+        "/avatars/Untitled design (2).png",
+        "/avatars/Untitled design (3).png",
     ]).optional()
 });
 

@@ -22,7 +22,7 @@ const getAvailability = async (req, res) => {
     const availability = await prisma.availability.findMany({
       where: { staff_id: { in: staffIds } },
       include: {
-        staff: { include: { users: { select: { user_id: true, full_name: true, email: true, role: true } } } },
+        staff: { include: { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } } },
       },
     });
 
@@ -40,7 +40,7 @@ const getAvailabilityById = async (req, res) => {
     const availability = await prisma.availability.findUnique({
       where: { request_id: requestId },
       include: {
-        staff: { select: { branch_id: true, users: { select: { user_id: true, full_name: true, email: true, role: true } } } },
+        staff: { select: { branch_id: true, users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } } },
       },
     });
 

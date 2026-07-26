@@ -61,7 +61,7 @@ export default function RegisterCasual() {
     <div style={s.shell}>
       <div style={s.card}>
         <div style={s.logoRow}>
-          <div style={s.logoBox}>K</div>
+          <img src="/logo_noText.png" alt="Krewby" style={{ width: "36px", height: "36px", objectFit: "contain", borderRadius: "9px" }} />
           <span style={s.logoText}>Krewby</span>
         </div>
 

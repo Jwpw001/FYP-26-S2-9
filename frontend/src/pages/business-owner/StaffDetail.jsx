@@ -6,6 +6,7 @@ import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import { Trash2, X } from "lucide-react";
+import UserAvatar from "../../components/UserAvatar";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-staffdetail-styles")) {
   const style = document.createElement("style");
@@ -693,8 +694,6 @@ export default function BOStaffDetail() {
   }
 
   const name = member.users?.full_name || "?";
-  const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
-  const color = avatarColor(name);
   const workDays = (form.default_work_days || "0000000").padEnd(7, "0");
 
   return (
@@ -704,7 +703,7 @@ export default function BOStaffDetail() {
       <div style={s.layout}>
         {/* ── Left: profile card ── */}
         <div style={s.profileCard}>
-          <div style={{ ...s.avatarLg, background: color }}>{initials}</div>
+          <UserAvatar name={name} avatar_url={member.users?.avatar_url} size={72} style={{ margin: "0 auto 14px" }} />
           <h2 style={s.profileName}>{member.users?.full_name}</h2>
           <p style={s.profileEmail}>{member.users?.email}</p>
           <span style={{

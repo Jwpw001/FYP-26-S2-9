@@ -4,6 +4,7 @@ import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
 import { Users, Building2, Search, ShieldCheck, LayoutList, Network, ChevronDown, ChevronRight, Briefcase } from "lucide-react";
+import UserAvatar from "../../components/UserAvatar";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-staff-styles")) {
   const style = document.createElement("style");
@@ -57,9 +58,7 @@ function PersonRow({ person, isLast, showConnector, goTo }) {
       <div className="org-person-row" onClick={() => goTo(person.nav)}
         style={{ flex: 1, display: "flex", alignItems: "center", gap: "12px", padding: "10px 16px 10px 48px", borderRadius: "10px", margin: "2px 0" }}>
         {/* Avatar */}
-        <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: color, color: "#FFF", fontSize: "13px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          {person.type === "manager" ? <ShieldCheck size={15} /> : (person.name[0]?.toUpperCase() || "?")}
-        </div>
+        <UserAvatar name={person.name} avatar_url={person.avatar_url} size={36} />
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.name}</p>
@@ -226,6 +225,7 @@ export default function BOStaff() {
           nav: `/business-owner/staff/${s.staff_id}`,
           name: s.users?.full_name || "—",
           email: s.users?.email || "—",
+          avatar_url: s.users?.avatar_url || null,
           type: s.staff_type === "regular" ? "regular" : "casual",
           branch_id: s.branch_id,
           branch_name: s.branch_name,
@@ -236,6 +236,7 @@ export default function BOStaff() {
         nav: `/business-owner/managers/${m.user_id}`,
         name: m.full_name || "—",
         email: m.email || "—",
+        avatar_url: m.avatar_url || null,
         type: "manager",
         branch_id: m.branch_id,
         branch_name: m.branch_name,
@@ -366,17 +367,13 @@ export default function BOStaff() {
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
               {filtered.map((p, i) => {
-                const initials = p.name[0]?.toUpperCase() || "?";
-                const bgColor = avatarColor(p.name);
                 const badge = typeBadge(p.type);
                 return (
                   <div key={p.key} className="bo-allstaff-card"
                     onClick={() => goTo(p.nav)}
                     style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${i * 0.04}s both`, cursor: "pointer" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-                      <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: bgColor, color: "#FFF", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {p.type === "manager" ? <ShieldCheck size={18} /> : initials}
-                      </div>
+                      <UserAvatar name={p.name} avatar_url={p.avatar_url} size={44} />
                       <div style={{ minWidth: 0 }}>
                         <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
                         <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.email}</p>

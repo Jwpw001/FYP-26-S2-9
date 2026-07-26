@@ -31,7 +31,7 @@ export default function ForgotPassword() {
     <main style={styles.page}>
       <div style={styles.card}>
         <Link to="/" style={styles.logoLink}>
-          <div style={styles.logoBox}>K</div>
+          <img src="/logo_noText.png" alt="Krewby" style={{ width: "34px", height: "34px", objectFit: "contain", borderRadius: "9px" }} />
           <span style={styles.logoText}>Krewby</span>
         </Link>
 

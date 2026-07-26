@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
 import { useGoTo } from "../../components/PageTransition";
-import { Users, CalendarDays, CalendarClock, Download, History, TrendingUp, TrendingDown } from "lucide-react";
+import { Download, History } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -17,7 +17,6 @@ if (typeof document !== "undefined" && !document.getElementById("bo-reports-styl
     @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
     .bo-rpt-tab:hover { background:#F1F5F9!important; }
     .bo-rpt-row:hover { background:#F8FAFC!important; }
-    .bo-rpt-sort:hover { color:#0F172A!important; }
   `;
   document.head.appendChild(s);
 }
@@ -27,6 +26,13 @@ const PERIODS = [
   { label: "30D", days: 30 },
   { label: "90D", days: 90 },
 ];
+
+const STATUS_BAR_COLOR = {
+  completed: "#16A34A", published: "#2563EB", draft: "#94A3B8",
+  cancelled: "#EF4444", assigned: "#0891B2", open: "#D97706",
+  approved: "#16A34A", pending: "#D97706", rejected: "#EF4444",
+  pending_review: "#D97706",
+};
 
 function Shimmer({ w = "100%", h = "16px", r = "6px" }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear", flexShrink: 0 }} />;
@@ -38,7 +44,7 @@ function delta(curr, prev) {
 }
 
 function TrendBadge({ pct }) {
-  if (pct === null) return null;
+  if (pct === null || pct === undefined) return null;
   const up = pct >= 0;
   const Icon = up ? TrendingUp : TrendingDown;
   return (
@@ -48,9 +54,66 @@ function TrendBadge({ pct }) {
   );
 }
 
+function StatStrip({ stats, loading }) {
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 8px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", flexWrap: "wrap" }}>
+      {stats.map((s, i) => (
+        <div key={s.label} style={{ flex: "1 1 0", padding: "0 24px", borderLeft: i === 0 ? "none" : "1px solid #E2E8F0", minWidth: "160px" }}>
+          {loading ? (
+            <><Shimmer w="60px" h="30px" r="6px" /><div style={{ marginTop: "8px" }}><Shimmer w="80px" h="11px" r="5px" /></div></>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "30px", fontWeight: "800", color: "#0F172A", lineHeight: 1 }}>{s.value}</span>
+                {s.pct !== null && s.pct !== undefined && <TrendBadge pct={s.pct} />}
+              </div>
+              <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", margin: "8px 0 2px" }}>{s.label}</p>
+              <p style={{ fontSize: "11px", color: "#94A3B8", margin: 0 }}>{s.sub}</p>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BarMeterSection({ title, sub, rows, loading }) {
+  const total = rows.reduce((s, r) => s + r.count, 0);
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: 0 }}>{title}</h3>
+      <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 16px" }}>{sub}</p>
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {[1, 2, 3].map(i => <Shimmer key={i} h="30px" />)}
+        </div>
+      ) : rows.length === 0 ? (
+        <p style={{ fontSize: "13px", color: "#94A3B8", textAlign: "center", padding: "16px 0" }}>No data</p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {rows.map(r => {
+            const pct = total > 0 ? Math.round((r.count / total) * 100) : 0;
+            const color = STATUS_BAR_COLOR[r.status] || "#94A3B8";
+            return (
+              <div key={r.status}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "5px" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: "600", color: "#374151", textTransform: "capitalize" }}>{r.status?.replace(/_/g, " ")}</span>
+                  <span style={{ fontSize: "12px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{r.count}</strong> · {pct}%</span>
+                </div>
+                <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: "100px", background: color, width: `${pct}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LineChart({ series, labels, height = 180 }) {
-  const W = 800;
-  const H = height;
+  const W = 800; const H = height;
   const PAD = { top: 12, right: 8, bottom: 28, left: 36 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
@@ -63,12 +126,6 @@ function LineChart({ series, labels, height = 180 }) {
     if (data.length === 0) return "";
     return data.map((v, i) => `${i === 0 ? "M" : "L"}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
   }
-  function area(data, color) {
-    if (data.length === 0) return null;
-    const line = path(data);
-    const close = ` L${px(data.length - 1).toFixed(1)},${(PAD.top + chartH).toFixed(1)} L${PAD.left.toFixed(1)},${(PAD.top + chartH).toFixed(1)} Z`;
-    return <path d={line + close} fill={color} fillOpacity="0.08" stroke="none" />;
-  }
   const ticks = [0, 0.25, 0.5, 0.75, 1].map(t => ({ v: Math.round(t * maxV), y: PAD.top + (1 - t) * chartH }));
   const xShow = n <= 14 ? labels.map((l, i) => ({ l, i })) : Array.from({ length: 7 }, (_, k) => { const i = Math.round(k * (n - 1) / 6); return { l: labels[i], i }; });
   return (
@@ -76,86 +133,25 @@ function LineChart({ series, labels, height = 180 }) {
       {ticks.map(t => <line key={t.v} x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y} stroke="#F1F5F9" strokeWidth="1" />)}
       {ticks.map(t => <text key={t.v} x={PAD.left - 4} y={t.y + 4} textAnchor="end" fontSize="14" fill="#94A3B8">{t.v}</text>)}
       {xShow.map(({ l, i }) => <text key={i} x={px(i)} y={H - 4} textAnchor="middle" fontSize="14" fill="#94A3B8">{l}</text>)}
-      {series.map(s => area(s.data, s.color))}
+      {series.map(s => {
+        if (!s.data.length) return null;
+        const close = ` L${px(s.data.length - 1).toFixed(1)},${(PAD.top + chartH).toFixed(1)} L${PAD.left.toFixed(1)},${(PAD.top + chartH).toFixed(1)} Z`;
+        return <path key={s.label + "-a"} d={path(s.data) + close} fill={s.color} fillOpacity="0.08" stroke="none" />;
+      })}
       {series.map(s => <path key={s.label} d={path(s.data)} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />)}
       {series.map(s => s.data.length > 0 && <circle key={s.label + "-dot"} cx={px(s.data.length - 1)} cy={py(s.data[s.data.length - 1])} r="4" fill={s.color} />)}
     </svg>
   );
 }
 
-function KpiCard({ label, value, sub, pct, color = "#2563EB", bg = "#EFF6FF", Icon, loading }) {
-  return (
-    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
-        <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: bg, color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          {Icon && <Icon size={18} strokeWidth={2} />}
-        </div>
-        {!loading && <TrendBadge pct={pct} />}
-      </div>
-      {loading ? (
-        <><Shimmer w="60px" h="26px" r="6px" /><div style={{ marginTop: "6px" }}><Shimmer w="90px" h="11px" r="5px" /></div></>
-      ) : (
-        <>
-          <p style={{ fontSize: "26px", fontWeight: "800", color: "#0F172A", lineHeight: 1, marginBottom: "4px" }}>{value}</p>
-          <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B" }}>{label}</p>
-          {sub && <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "2px" }}>{sub}</p>}
-        </>
-      )}
-    </div>
-  );
-}
-
-const STATUS_STYLE = {
-  completed: { bg: "#F0FDF4", color: "#16A34A" },
-  published: { bg: "#EFF6FF", color: "#2563EB" },
-  draft:     { bg: "#F8FAFC", color: "#64748B" },
-  cancelled: { bg: "#FEF2F2", color: "#DC2626" },
-  approved:  { bg: "#F0FDF4", color: "#16A34A" },
-  pending:   { bg: "#FFFBEB", color: "#D97706" },
-  rejected:  { bg: "#FEF2F2", color: "#DC2626" },
-  assigned:  { bg: "#EFF6FF", color: "#2563EB" },
-  pending_review: { bg: "#FFFBEB", color: "#D97706" },
-};
-function StatusBadge({ status }) {
-  const st = STATUS_STYLE[status] || { bg: "#F8FAFC", color: "#64748B" };
-  return (
-    <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "700", background: st.bg, color: st.color, textTransform: "capitalize" }}>
-      {status?.replace("_", " ")}
-    </span>
-  );
-}
-
-function StatusTable({ rows, loading }) {
-  if (loading) return <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>{Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="36px" />)}</div>;
-  const total = rows.reduce((s, r) => s + r.count, 0);
-  return (
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-      <thead><tr style={{ borderBottom: "2px solid #F1F5F9" }}>
-        <th style={{ padding: "8px 0", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-        <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Count</th>
-        <th style={{ padding: "8px 0", textAlign: "right", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Share</th>
-      </tr></thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr><td colSpan={3} style={{ padding: "24px 0", textAlign: "center", color: "#94A3B8" }}>No data</td></tr>
-        ) : rows.map(r => (
-          <tr key={r.status} className="bo-rpt-row" style={{ borderBottom: "1px solid #F8FAFC" }}>
-            <td style={{ padding: "10px 0" }}><StatusBadge status={r.status} /></td>
-            <td style={{ padding: "10px 0", textAlign: "right", fontWeight: "700", color: "#0F172A" }}>{r.count}</td>
-            <td style={{ padding: "10px 0", textAlign: "right", color: "#64748B", fontSize: "12px" }}>{total ? Math.round((r.count / total) * 100) : 0}%</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
 export default function BOReports() {
-  const user    = getUser();
   const goTo    = useGoTo();
   const [period, setPeriod] = useState(1);
   const [loading, setLoading] = useState(true);
   const [businessName, setBusinessName] = useState("");
+  const [showHistory,    setShowHistory]    = useState(false);
+  const [historyRows,    setHistoryRows]    = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const [kpis, setKpis] = useState({ staff: 0, staffPrev: 0, shifts: 0, shiftsPrev: 0, leave: 0, leavePrev: 0 });
   const [chartLabels, setChartLabels] = useState([]);
@@ -163,7 +159,6 @@ export default function BOReports() {
   const [branchRows, setBranchRows] = useState([]);
   const [shiftsByStatus, setShiftsByStatus] = useState([]);
   const [leaveByStatus, setLeaveByStatus] = useState([]);
-  const [staffByType, setStaffByType] = useState([]);
 
   const days = PERIODS[period].days;
 
@@ -180,10 +175,18 @@ export default function BOReports() {
     }).catch(() => {});
   }
 
+  function openHistory() {
+    setShowHistory(true);
+    setHistoryLoading(true);
+    api.get("/api/reports")
+      .then(r => setHistoryRows(r.reports || []))
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      // Get business via authenticated backend API
       const [bizResp, branchResp] = await Promise.all([
         api.get("/api/business/info"),
         api.get("/api/business/branches"),
@@ -197,7 +200,6 @@ export default function BOReports() {
       const branchIds = branches.map(o => o.branch_id);
       if (branchIds.length === 0) { setLoading(false); return; }
 
-      // Fetch staff for each branch via Supabase
       const { data: staffData } = await supabase
         .from("staff")
         .select("staff_id, staff_type, is_active, branch_id")
@@ -213,7 +215,6 @@ export default function BOReports() {
       const periodStart = new Date(now); periodStart.setDate(now.getDate() - days);
       const prevStart   = new Date(now); prevStart.setDate(now.getDate() - days * 2);
 
-      // Fetch shifts, leave requests for these branches
       const [{ data: shiftsAll }, { data: leaveAll }] = await Promise.all([
         branchIds.length > 0
           ? supabase.from("shifts").select("shift_id, status, shift_date, branch_id").in("branch_id", branchIds)
@@ -237,7 +238,6 @@ export default function BOReports() {
 
       setKpis({ staff: activeStaff, staffPrev: 0, shifts: newShifts, shiftsPrev: prevShifts, leave: newLeave, leavePrev: prevLeave });
 
-      // Chart
       const dayCount = Math.min(days, 30);
       const dayLabels = Array.from({ length: dayCount }, (_, i) => {
         const d = new Date(now); d.setDate(now.getDate() - (dayCount - 1 - i));
@@ -258,24 +258,19 @@ export default function BOReports() {
         { label: "Leave Requests",  data: dailyCount(leave,  l => l.start_date), color: "#D97706" },
       ]);
 
-      // Branches table
       setBranchRows(branches.map(o => ({
         name: o.name,
-        totalStaff: allStaff.filter(s => s.branch_id === o.branch_id).length,
+        totalStaff:  allStaff.filter(s => s.branch_id === o.branch_id).length,
         activeStaff: allStaff.filter(s => s.branch_id === o.branch_id && s.is_active).length,
-        shifts: shifts.filter(s => s.branch_id === o.branch_id).length,
-        published: shifts.filter(s => s.branch_id === o.branch_id && s.status === "published").length,
+        shifts:      shifts.filter(s => s.branch_id === o.branch_id).length,
+        published:   shifts.filter(s => s.branch_id === o.branch_id && s.status === "published").length,
       })));
 
-      // Breakdowns
       const shiftMap = {}; shifts.forEach(s => { shiftMap[s.status] = (shiftMap[s.status] || 0) + 1; });
       setShiftsByStatus(Object.entries(shiftMap).map(([s, c]) => ({ status: s, count: c })).sort((a, b) => b.count - a.count));
 
       const leaveMap = {}; leave.forEach(l => { leaveMap[l.status] = (leaveMap[l.status] || 0) + 1; });
       setLeaveByStatus(Object.entries(leaveMap).map(([s, c]) => ({ status: s, count: c })).sort((a, b) => b.count - a.count));
-
-      const typeMap = {}; allStaff.forEach(s => { const t = s.staff_type || "unknown"; typeMap[t] = (typeMap[t] || 0) + 1; });
-      setStaffByType(Object.entries(typeMap).map(([t, c]) => ({ type: t, count: c })));
 
     } catch (err) {
       console.error(err);
@@ -291,26 +286,17 @@ export default function BOReports() {
     const lines = [];
     lines.push(`${businessName} — Staff & Shift Report (${PERIODS[period].label})`);
     lines.push(`Generated,${today}`);
-    lines.push("");
-    lines.push("KPI SUMMARY");
-    lines.push("Metric,Value");
+    lines.push(""); lines.push("KPI SUMMARY"); lines.push("Metric,Value");
     lines.push(`Active Staff,${kpis.staff}`);
     lines.push(`Shifts (period),${kpis.shifts}`);
     lines.push(`Leave Requests (period),${kpis.leave}`);
-    lines.push("");
-    lines.push("BRANCHES");
-    lines.push("Branch,Total Staff,Active Staff,Total Shifts,Published");
+    lines.push(""); lines.push("BRANCHES"); lines.push("Branch,Total Staff,Active Staff,Total Shifts,Published");
     branchRows.forEach(o => lines.push(`"${o.name}",${o.totalStaff},${o.activeStaff},${o.shifts},${o.published}`));
-    lines.push("");
-    lines.push("SHIFTS BY STATUS");
-    lines.push("Status,Count");
+    lines.push(""); lines.push("SHIFTS BY STATUS"); lines.push("Status,Count");
     shiftsByStatus.forEach(s => lines.push(`${s.status},${s.count}`));
-    lines.push("");
-    lines.push("LEAVE BY STATUS");
-    lines.push("Status,Count");
+    lines.push(""); lines.push("LEAVE BY STATUS"); lines.push("Status,Count");
     leaveByStatus.forEach(l => lines.push(`${l.status},${l.count}`));
-    lines.push("");
-    lines.push("DAILY ACTIVITY");
+    lines.push(""); lines.push("DAILY ACTIVITY");
     lines.push(["Date", ...chartSeries.map(s => s.label)].join(","));
     chartLabels.forEach((lbl, i) => lines.push([lbl, ...chartSeries.map(s => s.data[i] ?? 0)].join(",")));
 
@@ -328,10 +314,8 @@ export default function BOReports() {
     const pageW = doc.internal.pageSize.getWidth();
     let y = 15;
 
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, pageW, 24, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(13); doc.setFont("helvetica", "bold");
+    doc.setFillColor(15, 23, 42); doc.rect(0, 0, pageW, 24, "F");
+    doc.setTextColor(255, 255, 255); doc.setFontSize(13); doc.setFont("helvetica", "bold");
     doc.text(`${businessName} — Staffing Report`, 14, 13);
     doc.setFontSize(9); doc.setFont("helvetica", "normal");
     doc.text(`Period: ${PERIODS[period].label}   Generated: ${today}`, pageW - 14, 13, { align: "right" });
@@ -368,141 +352,189 @@ export default function BOReports() {
 
     if (y > 210) { doc.addPage(); y = 20; }
     autoTable(doc, {
-      startY: y,
-      head: [["Shifts by Status", "Count"]],
+      startY: y, head: [["Shifts by Status", "Count"]],
       body: shiftsByStatus.map(s => [s.status, s.count]),
-      headStyles: { fillColor: [217, 119, 6], textColor: 255, fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
-      columnStyles: { 1: { halign: "right" } },
-      margin: { left: 14, right: pageW / 2 + 2 },
+      headStyles: { fillColor: [217, 119, 6], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: "right" } }, margin: { left: 14, right: pageW / 2 + 2 },
     });
     autoTable(doc, {
-      startY: y,
-      head: [["Leave by Status", "Count"]],
+      startY: y, head: [["Leave by Status", "Count"]],
       body: leaveByStatus.map(l => [l.status, l.count]),
-      headStyles: { fillColor: [8, 145, 178], textColor: 255, fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
-      columnStyles: { 1: { halign: "right" } },
-      margin: { left: pageW / 2 + 2, right: 14 },
+      headStyles: { fillColor: [8, 145, 178], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: "right" } }, margin: { left: pageW / 2 + 2, right: 14 },
     });
-    y = doc.lastAutoTable.finalY + 8;
-
     doc.save(`${businessName.toLowerCase().replace(/\s+/g, "-")}-report-${PERIODS[period].label}-${new Date().toISOString().slice(0, 10)}.pdf`);
     logDownload("pdf");
   }
 
-  const maxBranchStaff = Math.max(...branchRows.map(o => o.totalStaff), 1);
+  const maxBranchStaff  = Math.max(...branchRows.map(o => o.totalStaff), 1);
+  const maxBranchShifts = Math.max(...branchRows.map(o => o.shifts), 1);
 
   return (
     <BusinessOwnerLayout title="Reports">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+        {showHistory ? (
+          /* ── History View ── */
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>Reports</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
-              {businessName ? `${businessName} — ` : ""}Consolidated across all branches
-            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "22px" }}>
+              <button onClick={() => setShowHistory(false)}
+                style={{ width: "34px", height: "34px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: "pointer", color: "#64748B", fontSize: "16px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+              <div>
+                <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Report History</h2>
+                <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0" }}>All reports exported</p>
+              </div>
+            </div>
+            <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              {historyLoading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {[1,2,3].map(i => <Shimmer key={i} h="44px" />)}
+                </div>
+              ) : historyRows.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                  <History size={36} color="#CBD5E1" style={{ marginBottom: "12px" }} />
+                  <p style={{ fontSize: "14px", fontWeight: "600", color: "#94A3B8" }}>No exports yet</p>
+                  <p style={{ fontSize: "13px", color: "#CBD5E1", marginTop: "4px" }}>Download a CSV or PDF from the Reports page to see history here.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "500px" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #F1F5F9" }}>
+                        {["Title", "Format", "Period", "Downloaded"].map(h => (
+                          <th key={h} style={{ padding: "10px 12px", textAlign: h === "Format" || h === "Downloaded" ? "center" : "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyRows.map(r => (
+                        <tr key={r.report_id} className="bo-rpt-row" style={{ borderBottom: "1px solid #F8FAFC" }}>
+                          <td style={{ padding: "12px", fontWeight: "600", color: "#1E293B" }}>{r.title || "Report"}</td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>
+                            <span style={{ fontSize: "11px", fontWeight: "700", padding: "2px 10px", borderRadius: "100px", background: r.format === "pdf" ? "#FEF2F2" : "#F0FDF4", color: r.format === "pdf" ? "#DC2626" : "#16A34A", textTransform: "uppercase" }}>{r.format}</span>
+                          </td>
+                          <td style={{ padding: "12px", color: "#64748B", fontSize: "12px" }}>{r.period_start} – {r.period_end}</td>
+                          <td style={{ padding: "12px", textAlign: "center", color: "#94A3B8", fontSize: "12px" }}>{r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", background: "#F1F5F9", borderRadius: "10px", padding: "3px", gap: "2px" }}>
-              {PERIODS.map((p, i) => (
-                <button key={p.label} onClick={() => setPeriod(i)} className="bo-rpt-tab"
-                  style={{ padding: "6px 16px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "background 0.15s", background: period === i ? "#FFF" : "transparent", color: period === i ? "#0F172A" : "#64748B", boxShadow: period === i ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
-                  {p.label}
+        ) : (
+          /* ── Reports View ── */
+          <div>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "22px", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Reports</h2>
+                <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0" }}>
+                  {businessName ? `${businessName} — ` : ""}Consolidated across all branches
+                </p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", background: "#F1F5F9", borderRadius: "10px", padding: "3px", gap: "2px" }}>
+                  {PERIODS.map((p, i) => (
+                    <button key={p.label} onClick={() => setPeriod(i)} className="bo-rpt-tab"
+                      style={{ padding: "6px 16px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "background 0.15s", background: period === i ? "#FFF" : "transparent", color: period === i ? "#0F172A" : "#64748B", boxShadow: period === i ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={downloadCSV} disabled={loading}
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Download size={14} strokeWidth={2} /> CSV
                 </button>
-              ))}
+                <button onClick={downloadPDF} disabled={loading}
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Download size={14} strokeWidth={2} /> PDF
+                </button>
+                <button onClick={openHistory}
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  History
+                </button>
+              </div>
             </div>
-            <button onClick={downloadCSV} disabled={loading}
-              style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Download size={14} strokeWidth={2} /> CSV
-            </button>
-            <button onClick={downloadPDF} disabled={loading}
-              style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Download size={14} strokeWidth={2} /> PDF
-            </button>
-            <button onClick={() => goTo("/business-owner/report-history")}
-              style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
-              <History size={14} strokeWidth={2} /> History
-            </button>
-          </div>
-        </div>
 
-        {/* KPI Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: "14px", marginBottom: "20px" }}>
-          <KpiCard loading={loading} Icon={Users}         label="Active Staff"      value={kpis.staff}   pct={null}                                          sub="across all branches"                 color="#2563EB" bg="#EFF6FF" />
-          <KpiCard loading={loading} Icon={CalendarDays}  label="Shifts"            value={kpis.shifts}  pct={delta(kpis.shifts,  kpis.shiftsPrev)}          sub={`vs prev ${PERIODS[period].label}`} color="#059669" bg="#ECFDF5" />
-          <KpiCard loading={loading} Icon={CalendarClock} label="Leave Requests"    value={kpis.leave}   pct={delta(kpis.leave,   kpis.leavePrev)}           sub={`vs prev ${PERIODS[period].label}`} color="#D97706" bg="#FFFBEB" />
-        </div>
+            {/* Stats Strip */}
+            <StatStrip loading={loading} stats={[
+              { label: "ACTIVE STAFF",    value: kpis.staff,  sub: "across all branches",          pct: null },
+              { label: "SHIFTS",          value: kpis.shifts, sub: `vs prev ${PERIODS[period].label}`, pct: delta(kpis.shifts, kpis.shiftsPrev) },
+              { label: "LEAVE REQUESTS",  value: kpis.leave,  sub: `vs prev ${PERIODS[period].label}`, pct: delta(kpis.leave, kpis.leavePrev) },
+            ]} />
 
-        {/* Activity Chart */}
-        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-            <div>
-              <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A" }}>Daily Activity</h3>
-              <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>Last {Math.min(days, 30)} days</p>
-            </div>
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-              {chartSeries.map(s => (
-                <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{ width: "10px", height: "3px", borderRadius: "2px", background: s.color }} />
-                  <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>{s.label}</span>
+            {/* Daily Activity Chart */}
+            <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+                <div>
+                  <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Daily Activity</h3>
+                  <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 0" }}>Last {Math.min(days, 30)} days</p>
                 </div>
-              ))}
-            </div>
-          </div>
-          {loading ? (
-            <div style={{ height: "180px", background: "linear-gradient(90deg,#F8FAFC 25%,#F1F5F9 50%,#F8FAFC 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear", borderRadius: "8px" }} />
-          ) : <LineChart series={chartSeries} labels={chartLabels} height={180} />}
-        </div>
-
-        {/* Branches Table */}
-        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Branches Overview</h3>
-          <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>Staffing and shift coverage per branch</p>
-          {loading ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="52px" />)}
-            </div>
-          ) : branchRows.length === 0 ? (
-            <p style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", padding: "24px 0" }}>No branches found.</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {branchRows.map((o, i) => (
-                <div key={o.name} style={{ animation: `fadeUp 0.3s ease ${i * 0.07}s both` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{o.name}</span>
-                    <div style={{ display: "flex", gap: "16px", fontSize: "12px" }}>
-                      <span style={{ color: "#64748B" }}><strong style={{ color: "#0F172A" }}>{o.activeStaff}</strong>/{o.totalStaff} staff active</span>
-                      <span style={{ color: "#64748B" }}><strong style={{ color: "#0F172A" }}>{o.published}</strong>/{o.shifts} shifts published</span>
+                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                  {chartSeries.map(s => (
+                    <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <div style={{ width: "10px", height: "3px", borderRadius: "2px", background: s.color }} />
+                      <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>{s.label}</span>
                     </div>
-                  </div>
-                  <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: "100px", background: "#2563EB", width: `${(o.totalStaff / maxBranchStaff) * 100}%`, transition: "width 0.8s ease" }} />
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+              {loading ? (
+                <div style={{ height: "180px", background: "linear-gradient(90deg,#F8FAFC 25%,#F1F5F9 50%,#F8FAFC 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear", borderRadius: "8px" }} />
+              ) : <LineChart series={chartSeries} labels={chartLabels} height={180} />}
             </div>
-          )}
-        </div>
 
-        {/* Breakdowns */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Shifts</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By status (all time)</p>
-            <StatusTable rows={shiftsByStatus} loading={loading} />
-          </div>
-          <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "4px" }}>Leave Requests</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginBottom: "16px" }}>By approval status (all time)</p>
-            <StatusTable rows={leaveByStatus} loading={loading} />
-          </div>
-        </div>
+            {/* Branches Overview — dual progress bars */}
+            <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: "0 0 4px" }}>Branches Overview</h3>
+              <p style={{ fontSize: "12px", color: "#94A3B8", margin: "0 0 18px" }}>Staffing and shift coverage per branch</p>
+              {loading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                  {Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="60px" />)}
+                </div>
+              ) : branchRows.length === 0 ? (
+                <p style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", padding: "24px 0" }}>No branches found.</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                  {branchRows.map((o, i) => (
+                    <div key={o.name} style={{ animation: `fadeUp 0.3s ease ${i * 0.07}s both` }}>
+                      <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", margin: "0 0 10px" }}>{o.name}</p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                            <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>Staff active</span>
+                            <span style={{ fontSize: "12px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{o.activeStaff}</strong> / {o.totalStaff}</span>
+                          </div>
+                          <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", borderRadius: "100px", background: "#2563EB", width: `${o.totalStaff > 0 ? (o.activeStaff / o.totalStaff) * 100 : 0}%`, transition: "width 0.8s ease" }} />
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                            <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>Shifts published</span>
+                            <span style={{ fontSize: "12px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{o.published}</strong> / {o.shifts}</span>
+                          </div>
+                          <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", borderRadius: "100px", background: "#10B981", width: `${o.shifts > 0 ? (o.published / o.shifts) * 100 : 0}%`, transition: "width 0.8s ease" }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
+            {/* Breakdowns — 2-col grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+              <BarMeterSection title="Shifts by Status"   sub="All shifts (all time)"                rows={shiftsByStatus} loading={loading} />
+              <BarMeterSection title="Leave Requests"     sub="By approval status (all time)"        rows={leaveByStatus}  loading={loading} />
+            </div>
+          </div>
+        )}
       </div>
     </BusinessOwnerLayout>
   );
 }
-

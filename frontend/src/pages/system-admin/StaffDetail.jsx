@@ -3,6 +3,7 @@ import { useParams, useLocation } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout from "../../components/layout/AdminLayout";
 import { useGoTo } from "../../components/PageTransition";
+import UserAvatar from "../../components/UserAvatar";
 
 const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const AVATAR_COLORS = ["#6366F1","#F59E0B","#10B981","#EF4444","#8B5CF6","#EC4899","#14B8A6","#F97316"];
@@ -28,7 +29,7 @@ export default function AdminStaffDetail() {
     setLoading(true);
     const { data: staffRow } = await supabase
       .from("staff")
-      .select("staff_id,staff_type,default_work_days,hired_at,is_active,branch_id,users(user_id,full_name,email),branches(name)")
+      .select("staff_id,staff_type,default_work_days,hired_at,is_active,branch_id,users(user_id,full_name,email,avatar_url),branches(name)")
       .eq("staff_id", id).single();
 
     if (!staffRow) { goTo("/system-admin/staff"); return; }
@@ -47,7 +48,6 @@ export default function AdminStaffDetail() {
   if (loading) return <AdminLayout title="Staff Profile"><div style={{ padding:"60px", textAlign:"center", color:"#64748B" }}>Loading…</div></AdminLayout>;
 
   const name = member.users?.full_name || "?";
-  const initials = name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
 
   return (
     <AdminLayout title="Staff Profile">
@@ -56,7 +56,7 @@ export default function AdminStaffDetail() {
       <div style={s.layout}>
         {/* Left card */}
         <div style={s.profileCard}>
-          <div style={{ ...s.avatarLg, background: avatarColor(name) }}>{initials}</div>
+          <UserAvatar name={name} avatar_url={member.users?.avatar_url} size={72} style={{ margin: "0 auto 14px" }} />
           <h2 style={s.profileName}>{name}</h2>
           <p style={s.profileEmail}>{member.users?.email}</p>
           <span style={{ ...s.typeBadge, background: member.staff_type==="regular"?"#DBEAFE":"#F3E8FF", color: member.staff_type==="regular"?"#1E40AF":"#6B21A8" }}>

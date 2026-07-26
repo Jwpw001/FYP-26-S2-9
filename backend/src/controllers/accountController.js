@@ -16,6 +16,7 @@ const getAccount = async (req, res) => {
                 email: dbUser.email,
                 role: dbUser.role,
                 created_at: dbUser.created_at,
+                avatar_url: dbUser.avatar_url || "/avatars/default.png",
             }
         });
 
@@ -27,23 +28,38 @@ const getAccount = async (req, res) => {
     }
 };
 
+const VALID_AVATARS = [
+    "/avatars/default.png",
+    "/avatars/Untitled design (1).png",
+    "/avatars/Untitled design (2).png",
+    "/avatars/Untitled design (3).png",
+];
+
 const updateAccount = async (req, res) => {
     try {
-        const { full_name, email } = req.body;
+        const { full_name, email, avatar_url } = req.body;
+
+        const data = {};
+        if (full_name !== undefined) data.full_name = full_name;
+        if (email !== undefined) data.email = email;
+        if (avatar_url !== undefined) {
+            if (!VALID_AVATARS.includes(avatar_url)) {
+                return res.status(400).json({ success: false, message: "Invalid avatar selection." });
+            }
+            data.avatar_url = avatar_url;
+        }
 
         const updatedUser = await prisma.users.update({
             where: {
                 user_id: req.user.user_id || req.user.id
             },
-            data: {
-                full_name,
-                email
-            },
+            data,
             select: {
                 user_id: true,
                 full_name: true,
                 email: true,
-                role: true
+                role: true,
+                avatar_url: true,
             }
         });
 
