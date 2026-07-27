@@ -9,7 +9,6 @@ const ROLES = {
 
     BRANCH_CASUAL_STAFF: "casual_staff",
 
-    KREWBY_CASUAL_WORKER: "krewby_casual_worker"
 };
 
 module.exports = ROLES;
