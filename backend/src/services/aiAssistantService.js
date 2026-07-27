@@ -147,7 +147,7 @@ async function fetchManagerContext(userId) {
     start: fmtTime(s.start_time),
     end: fmtTime(s.end_time),
     status: s.status,
-    tasks: (s.shift_tasks || []).map((t) => ({ title: t.title, skill: t.skills?.name || null })),
+    tasks: (s.shift_tasks || []).map((t) => ({ task_id: t.task_id, title: t.title, skill: t.skills?.name || null })),
     total_positions_needed: (s.shift_tasks || []).length,
     assigned_count: (s.task_assignments || []).length,
     is_understaffed: (s.task_assignments || []).length < (s.shift_tasks || []).length,
@@ -171,6 +171,7 @@ async function fetchManagerContext(userId) {
     rejected_last_60_days: rejectedCount,
   };
   context.pendingLeaveRequests = pendingLeave.map((l) => ({
+    request_id: l.request_id,
     staff_name: l.staff?.users?.full_name,
     leave_type: l.leave_type,
     status: l.status,
@@ -341,6 +342,7 @@ async function fetchManagerContext(userId) {
       : "no data";
 
     return {
+      staff_id: sid,
       name: s.users?.full_name || s.users?.email || "Unknown",
       type: s.staff_type,
       exp_level: s.exp_level || null,
@@ -550,6 +552,79 @@ async function fetchBOContext(userId) {
   return context;
 }
 
+// ─── PHASE 4: TOOL DEFINITIONS ────────────────────────────────────────────────
+
+const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "approve_leave",
+      description: "Approve a pending leave request. Only call this when the manager explicitly asks to approve a specific leave request.",
+      parameters: {
+        type: "object",
+        properties: {
+          request_id: { type: "integer", description: "The request_id from pendingLeaveRequests context" },
+          staff_name: { type: "string", description: "Staff member's full name (for confirmation display)" },
+          leave_dates: { type: "string", description: "Human-readable date range, e.g. 'May 15–17'" },
+        },
+        required: ["request_id", "staff_name", "leave_dates"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reject_leave",
+      description: "Reject a pending leave request. Only call this when the manager explicitly asks to reject a specific leave request.",
+      parameters: {
+        type: "object",
+        properties: {
+          request_id: { type: "integer", description: "The request_id from pendingLeaveRequests context" },
+          staff_name: { type: "string", description: "Staff member's full name" },
+          leave_dates: { type: "string", description: "Human-readable date range" },
+          reason: { type: "string", description: "Brief reason for rejection (optional)" },
+        },
+        required: ["request_id", "staff_name", "leave_dates"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_draft_shift",
+      description: "Create a new draft shift for the manager's branch. Only call when the manager explicitly asks to create a shift.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Shift name/title" },
+          shift_date: { type: "string", description: "Date in YYYY-MM-DD format" },
+          start_time: { type: "string", description: "Start time in HH:MM (24-hour)" },
+          end_time: { type: "string", description: "End time in HH:MM (24-hour)" },
+        },
+        required: ["title", "shift_date", "start_time", "end_time"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "assign_staff_to_task",
+      description: "Assign a staff member to an unfilled task slot in a shift. Only call when the manager explicitly asks to assign someone to a specific task.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_id: { type: "integer", description: "The task_id from upcomingShifts tasks context" },
+          staff_id: { type: "integer", description: "The staff_id from staffRoster context" },
+          staff_name: { type: "string", description: "Staff member's name (for confirmation display)" },
+          shift_title: { type: "string", description: "Shift title (for confirmation display)" },
+          task_name: { type: "string", description: "Task/role name (for confirmation display)" },
+        },
+        required: ["task_id", "staff_id", "staff_name", "shift_title", "task_name"],
+      },
+    },
+  },
+];
+
 // ─── SYSTEM PROMPTS ───────────────────────────────────────────────────────────
 
 function buildSystemPrompt(role, context) {
@@ -563,8 +638,8 @@ Branch: "${context.branch?.name || "their branch"}" (${context.branch?.address |
 Today: ${date}
 
 RULES:
-1. READ-ONLY — you cannot create, edit, approve, reject, assign, or delete anything.
-2. Only reference data from the context below. Do not make up numbers, names, or dates.
+1. You can take 4 actions when explicitly requested: approve_leave, reject_leave, create_draft_shift, assign_staff_to_task. Call the correct tool function — never describe the action in text without calling it. Only call a tool if the manager clearly and explicitly asks for that action. For ambiguous requests, ask for clarification first.
+2. Only reference data from the context below. Do not make up IDs, numbers, names, or dates.
 3. Be concise. Use bullet points for lists. Bold important names and numbers.
 4. If a context field is an empty array, say "none recorded" — do NOT say "I don't have that data."
 5. Only say "I don't have that information" if the field is genuinely absent from the context.
@@ -772,4 +847,4 @@ async function buildBriefMessages(userId, role, question) {
   ];
 }
 
-module.exports = { buildMessages, buildBriefMessages };
+module.exports = { buildMessages, buildBriefMessages, TOOLS };

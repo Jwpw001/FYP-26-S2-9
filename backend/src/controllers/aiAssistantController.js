@@ -1,5 +1,5 @@
 const OpenAI = require("openai");
-const { buildMessages, buildBriefMessages } = require("../services/aiAssistantService");
+const { buildMessages, buildBriefMessages, TOOLS } = require("../services/aiAssistantService");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -30,18 +30,45 @@ async function chat(req, res) {
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
+    // Only managers get action tools (business owners are read-only for now)
+    const tools = role === "manager" ? TOOLS : undefined;
+
     const stream = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages,
+      tools,
+      tool_choice: tools ? "auto" : undefined,
       max_tokens: 1000,
       temperature: 0.3,
       stream: true,
     });
 
+    let toolCallBuffer = null;
+
     for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || "";
-      if (content) {
-        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      const delta = chunk.choices[0]?.delta;
+      const finishReason = chunk.choices[0]?.finish_reason;
+
+      // Accumulate tool call chunks
+      if (delta?.tool_calls) {
+        if (!toolCallBuffer) toolCallBuffer = { name: "", arguments: "" };
+        toolCallBuffer.name      += delta.tool_calls[0]?.function?.name      || "";
+        toolCallBuffer.arguments += delta.tool_calls[0]?.function?.arguments || "";
+      }
+
+      // Regular text content
+      if (delta?.content) {
+        res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
+      }
+
+      // Tool call complete — emit as special event so the frontend can show a confirmation card
+      if (finishReason === "tool_calls" && toolCallBuffer) {
+        try {
+          const args = JSON.parse(toolCallBuffer.arguments);
+          res.write(`data: ${JSON.stringify({ tool_call: { name: toolCallBuffer.name, args } })}\n\n`);
+        } catch (e) {
+          console.error("[AI] Failed to parse tool call args:", e);
+        }
       }
     }
 

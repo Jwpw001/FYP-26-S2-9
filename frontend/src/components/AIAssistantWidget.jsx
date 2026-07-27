@@ -70,6 +70,93 @@ function getToken() {
 }
 
 
+const ACTION_META = {
+  approve_leave:        { label: "Approve Leave",     color: "#22C55E", icon: "✓" },
+  reject_leave:         { label: "Reject Leave",      color: "#EF4444", icon: "✕" },
+  create_draft_shift:   { label: "Create Draft Shift", color: "#6366F1", icon: "+" },
+  assign_staff_to_task: { label: "Assign Staff",       color: "#F59E0B", icon: "→" },
+};
+
+function describeAction(name, args) {
+  if (name === "approve_leave")
+    return `Approve ${args.staff_name}'s leave request\nDates: ${args.leave_dates}`;
+  if (name === "reject_leave")
+    return `Reject ${args.staff_name}'s leave request\nDates: ${args.leave_dates}${args.reason ? `\nReason: ${args.reason}` : ""}`;
+  if (name === "create_draft_shift")
+    return `Create draft shift: "${args.title}"\nDate: ${args.shift_date}  ·  ${args.start_time}–${args.end_time}`;
+  if (name === "assign_staff_to_task")
+    return `Assign ${args.staff_name} → "${args.task_name}"\nShift: ${args.shift_title}`;
+  return JSON.stringify(args, null, 2);
+}
+
+function ActionCard({ msg, onConfirm, onCancel }) {
+  const meta = ACTION_META[msg.name] || { label: msg.name, color: ACCENT, icon: "⚡" };
+  const [busy, setBusy] = useState(false);
+
+  if (msg.status === "cancelled") {
+    return (
+      <div style={{ marginBottom: 10, padding: "9px 13px", borderRadius: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", fontSize: 12.5, color: "#94A3B8" }}>
+        Action cancelled.
+      </div>
+    );
+  }
+
+  if (msg.status === "done") {
+    return (
+      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#F0FDF4", border: "1px solid #86EFAC", fontSize: 13, color: "#16A34A", fontWeight: 600 }}>
+        ✓ {msg.result}
+      </div>
+    );
+  }
+
+  if (msg.status === "error") {
+    return (
+      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#FEF2F2", border: "1px solid #FCA5A5", fontSize: 13, color: "#DC2626" }}>
+        ✗ {msg.result}
+      </div>
+    );
+  }
+
+  return (
+    <div className="ai-msg" style={{
+      marginBottom: 10,
+      padding: "12px 14px",
+      borderRadius: "12px",
+      background: "#FAFAFA",
+      border: `1.5px solid ${meta.color}33`,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+        <div style={{
+          width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+          background: meta.color, display: "flex", alignItems: "center",
+          justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 800,
+        }}>{meta.icon}</div>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          {meta.label}
+        </span>
+      </div>
+      <p style={{ fontSize: 12.5, color: "#1E293B", whiteSpace: "pre-wrap", margin: "0 0 10px", lineHeight: 1.5 }}>
+        {describeAction(msg.name, msg.args)}
+      </p>
+      <div style={{ display: "flex", gap: 7 }}>
+        <button
+          onClick={onCancel}
+          style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={async () => { setBusy(true); await onConfirm(); setBusy(false); }}
+          disabled={busy}
+          style={{ flex: 1.4, padding: "7px 0", borderRadius: 8, border: "none", background: meta.color, color: "#fff", fontSize: 12, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}
+        >
+          {busy ? "Working…" : "Confirm ✓"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TypingIndicator() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "10px 14px" }}>
@@ -83,7 +170,10 @@ function TypingIndicator() {
   );
 }
 
-function Message({ msg }) {
+function Message({ msg, onConfirm, onCancel }) {
+  if (msg.role === "tool_call") {
+    return <ActionCard msg={msg} onConfirm={onConfirm} onCancel={onCancel} />;
+  }
   const isUser = msg.role === "user";
   return (
     <div className="ai-msg" style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", marginBottom: 10 }}>
@@ -183,13 +273,47 @@ export default function AIAssistantWidget() {
     try { localStorage.setItem(storageKey, JSON.stringify(fresh)); } catch {}
   }, [storageKey, briefedKey]);
 
+  async function handleConfirm(index) {
+    const msg = messages[index];
+    try {
+      const resp = await fetch(`${BASE_URL}/api/ai-assistant/execute`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+        },
+        body: JSON.stringify({ tool_name: msg.name, args: msg.args }),
+      });
+      const data = await resp.json();
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], status: data.success ? "done" : "error", result: data.message };
+        return updated;
+      });
+    } catch {
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], status: "error", result: "Action failed. Please try again." };
+        return updated;
+      });
+    }
+  }
+
+  function handleCancel(index) {
+    setMessages((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], status: "cancelled" };
+      return updated;
+    });
+  }
+
   async function send(text) {
     const question = (text || input).trim();
     if (!question || loading) return;
     setInput("");
 
     const userMsg = { role: "user", content: question };
-    const history = messages.filter((m) => m.role !== "system");
+    const history = messages.filter((m) => m.role !== "system" && m.role !== "tool_call");
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
@@ -220,6 +344,7 @@ export default function AIAssistantWidget() {
       const decoder = new TextDecoder();
       let buffer    = "";
       let fullText  = "";
+      let gotToolCall = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -235,6 +360,24 @@ export default function AIAssistantWidget() {
           if (data === "[DONE]") break;
           try {
             const parsed = JSON.parse(data);
+
+            // Tool call: replace the empty assistant bubble with the action card
+            if (parsed.tool_call) {
+              gotToolCall = true;
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  role: "tool_call",
+                  name: parsed.tool_call.name,
+                  args: parsed.tool_call.args,
+                  status: "pending",
+                  result: null,
+                };
+                return updated;
+              });
+              break;
+            }
+
             if (parsed.content) {
               fullText += parsed.content;
               setMessages((prev) => {
@@ -245,6 +388,8 @@ export default function AIAssistantWidget() {
             }
           } catch {}
         }
+
+        if (gotToolCall) break;
       }
 
       if (!open) setHasNew(true);
@@ -353,7 +498,14 @@ export default function AIAssistantWidget() {
             padding: "14px 14px 4px",
             display: "flex", flexDirection: "column",
           }}>
-            {messages.map((m, i) => <Message key={i} msg={m} />)}
+            {messages.map((m, i) => (
+              <Message
+                key={i}
+                msg={m}
+                onConfirm={() => handleConfirm(i)}
+                onCancel={() => handleCancel(i)}
+              />
+            ))}
             {loading && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <div style={{
