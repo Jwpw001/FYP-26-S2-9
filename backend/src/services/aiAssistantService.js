@@ -4,7 +4,6 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 function fmtTime(t) {
   if (!t) return null;
   if (typeof t === "string") return t.slice(0, 5);
-  // Prisma Time fields come back as Date objects — use ISO string to get HH:MM in UTC
   return new Date(t).toISOString().slice(11, 16);
 }
 
@@ -22,12 +21,20 @@ function getWeekBounds() {
   };
 }
 
+function fourWeeksAgoDate() {
+  const d = new Date();
+  d.setDate(d.getDate() - 28);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 // ─── MANAGER CONTEXT ──────────────────────────────────────────────────────────
 
 async function fetchManagerContext(userId) {
   const context = {};
 
-  // User
   const user = await prisma.users.findUnique({
     where: { user_id: userId },
     select: { user_id: true, full_name: true, role: true },
@@ -61,35 +68,84 @@ async function fetchManagerContext(userId) {
   }
 
   const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
   const weekFromNow = new Date(today);
   weekFromNow.setDate(today.getDate() + 7);
   const { monday, sunday } = getWeekBounds();
+  const fourWeeksAgo = fourWeeksAgoDate();
+  const fourWeeksAgoStr = fourWeeksAgo.toISOString().slice(0, 10);
 
-  // Branch info
-  const branch = await prisma.branches.findUnique({
-    where: { branch_id: branchId },
-    select: { name: true, address: true },
-  }).catch(() => null);
-  context.branch = branch;
+  // ── Parallel fetch: branch info, upcoming shifts, leave requests, swaps, past shifts ──
+  const [
+    branch,
+    shifts,
+    allLeave,
+    pendingSwaps,
+    pastShifts,
+    regularStaff,
+  ] = await Promise.all([
+    prisma.branches.findUnique({
+      where: { branch_id: branchId },
+      select: { name: true, address: true },
+    }).catch(() => null),
 
-  // Upcoming shifts
-  const shifts = await prisma.shifts.findMany({
-    where: { branch_id: branchId, shift_date: { gte: today, lte: weekFromNow } },
-    include: {
-      shift_tasks: { include: { skills: { select: { name: true } } } },
-      task_assignments: {
-        include: { staff: { include: { users: { select: { full_name: true } } } } },
+    prisma.shifts.findMany({
+      where: { branch_id: branchId, shift_date: { gte: today, lte: weekFromNow } },
+      include: {
+        shift_tasks: { include: { skills: { select: { name: true } } } },
+        task_assignments: {
+          include: { staff: { include: { users: { select: { full_name: true } } } } },
+        },
       },
-    },
-    orderBy: { shift_date: "asc" },
-  }).catch(() => []);
+      orderBy: { shift_date: "asc" },
+    }).catch(() => []),
 
+    // Phase 1.1 — fetch all leave but we'll compress below
+    prisma.availability.findMany({
+      where: { staff: { branch_id: branchId } },
+      include: { staff: { include: { users: { select: { full_name: true } } } } },
+      orderBy: { start_date: "desc" },
+      take: 60,
+    }).catch(() => []),
+
+    prisma.swap_requests.findMany({
+      where: {
+        status: "pending",
+        task_assignments_swap_requests_requester_assignTotask_assignments: {
+          shifts: { branch_id: branchId },
+        },
+      },
+    }).catch(() => []),
+
+    // Phase 1.3 — 4-week shift history
+    prisma.shifts.findMany({
+      where: { branch_id: branchId, shift_date: { gte: fourWeeksAgo, lt: today } },
+      include: {
+        shift_tasks: { include: { skills: { select: { name: true } } } },
+        task_assignments: { select: { assignment_id: true, task_id: true, staff_id: true } },
+      },
+      orderBy: { shift_date: "asc" },
+    }).catch(() => []),
+
+    prisma.staff.findMany({
+      where: { branch_id: branchId, staff_type: "regular" },
+      select: {
+        staff_id: true, staff_type: true, exp_level: true, is_active: true,
+        users: { select: { user_id: true, full_name: true, email: true } },
+      },
+    }).catch(() => []),
+  ]);
+
+  context.branch = branch;
+  context.pendingSwapRequests = pendingSwaps.length;
+
+  // ── Upcoming shifts ──
   context.upcomingShifts = shifts.map((s) => ({
     shift_id: s.shift_id,
     title: s.title,
     date: s.shift_date,
-    start: s.start_time,
-    end: s.end_time,
+    start: fmtTime(s.start_time),
+    end: fmtTime(s.end_time),
     status: s.status,
     tasks: (s.shift_tasks || []).map((t) => ({ title: t.title, skill: t.skills?.name || null })),
     total_positions_needed: (s.shift_tasks || []).length,
@@ -98,14 +154,23 @@ async function fetchManagerContext(userId) {
     assigned_staff: (s.task_assignments || []).map((a) => a.staff?.users?.full_name || "Unknown"),
   }));
 
-  // Leave requests — all statuses so AI knows about pending, approved and rejected
-  const allLeave = await prisma.availability.findMany({
-    where: { staff: { branch_id: branchId } },
-    include: { staff: { include: { users: { select: { full_name: true } } } } },
-    orderBy: { start_date: "desc" },
-    take: 30,
-  }).catch(() => []);
-  context.leaveRequests = allLeave.map((l) => ({
+  // Phase 1.5 — track who is assigned at least once this week
+  const assignedThisWeek = new Set();
+  shifts.forEach((s) => {
+    s.task_assignments.forEach((a) => { if (a.staff_id) assignedThisWeek.add(a.staff_id); });
+  });
+
+  // ── Phase 1.1 — Compressed leave requests ──
+  const pendingLeave = allLeave.filter((l) => l.status === "pending");
+  const approvedCount = allLeave.filter((l) => l.status === "approved").length;
+  const rejectedCount = allLeave.filter((l) => l.status === "rejected").length;
+
+  context.leaveRequestSummary = {
+    pending: pendingLeave.length,
+    approved_last_60_days: approvedCount,
+    rejected_last_60_days: rejectedCount,
+  };
+  context.pendingLeaveRequests = pendingLeave.map((l) => ({
     staff_name: l.staff?.users?.full_name,
     leave_type: l.leave_type,
     status: l.status,
@@ -114,27 +179,52 @@ async function fetchManagerContext(userId) {
     reason: l.reason,
   }));
 
-  // Pending swaps — scoped to this branch via the requester's assignment → shift
-  const pendingSwaps = await prisma.swap_requests.findMany({
-    where: {
-      status: "pending",
-      task_assignments_swap_requests_requester_assignTotask_assignments: {
-        shifts: { branch_id: branchId },
-      },
-    },
-  }).catch(() => []);
-  context.pendingSwapRequests = pendingSwaps.length;
+  // ── Phase 1.3 — 4-week shift history by day of week ──
+  const byDay = {};
+  DAY_NAMES.forEach((d) => { byDay[d] = { shifts: 0, total_positions: 0, filled_positions: 0 }; });
 
-  // Regular staff — direct branch assignment
-  const regularStaff = await prisma.staff.findMany({
-    where: { branch_id: branchId, staff_type: "regular" },
-    select: {
-      staff_id: true, staff_type: true, exp_level: true, is_active: true,
-      users: { select: { user_id: true, full_name: true, email: true } },
-    },
-  }).catch(() => []);
+  // Phase 1.4 — skills gap from past shifts
+  const skillGapMap = {};
 
-  // Casual staff — via casual_branch_preferences (same as staffController)
+  pastShifts.forEach((s) => {
+    const dayName = DAY_NAMES[new Date(s.shift_date).getDay()];
+    byDay[dayName].shifts += 1;
+    byDay[dayName].total_positions += s.shift_tasks.length;
+    byDay[dayName].filled_positions += s.task_assignments.length;
+
+    // Phase 1.4 — track which tasks were unfilled and what skill they needed
+    const filledTaskIds = new Set(s.task_assignments.map((a) => a.task_id));
+    s.shift_tasks.forEach((task) => {
+      if (!filledTaskIds.has(task.task_id)) {
+        const skillName = task.skills?.name || "Unspecified";
+        skillGapMap[skillName] = (skillGapMap[skillName] || 0) + 1;
+      }
+    });
+  });
+
+  context.shiftHistoryByDay = DAY_NAMES
+    .filter((d) => byDay[d].shifts > 0)
+    .map((d) => {
+      const { shifts: count, total_positions, filled_positions } = byDay[d];
+      const fillPct = total_positions > 0
+        ? Math.round((filled_positions / total_positions) * 100)
+        : 100;
+      return {
+        day: d,
+        avg_shifts_per_week: (count / 4).toFixed(1),
+        fill_rate: `${fillPct}%`,
+        typically_understaffed: fillPct < 80,
+      };
+    });
+
+  // Phase 1.4 — skills gap summary (top unfilled, sorted)
+  const skillsGapEntries = Object.entries(skillGapMap)
+    .sort((a, b) => b[1] - a[1]);
+  context.skillsGap = skillsGapEntries.length > 0
+    ? skillsGapEntries.map(([skill, times]) => ({ skill, unfilled_slots_last_4wk: times }))
+    : "No unfilled slots in the past 4 weeks — full coverage achieved.";
+
+  // ── Casual staff ──
   const { data: prefs } = await supabaseAdmin
     .from("casual_branch_preferences")
     .select("user_id")
@@ -154,85 +244,135 @@ async function fetchManagerContext(userId) {
   const branchStaff = [...regularStaff, ...casualStaff];
   const staffIds = branchStaff.map((s) => s.staff_id);
   const userIds  = branchStaff.map((s) => s.users?.user_id).filter(Boolean);
-  console.log("[AI] regular:", regularStaff.length, "| casual:", casualStaff.length, "| staffIds:", staffIds);
+  console.log("[AI] regular:", regularStaff.length, "| casual:", casualStaff.length, "| staffIds:", staffIds.length);
 
-  // Staff roster with skills
-  const skillTags = userIds.length > 0
-    ? await prisma.user_skill_tags.findMany({
-        where: { user_id: { in: userIds } },
-        include: { skills: { select: { name: true } } },
-      }).catch(() => [])
-    : [];
+  if (staffIds.length === 0) {
+    context.staffRoster = [];
+    context.timesheetsThisWeek = "No staff found in this branch.";
+    context.casualAvailabilitySubmissions = [];
+    return context;
+  }
 
+  // ── Parallel fetch: skills, timesheets (this week + 4 weeks), past assignments, casual avail ──
+  const [skillTags, weekTimesheets, fourWkTimesheets, casualAvail] = await Promise.all([
+    prisma.user_skill_tags.findMany({
+      where: { user_id: { in: userIds } },
+      include: { skills: { select: { name: true } } },
+    }).catch(() => []),
+
+    supabaseAdmin
+      .from("timesheets")
+      .select("staff_id, log_date, hours_worked, status")
+      .in("staff_id", staffIds)
+      .gte("log_date", monday)
+      .lte("log_date", sunday)
+      .then((r) => r.data || [])
+      .catch(() => []),
+
+    // Phase 1.2 — 4-week timesheets for attendance rate
+    supabaseAdmin
+      .from("timesheets")
+      .select("staff_id, log_date, status")
+      .in("staff_id", staffIds)
+      .gte("log_date", fourWeeksAgoStr)
+      .lt("log_date", todayStr)
+      .then((r) => r.data || [])
+      .catch(() => []),
+
+    prisma.casual_availability.findMany({
+      where: { staff_id: { in: staffIds } },
+      orderBy: { week_start_date: "desc" },
+    }).catch(() => []),
+  ]);
+
+  // Skills by user
   const skillsByUser = {};
   skillTags.forEach((t) => {
     if (!skillsByUser[t.user_id]) skillsByUser[t.user_id] = [];
     if (t.skills?.name) skillsByUser[t.user_id].push(t.skills.name);
   });
 
-  context.staffRoster = branchStaff.map((s) => ({
-    name: s.users?.full_name || s.users?.email || "Unknown",
-    type: s.staff_type,
-    exp_level: s.exp_level || null,
-    is_active: s.is_active,
-    skills: skillsByUser[s.users?.user_id] || [],
-  }));
+  // This-week timesheets
+  const staffMap = {};
+  branchStaff.forEach((s) => { staffMap[s.staff_id] = s.users?.full_name || s.users?.email; });
 
-  // Timesheets this week
-  if (staffIds.length > 0) {
-    const { data: timesheets, error: tsErr } = await supabaseAdmin
-      .from("timesheets")
-      .select("staff_id, log_date, hours_worked, status")
-      .in("staff_id", staffIds)
-      .gte("log_date", monday)
-      .lte("log_date", sunday);
+  const hoursByStaff = {};
+  weekTimesheets.forEach((t) => {
+    if (!hoursByStaff[t.staff_id]) {
+      hoursByStaff[t.staff_id] = { name: staffMap[t.staff_id], approved_hours: 0, pending_hours: 0 };
+    }
+    const hrs = Number(t.hours_worked) || 0;
+    if (t.status === "approved") hoursByStaff[t.staff_id].approved_hours += hrs;
+    else if (t.status === "pending") hoursByStaff[t.staff_id].pending_hours += hrs;
+  });
+  const timesheetRows = Object.values(hoursByStaff);
+  context.timesheetsThisWeek = timesheetRows.length > 0
+    ? timesheetRows
+    : "No timesheet entries have been submitted for the current week yet.";
 
-    console.log("[AI] week:", monday, "→", sunday, "| timesheets:", timesheets?.length ?? 0, "| error:", tsErr?.message);
-
-    const staffMap = {};
-    branchStaff.forEach((s) => { staffMap[s.staff_id] = s.users?.full_name || s.users?.email; });
-
-    const hoursByStaff = {};
-    (timesheets || []).forEach((t) => {
-      if (!hoursByStaff[t.staff_id]) {
-        hoursByStaff[t.staff_id] = { name: staffMap[t.staff_id], approved_hours: 0, pending_hours: 0 };
-      }
-      const hrs = Number(t.hours_worked) || 0;
-      if (t.status === "approved") hoursByStaff[t.staff_id].approved_hours += hrs;
-      else if (t.status === "pending") hoursByStaff[t.staff_id].pending_hours += hrs;
+  // Phase 1.2 — Attendance rate from 4-week timesheets vs past assignments
+  // "scheduled days" = distinct shift_dates where staff had a task assignment in past 4 weeks
+  const scheduledDays = {}; // staff_id → Set<dateStr>
+  pastShifts.forEach((s) => {
+    const dateStr = new Date(s.shift_date).toISOString().slice(0, 10);
+    s.task_assignments.forEach((a) => {
+      if (!a.staff_id) return;
+      if (!scheduledDays[a.staff_id]) scheduledDays[a.staff_id] = new Set();
+      scheduledDays[a.staff_id].add(dateStr);
     });
+  });
 
-    const timesheetRows = Object.values(hoursByStaff);
-    context.timesheetsThisWeek = timesheetRows.length > 0
-      ? timesheetRows
-      : "No timesheet entries have been submitted for the current week yet.";
-  } else {
-    context.timesheetsThisWeek = "No staff found in this branch.";
-  }
+  // "present days" = distinct log_dates with approved status in past 4 weeks
+  const presentDays = {}; // staff_id → Set<dateStr>
+  fourWkTimesheets.forEach((t) => {
+    if (t.status !== "approved") return;
+    if (!presentDays[t.staff_id]) presentDays[t.staff_id] = new Set();
+    presentDays[t.staff_id].add(t.log_date);
+  });
 
-  // Casual availability
-  if (staffIds.length > 0) {
-    const casualAvail = await prisma.casual_availability.findMany({
-      where: { staff_id: { in: staffIds } },
-      orderBy: { week_start_date: "desc" },
-    }).catch(() => []);
+  // Build roster with all Phase 1 enrichments
+  context.staffRoster = branchStaff.map((s) => {
+    const sid = s.staff_id;
+    const uid = s.users?.user_id;
+    const scheduled = scheduledDays[sid]?.size ?? 0;
+    const present = presentDays[sid]?.size ?? 0;
+    const attendanceRate = scheduled > 0
+      ? `${Math.round((Math.min(present, scheduled) / scheduled) * 100)}%`
+      : "no data";
 
-    const staffNameMap = {};
-    branchStaff.forEach((s) => { staffNameMap[s.staff_id] = s.users?.full_name || "Unknown"; });
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const grouped = {};
-    casualAvail.forEach((row) => {
-      const week = row.week_start_date.toISOString().split("T")[0];
-      const key  = `${row.staff_id}_${week}`;
-      if (!grouped[key]) grouped[key] = { staff_name: staffNameMap[row.staff_id], week, days: [] };
-      grouped[key].days.push({
-        day: dayNames[row.day_of_week],
-        from: fmtTime(row.available_from),
-        to:   fmtTime(row.available_to),
-      });
+    return {
+      name: s.users?.full_name || s.users?.email || "Unknown",
+      type: s.staff_type,
+      exp_level: s.exp_level || null,
+      is_active: s.is_active,
+      skills: skillsByUser[uid] || [],
+      assigned_this_week: assignedThisWeek.has(sid),
+      scheduled_days_last_4wk: scheduled,
+      attendance_rate_4wk: attendanceRate,
+    };
+  });
+
+  // Highlight staff not yet assigned this week
+  const unassignedThisWeek = context.staffRoster.filter((s) => !s.assigned_this_week).map((s) => s.name);
+  context.staffNotAssignedThisWeek = unassignedThisWeek.length > 0
+    ? unassignedThisWeek
+    : "All staff have been assigned at least one shift this week.";
+
+  // Casual availability grouped by staff + week
+  const staffNameMap = {};
+  branchStaff.forEach((s) => { staffNameMap[s.staff_id] = s.users?.full_name || "Unknown"; });
+  const grouped = {};
+  casualAvail.forEach((row) => {
+    const week = row.week_start_date.toISOString().split("T")[0];
+    const key  = `${row.staff_id}_${week}`;
+    if (!grouped[key]) grouped[key] = { staff_name: staffNameMap[row.staff_id], week, days: [] };
+    grouped[key].days.push({
+      day: DAY_NAMES[row.day_of_week],
+      from: fmtTime(row.available_from),
+      to:   fmtTime(row.available_to),
     });
-    context.casualAvailabilitySubmissions = Object.values(grouped);
-  }
+  });
+  context.casualAvailabilitySubmissions = Object.values(grouped);
 
   return context;
 }
@@ -260,6 +400,7 @@ async function fetchBOContext(userId) {
   const today = new Date();
   const weekFromNow = new Date(today);
   weekFromNow.setDate(today.getDate() + 7);
+  const fourWeeksAgo = fourWeeksAgoDate();
 
   const branches = await prisma.branches.findMany({
     where: { business_id: biz.business_id },
@@ -271,11 +412,12 @@ async function fetchBOContext(userId) {
 
   if (branchIds.length === 0) return context;
 
-  const [allStaff, upcomingShifts, pendingLeave] = await Promise.all([
+  const [allStaff, upcomingShifts, allLeave, pastShifts] = await Promise.all([
     prisma.staff.findMany({
       where: { branch_id: { in: branchIds } },
       select: { staff_id: true, staff_type: true, branch_id: true, exp_level: true, users: { select: { full_name: true, email: true } } },
     }).catch(() => []),
+
     prisma.shifts.findMany({
       where: { branch_id: { in: branchIds }, shift_date: { gte: today, lte: weekFromNow } },
       include: {
@@ -285,8 +427,10 @@ async function fetchBOContext(userId) {
       },
       orderBy: { shift_date: "asc" },
     }).catch(() => []),
+
+    // Phase 1.1 — all leave, compressed below
     prisma.availability.findMany({
-      where: { status: "pending", staff: { branch_id: { in: branchIds } } },
+      where: { staff: { branch_id: { in: branchIds } } },
       include: {
         staff: {
           include: {
@@ -295,10 +439,21 @@ async function fetchBOContext(userId) {
           },
         },
       },
+      orderBy: { start_date: "desc" },
+      take: 60,
+    }).catch(() => []),
+
+    // Phase 1.3 — 4-week history for BO-level fill rate per branch
+    prisma.shifts.findMany({
+      where: { branch_id: { in: branchIds }, shift_date: { gte: fourWeeksAgo, lt: today } },
+      include: {
+        shift_tasks: { select: { task_id: true } },
+        task_assignments: { select: { assignment_id: true } },
+      },
     }).catch(() => []),
   ]);
 
-  // Fetch branch managers from Supabase
+  // Branch managers
   const { data: bmRows } = await supabaseAdmin
     .from("branch_managers")
     .select("branch_id, user_id")
@@ -322,8 +477,6 @@ async function fetchBOContext(userId) {
     regular: allStaff.filter((s) => s.staff_type === "regular").length,
     casual:  allStaff.filter((s) => s.staff_type === "casual").length,
   };
-
-  // Full staff list with branch name
   context.allStaff = allStaff.map((s) => ({
     name: s.users?.full_name || s.users?.email || "Unknown",
     type: s.staff_type,
@@ -331,14 +484,27 @@ async function fetchBOContext(userId) {
     branch: branchNameMap[s.branch_id] || s.branch_id,
   }));
 
+  // Phase 1.3 — 4-week fill rate per branch
+  const pastByBranch = {};
+  pastShifts.forEach((s) => {
+    if (!pastByBranch[s.branch_id]) pastByBranch[s.branch_id] = { total: 0, filled: 0 };
+    pastByBranch[s.branch_id].total += s.shift_tasks.length;
+    pastByBranch[s.branch_id].filled += s.task_assignments.length;
+  });
+
   context.branchSummaries = branches.map((b) => {
-    const bStaff    = allStaff.filter((s) => s.branch_id === b.branch_id);
-    const bShifts   = upcomingShifts.filter((s) => s.branch_id === b.branch_id);
+    const bStaff       = allStaff.filter((s) => s.branch_id === b.branch_id);
+    const bShifts      = upcomingShifts.filter((s) => s.branch_id === b.branch_id);
     const understaffed = bShifts.filter((s) => s.task_assignments.length < s.shift_tasks.length);
-    const bManagers = (bmRows || []).filter((r) => r.branch_id === b.branch_id).map((r) => {
+    const bManagers    = (bmRows || []).filter((r) => r.branch_id === b.branch_id).map((r) => {
       const u = managerUsers.find((u) => u.user_id === r.user_id);
       return u?.full_name || u?.email || "Unknown";
     });
+    const hist = pastByBranch[b.branch_id];
+    const fillRate4wk = hist && hist.total > 0
+      ? `${Math.round((hist.filled / hist.total) * 100)}%`
+      : "no data";
+
     return {
       name: b.name,
       address: b.address,
@@ -346,6 +512,7 @@ async function fetchBOContext(userId) {
       staff_count: bStaff.length,
       upcoming_shifts: bShifts.length,
       understaffed_shifts: understaffed.length,
+      fill_rate_last_4wk: fillRate4wk,
     };
   });
 
@@ -353,14 +520,24 @@ async function fetchBOContext(userId) {
     branch: s.branches?.name,
     title: s.title,
     date: s.shift_date,
-    start: s.start_time,
-    end: s.end_time,
+    start: fmtTime(s.start_time),
+    end: fmtTime(s.end_time),
     status: s.status,
     total_positions: s.shift_tasks.length,
     assigned_count: s.task_assignments.length,
     is_understaffed: s.task_assignments.length < s.shift_tasks.length,
   }));
 
+  // Phase 1.1 — compressed leave for BO
+  const pendingLeave = allLeave.filter((l) => l.status === "pending");
+  const approvedCount = allLeave.filter((l) => l.status === "approved").length;
+  const rejectedCount = allLeave.filter((l) => l.status === "rejected").length;
+
+  context.leaveRequestSummary = {
+    pending: pendingLeave.length,
+    approved_last_60_days: approvedCount,
+    rejected_last_60_days: rejectedCount,
+  };
   context.pendingLeaveRequests = pendingLeave.map((l) => ({
     staff_name: l.staff?.users?.full_name,
     branch: l.staff?.branches?.name,
@@ -379,24 +556,30 @@ function buildSystemPrompt(role, context) {
   const date = new Date().toLocaleDateString("en-SG", { timeZone: "Asia/Singapore" });
 
   if (role === "manager") {
-    return `You are the Krewby AI Workforce Assistant — a read-only conversational tool for the Krewby F&B workforce management platform.
+    return `You are the Krewby AI Workforce Assistant — a conversational tool for the Krewby workforce management platform.
 
-You are helping a manager: ${context.currentUser?.full_name || "user"}
+You are helping manager: ${context.currentUser?.full_name || "user"}
 Branch: "${context.branch?.name || "their branch"}" (${context.branch?.address || ""})
+Today: ${date}
 
 RULES:
 1. READ-ONLY — you cannot create, edit, approve, reject, assign, or delete anything.
-2. Only reference data from the context below. Do not make up numbers or names.
-3. Keep answers concise. Use bullet points for lists.
-4. If a field in the context is an empty array, say "none recorded" or "none found" — do NOT say "I don't have that data."
-5. Only say "I don't have that data" if the field is completely absent from the context.
+2. Only reference data from the context below. Do not make up numbers, names, or dates.
+3. Be concise. Use bullet points for lists. Bold important names and numbers.
+4. If a context field is an empty array, say "none recorded" — do NOT say "I don't have that data."
+5. Only say "I don't have that information" if the field is genuinely absent from the context.
+6. When asked for a recommendation (e.g. who to assign), give a clear answer with brief reasoning from the data.
 
-KEY FIELDS:
-- staffRoster: all branch staff with type, experience, and skills
-- timesheetsThisWeek: hours logged this week per staff member (approved vs pending)
-- leaveRequests: all leave requests with status (pending/approved/rejected) — last 30
-- upcomingShifts: next 7 days of shifts with assigned staff and task details
-- casualAvailabilitySubmissions: weekly hours submitted by casual staff
+KEY CONTEXT FIELDS:
+- upcomingShifts: next 7 days — includes tasks, required skills, assigned staff, understaffing flag
+- pendingLeaveRequests: leave requests awaiting approval (full detail)
+- leaveRequestSummary: counts of pending / approved / rejected leave in last 60 days
+- staffRoster: all branch staff — includes skills, attendance_rate_4wk, assigned_this_week flag
+- staffNotAssignedThisWeek: names of staff with no shift assignment yet this week
+- timesheetsThisWeek: approved and pending hours logged this week per staff member
+- shiftHistoryByDay: 4-week trend — which days are busiest and which have low fill rates
+- skillsGap: which skill types had the most unfilled slots in the past 4 weeks
+- casualAvailabilitySubmissions: availability windows submitted by casual staff
 - pendingSwapRequests: count of pending shift swap requests
 
 CONTEXT (${date}):
@@ -404,17 +587,28 @@ ${JSON.stringify(context, null, 2)}`;
   }
 
   if (role === "business_owner") {
-    return `You are the Krewby AI Workforce Assistant — a read-only conversational tool for the Krewby F&B workforce management platform.
+    return `You are the Krewby AI Workforce Assistant — a conversational tool for the Krewby workforce management platform.
 
-You are helping the business owner: ${context.currentUser?.full_name || "user"}
-Business: "${context.business?.name || "their business"}" with ${context.totalBranches || 0} branch(es)
+You are helping business owner: ${context.currentUser?.full_name || "user"}
+Business: "${context.business?.name || "their business"}" — ${context.totalBranches || 0} branch(es)
+Today: ${date}
 
 RULES:
 1. READ-ONLY — you cannot create, edit, approve, reject, assign, or delete anything.
-2. Only reference data from the context below. Do not make up numbers or names.
-3. Keep answers concise. Use bullet points for lists.
-4. If a field in the context is an empty array, say "none recorded" — do NOT say "I don't have that data."
-5. Only say "I don't have that data" if the field is completely absent from the context.
+2. Only reference data from the context below. Do not make up numbers, names, or dates.
+3. Be concise. Use bullet points for lists. Bold important names and numbers.
+4. If a context field is an empty array, say "none recorded" — do NOT say "I don't have that data."
+5. Only say "I don't have that information" if the field is genuinely absent from the context.
+6. When asked for a recommendation, give a clear answer with brief reasoning from the data.
+
+KEY CONTEXT FIELDS:
+- branchSummaries: per-branch — staff count, upcoming shifts, understaffed shifts, fill_rate_last_4wk
+- upcomingShifts: next 7 days across all branches — includes understaffing flag
+- pendingLeaveRequests: all pending leave across all branches (full detail)
+- leaveRequestSummary: counts of pending / approved / rejected leave in last 60 days
+- allStaff: full staff list with branch, type, and experience level
+- branchManagers: who manages each branch
+- staffByType: total regular vs casual staff count
 
 CONTEXT (${date}):
 ${JSON.stringify(context, null, 2)}`;
@@ -439,7 +633,7 @@ async function buildMessages(userId, role, question, conversationHistory = []) {
 
   return [
     { role: "system", content: systemPrompt },
-    ...conversationHistory.slice(-10).map((m) => ({
+    ...conversationHistory.slice(-12).map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
       content: m.content,
     })),
