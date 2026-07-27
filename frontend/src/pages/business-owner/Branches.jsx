@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
-import { Plus, Building2, MapPin, ArrowRight, Clock, Check, Calendar } from "lucide-react";
+import { Plus, Building2, MapPin, Clock, Check, Calendar, Search, Users, Pencil } from "lucide-react";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 import { SG_HOLIDAYS } from "../../data/sgHolidays";
 
@@ -14,12 +14,9 @@ if (typeof document !== "undefined" && !document.getElementById("bo-branch-style
     @keyframes fadeSlideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
     @keyframes shimmer { from { background-position:-600px 0; } to { background-position:600px 0; } }
     @keyframes pageIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-    .bo-branch-card { transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; position: relative; overflow: hidden; }
-    .bo-branch-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(217,119,6,0.14) !important; border-color: #FDE9C2 !important; }
-    .bo-branch-card:hover .bo-branch-arrow { opacity: 1; transform: translateX(0); }
-    .bo-branch-card:hover .bo-branch-icon { background: #F59E0B !important; }
-    .bo-branch-card:hover .bo-branch-icon svg { stroke: #fff !important; }
-    .bo-branch-arrow { opacity: 0; transform: translateX(-6px); transition: opacity 0.2s, transform 0.2s; }
+    .bo-branch-card { transition: transform 0.18s ease, box-shadow 0.18s ease; position: relative; overflow: hidden; }
+    .bo-branch-card:hover { transform: translateY(-3px); box-shadow: 0 16px 32px rgba(0,0,0,0.10) !important; }
+    .bo-edit-btn:hover { background: #E2E8F0 !important; color: #1E293B !important; }
   `;
   document.head.appendChild(style);
 }
@@ -52,6 +49,8 @@ export default function BOBranches() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [upgradeModal, setUpgradeModal] = useState(null);
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState("name");
 
   const load = () => {
     setLoading(true);
@@ -113,21 +112,94 @@ export default function BOBranches() {
 
   const STEPS = ["Basic Info", "Operating Hours"];
 
+  const q = search.trim().toLowerCase();
+  const hasStaffData = branches.some(b => b.staff_count != null);
+  const totalStaff = branches.reduce((sum, b) => sum + (b.staff_count || 0), 0);
+  const busiestBranch = hasStaffData && branches.length
+    ? branches.reduce((a, b) => (b.staff_count || 0) > (a.staff_count || 0) ? b : a)
+    : null;
+
+  const filtered = branches
+    .filter(b => !q || b.name.toLowerCase().includes(q) || (b.address || "").toLowerCase().includes(q))
+    .sort((a, b) =>
+      sortKey === "staff"
+        ? (b.staff_count || 0) - (a.staff_count || 0)
+        : a.name.localeCompare(b.name)
+    );
+
   return (
     <BusinessOwnerLayout title="Branches">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "28px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Branches</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+            <h2 style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", letterSpacing: "-0.02em", margin: 0 }}>Branches</h2>
+            <p style={{ fontSize: "14px", color: "#64748B", marginTop: "6px" }}>
               {loading ? "Loading…" : `${branches.length} branch${branches.length !== 1 ? "es" : ""} across your business`}
             </p>
           </div>
           <button onClick={openWizard} style={s.btnPrimary}>
-            <Plus size={15} /> Add Branch
+            <Plus size={16} /> Add Branch
           </button>
+        </div>
+
+        {/* Stats Row */}
+        {!loading && branches.length > 0 && (
+          <div style={{ display: "flex", gap: "16px", marginBottom: "28px", flexWrap: "wrap" }}>
+            <div style={s.statCard}>
+              <div style={{ ...s.statIcon, background: "#FFFBEB" }}>
+                <Building2 size={20} color="#D97706" />
+              </div>
+              <div>
+                <div style={s.statNum}>{branches.length}</div>
+                <div style={s.statLabel}>Total branches</div>
+              </div>
+            </div>
+            {hasStaffData && (
+              <div style={s.statCard}>
+                <div style={{ ...s.statIcon, background: "#EFF6FF" }}>
+                  <Users size={20} color="#2563EB" />
+                </div>
+                <div>
+                  <div style={s.statNum}>{totalStaff}</div>
+                  <div style={s.statLabel}>Total staff</div>
+                </div>
+              </div>
+            )}
+            {busiestBranch && (
+              <div style={s.statCard}>
+                <div style={{ ...s.statIcon, background: "#F0F9FF" }}>
+                  <MapPin size={20} color="#0284C7" />
+                </div>
+                <div>
+                  <div style={{ ...s.statNum, fontSize: "16px" }}>{busiestBranch.name}</div>
+                  <div style={s.statLabel}>Busiest branch</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Toolbar */}
+        <div style={{ display: "flex", gap: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: "220px", position: "relative", display: "flex", alignItems: "center" }}>
+            <Search size={16} style={{ position: "absolute", left: "16px", color: "#94A3B8", pointerEvents: "none" }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search branches by name or address…"
+              style={{ width: "100%", padding: "12px 16px 12px 44px", borderRadius: "999px", border: "1px solid #E2E8F0", fontSize: "14px", outline: "none", background: "#fff", color: "#1E293B", boxSizing: "border-box" }}
+            />
+          </div>
+          <select
+            value={sortKey}
+            onChange={e => setSortKey(e.target.value)}
+            style={{ padding: "12px 18px", borderRadius: "999px", border: "1px solid #E2E8F0", fontSize: "14px", color: "#475569", background: "#fff", outline: "none", cursor: "pointer" }}
+          >
+            <option value="name">Sort: Name (A–Z)</option>
+            {hasStaffData && <option value="staff">Sort: Most staff</option>}
+          </select>
         </div>
 
         {/* Wizard Modal */}
@@ -184,7 +256,6 @@ export default function BOBranches() {
                   <h3 style={s.stepTitle}>Operating Hours</h3>
                   <p style={s.stepSub}>Set operating days, hours, work rules, and public holidays for this branch.</p>
 
-                  {/* Operating Days */}
                   <p style={s.sectionLabel}>Operating days</p>
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "20px" }}>
                     {DAYS.map((day, i) => {
@@ -199,7 +270,6 @@ export default function BOBranches() {
                     })}
                   </div>
 
-                  {/* Open / Close times */}
                   <p style={s.sectionLabel}>Opening hours</p>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }}>
                     <div style={s.fieldGroup}>
@@ -212,7 +282,6 @@ export default function BOBranches() {
                     </div>
                   </div>
 
-                  {/* Work Rules */}
                   <p style={s.sectionLabel}>Work rules</p>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
                     {[
@@ -240,7 +309,6 @@ export default function BOBranches() {
                     </button>
                   </div>
 
-                  {/* Public Holidays */}
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <Calendar size={13} color="#64748B" />
                     <p style={s.sectionLabel}>Public holidays</p>
@@ -266,15 +334,12 @@ export default function BOBranches() {
 
               {error && <p style={{ color: "#EF4444", fontSize: "13px", marginTop: "14px" }}>{error}</p>}
 
-              {/* Footer actions */}
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px" }}>
                 <button onClick={step === 1 ? closeWizard : () => setStep(s => s - 1)} style={s.btnSecondary}>
                   {step === 1 ? "Cancel" : "← Back"}
                 </button>
                 {step < 2 ? (
-                  <button onClick={nextStep} style={s.btnPrimary}>
-                    Next →
-                  </button>
+                  <button onClick={nextStep} style={s.btnPrimary}>Next →</button>
                 ) : (
                   <button onClick={handleCreate} disabled={submitting} style={s.btnPrimary}>
                     {submitting ? "Creating…" : "Create Branch"}
@@ -285,15 +350,16 @@ export default function BOBranches() {
           </div>
         , document.body)}
 
-        {/* Branch list */}
+        {/* Branch grid */}
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "18px" }}>
-            {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px", display: "flex", gap: "16px" }}>
-                <Shimmer w="52px" h="52px" r="12px" />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={{ flex: "1 1 340px", maxWidth: "560px", background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "24px", padding: "28px", display: "flex", gap: "18px" }}>
+                <Shimmer w="58px" h="58px" r="16px" />
                 <div style={{ flex: 1 }}>
-                  <Shimmer w="50%" h="17px" r="6px" />
-                  <div style={{ marginTop: "10px" }}><Shimmer w="70%" h="13px" r="5px" /></div>
+                  <Shimmer w="55%" h="18px" r="6px" />
+                  <div style={{ marginTop: "12px" }}><Shimmer w="70%" h="13px" r="5px" /></div>
+                  <div style={{ marginTop: "8px" }}><Shimmer w="50%" h="13px" r="5px" /></div>
                 </div>
               </div>
             ))}
@@ -304,23 +370,58 @@ export default function BOBranches() {
             <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No branches yet</p>
             <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Create your first branch to get started.</p>
           </div>
+        ) : filtered.length === 0 ? (
+          <div style={s.empty}>
+            <Search size={36} color="#CBD5E1" />
+            <p style={{ fontSize: "15px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No branches match your search.</p>
+          </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "18px" }}>
-            {branches.map((o, i) => (
-              <div key={o.branch_id} className="bo-branch-card" style={{ ...s.card, animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both` }} onClick={() => goTo(`/business-owner/branches/${o.branch_id}`)}>
-                <div className="bo-branch-icon" style={s.cardIcon}><Building2 size={22} color="#D97706" /></div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={s.cardName}>{o.name}</p>
-                  {o.address
-                    ? <p style={s.cardMeta}><MapPin size={13} /> {o.address}</p>
-                    : <p style={s.cardMetaMuted}>No address set</p>}
-                  {(o.open_time || o.close_time) && (
-                    <p style={{ ...s.cardMeta, marginTop: "4px" }}>
-                      <Clock size={12} /> {fmtTime(o.open_time)} – {fmtTime(o.close_time)}
-                    </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
+            {filtered.map((branch, i) => (
+              <div
+                key={branch.branch_id}
+                className="bo-branch-card"
+                style={{ ...s.card, animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both` }}
+                onClick={() => goTo(`/business-owner/branches/${branch.branch_id}`)}
+              >
+                {/* Top-right actions */}
+                <div style={{ position: "absolute", top: "22px", right: "22px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  {branch.staff_count != null && (
+                    <div style={s.staffBadge}>
+                      <Users size={12} />
+                      {branch.staff_count}
+                    </div>
                   )}
+                  <button
+                    className="bo-edit-btn"
+                    onClick={e => { e.stopPropagation(); goTo(`/business-owner/branches/${branch.branch_id}`); }}
+                    style={s.btnEdit}
+                  >
+                    <Pencil size={14} />
+                  </button>
                 </div>
-                <ArrowRight className="bo-branch-arrow" size={18} color="#D97706" style={{ flexShrink: 0 }} />
+
+                {/* Card body */}
+                <div style={{ display: "flex", gap: "18px" }}>
+                  <div style={s.cardIcon}>
+                    <Building2 size={27} color="#D97706" />
+                  </div>
+                  <div style={{ minWidth: 0, paddingRight: "60px", paddingTop: "2px" }}>
+                    <p style={s.cardName}>{branch.name}</p>
+                    {branch.address && (
+                      <div style={s.cardLine}>
+                        <MapPin size={14} style={{ flexShrink: 0 }} />
+                        {branch.address}
+                      </div>
+                    )}
+                    {(branch.open_time || branch.close_time) && (
+                      <div style={s.cardLine}>
+                        <Clock size={14} style={{ flexShrink: 0 }} />
+                        {fmtTime(branch.open_time)} – {fmtTime(branch.close_time)}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -347,8 +448,19 @@ function fmtTime(t) {
 }
 
 const s = {
-  btnPrimary: { display: "inline-flex", alignItems: "center", gap: "6px", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "13px", fontWeight: "700", cursor: "pointer" },
-  btnSecondary: { background: "#F1F5F9", color: "#475569", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "13px", fontWeight: "600", cursor: "pointer" },
+  btnPrimary: {
+    display: "inline-flex", alignItems: "center", gap: "8px",
+    background: "linear-gradient(135deg, #F59E0B, #D97706)",
+    color: "#1C1917", border: "none", padding: "13px 22px",
+    borderRadius: "999px", fontSize: "14px", fontWeight: "700",
+    cursor: "pointer", boxShadow: "0 6px 16px rgba(217,119,6,0.4)",
+    transition: "transform 0.15s",
+  },
+  btnSecondary: {
+    background: "#F1F5F9", color: "#475569", border: "none",
+    borderRadius: "999px", padding: "13px 22px", fontSize: "14px",
+    fontWeight: "600", cursor: "pointer",
+  },
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center" },
   modal: { background: "#FFFFFF", borderRadius: "20px", padding: "32px", width: "560px", maxWidth: "95vw", boxShadow: "0 24px 64px rgba(0,0,0,0.18)", maxHeight: "90vh", overflowY: "auto" },
   stepTitle: { fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" },
@@ -356,12 +468,41 @@ const s = {
   sectionLabel: { fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "10px" },
   fieldGroup: { marginBottom: "14px" },
   label: { display: "flex", alignItems: "center", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" },
-  colLabel: { fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em" },
   input: { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", outline: "none", boxSizing: "border-box", color: "#1E293B", background: "#FFFFFF" },
-  card: { background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px", display: "flex", gap: "16px", alignItems: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer" },
-  cardIcon: { width: "52px", height: "52px", borderRadius: "12px", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" },
-  cardName: { fontSize: "17px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  cardMeta: { display: "flex", alignItems: "center", gap: "5px", fontSize: "13px", color: "#64748B", marginTop: "5px" },
-  cardMetaMuted: { fontSize: "13px", color: "#94A3B8", marginTop: "5px" },
-  empty: { textAlign: "center", padding: "60px 20px", background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px" },
+  statCard: {
+    flex: 1, minWidth: "160px",
+    background: "#fff", border: "1px solid #E2E8F0", borderRadius: "18px",
+    padding: "18px 20px", display: "flex", alignItems: "center", gap: "14px",
+  },
+  statIcon: {
+    width: "44px", height: "44px", flexShrink: 0,
+    borderRadius: "13px", display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  statNum: { fontSize: "22px", fontWeight: "800", color: "#1E293B", letterSpacing: "-0.01em" },
+  statLabel: { fontSize: "13px", color: "#64748B", marginTop: "1px" },
+  card: {
+    background: "#fff", border: "1px solid #E2E8F0", borderRadius: "24px",
+    padding: "28px", flex: "1 1 340px", maxWidth: "560px",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer",
+  },
+  cardIcon: {
+    width: "58px", height: "58px", flexShrink: 0, borderRadius: "16px",
+    background: "linear-gradient(135deg, #FEF3C7, #FDE68A)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  cardName: { fontSize: "19px", fontWeight: "700", color: "#1E293B", letterSpacing: "-0.01em", marginBottom: "8px" },
+  cardLine: { display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#64748B", marginBottom: "5px" },
+  staffBadge: {
+    display: "flex", alignItems: "center", gap: "5px",
+    background: "#FFFBEB", color: "#D97706",
+    borderRadius: "999px", padding: "5px 11px",
+    fontSize: "12px", fontWeight: "700",
+  },
+  btnEdit: {
+    width: "32px", height: "32px", borderRadius: "999px", border: "none",
+    background: "#F1F5F9", color: "#64748B",
+    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "background 0.15s, color 0.15s",
+  },
+  empty: { textAlign: "center", padding: "60px 20px", background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "24px" },
 };
