@@ -55,6 +55,25 @@ const SUGGESTIONS = {
     "What is my total headcount across all branches?",
     "Which branch needs the most attention this week?",
   ],
+  regular_staff: [
+    "What shifts am I working this week?",
+    "How many hours have I logged this week?",
+    "What is the status of my leave requests?",
+    "What are my registered skills?",
+  ],
+  casual_staff: [
+    "What shifts am I scheduled for?",
+    "Show me my submitted availability",
+    "Which branches am I assigned to?",
+    "What hours have I logged this week?",
+  ],
+};
+
+const WELCOME_BY_ROLE = {
+  manager:       "Hi! I'm your Krewby AI Workforce Assistant.\n\nI can answer questions about your shifts, staff skills, timesheets, and leave requests — and now I can take actions too (approve leave, assign staff, create draft shifts). What would you like to know?",
+  business_owner:"Hi! I'm your Krewby AI Workforce Assistant.\n\nI can give you an overview across all your branches — shifts, headcount, leave, and performance trends. What would you like to know?",
+  regular_staff: "Hi! I'm your Krewby AI Workforce Assistant.\n\nI can tell you about your upcoming shifts, timesheet hours, leave requests, and your registered skills. What would you like to know?",
+  casual_staff:  "Hi! I'm your Krewby AI Workforce Assistant.\n\nI can show you your upcoming shifts, submitted availability, preferred branches, and logged hours. What would you like to know?",
 };
 
 const WELCOME = "Hi! I'm your Krewby AI Workforce Assistant.\n\nI can answer questions about your shifts, staff skills, timesheets, leave requests, and more. What would you like to know?";
@@ -206,6 +225,7 @@ export default function AIAssistantWidget() {
   const user    = getUser();
   const role    = user?.role;
   const suggestions = SUGGESTIONS[role] || SUGGESTIONS.manager;
+  const welcomeMsg  = WELCOME_BY_ROLE[role] || WELCOME;
   const storageKey  = `krewby_ai_chat_${user?.user_id || "guest"}`;
   const briefedKey  = `krewby_ai_briefed_${user?.user_id || "guest"}`;
 
@@ -218,7 +238,7 @@ export default function AIAssistantWidget() {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    return [{ role: "assistant", content: WELCOME }];
+    return [{ role: "assistant", content: welcomeMsg }];
   });
   const [input,    setInput]    = useState("");
   const [loading,  setLoading]  = useState(false);
@@ -232,12 +252,12 @@ export default function AIAssistantWidget() {
     try { localStorage.setItem(storageKey, JSON.stringify(messages)); } catch {}
   }, [messages, storageKey]);
 
-  // Auto-brief: on first open of the session with a fresh chat, fetch a proactive brief
+  // Auto-brief: on first open of the session with a fresh chat, fetch a proactive brief (managers/BOs only)
   useEffect(() => {
     if (!open) return;
     if (autoBriefRef.current) return;
     if (messages.length !== 1) return;                          // only on fresh chat
-    if (!["manager", "business_owner"].includes(role)) return;
+    if (!["manager", "business_owner"].includes(role)) return;  // staff get read-only context, no proactive brief
     try { if (sessionStorage.getItem(briefedKey)) return; } catch {}
 
     autoBriefRef.current = true;
@@ -266,7 +286,7 @@ export default function AIAssistantWidget() {
   }, [messages, loading]);
 
   const clearChat = useCallback(() => {
-    const fresh = [{ role: "assistant", content: WELCOME }];
+    const fresh = [{ role: "assistant", content: welcomeMsg }];
     setMessages(fresh);
     autoBriefRef.current = false;
     try { sessionStorage.removeItem(briefedKey); } catch {}

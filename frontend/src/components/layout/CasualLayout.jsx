@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
+import AIAssistantWidget from "../AIAssistantWidget";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
@@ -110,6 +111,7 @@ export default function CasualLayout({ children, title }) {
       </div>
 
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+      <AIAssistantWidget />
     </div>
   );
 }

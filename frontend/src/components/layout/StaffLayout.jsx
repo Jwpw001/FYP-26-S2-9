@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
+import AIAssistantWidget from "../AIAssistantWidget";
 import { LayoutDashboard, CalendarDays, UmbrellaOff, ArrowLeftRight } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
@@ -111,6 +112,7 @@ export default function StaffLayout({ children, title }) {
         <div style={s.content}>{children}</div>
       </div>
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+      <AIAssistantWidget />
     </div>
   );
 }

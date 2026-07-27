@@ -15,10 +15,10 @@ async function chat(req, res) {
     if (!userId || !role) {
       return res.status(401).json({ success: false, message: "Unauthorized." });
     }
-    if (!["manager", "business_owner"].includes(role)) {
+    if (!["manager", "business_owner", "regular_staff", "casual_staff"].includes(role)) {
       return res.status(403).json({
         success: false,
-        message: "AI Workforce Assistant is available for managers and business owners only.",
+        message: "AI Workforce Assistant is not available for your role.",
       });
     }
 
@@ -96,7 +96,7 @@ async function brief(req, res) {
     const role   = req.user?.role;
 
     if (!userId || !role) return res.status(401).json({ success: false, message: "Unauthorized." });
-    if (!["manager", "business_owner"].includes(role)) {
+    if (!["manager", "business_owner", "regular_staff", "casual_staff"].includes(role)) {
       return res.status(403).json({ success: false, message: "Not available for your role." });
     }
 

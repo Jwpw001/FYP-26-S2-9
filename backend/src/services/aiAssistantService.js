@@ -379,6 +379,238 @@ async function fetchManagerContext(userId) {
   return context;
 }
 
+// ─── REGULAR STAFF CONTEXT ────────────────────────────────────────────────────
+
+async function fetchRegularStaffContext(userId) {
+  const context = {};
+
+  const user = await prisma.users.findUnique({
+    where: { user_id: userId },
+    select: { user_id: true, full_name: true, role: true },
+  }).catch(() => null);
+  context.currentUser = user;
+
+  const staffRecord = await prisma.staff.findFirst({
+    where: { user_id: userId },
+    select: { staff_id: true, branch_id: true, exp_level: true, is_active: true },
+  }).catch(() => null);
+
+  if (!staffRecord) {
+    context.note = "No staff record found for this user.";
+    return context;
+  }
+
+  const branchId = staffRecord.branch_id;
+  const staffId  = staffRecord.staff_id;
+  context.exp_level = staffRecord.exp_level;
+
+  const branch = await prisma.branches.findUnique({
+    where: { branch_id: branchId },
+    select: { name: true, address: true },
+  }).catch(() => null);
+  context.branch = branch;
+
+  const today    = new Date();
+  const twoWeeks = new Date(today);
+  twoWeeks.setDate(today.getDate() + 14);
+  const { monday, sunday } = getWeekBounds();
+
+  const [myAssignments, myLeave, mySkills] = await Promise.all([
+    prisma.task_assignments.findMany({
+      where: {
+        staff_id: staffId,
+        shift_tasks: { shifts: { shift_date: { gte: today, lte: twoWeeks } } },
+      },
+      include: {
+        shift_tasks: {
+          include: {
+            shifts: { select: { shift_id: true, title: true, shift_date: true, start_time: true, end_time: true, status: true } },
+            skills:  { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { shift_tasks: { shifts: { shift_date: "asc" } } },
+    }).catch(() => []),
+
+    prisma.availability.findMany({
+      where: { staff_id: staffId },
+      orderBy: { start_date: "desc" },
+      take: 10,
+    }).catch(() => []),
+
+    prisma.user_skill_tags.findMany({
+      where: { user_id: userId },
+      include: { skills: { select: { name: true } } },
+    }).catch(() => []),
+  ]);
+
+  const myTimesheets = await supabaseAdmin
+    .from("timesheets")
+    .select("log_date, hours_worked, status")
+    .eq("staff_id", staffId)
+    .gte("log_date", monday)
+    .lte("log_date", sunday)
+    .then((r) => r.data || [])
+    .catch(() => []);
+
+  context.myUpcomingShifts = myAssignments.map((a) => ({
+    title: a.shift_tasks?.shifts?.title || "Shift",
+    date:  a.shift_tasks?.shifts?.shift_date,
+    start: fmtTime(a.shift_tasks?.shifts?.start_time),
+    end:   fmtTime(a.shift_tasks?.shifts?.end_time),
+    status: a.shift_tasks?.shifts?.status,
+    role:  a.shift_tasks?.title || null,
+    skill_required: a.shift_tasks?.skills?.name || null,
+  }));
+
+  const pendingLeave   = myLeave.filter((l) => l.status === "pending");
+  const approvedLeave  = myLeave.filter((l) => l.status === "approved").slice(0, 3);
+  context.myLeaveRequests = {
+    pending: pendingLeave.map((l) => ({
+      request_id: l.request_id,
+      leave_type: l.leave_type,
+      start_date: l.start_date,
+      end_date:   l.end_date,
+      reason:     l.reason,
+    })),
+    recent_approved: approvedLeave.map((l) => ({
+      leave_type: l.leave_type,
+      start_date: l.start_date,
+      end_date:   l.end_date,
+    })),
+  };
+
+  const totalHours = myTimesheets.reduce((sum, t) => sum + (Number(t.hours_worked) || 0), 0);
+  context.myTimesheetsThisWeek = myTimesheets.length > 0
+    ? { entries: myTimesheets, total_hours: totalHours.toFixed(1) }
+    : "No timesheet entries this week yet.";
+
+  context.mySkills = mySkills.map((t) => t.skills?.name).filter(Boolean);
+
+  return context;
+}
+
+// ─── CASUAL STAFF CONTEXT ─────────────────────────────────────────────────────
+
+async function fetchCasualStaffContext(userId) {
+  const context = {};
+
+  const user = await prisma.users.findUnique({
+    where: { user_id: userId },
+    select: { user_id: true, full_name: true, role: true },
+  }).catch(() => null);
+  context.currentUser = user;
+
+  const staffRecord = await prisma.staff.findFirst({
+    where: { user_id: userId },
+    select: { staff_id: true, branch_id: true, exp_level: true, is_active: true },
+  }).catch(() => null);
+
+  if (!staffRecord) {
+    context.note = "No staff record found for this user.";
+    return context;
+  }
+
+  const staffId = staffRecord.staff_id;
+
+  const today    = new Date();
+  const twoWeeks = new Date(today);
+  twoWeeks.setDate(today.getDate() + 14);
+  const { monday, sunday } = getWeekBounds();
+
+  // Preferred branches
+  const { data: prefs } = await supabaseAdmin
+    .from("casual_branch_preferences")
+    .select("branch_id")
+    .eq("user_id", userId);
+  const preferredBranchIds = (prefs || []).map((p) => p.branch_id);
+
+  const [preferredBranches, myAssignments, myLeave, myAvail, mySkills] = await Promise.all([
+    preferredBranchIds.length > 0
+      ? prisma.branches.findMany({
+          where: { branch_id: { in: preferredBranchIds } },
+          select: { name: true, address: true },
+        }).catch(() => [])
+      : Promise.resolve([]),
+
+    prisma.task_assignments.findMany({
+      where: {
+        staff_id: staffId,
+        shift_tasks: { shifts: { shift_date: { gte: today, lte: twoWeeks } } },
+      },
+      include: {
+        shift_tasks: {
+          include: {
+            shifts: { select: { title: true, shift_date: true, start_time: true, end_time: true, status: true } },
+            skills:  { select: { name: true } },
+          },
+        },
+      },
+    }).catch(() => []),
+
+    prisma.availability.findMany({
+      where: { staff_id: staffId },
+      orderBy: { start_date: "desc" },
+      take: 6,
+    }).catch(() => []),
+
+    prisma.casual_availability.findMany({
+      where: { staff_id: staffId, week_start_date: { gte: today } },
+      orderBy: { week_start_date: "asc" },
+      take: 14,
+    }).catch(() => []),
+
+    prisma.user_skill_tags.findMany({
+      where: { user_id: userId },
+      include: { skills: { select: { name: true } } },
+    }).catch(() => []),
+  ]);
+
+  const myTimesheets = await supabaseAdmin
+    .from("timesheets")
+    .select("log_date, hours_worked, status")
+    .eq("staff_id", staffId)
+    .gte("log_date", monday)
+    .lte("log_date", sunday)
+    .then((r) => r.data || [])
+    .catch(() => []);
+
+  context.myPreferredBranches = preferredBranches.map((b) => ({ name: b.name, address: b.address }));
+
+  context.myUpcomingShifts = myAssignments.map((a) => ({
+    title:  a.shift_tasks?.shifts?.title || "Shift",
+    date:   a.shift_tasks?.shifts?.shift_date,
+    start:  fmtTime(a.shift_tasks?.shifts?.start_time),
+    end:    fmtTime(a.shift_tasks?.shifts?.end_time),
+    status: a.shift_tasks?.shifts?.status,
+    role:   a.shift_tasks?.title || null,
+    skill_required: a.shift_tasks?.skills?.name || null,
+  }));
+
+  // Group availability by week
+  const availByWeek = {};
+  myAvail.forEach((row) => {
+    const week = row.week_start_date.toISOString().slice(0, 10);
+    if (!availByWeek[week]) availByWeek[week] = [];
+    availByWeek[week].push({ day: DAY_NAMES[row.day_of_week], from: fmtTime(row.available_from), to: fmtTime(row.available_to) });
+  });
+  context.myAvailability = Object.entries(availByWeek).map(([week, days]) => ({ week, days }));
+
+  const pendingLeave = myLeave.filter((l) => l.status === "pending");
+  context.myLeaveRequests = {
+    pending: pendingLeave.map((l) => ({ leave_type: l.leave_type, start_date: l.start_date, end_date: l.end_date })),
+  };
+
+  const totalHours = myTimesheets.reduce((sum, t) => sum + (Number(t.hours_worked) || 0), 0);
+  context.myTimesheetsThisWeek = myTimesheets.length > 0
+    ? { entries: myTimesheets, total_hours: totalHours.toFixed(1) }
+    : "No timesheet entries this week yet.";
+
+  context.mySkills = mySkills.map((t) => t.skills?.name).filter(Boolean);
+
+  return context;
+}
+
 // ─── BUSINESS OWNER CONTEXT ───────────────────────────────────────────────────
 
 async function fetchBOContext(userId) {
@@ -689,6 +921,53 @@ CONTEXT (${date}):
 ${JSON.stringify(context, null, 2)}`;
   }
 
+  if (role === "regular_staff") {
+    return `You are the Krewby AI Workforce Assistant — a conversational tool for the Krewby workforce management platform.
+
+You are helping staff member: ${context.currentUser?.full_name || "user"}
+Branch: "${context.branch?.name || "their branch"}" (${context.branch?.address || ""})
+Today: ${date}
+
+RULES:
+1. READ-ONLY — you cannot create, edit, approve, reject, assign, or delete anything.
+2. Only reference data from the context below. Do not make up shifts, hours, or dates.
+3. Be helpful and conversational. Use bullet points for lists. Refer to data as "your" shifts, hours, etc.
+4. If a context field is an empty array or the string "No … yet", say so naturally — don't say "I don't have that data."
+
+KEY CONTEXT FIELDS:
+- myUpcomingShifts: your assigned shifts for the next 2 weeks
+- myLeaveRequests: your pending and recently approved leave requests
+- myTimesheetsThisWeek: hours you've logged this week (approved + pending)
+- mySkills: your registered skill tags
+
+CONTEXT (${date}):
+${JSON.stringify(context, null, 2)}`;
+  }
+
+  if (role === "casual_staff") {
+    return `You are the Krewby AI Workforce Assistant — a conversational tool for the Krewby workforce management platform.
+
+You are helping casual staff member: ${context.currentUser?.full_name || "user"}
+Today: ${date}
+
+RULES:
+1. READ-ONLY — you cannot create, edit, approve, reject, assign, or delete anything.
+2. Only reference data from the context below. Do not make up shifts, hours, or dates.
+3. Be helpful and conversational. Use bullet points for lists. Refer to data as "your" shifts, branches, etc.
+4. If a context field is an empty array or the string "No … yet", say so naturally.
+
+KEY CONTEXT FIELDS:
+- myPreferredBranches: the branches you've opted into
+- myUpcomingShifts: your upcoming assignments for the next 2 weeks
+- myAvailability: the availability windows you've submitted for upcoming weeks
+- myLeaveRequests: your pending leave requests
+- myTimesheetsThisWeek: hours you've logged this week
+- mySkills: your registered skill tags
+
+CONTEXT (${date}):
+${JSON.stringify(context, null, 2)}`;
+  }
+
   return "";
 }
 
@@ -796,21 +1075,24 @@ function selectBOContext(full, cats) {
 // ─── PUBLIC API ───────────────────────────────────────────────────────────────
 
 async function buildMessages(userId, role, question, conversationHistory = []) {
-  let fullContext;
+  let context;
   if (role === "manager") {
-    fullContext = await fetchManagerContext(userId);
+    const fullContext = await fetchManagerContext(userId);
+    const categories  = classifyQuestion(question);
+    console.log("[AI] question categories:", [...categories]);
+    context = selectManagerContext(fullContext, categories);
   } else if (role === "business_owner") {
-    fullContext = await fetchBOContext(userId);
+    const fullContext = await fetchBOContext(userId);
+    const categories  = classifyQuestion(question);
+    console.log("[AI] question categories:", [...categories]);
+    context = selectBOContext(fullContext, categories);
+  } else if (role === "regular_staff") {
+    context = await fetchRegularStaffContext(userId);
+  } else if (role === "casual_staff") {
+    context = await fetchCasualStaffContext(userId);
   } else {
     throw new Error("Unsupported role");
   }
-
-  const categories = classifyQuestion(question);
-  console.log("[AI] question categories:", [...categories]);
-
-  const context = role === "manager"
-    ? selectManagerContext(fullContext, categories)
-    : selectBOContext(fullContext, categories);
 
   const systemPrompt = buildSystemPrompt(role, context);
 
@@ -827,14 +1109,20 @@ async function buildMessages(userId, role, question, conversationHistory = []) {
 // Builds messages for the non-streaming /brief endpoint and cron digest jobs.
 // Uses full context (categories = "all") with a proactive question.
 async function buildBriefMessages(userId, role, question) {
-  let fullContext;
-  if (role === "manager") fullContext = await fetchManagerContext(userId);
-  else if (role === "business_owner") fullContext = await fetchBOContext(userId);
-  else throw new Error("Unsupported role");
-
-  const context = role === "manager"
-    ? selectManagerContext(fullContext, new Set(["all"]))
-    : selectBOContext(fullContext, new Set(["all"]));
+  let context;
+  if (role === "manager") {
+    const full = await fetchManagerContext(userId);
+    context = selectManagerContext(full, new Set(["all"]));
+  } else if (role === "business_owner") {
+    const full = await fetchBOContext(userId);
+    context = selectBOContext(full, new Set(["all"]));
+  } else if (role === "regular_staff") {
+    context = await fetchRegularStaffContext(userId);
+  } else if (role === "casual_staff") {
+    context = await fetchCasualStaffContext(userId);
+  } else {
+    throw new Error("Unsupported role");
+  }
 
   const systemPrompt = buildSystemPrompt(role, context);
 
