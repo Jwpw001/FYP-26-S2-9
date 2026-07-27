@@ -33,8 +33,8 @@ async function chat(req, res) {
     const stream = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages,
-      max_tokens: 700,
-      temperature: 0.4,
+      max_tokens: 1000,
+      temperature: 0.3,
       stream: true,
     });
 

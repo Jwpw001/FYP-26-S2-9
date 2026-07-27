@@ -617,17 +617,125 @@ ${JSON.stringify(context, null, 2)}`;
   return "";
 }
 
+// ─── PHASE 2: QUESTION CLASSIFIER ─────────────────────────────────────────────
+
+function classifyQuestion(question) {
+  const q = question.toLowerCase();
+  const cats = new Set();
+
+  if (/shift|roster|schedule|working|who.s in|tonight|tomorrow|this week|next week|understaffed|position|task|assigned|cover/i.test(q))
+    cats.add("shifts");
+
+  if (/leave|time.?off|absent|approve|reject|request|sick|annual|pending leave/i.test(q))
+    cats.add("leave");
+
+  if (/staff|worker|employee|team|skill|casual|regular|experience|active|inactive|attendance|rate|not assigned|unassigned|who has/i.test(q))
+    cats.add("staff");
+
+  if (/timesheet|hours|clock|log|worked|approved hour/i.test(q))
+    cats.add("timesheets");
+
+  if (/availab|free|when can|who can work/i.test(q))
+    cats.add("availability");
+
+  if (/gap|unfilled|missing skill|coverage|skill/i.test(q))
+    cats.add("skills_gap");
+
+  // Broad / summary questions → full context
+  if (cats.size === 0 || /summar|overview|brief|report|everything|all|what.s happening|how.s the branch|how are we doing/i.test(q))
+    cats.add("all");
+
+  return cats;
+}
+
+// ─── PHASE 2: CONTEXT SLICES ───────────────────────────────────────────────────
+
+function selectManagerContext(full, cats) {
+  const isAll = cats.has("all");
+  const ctx = {
+    currentUser: full.currentUser,
+    branch: full.branch,
+    pendingSwapRequests: full.pendingSwapRequests,
+  };
+
+  if (isAll || cats.has("shifts")) {
+    ctx.upcomingShifts = full.upcomingShifts;
+    ctx.shiftHistoryByDay = full.shiftHistoryByDay;
+  }
+
+  if (isAll || cats.has("leave")) {
+    ctx.pendingLeaveRequests = full.pendingLeaveRequests;
+    ctx.leaveRequestSummary = full.leaveRequestSummary;
+  }
+
+  // Staff info is needed for both "staff" and "shifts" questions (assignments need names)
+  if (isAll || cats.has("staff") || cats.has("shifts")) {
+    ctx.staffRoster = full.staffRoster;
+    ctx.staffNotAssignedThisWeek = full.staffNotAssignedThisWeek;
+  }
+
+  if (isAll || cats.has("timesheets")) {
+    ctx.timesheetsThisWeek = full.timesheetsThisWeek;
+  }
+
+  if (isAll || cats.has("availability")) {
+    ctx.casualAvailabilitySubmissions = full.casualAvailabilitySubmissions;
+  }
+
+  if (isAll || cats.has("skills_gap") || cats.has("staff")) {
+    ctx.skillsGap = full.skillsGap;
+  }
+
+  return ctx;
+}
+
+function selectBOContext(full, cats) {
+  const isAll = cats.has("all");
+  const ctx = {
+    currentUser: full.currentUser,
+    business: full.business,
+    totalBranches: full.totalBranches,
+    totalStaff: full.totalStaff,
+    staffByType: full.staffByType,
+    branchManagers: full.branchManagers,
+    // Always include branch summaries — it's lightweight and nearly always relevant
+    branchSummaries: full.branchSummaries,
+  };
+
+  if (isAll || cats.has("shifts")) {
+    ctx.upcomingShifts = full.upcomingShifts;
+  }
+
+  if (isAll || cats.has("leave")) {
+    ctx.pendingLeaveRequests = full.pendingLeaveRequests;
+    ctx.leaveRequestSummary = full.leaveRequestSummary;
+  }
+
+  if (isAll || cats.has("staff")) {
+    ctx.allStaff = full.allStaff;
+  }
+
+  return ctx;
+}
+
 // ─── PUBLIC API ───────────────────────────────────────────────────────────────
 
 async function buildMessages(userId, role, question, conversationHistory = []) {
-  let context;
+  let fullContext;
   if (role === "manager") {
-    context = await fetchManagerContext(userId);
+    fullContext = await fetchManagerContext(userId);
   } else if (role === "business_owner") {
-    context = await fetchBOContext(userId);
+    fullContext = await fetchBOContext(userId);
   } else {
     throw new Error("Unsupported role");
   }
+
+  const categories = classifyQuestion(question);
+  console.log("[AI] question categories:", [...categories]);
+
+  const context = role === "manager"
+    ? selectManagerContext(fullContext, categories)
+    : selectBOContext(fullContext, categories);
 
   const systemPrompt = buildSystemPrompt(role, context);
 
