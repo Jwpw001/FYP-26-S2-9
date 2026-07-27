@@ -117,6 +117,7 @@ export default function AIAssistantWidget() {
   const role    = user?.role;
   const suggestions = SUGGESTIONS[role] || SUGGESTIONS.manager;
   const storageKey  = `krewby_ai_chat_${user?.user_id || "guest"}`;
+  const briefedKey  = `krewby_ai_briefed_${user?.user_id || "guest"}`;
 
   const [open,     setOpen]     = useState(false);
   const [messages, setMessages] = useState(() => {
@@ -134,11 +135,37 @@ export default function AIAssistantWidget() {
   const [hasNew,   setHasNew]   = useState(false);
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
+  const autoBriefRef = useRef(false);
 
   // Persist conversation to localStorage whenever messages change
   useEffect(() => {
     try { localStorage.setItem(storageKey, JSON.stringify(messages)); } catch {}
   }, [messages, storageKey]);
+
+  // Auto-brief: on first open of the session with a fresh chat, fetch a proactive brief
+  useEffect(() => {
+    if (!open) return;
+    if (autoBriefRef.current) return;
+    if (messages.length !== 1) return;                          // only on fresh chat
+    if (!["manager", "business_owner"].includes(role)) return;
+    try { if (sessionStorage.getItem(briefedKey)) return; } catch {}
+
+    autoBriefRef.current = true;
+    try { sessionStorage.setItem(briefedKey, "1"); } catch {}
+
+    setLoading(true);
+    fetch(`${BASE_URL}/api/ai-assistant/brief`, {
+      headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.content) {
+          setMessages((prev) => [...prev, { role: "assistant", content: data.content }]);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [open, briefedKey, role]); // messages.length intentionally omitted — we only want this on mount
 
   useEffect(() => {
     if (open) { setHasNew(false); setTimeout(() => inputRef.current?.focus(), 200); }
@@ -151,8 +178,10 @@ export default function AIAssistantWidget() {
   const clearChat = useCallback(() => {
     const fresh = [{ role: "assistant", content: WELCOME }];
     setMessages(fresh);
+    autoBriefRef.current = false;
+    try { sessionStorage.removeItem(briefedKey); } catch {}
     try { localStorage.setItem(storageKey, JSON.stringify(fresh)); } catch {}
-  }, [storageKey]);
+  }, [storageKey, briefedKey]);
 
   async function send(text) {
     const question = (text || input).trim();

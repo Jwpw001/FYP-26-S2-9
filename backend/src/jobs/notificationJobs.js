@@ -1,7 +1,11 @@
 const cron = require("node-cron");
+const OpenAI = require("openai");
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUser } = require("../utils/notify");
+const { buildBriefMessages } = require("../services/aiAssistantService");
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 function toDateStr(d) {
   return d.toISOString().slice(0, 10);
@@ -90,11 +94,123 @@ async function remindMissingReports() {
   }
 }
 
-function startNotificationJobs() {
-  // Every Sunday at 18:00 server time
-  cron.schedule("0 18 * * 0", remindMissingAvailability);
-  // Every day at 09:00 server time
-  cron.schedule("0 9 * * *", remindMissingReports);
+// Runs every Monday at 00:00 UTC (= 08:00 SGT) — sends an AI weekly digest to all branch managers.
+async function sendMondayDigest() {
+  try {
+    const { data: bm } = await supabaseAdmin
+      .from("branch_managers")
+      .select("user_id");
+    if (!bm?.length) return;
+
+    const uniqueIds = [...new Set(bm.map((r) => r.user_id))];
+    for (const userId of uniqueIds) {
+      try {
+        const messages = await buildBriefMessages(
+          userId,
+          "manager",
+          "It's the start of a new week. Give me a weekly digest — what happened recently, what's coming up this week, and what needs action right now. Max 5 bullet points."
+        );
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages,
+          max_tokens: 400,
+          temperature: 0.3,
+        });
+        await notifyUser({
+          recipientId: userId,
+          type: "ai_weekly_digest",
+          title: "AI Weekly Digest",
+          message: completion.choices[0].message.content,
+        });
+      } catch (err) {
+        console.error(`[Monday digest] manager ${userId}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error("[sendMondayDigest] error:", err.message);
+  }
 }
 
-module.exports = { startNotificationJobs, remindMissingAvailability, remindMissingReports };
+// Runs daily at 23:00 UTC (= 07:00 SGT next day) — suggests staff for tomorrow's understaffed shifts.
+async function suggestUnderstaffedShifts() {
+  try {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    const dayAfter = new Date(tomorrow);
+    dayAfter.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+    const shifts = await prisma.shifts.findMany({
+      where: {
+        shift_date: { gte: tomorrow, lt: dayAfter },
+        status: { in: ["open", "published"] },
+      },
+      include: {
+        shift_tasks: { select: { task_id: true } },
+        task_assignments: { select: { assignment_id: true } },
+      },
+    });
+
+    const understaffedBranchIds = [
+      ...new Set(
+        shifts
+          .filter((s) => s.task_assignments.length < s.shift_tasks.length)
+          .map((s) => s.branch_id)
+      ),
+    ];
+    if (understaffedBranchIds.length === 0) return;
+
+    const { data: managers } = await supabaseAdmin
+      .from("branch_managers")
+      .select("user_id, branch_id")
+      .in("branch_id", understaffedBranchIds);
+    if (!managers?.length) return;
+
+    const uniqueManagerIds = [...new Set(managers.map((m) => m.user_id))];
+    for (const userId of uniqueManagerIds) {
+      try {
+        const messages = await buildBriefMessages(
+          userId,
+          "manager",
+          `There are understaffed shifts scheduled for tomorrow (${tomorrowStr}). Looking at my staff roster and their availability, who should I consider assigning to fill the open positions? Give specific name recommendations with one-line reasoning. Max 5 bullet points.`
+        );
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages,
+          max_tokens: 350,
+          temperature: 0.3,
+        });
+        await notifyUser({
+          recipientId: userId,
+          type: "ai_shift_suggestion",
+          title: "AI: Staff suggestions for tomorrow",
+          message: completion.choices[0].message.content,
+        });
+      } catch (err) {
+        console.error(`[suggestUnderstaffedShifts] manager ${userId}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error("[suggestUnderstaffedShifts] error:", err.message);
+  }
+}
+
+function startNotificationJobs() {
+  // Every Sunday at 18:00 UTC
+  cron.schedule("0 18 * * 0", remindMissingAvailability);
+  // Every day at 09:00 UTC
+  cron.schedule("0 9 * * *", remindMissingReports);
+  // Every Monday at 00:00 UTC (08:00 SGT) — weekly AI digest for managers
+  cron.schedule("0 0 * * 1", sendMondayDigest);
+  // Every day at 23:00 UTC (07:00 SGT next day) — staff suggestions for tomorrow's understaffed shifts
+  cron.schedule("0 23 * * *", suggestUnderstaffedShifts);
+}
+
+module.exports = {
+  startNotificationJobs,
+  remindMissingAvailability,
+  remindMissingReports,
+  sendMondayDigest,
+  suggestUnderstaffedShifts,
+};

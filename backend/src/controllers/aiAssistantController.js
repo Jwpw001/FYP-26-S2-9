@@ -1,5 +1,5 @@
 const OpenAI = require("openai");
-const { buildMessages } = require("../services/aiAssistantService");
+const { buildMessages, buildBriefMessages } = require("../services/aiAssistantService");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -62,4 +62,32 @@ async function chat(req, res) {
   }
 }
 
-module.exports = { chat };
+// Non-streaming proactive brief for the auto-brief on chat open (Phase 3.1)
+async function brief(req, res) {
+  try {
+    const userId = req.user?.user_id;
+    const role   = req.user?.role;
+
+    if (!userId || !role) return res.status(401).json({ success: false, message: "Unauthorized." });
+    if (!["manager", "business_owner"].includes(role)) {
+      return res.status(403).json({ success: false, message: "Not available for your role." });
+    }
+
+    const messages = await buildBriefMessages(userId, role);
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages,
+      max_tokens: 400,
+      temperature: 0.3,
+    });
+
+    res.json({ success: true, content: completion.choices[0].message.content });
+  } catch (err) {
+    console.error("AI brief error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: "Brief unavailable." });
+    }
+  }
+}
+
+module.exports = { chat, brief };

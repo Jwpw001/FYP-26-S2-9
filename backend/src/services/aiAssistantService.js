@@ -749,4 +749,27 @@ async function buildMessages(userId, role, question, conversationHistory = []) {
   ];
 }
 
-module.exports = { buildMessages };
+// Builds messages for the non-streaming /brief endpoint and cron digest jobs.
+// Uses full context (categories = "all") with a proactive question.
+async function buildBriefMessages(userId, role, question) {
+  let fullContext;
+  if (role === "manager") fullContext = await fetchManagerContext(userId);
+  else if (role === "business_owner") fullContext = await fetchBOContext(userId);
+  else throw new Error("Unsupported role");
+
+  const context = role === "manager"
+    ? selectManagerContext(fullContext, new Set(["all"]))
+    : selectBOContext(fullContext, new Set(["all"]));
+
+  const systemPrompt = buildSystemPrompt(role, context);
+
+  return [
+    { role: "system", content: systemPrompt },
+    {
+      role: "user",
+      content: question || "Give me a proactive brief — what needs my attention right now? Cover understaffed shifts, pending leave, unassigned staff, and any notable issues. Max 5 bullet points, be direct and specific.",
+    },
+  ];
+}
+
+module.exports = { buildMessages, buildBriefMessages };
