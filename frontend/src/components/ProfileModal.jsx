@@ -114,9 +114,9 @@ if (typeof document !== "undefined" && !document.getElementById("profile-modal-s
 
 const AVATARS = [
   "/avatars/default.png",
-  "/avatars/Untitled design (1).png",
-  "/avatars/Untitled design (2).png",
-  "/avatars/Untitled design (3).png",
+  "/avatars/avatar1.png",
+  "/avatars/avatar2.png",
+  "/avatars/avatar3.png",
 ];
 
 function roleLabel(role) {

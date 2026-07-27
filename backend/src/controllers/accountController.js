@@ -30,9 +30,9 @@ const getAccount = async (req, res) => {
 
 const VALID_AVATARS = [
     "/avatars/default.png",
-    "/avatars/Untitled design (1).png",
-    "/avatars/Untitled design (2).png",
-    "/avatars/Untitled design (3).png",
+    "/avatars/avatar1.png",
+    "/avatars/avatar2.png",
+    "/avatars/avatar3.png",
 ];
 
 const updateAccount = async (req, res) => {
