@@ -26,6 +26,11 @@ if (typeof document !== "undefined" && !document.getElementById("ai-widget-style
       from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    @keyframes aiMicPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+      70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
     .ai-msg { animation: aiFadeIn 0.25s ease both; }
     .ai-fab-pulse::before {
       content: "";
@@ -34,6 +39,9 @@ if (typeof document !== "undefined" && !document.getElementById("ai-widget-style
       border-radius: 50%;
       background: #6366F1;
       animation: aiPulseRing 2s ease-out infinite;
+    }
+    .ai-mic-active {
+      animation: aiMicPulse 1.2s ease-out infinite;
     }
   `;
   document.head.appendChild(s);
@@ -243,9 +251,11 @@ export default function AIAssistantWidget() {
   const [input,    setInput]    = useState("");
   const [loading,  setLoading]  = useState(false);
   const [hasNew,   setHasNew]   = useState(false);
-  const bottomRef = useRef(null);
-  const inputRef  = useRef(null);
-  const autoBriefRef = useRef(false);
+  const [isListening, setIsListening] = useState(false);
+  const bottomRef      = useRef(null);
+  const inputRef       = useRef(null);
+  const autoBriefRef   = useRef(false);
+  const recognitionRef = useRef(null);
 
   // Persist conversation to localStorage whenever messages change
   useEffect(() => {
@@ -426,6 +436,41 @@ export default function AIAssistantWidget() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   }
 
+  function toggleVoice() {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      // Browser doesn't support it — just focus the input
+      inputRef.current?.focus();
+      return;
+    }
+    const recognition = new SR();
+    recognition.continuous    = false;
+    recognition.interimResults = true;
+    recognition.lang           = "en-SG";
+
+    recognition.onstart = () => setIsListening(true);
+
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results).map((r) => r[0].transcript).join("");
+      setInput(transcript);
+      // Auto-resize the textarea
+      if (inputRef.current) {
+        inputRef.current.style.height = "auto";
+        inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 80) + "px";
+      }
+    };
+
+    recognition.onend  = () => { setIsListening(false); inputRef.current?.focus(); };
+    recognition.onerror = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
+
   return (
     <>
       {/* FAB */}
@@ -597,6 +642,42 @@ export default function AIAssistantWidget() {
               onFocus={(e) => (e.target.style.borderColor = ACCENT)}
               onBlur={(e)  => (e.target.style.borderColor = "#E2E8F0")}
             />
+            {/* Mic button — hidden if browser doesn't support SpeechRecognition */}
+            {(typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition)) && (
+              <button
+                onClick={toggleVoice}
+                disabled={loading}
+                className={isListening ? "ai-mic-active" : ""}
+                title={isListening ? "Stop listening" : "Speak your question"}
+                style={{
+                  width: 36, height: 36, borderRadius: "50%",
+                  background: isListening ? "#EF4444" : "#F1F5F9",
+                  border: isListening ? "none" : "1.5px solid #E2E8F0",
+                  cursor: loading ? "default" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                  transition: "background 0.15s",
+                  opacity: loading ? 0.5 : 1,
+                }}
+              >
+                {isListening ? (
+                  /* Stop icon */
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff">
+                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                  </svg>
+                ) : (
+                  /* Mic icon */
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="2" width="6" height="11" rx="3" />
+                    <path d="M5 10a7 7 0 0 0 14 0" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                    <line x1="9" y1="22" x2="15" y2="22" />
+                  </svg>
+                )}
+              </button>
+            )}
+
             <button
               onClick={() => send()}
               disabled={!input.trim() || loading}
