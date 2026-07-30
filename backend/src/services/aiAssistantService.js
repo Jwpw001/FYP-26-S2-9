@@ -30,6 +30,33 @@ function fourWeeksAgoDate() {
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+// ─── AZURE AI FOUNDRY KNOWLEDGE BASE ─────────────────────────────────────────
+
+async function queryFoundryKnowledge(question) {
+  if (!process.env.AZURE_FOUNDRY_KEY || !process.env.AZURE_FOUNDRY_ENDPOINT) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(process.env.AZURE_FOUNDRY_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": process.env.AZURE_FOUNDRY_KEY,
+      },
+      body: JSON.stringify({ model: "gpt-5-mini", input: question }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) { console.error("[Foundry] HTTP error:", res.status); return null; }
+    const data = await res.json();
+    return data.output?.[0]?.content?.[0]?.text || null;
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err.name !== "AbortError") console.error("[Foundry] query failed:", err.message);
+    return null;
+  }
+}
+
 // ─── MANAGER CONTEXT ──────────────────────────────────────────────────────────
 
 async function fetchManagerContext(userId) {
@@ -1075,6 +1102,9 @@ function selectBOContext(full, cats) {
 // ─── PUBLIC API ───────────────────────────────────────────────────────────────
 
 async function buildMessages(userId, role, question, conversationHistory = []) {
+  // Fire Foundry knowledge lookup in parallel with DB fetch — zero added latency
+  const foundryPromise = queryFoundryKnowledge(question);
+
   let context;
   if (role === "manager") {
     const fullContext = await fetchManagerContext(userId);
@@ -1094,7 +1124,11 @@ async function buildMessages(userId, role, question, conversationHistory = []) {
     throw new Error("Unsupported role");
   }
 
-  const systemPrompt = buildSystemPrompt(role, context);
+  let systemPrompt = buildSystemPrompt(role, context);
+  const foundryContext = await foundryPromise;
+  if (foundryContext) {
+    systemPrompt += `\n\nKREWBY POLICY REFERENCE (from knowledge base):\n${foundryContext}`;
+  }
 
   return [
     { role: "system", content: systemPrompt },
@@ -1124,7 +1158,7 @@ async function buildBriefMessages(userId, role, question) {
     throw new Error("Unsupported role");
   }
 
-  const systemPrompt = buildSystemPrompt(role, context);
+  let systemPrompt = buildSystemPrompt(role, context);
 
   return [
     { role: "system", content: systemPrompt },

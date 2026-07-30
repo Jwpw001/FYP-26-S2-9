@@ -117,6 +117,12 @@ const AVATARS = [
   "/avatars/avatar1.png",
   "/avatars/avatar2.png",
   "/avatars/avatar3.png",
+  "/avatars/avatar4.png",
+  "/avatars/avatar5.png",
+  "/avatars/avatar6.png",
+  "/avatars/avatar7.png",
+  "/avatars/avatar8.png",
+  "/avatars/avatar9.png",
 ];
 
 function roleLabel(role) {
@@ -212,6 +218,7 @@ export default function ProfileModal({ onClose }) {
   const [saving,        setSaving]        = useState(false);
   const [savingAvatar,  setSavingAvatar]  = useState(false);
   const [error,         setError]         = useState("");
+  const [avatarError,   setAvatarError]   = useState("");
   const [pendingAvatar, setPendingAvatar] = useState(null);
 
   useEffect(() => {
@@ -250,7 +257,7 @@ export default function ProfileModal({ onClose }) {
       setShowAvatarPicker(false);
       setPendingAvatar(null);
     } catch (e) {
-      console.error("Avatar save failed:", e);
+      setAvatarError("Failed to save avatar. Please try again.");
     } finally {
       setSavingAvatar(false);
     }
@@ -294,9 +301,10 @@ export default function ProfileModal({ onClose }) {
                     src={showAvatarPicker && pendingAvatar ? pendingAvatar : avatarSrc}
                     alt="Profile avatar"
                     style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", boxShadow: "0 4px 20px rgba(0,0,0,0.22), 0 0 0 3px rgba(255,255,255,0.5)", display: "block" }}
+                    onError={e => { e.currentTarget.src = "/avatars/default.png"; }}
                   />
                   <button
-                    onClick={() => { setShowAvatarPicker(v => !v); setPendingAvatar(account?.avatar_url || "/avatars/default.png"); }}
+                    onClick={() => { setShowAvatarPicker(v => !v); setPendingAvatar(account?.avatar_url || "/avatars/default.png"); setAvatarError(""); }}
                     className="pm-cam-btn"
                     style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderRadius: "50%", background: "rgba(0,0,0,0.45)", border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
                   >
@@ -317,7 +325,8 @@ export default function ProfileModal({ onClose }) {
             {showAvatarPicker && (
               <div style={{ padding: "18px 22px 16px", borderBottom: "1px solid #F1F5F9" }}>
                 <p style={{ fontSize: "11px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "14px" }}>Choose your avatar</p>
-                <div style={{ display: "flex", justifyContent: "center", gap: "16px", marginBottom: "16px" }}>
+                {avatarError && <p style={{ fontSize: "12px", color: "#DC2626", fontWeight: "600", marginBottom: "10px" }}>{avatarError}</p>}
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "12px", marginBottom: "16px" }}>
                   {AVATARS.map(src => (
                     <button
                       key={src}

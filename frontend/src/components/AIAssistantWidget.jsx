@@ -497,10 +497,7 @@ export default function AIAssistantWidget() {
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="#fff" />
-            <path d="M19 16L19.8 18.2L22 19L19.8 19.8L19 22L18.2 19.8L16 19L18.2 18.2L19 16Z" fill="rgba(255,255,255,0.7)" />
-          </svg>
+          <img src="/chatbot.png" alt="AI Assistant" width={32} height={32} style={{ objectFit: "contain", display: "block" }} />
         )}
         {hasNew && (
           <span style={{

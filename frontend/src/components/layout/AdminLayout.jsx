@@ -69,7 +69,7 @@ export default function AdminLayout({ children, title }) {
         <div style={{ ...s.sidebarBottom, padding: "12px" }}>
           <button onClick={() => setShowProfile(true)} title="View profile"
             style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
-            <UserAvatar name={user?.full_name || "A"} avatar_url={user?.avatar_url} size={34} />
+            <UserAvatar name={user?.full_name || "A"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
             <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Admin"}</p>
               <p style={s.userRole}>System Administrator</p>

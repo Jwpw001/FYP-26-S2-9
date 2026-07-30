@@ -242,7 +242,7 @@ const generateWeeklySchedule = async (req, res) => {
     if (!branchId) return res.status(403).json({ success: false, message: "No branch found." });
 
     const { weekStart, weekEnd, preferences = {} } = req.body;
-    const { shiftsPerDay = 2, shiftNames = ["Morning", "Evening"], offDays = [], shiftRoles: prefShiftRoles, roles: prefRoles } = preferences;
+    const { shiftsPerDay = 2, shiftNames = ["Morning", "Evening"], offDays = [], shiftRoles: prefShiftRoles, roles: prefRoles, difficultyByDay = {} } = preferences;
 
     if (!weekStart || !weekEnd) return res.status(400).json({ success: false, message: "weekStart and weekEnd required." });
 
@@ -436,6 +436,12 @@ const generateWeeklySchedule = async (req, res) => {
     const staffCount = allStaffNamesList.length;
     const targetPerPerson = staffCount > 0 ? Math.ceil(totalRoleSlots / staffCount) : 0;
 
+    // Casuals who have no availability submissions this week
+    const missedCasuals = Object.values(casualMap)
+      .filter(c => c.slots.length === 0)
+      .map(c => c.name)
+      .filter(Boolean);
+
     // Pre-compute eligible staff per date+shift so the AI has an explicit allowed list
     const casualSlotsByDate = {};
     Object.values(casualMap).forEach(({ name, slots }) => {
@@ -503,12 +509,34 @@ ${activeHolidaysThisWeek.length > 0 ? `PUBLIC HOLIDAYS (skip): ${activeHolidaysT
 STAFF SKILLS (use for role matching within the eligible pool only):
 ${staffSkillLines}
 
-ROLE TEMPLATES PER SHIFT:
+ROLE TEMPLATES PER SHIFT (base structure):
 ${shiftSlots.map((s, i) => {
   const roles = getRolesForShift(i);
   const rolesStr = roles.length > 0 ? roles.map(r => `${r.role_name} x${r.headcount}`).join(", ") : "Staff x1";
   return `- ${s.name} (${s.start}–${s.end}): ${rolesStr}`;
 }).join("\n")}
+
+SKILL LEVEL REQUIREMENTS (per date — overrides base structure):
+${finalWorkingDays.map(date => {
+  const dayDiff = difficultyByDay[date] || {};
+  const lines = shiftSlots.map((s, si) => {
+    const roles = getRolesForShift(si);
+    const roleParts = roles.map((r, j) => {
+      const diff = (dayDiff[si] || {})[j] || "any";
+      return diff !== "any" ? `${r.role_name} [${diff}]` : null;
+    }).filter(Boolean);
+    return roleParts.length ? `  ${date} ${s.name}: ${roleParts.join(", ")}` : null;
+  }).filter(Boolean);
+  return lines.join("\n");
+}).filter(Boolean).join("\n") || "  (all roles set to Any — no restrictions)"}
+
+SKILL LEVEL MATCHING RULE:
+- "any": no restriction, all eligible staff qualify
+- "junior": prefer staff whose skills show beginner/junior experience
+- "intermediate": prefer staff with intermediate or higher experience
+- "senior": only assign staff with senior or expert experience; do NOT assign beginners/juniors
+- "lead": only assign the most experienced staff; reserve for the highest-skill roles
+Regular staff without recorded skills may fill "any" or "junior" roles only.
 
 BUSINESS RULES:
 - Max ${maxHours}h per person per day
@@ -556,7 +584,7 @@ Generate ALL ${totalShifts} shifts now (${shiftsPerDay} per day × ${finalWorkin
     if (!match) return res.status(500).json({ success: false, message: "AI returned invalid schedule format. Please try again." });
 
     const schedule = JSON.parse(match[0]);
-    return res.json({ success: true, schedule, hasRoleTemplates: dbTemplates.length > 0 });
+    return res.json({ success: true, schedule, hasRoleTemplates: dbTemplates.length > 0, missedCasuals });
   } catch (err) {
     console.error("generateWeeklySchedule error:", err.message);
     return res.status(500).json({ success: false, message: err.message });

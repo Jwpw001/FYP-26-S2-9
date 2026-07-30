@@ -91,6 +91,7 @@ export default function ShiftsList() {
 
   // AI Weekly Schedule state — step: 'config' | 'generating' | 'preview' | 'creating' | 'done'
   const [weeklyAI, setWeeklyAI] = useState(null);
+  const [weeklyReviewModal, setWeeklyReviewModal] = useState({ open: false, text: null, loading: false });
   const [branchStaff, setBranchStaff] = useState([]);
 
   useEffect(() => {
@@ -237,6 +238,7 @@ export default function ShiftsList() {
       weekStart, weekEnd,
       weekDateStrs,
       branchSkills,
+      difficultyByDay: {},
       config: {
         shiftsPerDay: 2,
         shiftNames: ["Morning", "Evening"],
@@ -250,8 +252,11 @@ export default function ShiftsList() {
   async function runGenerate(weekStart, weekEnd, config) {
     setWeeklyAI(prev => ({ ...prev, step: "generating" }));
     try {
-      const result = await api.post("/api/shifts/generate-week", { weekStart, weekEnd, preferences: config });
-      setWeeklyAI(prev => ({ ...prev, step: "preview", schedule: result.schedule, accepted: new Set(result.schedule.map((_, i) => i)) }));
+      const result = await api.post("/api/shifts/generate-week", {
+        weekStart, weekEnd,
+        preferences: { ...config, difficultyByDay: weeklyAI.difficultyByDay || {} },
+      });
+      setWeeklyAI(prev => ({ ...prev, step: "preview", schedule: result.schedule, accepted: new Set(result.schedule.map((_, i) => i)), missedCasuals: result.missedCasuals || [] }));
     } catch (err) {
       setWeeklyAI(prev => ({ ...prev, step: "error", message: err.message }));
     }
@@ -265,6 +270,20 @@ export default function ShiftsList() {
       setWeeklyAI(prev => ({ ...prev, step: "preview", schedule: result.schedule, accepted: new Set(result.schedule.map((_, i) => i)) }));
     } catch (err) {
       setWeeklyAI(prev => ({ ...prev, step: "error", message: err.message }));
+    }
+  }
+
+  async function runWeeklyReview() {
+    if (!weeklyAI?.schedule || weeklyReviewModal.loading) return;
+    setWeeklyReviewModal({ open: true, text: null, loading: true });
+    try {
+      const data = await api.post("/api/ai-assistant/weekly-review", {
+        schedule: weeklyAI.schedule,
+        branchStaff,
+      });
+      setWeeklyReviewModal({ open: true, text: data.review || "No review available.", loading: false });
+    } catch {
+      setWeeklyReviewModal({ open: true, text: "AI review unavailable. Please try again.", loading: false });
     }
   }
 
@@ -771,6 +790,65 @@ export default function ShiftsList() {
         })()}
       </div>
 
+      {/* ── Weekly AI Review Popup ─────────────────────────────────────────── */}
+      {weeklyReviewModal.open && (
+        <div style={{ position:"fixed",inset:0,zIndex:999999,background:"rgba(2,6,23,0.55)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px" }}
+          onClick={() => setWeeklyReviewModal(s => ({ ...s, open:false }))}>
+          <div style={{ background:"#fff",borderRadius:"20px",width:"min(94vw,540px)",maxHeight:"80vh",display:"flex",flexDirection:"column",boxShadow:"0 32px 80px rgba(0,0,0,0.4)",overflow:"hidden",animation:"modalIn 0.2s cubic-bezier(0.34,1.56,0.64,1)" }}
+            onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ background:"linear-gradient(135deg,#4F46E5,#7C3AED)",padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0 }}>
+              <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
+                <div style={{ width:"30px",height:"30px",borderRadius:"9px",background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                  <Sparkles size={14} color="#fff" />
+                </div>
+                <div>
+                  <p style={{ fontSize:"14px",fontWeight:"800",color:"#fff",margin:0,lineHeight:1 }}>AI Weekly Review</p>
+                  <p style={{ fontSize:"10px",color:"rgba(255,255,255,0.65)",margin:0,marginTop:"3px" }}>Full-week schedule analysis</p>
+                </div>
+              </div>
+              <button onClick={() => setWeeklyReviewModal(s => ({ ...s, open:false }))}
+                style={{ width:"30px",height:"30px",borderRadius:"8px",border:"1px solid rgba(255,255,255,0.25)",background:"rgba(255,255,255,0.12)",color:"rgba(255,255,255,0.8)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                <X size={13} />
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ flex:1,overflowY:"auto",padding:"18px 20px" }}>
+              {weeklyReviewModal.loading ? (
+                <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"14px",padding:"32px 0" }}>
+                  <div style={{ width:"36px",height:"36px",borderRadius:"50%",border:"3px solid #E0E7FF",borderTopColor:"#6366F1",animation:"aiSpin 0.8s linear infinite" }} />
+                  <p style={{ fontSize:"13px",color:"#94A3B8",margin:0 }}>Analysing your week…</p>
+                </div>
+              ) : (
+                weeklyReviewModal.text?.split("\n").filter(l => l.trim()).map((line, i) => {
+                  const isWarning = /⚠️|warning|conflict|leave|unfilled|not available|imbalanced|overload/i.test(line);
+                  const isGood    = /✅|ready|fully|covered|great|all roles/i.test(line);
+                  const isCrit    = /❌|critical|urgent|nobody/i.test(line);
+                  const bg    = isCrit ? "#FEF2F2" : isWarning ? "#FFFBEB" : isGood ? "#F0FDF4" : "transparent";
+                  const color = isCrit ? "#B91C1C" : isWarning ? "#92400E" : isGood ? "#065F46" : "#374151";
+                  const icon  = isCrit ? "❌" : isWarning ? "⚠️" : isGood ? "✅" : "•";
+                  return (
+                    <div key={i} style={{ display:"flex",gap:"9px",marginBottom:"10px",alignItems:"flex-start",background:bg,borderRadius:"9px",padding:bg !== "transparent" ? "9px 11px" : "2px 0" }}>
+                      <span style={{ fontSize:"13px",flexShrink:0,marginTop:"1px" }}>{icon}</span>
+                      <p style={{ fontSize:"13px",color,fontWeight: bg !== "transparent" ? "600" : "400",lineHeight:1.55,margin:0 }}>
+                        {line.replace(/^[-•·✅⚠️❌*]\s*/, "").trim()}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            {/* Footer */}
+            <div style={{ padding:"12px 20px",borderTop:"1.5px solid #F1F5F9",display:"flex",justifyContent:"flex-end",background:"#FAFBFE",flexShrink:0 }}>
+              <button onClick={() => setWeeklyReviewModal(s => ({ ...s, open:false }))}
+                style={{ padding:"7px 18px",borderRadius:"8px",border:"none",background:"#6366F1",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:"pointer" }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── AI Weekly Schedule Modal ───────────────────────────────────────── */}
       {weeklyAI && (
         <div style={{ position:"fixed",inset:0,zIndex:99999,background:"rgba(2,6,23,0.8)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px" }}
@@ -808,6 +886,14 @@ export default function ShiftsList() {
                       </div>
                     ));
                   })()}
+                  {(weeklyAI.step === "preview" || weeklyAI.step === "creating") && (
+                    <button onClick={runWeeklyReview} disabled={weeklyReviewModal.loading}
+                      style={{ display:"flex",alignItems:"center",gap:"6px",padding:"7px 14px",borderRadius:"10px",border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(6px)",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:"pointer",transition:"all 0.15s",flexShrink:0 }}>
+                      {weeklyReviewModal.loading
+                        ? <><span style={{ width:"10px",height:"10px",borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",display:"inline-block",animation:"aiSpin 0.7s linear infinite" }}/> Reviewing…</>
+                        : <><Sparkles size={12}/> AI Review</>}
+                    </button>
+                  )}
                   {!["generating","creating"].includes(weeklyAI.step) && (
                     <button onClick={() => setWeeklyAI(null)} style={{ width:"32px",height:"32px",borderRadius:"8px",background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.8)",fontSize:"14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><X size={14} /></button>
                   )}
@@ -1021,6 +1107,108 @@ export default function ShiftsList() {
                 );
               })()}
 
+              {/* ── Difficulty step ── */}
+              {weeklyAI.step === "difficulty" && (() => {
+                const cfg = weeklyAI.config;
+                const dbd = weeklyAI.difficultyByDay || {};
+                const DIFF_LEVELS = ["any","junior","intermediate","senior","lead"];
+                const DIFF_META = {
+                  any:          { label:"Any",          bg:"#F1F5F9", border:"#CBD5E1", color:"#475569" },
+                  junior:       { label:"Junior",       bg:"#F0FDF4", border:"#86EFAC", color:"#166534" },
+                  intermediate: { label:"Intermediate", bg:"#EFF6FF", border:"#93C5FD", color:"#1D4ED8" },
+                  senior:       { label:"Senior",       bg:"#FFF7ED", border:"#FCD34D", color:"#92400E" },
+                  lead:         { label:"Lead",         bg:"#F5F3FF", border:"#C4B5FD", color:"#6D28D9" },
+                };
+                const DAY_COLORS = ["#6366F1","#8B5CF6","#EC4899","#F59E0B","#10B981","#3B82F6","#EF4444"];
+                const shiftSlots = (cfg.shiftNames || []).map(name => ({ name }));
+
+                const workingDays = Array.from({length:7}, (_,i) => {
+                  const base = new Date(weeklyAI.weekStart + "T12:00:00Z");
+                  base.setUTCDate(base.getUTCDate() + i);
+                  const dateStr = base.toISOString().split("T")[0];
+                  const d = new Date(dateStr + "T12:00:00Z");
+                  return {
+                    date: dateStr,
+                    label: d.toLocaleDateString("en-SG",{weekday:"short",timeZone:"UTC"}),
+                    day:   d.getUTCDate(),
+                    month: d.toLocaleDateString("en-SG",{month:"short",timeZone:"UTC"}),
+                  };
+                }).filter(d => !(cfg.offDays || []).includes(d.date));
+
+                const getDiff = (date, si, j) => dbd[date]?.[si]?.[j] || "any";
+
+                const setDiff = (date, si, j, val) => {
+                  setWeeklyAI(prev => {
+                    const next = { ...(prev.difficultyByDay || {}) };
+                    next[date] = { ...(next[date] || {}) };
+                    next[date][si] = { ...(next[date][si] || {}), [j]: val };
+                    return { ...prev, difficultyByDay: next };
+                  });
+                };
+
+                return (
+                  <div>
+                    {/* Legend */}
+                    <div style={{ display:"flex",alignItems:"center",gap:"8px",marginBottom:"20px",flexWrap:"wrap" }}>
+                      <span style={{ fontSize:"11px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginRight:"4px" }}>Skill level:</span>
+                      {DIFF_LEVELS.map(lvl => {
+                        const m = DIFF_META[lvl];
+                        return <span key={lvl} style={{ padding:"3px 10px",borderRadius:"100px",background:m.bg,border:`1.5px solid ${m.border}`,color:m.color,fontSize:"11px",fontWeight:"700" }}>{m.label}</span>;
+                      })}
+                      <span style={{ fontSize:"11px",color:"#94A3B8",marginLeft:"4px" }}>— click a role to cycle its required level</span>
+                    </div>
+
+                    {/* Calendar grid */}
+                    <div style={{ display:"grid",gridTemplateColumns:`repeat(${workingDays.length},1fr)`,gap:"10px",alignItems:"start" }}>
+                      {workingDays.map((day, di) => {
+                        const color = DAY_COLORS[di % DAY_COLORS.length];
+                        return (
+                          <div key={day.date} style={{ display:"flex",flexDirection:"column",gap:"8px" }}>
+                            <div style={{ textAlign:"center",paddingBottom:"8px",borderBottom:`2px solid ${color}33` }}>
+                              <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",margin:0 }}>{day.label}</p>
+                              <p style={{ fontSize:"18px",fontWeight:"900",color:"#1E293B",margin:"2px 0 0",lineHeight:1 }}>{day.day}</p>
+                              <p style={{ fontSize:"10px",color:"#94A3B8",margin:0 }}>{day.month}</p>
+                            </div>
+
+                            {shiftSlots.map((slot, si) => {
+                              const roles = cfg.shiftRoles?.[si] || [];
+                              return (
+                                <div key={si} style={{ borderRadius:"12px",border:`1.5px solid ${color}33`,overflow:"hidden",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
+                                  <div style={{ background:`${color}12`,borderBottom:`1px solid ${color}22`,padding:"7px 10px" }}>
+                                    <p style={{ fontSize:"11px",fontWeight:"800",color,margin:0 }}>{slot.name}</p>
+                                  </div>
+                                  <div style={{ padding:"8px 10px",display:"flex",flexDirection:"column",gap:"6px" }}>
+                                    {roles.length === 0 && <p style={{ fontSize:"11px",color:"#94A3B8",margin:0 }}>No roles</p>}
+                                    {roles.map((r, j) => {
+                                      const diff = getDiff(day.date, si, j);
+                                      const dm = DIFF_META[diff];
+                                      const nextDiff = DIFF_LEVELS[(DIFF_LEVELS.indexOf(diff)+1) % DIFF_LEVELS.length];
+                                      return (
+                                        <div key={j}>
+                                          <p style={{ fontSize:"10px",fontWeight:"600",color:"#64748B",margin:"0 0 3px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
+                                            {r.role_name || "Role"} ×{r.headcount}
+                                          </p>
+                                          <button
+                                            title={`Next: ${nextDiff}`}
+                                            onClick={() => setDiff(day.date, si, j, nextDiff)}
+                                            style={{ width:"100%",padding:"4px 6px",borderRadius:"7px",border:`1.5px solid ${dm.border}`,background:dm.bg,color:dm.color,fontSize:"10px",fontWeight:"700",cursor:"pointer",textAlign:"center",transition:"all 0.12s" }}>
+                                            {dm.label}
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Generating / Rescheduling */}
               {(weeklyAI.step === "generating" || weeklyAI.step === "rescheduling") && (
                 <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 20px",gap:"20px" }}>
@@ -1063,6 +1251,24 @@ export default function ShiftsList() {
                 </div>
               )}
 
+              {/* Missed casuals banner */}
+              {(weeklyAI.step === "preview" || weeklyAI.step === "creating") && weeklyAI.missedCasuals?.length > 0 && (
+                <div style={{ margin:"0 0 16px",padding:"12px 16px",borderRadius:"12px",background:"#FFFBEB",border:"1.5px solid #FCD34D",display:"flex",alignItems:"flex-start",gap:"10px" }}>
+                  <span style={{ fontSize:"16px",flexShrink:0,marginTop:"1px" }}>⚠️</span>
+                  <div>
+                    <p style={{ fontSize:"13px",fontWeight:"700",color:"#92400E",margin:0,marginBottom:"3px" }}>
+                      {weeklyAI.missedCasuals.length === 1
+                        ? `${weeklyAI.missedCasuals[0]} wasn't considered in this schedule`
+                        : `${weeklyAI.missedCasuals.length} casual staff weren't considered in this schedule`}
+                    </p>
+                    <p style={{ fontSize:"12px",color:"#B45309",margin:0 }}>
+                      {weeklyAI.missedCasuals.length > 1 && <><strong>{weeklyAI.missedCasuals.join(", ")}</strong> — </>}
+                      They haven't submitted their availability for this week. Remind them to submit it, then regenerate.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Preview */}
               {(weeklyAI.step === "preview" || weeklyAI.step === "creating") && weeklyAI.schedule && (
                 <WeeklySchedulePreview
@@ -1083,9 +1289,23 @@ export default function ShiftsList() {
                   Cancel
                 </button>
                 <div style={{ flex:1 }} />
+                <button onClick={() => setWeeklyAI(prev => ({ ...prev, step: "difficulty" }))}
+                  style={{ padding:"10px 24px",borderRadius:"9px",border:"none",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:"13px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",boxShadow:"0 4px 14px rgba(99,102,241,0.4)" }}>
+                  Next: Set Difficulty →
+                </button>
+              </div>
+            )}
+
+            {weeklyAI.step === "difficulty" && (
+              <div style={{ padding:"14px 24px",borderTop:"1px solid #E8EDF5",display:"flex",alignItems:"center",gap:"12px",background:"#fff",flexShrink:0 }}>
+                <button onClick={() => setWeeklyAI(prev => ({ ...prev, step: "config" }))}
+                  style={{ padding:"9px 18px",borderRadius:"9px",border:"1.5px solid #E2E8F0",background:"#fff",fontSize:"13px",fontWeight:"600",color:"#64748B",cursor:"pointer" }}>
+                  ← Back
+                </button>
+                <div style={{ flex:1,fontSize:"12px",color:"#94A3B8" }}>Set required skill level for each role — AI will match staff accordingly</div>
                 <button onClick={() => runGenerate(weeklyAI.weekStart, weeklyAI.weekEnd, weeklyAI.config)}
                   style={{ padding:"10px 24px",borderRadius:"9px",border:"none",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:"13px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",boxShadow:"0 4px 14px rgba(99,102,241,0.4)" }}>
-                  <Sparkles size={13} /> Generate Week →
+                  <Sparkles size={13} /> Generate Schedule →
                 </button>
               </div>
             )}
@@ -1279,17 +1499,32 @@ function StaffRosterPicker({ branchStaff, rosterData, rosterLoading, assigned, h
       {/* Selected pills */}
       {assigned.length > 0 && (
         <div style={{ display:"flex", flexWrap:"wrap", gap:"5px", marginBottom:"10px" }}>
-          {assigned.map(name => (
-            <span key={name} style={{ display:"flex", alignItems:"center", gap:"4px", padding:"3px 10px 3px 8px", borderRadius:"100px", background:accent.top, color:"#fff", fontSize:"12px", fontWeight:"600" }}>
-              <span style={{ width:"16px", height:"16px", borderRadius:"50%", background:"rgba(255,255,255,0.25)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"8px", fontWeight:"700" }}>
-                {initials(name)}
+          {assigned.map(name => {
+            const r = rosterData?.[name];
+            const hasWarning = r && (
+              r.is_on_leave ||
+              r.is_double_booked ||
+              (r.staff_type === "casual" && r.casual_available_today === false)
+            );
+            const warningTip = r?.is_on_leave ? "On leave"
+              : r?.is_double_booked ? "Double-booked"
+              : r?.staff_type === "casual" && r?.casual_available_today === false
+              ? `Available ${r.casual_avail_from?.slice(0,5) || "?"}–${r.casual_avail_to?.slice(0,5) || "?"} (doesn't cover shift)`
+              : null;
+            return (
+              <span key={name} title={warningTip || undefined}
+                style={{ display:"flex", alignItems:"center", gap:"4px", padding:"3px 10px 3px 8px", borderRadius:"100px", background: hasWarning ? "#F59E0B" : accent.top, color:"#fff", fontSize:"12px", fontWeight:"600", border: hasWarning ? "1.5px solid #D97706" : "1.5px solid transparent" }}>
+                <span style={{ width:"16px", height:"16px", borderRadius:"50%", background:"rgba(255,255,255,0.25)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"8px", fontWeight:"700" }}>
+                  {initials(name)}
+                </span>
+                {name}
+                {hasWarning && <span style={{ fontSize:"10px", lineHeight:1 }}>⚠️</span>}
+                <button onClick={() => toggle(name)} style={{ background:"none", border:"none", cursor:"pointer", padding:"0", display:"flex", color:"rgba(255,255,255,0.8)", lineHeight:1 }}>
+                  <X size={11} />
+                </button>
               </span>
-              {name}
-              <button onClick={() => toggle(name)} style={{ background:"none", border:"none", cursor:"pointer", padding:"0", display:"flex", color:"rgba(255,255,255,0.8)", lineHeight:1 }}>
-                <X size={11} />
-              </button>
-            </span>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1358,6 +1593,26 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
   const [rosterLoading, setRosterLoading]   = useState(false);
   const [allRosterData, setAllRosterData]   = useState({});     // cards: "date|start|end" -> { name -> info }
 
+  // AI shift review
+  const [aiReview, setAiReview]           = useState(null);
+  const [aiReviewLoading, setAiReviewLoading] = useState(false);
+
+  async function runAiReview() {
+    if (!draft) return;
+    setAiReviewLoading(true);
+    setAiReview(null);
+    try {
+      const roster = rosterData ? Object.values(rosterData) : [];
+      const res = await api.post("/api/ai-assistant/shift-review", { shift: draft, roster });
+      if (res.success) setAiReview(res.review);
+      else setAiReview("⚠️ AI review unavailable right now.");
+    } catch {
+      setAiReview("⚠️ AI review unavailable right now.");
+    } finally {
+      setAiReviewLoading(false);
+    }
+  }
+
   // Fetch roster for every shift in the schedule once on mount (for card warnings)
   useEffect(() => {
     if (!schedule || schedule.length === 0) return;
@@ -1416,8 +1671,8 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
       }
     }
   }
-  function saveEdit(i)              { onEdit(i, draft); setEditingIdx(null); setDraft(null); setRosterData(null); }
-  function cancelEdit()             { setEditingIdx(null); setDraft(null); setRosterData(null); }
+  function saveEdit(i)              { onEdit(i, draft); setEditingIdx(null); setDraft(null); setRosterData(null); setAiReview(null); }
+  function cancelEdit()             { setEditingIdx(null); setDraft(null); setRosterData(null); setAiReview(null); }
   function setDraftField(f, v)      { setDraft(d => ({ ...d, [f]: v })); }
   function setRoleField(j, f, v)    { setDraft(d => { const r=[...d.roles]; r[j]={...r[j],[f]:v}; return {...d,roles:r}; }); }
   function addRole()                { setDraft(d => ({ ...d, roles:[...d.roles,{role_name:"",headcount:1,assigned_staff:[]}] })); }
@@ -1653,7 +1908,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
             style={{ position:"fixed",inset:0,zIndex:999999,background:"rgba(2,6,23,0.65)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px" }}
             onClick={cancelEdit}>
             <div
-              style={{ background:"#fff",borderRadius:"20px",width:"min(96vw,540px)",maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 32px 80px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.06)",overflow:"hidden",animation:"modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}
+              style={{ background:"#fff",borderRadius:"20px",width:"min(96vw,940px)",maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 32px 80px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.06)",overflow:"hidden",animation:"modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}
               onClick={e => e.stopPropagation()}>
 
               {/* Header */}
@@ -1672,71 +1927,149 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                 </button>
               </div>
 
-              {/* Body */}
-              <div style={{ flex:1,overflowY:"auto",padding:"22px" }}>
+              {/* Body: two-column layout */}
+              <div style={{ flex:1,display:"flex",overflow:"hidden" }}>
 
-                {/* Basic fields */}
-                <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"10px" }}>Shift details</p>
-                <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:"12px",marginBottom:"22px" }}>
-                  {[
-                    { label:"Title",      field:"title",      type:"text", val:draft.title },
-                    { label:"Start time", field:"start_time", type:"time", val:draft.start_time },
-                    { label:"End time",   field:"end_time",   type:"time", val:draft.end_time },
-                  ].map(f => (
-                    <div key={f.field}>
-                      <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"6px" }}>{f.label}</p>
-                      <input type={f.type} value={f.val} onChange={e => setDraftField(f.field, e.target.value)} style={F} />
-                    </div>
-                  ))}
-                </div>
+                {/* LEFT: shift details + roles */}
+                <div style={{ flex:1,overflowY:"auto",padding:"22px",minWidth:0 }}>
 
-                <div style={{ height:"1px",background:"#F1F5F9",marginBottom:"20px" }} />
-
-                {/* Roles */}
-                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px" }}>
-                  <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px" }}>Roles & Assigned Staff</p>
-                  <button onClick={addRole}
-                    style={{ padding:"4px 12px",borderRadius:"7px",border:`1.5px dashed ${cc.border}`,background:cc.bg,color:cc.text,fontSize:"11px",fontWeight:"700",cursor:"pointer" }}>
-                    + Add Role
-                  </button>
-                </div>
-
-                <div style={{ display:"flex",flexDirection:"column",gap:"12px" }}>
-                  {draft.roles.map((r, j) => (
-                    <div key={j} style={{ border:`1.5px solid ${cc.border}`,borderRadius:"14px",overflow:"hidden" }}>
-                      {/* Role header row */}
-                      <div style={{ background:cc.bg,padding:"10px 14px",display:"flex",alignItems:"center",gap:"8px" }}>
-                        <div style={{ width:"7px",height:"7px",borderRadius:"50%",background:cc.top,flexShrink:0 }} />
-                        <input
-                          value={r.role_name}
-                          placeholder="Role name"
-                          onChange={e => setRoleField(j, "role_name", e.target.value)}
-                          style={{ flex:1,border:"none",background:"transparent",fontSize:"13px",fontWeight:"700",color:cc.text,outline:"none",fontFamily:"inherit" }} />
-                        <div style={{ display:"flex",alignItems:"center",gap:"6px",flexShrink:0 }}>
-                          <span style={{ fontSize:"11px",color:"#94A3B8" }}>×</span>
-                          <input
-                            type="number" min="1" value={r.headcount}
-                            onChange={e => setRoleField(j, "headcount", Number(e.target.value))}
-                            style={{ width:"46px",padding:"4px 6px",borderRadius:"7px",border:`1.5px solid ${cc.border}`,fontSize:"13px",fontWeight:"700",textAlign:"center",outline:"none",background:"#fff",color:"#1E293B",fontFamily:"inherit" }} />
-                        </div>
-                        <button onClick={() => removeRole(j)}
-                          style={{ width:"28px",height:"28px",borderRadius:"8px",border:"1px solid #FECACA",background:"#FEF2F2",color:"#DC2626",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
-                          <X size={12} />
-                        </button>
+                  {/* Basic fields */}
+                  <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"10px" }}>Shift details</p>
+                  <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:"12px",marginBottom:"22px" }}>
+                    {[
+                      { label:"Title",      field:"title",      type:"text", val:draft.title },
+                      { label:"Start time", field:"start_time", type:"time", val:draft.start_time },
+                      { label:"End time",   field:"end_time",   type:"time", val:draft.end_time },
+                    ].map(f => (
+                      <div key={f.field}>
+                        <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"6px" }}>{f.label}</p>
+                        <input type={f.type} value={f.val} onChange={e => setDraftField(f.field, e.target.value)} style={F} />
                       </div>
+                    ))}
+                  </div>
 
-                      {/* Staff picker — roster style */}
-                      <StaffRosterPicker
-                        branchStaff={branchStaff}
-                        rosterData={rosterData}
-                        rosterLoading={rosterLoading}
-                        assigned={r.assigned_staff || []}
-                        headcount={r.headcount || 1}
-                        accent={cc}
-                        onChange={staff => setRoleField(j, "assigned_staff", staff)}
-                      />
+                  <div style={{ height:"1px",background:"#F1F5F9",marginBottom:"20px" }} />
+
+                  {/* Roles */}
+                  <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px" }}>
+                    <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px" }}>Roles & Assigned Staff</p>
+                    <button onClick={addRole}
+                      style={{ padding:"4px 12px",borderRadius:"7px",border:`1.5px dashed ${cc.border}`,background:cc.bg,color:cc.text,fontSize:"11px",fontWeight:"700",cursor:"pointer" }}>
+                      + Add Role
+                    </button>
+                  </div>
+
+                  <div style={{ display:"flex",flexDirection:"column",gap:"12px" }}>
+                    {draft.roles.map((r, j) => (
+                      <div key={j} style={{ border:`1.5px solid ${cc.border}`,borderRadius:"14px",overflow:"hidden" }}>
+                        {/* Role header row */}
+                        <div style={{ background:cc.bg,padding:"10px 14px",display:"flex",alignItems:"center",gap:"8px" }}>
+                          <div style={{ width:"7px",height:"7px",borderRadius:"50%",background:cc.top,flexShrink:0 }} />
+                          <input
+                            value={r.role_name}
+                            placeholder="Role name"
+                            onChange={e => setRoleField(j, "role_name", e.target.value)}
+                            style={{ flex:1,border:"none",background:"transparent",fontSize:"13px",fontWeight:"700",color:cc.text,outline:"none",fontFamily:"inherit" }} />
+                          {/* Difficulty pill */}
+                          {(() => {
+                            const diff = r.difficulty || "any";
+                            const DIFF_CYCLE = ["any","intermediate","senior"];
+                            const DIFF_STYLE = {
+                              any:          { bg:"#F1F5F9", border:"#CBD5E1", color:"#64748B" },
+                              intermediate: { bg:"#EFF6FF", border:"#BFDBFE", color:"#1D4ED8" },
+                              senior:       { bg:"#F5F3FF", border:"#DDD6FE", color:"#6D28D9" },
+                            };
+                            const ds = DIFF_STYLE[diff];
+                            return (
+                              <button title="Skill level required — click to change" onClick={() => {
+                                const next = DIFF_CYCLE[(DIFF_CYCLE.indexOf(diff)+1)%DIFF_CYCLE.length];
+                                setRoleField(j, "difficulty", next);
+                              }} style={{ padding:"3px 9px",borderRadius:"100px",border:`1.5px solid ${ds.border}`,background:ds.bg,color:ds.color,fontSize:"10px",fontWeight:"700",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap" }}>
+                                {diff === "any" ? "Any" : diff === "intermediate" ? "Mid+" : "Senior"}
+                              </button>
+                            );
+                          })()}
+                          <div style={{ display:"flex",alignItems:"center",gap:"6px",flexShrink:0 }}>
+                            <span style={{ fontSize:"11px",color:"#94A3B8" }}>×</span>
+                            <input
+                              type="number" min="1" value={r.headcount}
+                              onChange={e => setRoleField(j, "headcount", Number(e.target.value))}
+                              style={{ width:"46px",padding:"4px 6px",borderRadius:"7px",border:`1.5px solid ${cc.border}`,fontSize:"13px",fontWeight:"700",textAlign:"center",outline:"none",background:"#fff",color:"#1E293B",fontFamily:"inherit" }} />
+                          </div>
+                          <button onClick={() => removeRole(j)}
+                            style={{ width:"28px",height:"28px",borderRadius:"8px",border:"1px solid #FECACA",background:"#FEF2F2",color:"#DC2626",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                            <X size={12} />
+                          </button>
+                        </div>
+
+                        {/* Staff picker — roster style */}
+                        <StaffRosterPicker
+                          branchStaff={branchStaff}
+                          rosterData={rosterData}
+                          rosterLoading={rosterLoading}
+                          assigned={r.assigned_staff || []}
+                          headcount={r.headcount || 1}
+                          accent={cc}
+                          onChange={staff => setRoleField(j, "assigned_staff", staff)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* RIGHT: AI Review panel */}
+                <div style={{ width:"300px",flexShrink:0,borderLeft:"1.5px solid #E0E7FF",display:"flex",flexDirection:"column",background:"#FAFBFF" }}>
+                  {/* Panel header */}
+                  <div style={{ background:"linear-gradient(135deg,#EEF2FF,#F5F3FF)",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1.5px solid #E0E7FF",flexShrink:0 }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:"8px" }}>
+                      <div style={{ width:"26px",height:"26px",borderRadius:"8px",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 2px 6px rgba(99,102,241,0.3)" }}>
+                        <Sparkles size={12} color="#fff" />
+                      </div>
+                      <div>
+                        <p style={{ fontSize:"12px",fontWeight:"800",color:"#4F46E5",margin:0 }}>AI Review</p>
+                        <p style={{ fontSize:"10px",color:"#818CF8",margin:0 }}>Assignments & suggestions</p>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                  {/* Review button */}
+                  <div style={{ padding:"12px 16px",borderBottom:"1px solid #E0E7FF",flexShrink:0 }}>
+                    <button
+                      onClick={runAiReview}
+                      disabled={aiReviewLoading || rosterLoading}
+                      style={{ width:"100%",padding:"8px 14px",borderRadius:"8px",border:"none",background:aiReviewLoading?"#C7D2FE":"#6366F1",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:aiReviewLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",transition:"background 0.15s" }}>
+                      {aiReviewLoading
+                        ? <><span style={{ width:"10px",height:"10px",borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",display:"inline-block",animation:"aiSpin 0.7s linear infinite" }}/> Reviewing…</>
+                        : <><Sparkles size={11}/> {aiReview ? "Re-review shift" : "Review shift"}</>}
+                    </button>
+                  </div>
+                  {/* Review content */}
+                  <div style={{ flex:1,overflowY:"auto",padding:"14px 16px" }}>
+                    {aiReview ? (
+                      aiReview.split("\n").filter(l => l.trim()).map((line, i) => {
+                        const isWarning = /⚠️|warning|conflict|leave|unfilled|not available/i.test(line);
+                        const isGood    = /✅|good|fully|covered|great/i.test(line);
+                        return (
+                          <div key={i} style={{ display:"flex",gap:"8px",marginBottom:"9px",alignItems:"flex-start" }}>
+                            <span style={{ fontSize:"13px",flexShrink:0,marginTop:"1px" }}>
+                              {isWarning ? "⚠️" : isGood ? "✅" : "•"}
+                            </span>
+                            <p style={{ fontSize:"12px",color:isWarning?"#B45309":isGood?"#047857":"#374151",fontWeight:isWarning||isGood?"600":"400",lineHeight:1.55,margin:0 }}>
+                              {line.replace(/^[-•·✅⚠️*]\s*/, "").trim()}
+                            </p>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:"10px",textAlign:"center" }}>
+                        <div style={{ width:"40px",height:"40px",borderRadius:"12px",background:"#EEF2FF",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                          <Sparkles size={18} color="#6366F1" />
+                        </div>
+                        <p style={{ fontSize:"12px",color:"#94A3B8",margin:0,lineHeight:1.6 }}>
+                          Click <strong style={{color:"#6366F1"}}>Review shift</strong> to check assignments, spot conflicts, and get staff suggestions.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
