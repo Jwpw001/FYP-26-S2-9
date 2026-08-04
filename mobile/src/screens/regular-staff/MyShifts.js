@@ -31,10 +31,9 @@ export default function MyShifts() {
     const staffId = myStaff?.[0]?.staff_id;
     if (!staffId) { setLoading(false); setRefreshing(false); return; }
 
-    const query = supabase.from("shift_assignments")
+    const query = supabase.from("task_assignments")
       .select(`assignment_id, status, acknowledged,
-        shifts ( shift_id, title, shift_date, start_time, end_time, status, outlets ( name ) ),
-        attendance ( attendance_id, status, clock_in, clock_out )`)
+        shifts ( shift_id, title, shift_date, start_time, end_time, status, branches ( name ) )`)
       .eq("staff_id", staffId);
 
     const { data } = await query;
@@ -52,7 +51,6 @@ export default function MyShifts() {
   useEffect(() => { load(); }, [load]);
 
   function renderItem({ item }) {
-    const attend = item.attendance?.[0];
     return (
       <View style={s.card}>
         <View style={s.cardTop}>
@@ -64,16 +62,10 @@ export default function MyShifts() {
           <View style={{ flex: 1 }}>
             <Text style={s.shiftTitle}>{item.shifts?.title || "Shift"}</Text>
             <Text style={s.shiftSub}>{fmtTime(item.shifts?.start_time)} – {fmtTime(item.shifts?.end_time)}</Text>
-            {item.shifts?.outlets?.name && <Text style={s.outlet}>📍 {item.shifts.outlets.name}</Text>}
+            {item.shifts?.branches?.name && <Text style={s.outlet}>📍 {item.shifts.branches.name}</Text>}
           </View>
           <Badge label={item.shifts?.status} variant={item.shifts?.status} />
         </View>
-        {(attend?.clock_in || attend?.clock_out) && (
-          <View style={s.attendRow}>
-            {attend.clock_in  && <Text style={s.attendText}>🟢 In: {attend.clock_in?.slice(11,16)}</Text>}
-            {attend.clock_out && <Text style={s.attendText}>🔴 Out: {attend.clock_out?.slice(11,16)}</Text>}
-          </View>
-        )}
         {!item.acknowledged && item.shifts?.status === "published" && (
           <View style={s.ackBanner}>
             <Text style={s.ackText}>Needs acknowledgement</Text>

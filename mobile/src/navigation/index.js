@@ -20,11 +20,6 @@ import CasualDashboard from "../screens/casual-staff/Dashboard";
 import CasualMyShifts from "../screens/casual-staff/MyShifts";
 import CasualAvailability from "../screens/casual-staff/WeeklyAvailability";
 
-// Krewby worker
-import WorkerDashboard from "../screens/krewby-worker/Dashboard";
-import WorkerMyJobs from "../screens/krewby-worker/MyJobs";
-import WorkerAvailability from "../screens/krewby-worker/Availability";
-
 // Shared
 import NotificationsScreen from "../screens/shared/Notifications";
 
@@ -84,25 +79,9 @@ function CasualStaffTabs() {
   );
 }
 
-function KrewbyWorkerTabs() {
-  return (
-    <Tab.Navigator screenOptions={TAB_OPTS}>
-      <Tab.Screen name="Dashboard" component={WorkerDashboard}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} /> }} />
-      <Tab.Screen name="My Jobs" component={WorkerMyJobs}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="💼" focused={focused} /> }} />
-      <Tab.Screen name="Availability" component={WorkerAvailability}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="📆" focused={focused} /> }} />
-      <Tab.Screen name="Notifications" component={NotificationsScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" focused={focused} /> }} />
-    </Tab.Navigator>
-  );
-}
-
 function RoleNavigator({ role }) {
   if (role === "regular_staff") return <RegularStaffTabs />;
   if (role === "outlet_casual_staff") return <CasualStaffTabs />;
-  if (role === "krewby_worker") return <KrewbyWorkerTabs />;
   return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ color: "#64748B", fontSize: 14 }}>

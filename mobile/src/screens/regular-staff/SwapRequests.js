@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Modal,
-  ScrollView, RefreshControl, ActivityIndicator,
+  ScrollView, RefreshControl, ActivityIndicator, TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
@@ -42,21 +42,24 @@ export default function SwapRequests() {
     if (!sid) { setLoading(false); setRefreshing(false); return; }
 
     const today = new Date().toISOString().split("T")[0];
-    const [{ data: reqs }, { data: shifts }] = await Promise.all([
-      supabase.from("swap_requests")
-        .select(`swap_id, status, request_type, reason, created_at,
-          requester_shift:shifts!swap_requests_requester_shift_id_fkey ( shift_id, title, shift_date, start_time, end_time )`)
-        .eq("requester_id", sid)
-        .order("created_at", { ascending: false }),
-      supabase.from("shift_assignments")
+    const [{ data: assignments }, { data: reqs }] = await Promise.all([
+      supabase.from("task_assignments")
         .select(`assignment_id, shifts ( shift_id, title, shift_date, start_time, end_time )`)
         .eq("staff_id", sid),
+      supabase.from("swap_requests")
+        .select("swap_id, status, request_type, reason, requester_assign")
+        .eq("requester_id", sid)
+        .order("swap_id", { ascending: false }),
     ]);
 
-    let arr = reqs || [];
+    const allAssignments = assignments || [];
+    const assignMap = {};
+    allAssignments.forEach(a => { assignMap[a.assignment_id] = a; });
+
+    let arr = (reqs || []).map(r => ({ ...r, _shift: assignMap[r.requester_assign]?.shifts || null }));
     if (filter !== "all") arr = arr.filter(r => r.status === filter);
     setRequests(arr);
-    setMyShifts((shifts || []).filter(s => s.shifts?.shift_date >= today));
+    setMyShifts(allAssignments.filter(a => a.shifts?.shift_date >= today));
     setLoading(false);
     setRefreshing(false);
   }, [filter]);
@@ -68,7 +71,7 @@ export default function SwapRequests() {
     setSaving(true);
     try {
       await supabase.from("swap_requests").insert({
-        requester_id: staffId, requester_shift_id: selectedShift,
+        requester_id: staffId, requester_assign: selectedShift,
         request_type: "swap", reason, status: "pending",
       });
       showToast("Swap request submitted!");
@@ -81,7 +84,7 @@ export default function SwapRequests() {
   }
 
   function renderItem({ item }) {
-    const shift = item.requester_shift;
+    const shift = item._shift;
     return (
       <View style={s.card}>
         <View style={s.cardTop}>
@@ -151,13 +154,13 @@ export default function SwapRequests() {
                 : myShifts.map(a => (
                   <TouchableOpacity
                     key={a.assignment_id}
-                    style={[s.shiftOption, selectedShift === a.shifts?.shift_id && s.shiftOptionActive]}
-                    onPress={() => setSelectedShift(a.shifts?.shift_id)}
+                    style={[s.shiftOption, selectedShift === a.assignment_id && s.shiftOptionActive]}
+                    onPress={() => setSelectedShift(a.assignment_id)}
                   >
-                    <Text style={[s.shiftOptionText, selectedShift === a.shifts?.shift_id && { color: "#fff" }]}>
+                    <Text style={[s.shiftOptionText, selectedShift === a.assignment_id && { color: "#fff" }]}>
                       {fmtDate(a.shifts?.shift_date)} · {fmtTime(a.shifts?.start_time)} – {fmtTime(a.shifts?.end_time)}
                     </Text>
-                    <Text style={[s.shiftOptionTitle, selectedShift === a.shifts?.shift_id && { color: "rgba(255,255,255,0.8)" }]}>
+                    <Text style={[s.shiftOptionTitle, selectedShift === a.assignment_id && { color: "rgba(255,255,255,0.8)" }]}>
                       {a.shifts?.title}
                     </Text>
                   </TouchableOpacity>
@@ -166,11 +169,14 @@ export default function SwapRequests() {
             </ScrollView>
 
             <Text style={[s.label, { marginTop: 14 }]}>Reason (optional)</Text>
-            <View style={[s.input, { height: 70 }]}>
-              <Text style={{ color: reason ? "#1E293B" : "#94A3B8", fontSize: 14 }} onPress={() => {}}>
-                {reason || "Briefly describe your reason..."}
-              </Text>
-            </View>
+            <TextInput
+              style={[s.input, { height: 70, textAlignVertical: "top" }]}
+              value={reason}
+              onChangeText={setReason}
+              placeholder="Briefly describe your reason..."
+              placeholderTextColor="#94A3B8"
+              multiline
+            />
 
             <View style={s.sheetBtns}>
               <TouchableOpacity style={s.cancelSheetBtn} onPress={() => setModal(false)}>
