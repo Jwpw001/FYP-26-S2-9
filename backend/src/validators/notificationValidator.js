@@ -1,7 +1,7 @@
 const { z } = require("zod");
 
 const createNotificationSchema = z.object({
-    user_id: z.number(),
+    recipient_id: z.number(),
 
     title: z.string().min(2, "Title is required"),
 
@@ -12,7 +12,11 @@ const createNotificationSchema = z.object({
         "attendance",
         "system",
         "request"
-    ])
+    ]),
+
+    related_entity: z.string().optional(),
+
+    related_id: z.number().optional()
 });
 
 const updateNotificationSchema = z.object({

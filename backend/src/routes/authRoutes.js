@@ -5,19 +5,8 @@ const {
     register,
     registerBusiness,
     login,
-    forgotPassword,
-    resetPassword,
     createStaffAccount,
     createManagerAccount,
-    createWorkerAccount,
-    getKrewbyWorkers,
-    getWorkerAvailability,
-    saveWorkerAvailability,
-    getWorkerAvailabilityById,
-    applyWorker,
-    getWorkerApplications,
-    approveWorkerApplication,
-    rejectWorkerApplication,
 } = require("../controllers/authController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -25,8 +14,6 @@ const validate = require("../middleware/validateMiddleware");
 const {
     registerSchema,
     loginSchema,
-    forgotPasswordSchema,
-    resetPasswordSchema
 } = require("../validators/authValidator");
 
 const protect = require("../middleware/authMiddleware");
@@ -39,20 +26,9 @@ router.get("/me", protect, (req, res) => {
 });
 
 router.post("/register", validate(registerSchema), register);
-router.post("/apply-worker", applyWorker);
-router.get("/coordinator/applications", protect, getWorkerApplications);
-router.post("/coordinator/applications/:id/approve", protect, approveWorkerApplication);
-router.post("/coordinator/applications/:id/reject", protect, rejectWorkerApplication);
 router.post("/register-business", registerBusiness);
 router.post("/create-staff", protect, createStaffAccount);
 router.post("/create-manager", protect, createManagerAccount);
-router.get("/krewby-workers", protect, getKrewbyWorkers);
-router.post("/create-worker", protect, createWorkerAccount);
-router.get("/worker-availability", protect, getWorkerAvailability);
-router.post("/worker-availability", protect, saveWorkerAvailability);
-router.get("/worker-availability-by-id", protect, getWorkerAvailabilityById);
 router.post("/login", validate(loginSchema), login);
-router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
-router.post("/reset-password", validate(resetPasswordSchema), resetPassword);
 
 module.exports = router;

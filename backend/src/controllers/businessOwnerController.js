@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { getLimits } = require("../utils/planLimits");
+const { logAudit } = require("../utils/auditLog");
 
 // Resolves business_id for both business owners and managers
 async function resolveBusinessId(user) {
@@ -29,6 +30,7 @@ const getMyBranches = async (req, res) => {
       .from("branches")
       .select("branch_id, name, address, business_id, open_time, close_time")
       .eq("business_id", biz.business_id)
+      .is("deleted_at", null)
       .order("branch_id");
     return res.json({ success: true, branches: branches || [] });
   } catch (error) {
@@ -48,7 +50,7 @@ const createBranch = async (req, res) => {
     // Enforce branch limit
     const limits = getLimits(biz.plan);
     if (limits.branches !== Infinity) {
-      const { count } = await supabaseAdmin.from("branches").select("*", { count: "exact", head: true }).eq("business_id", biz.business_id);
+      const { count } = await supabaseAdmin.from("branches").select("*", { count: "exact", head: true }).eq("business_id", biz.business_id).is("deleted_at", null);
       if ((count || 0) >= limits.branches) {
         return res.status(403).json({
           success: false,
@@ -106,7 +108,7 @@ const getAllStaff = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.json({ success: true, staff: [] });
 
-    const branches = await prisma.branches.findMany({ where: { business_id: biz.business_id }, select: { branch_id: true, name: true } });
+    const branches = await prisma.branches.findMany({ where: { business_id: biz.business_id, deleted_at: null }, select: { branch_id: true, name: true } });
     const branchIds = branches.map(o => o.branch_id);
     if (branchIds.length === 0) return res.json({ success: true, staff: [] });
 
@@ -131,7 +133,7 @@ const getAllManagers = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.json({ success: true, managers: [] });
 
-    const branches = await prisma.branches.findMany({ where: { business_id: biz.business_id }, select: { branch_id: true, name: true } });
+    const branches = await prisma.branches.findMany({ where: { business_id: biz.business_id, deleted_at: null }, select: { branch_id: true, name: true } });
     const branchIds = branches.map(o => o.branch_id);
     if (branchIds.length === 0) return res.json({ success: true, managers: [] });
 
@@ -376,11 +378,20 @@ const deleteBranch = async (req, res) => {
     if (!biz) return res.status(404).json({ success: false, message: "Business not found for this owner." });
 
     const branch = await prisma.branches.findUnique({ where: { branch_id: branch_id } });
-    if (!branch || branch.business_id !== biz.business_id) {
+    if (!branch || branch.business_id !== biz.business_id || branch.deleted_at) {
       return res.status(404).json({ success: false, message: "Branch not found." });
     }
 
-    await prisma.branches.delete({ where: { branch_id: branch_id } });
+    // Soft delete — a hard delete here cascades and permanently destroys every historical
+    // shift, timesheet, and swap record tied to the branch, which is both a record-retention
+    // problem and irreversible if a manager clicks this by mistake.
+    await prisma.branches.update({ where: { branch_id: branch_id }, data: { deleted_at: new Date() } });
+
+    await logAudit({
+      actorId: req.user.user_id, action: "branch_deleted", entity: "branches", entityId: branch_id,
+      before: { name: branch.name, business_id: branch.business_id }, after: null,
+    });
+
     return res.json({ success: true, message: "Branch deleted." });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -532,6 +543,33 @@ const getMyBusiness = async (req, res) => {
   }
 };
 
+const VALID_PLANS = ["free", "premium", "enterprise"];
+
+// PATCH /api/business/plan — the owner picks their own plan; there's no payment step yet, but
+// the update must still be scoped server-side to the caller's own business (owner_id from the
+// verified JWT), not trusted from the client the way a direct Supabase write from the browser would be.
+const updateMyBusinessPlan = async (req, res) => {
+  try {
+    const { plan } = req.body;
+    if (!VALID_PLANS.includes(plan)) {
+      return res.status(400).json({ success: false, message: "Invalid plan." });
+    }
+
+    const { data: biz, error: fetchErr } = await supabaseAdmin
+      .from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    const { data: updated, error } = await supabaseAdmin
+      .from("businesses").update({ plan }).eq("business_id", biz.business_id).select("plan").single();
+    if (error) throw new Error(error.message);
+
+    return res.json({ success: true, plan: updated.plan });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // ── Skill tags scoped to branch ───────────────────────────
 
 // GET /api/business/branches/:branch_id/skills
@@ -620,7 +658,7 @@ const getBusinessStats = async (req, res) => {
     const { data: biz } = await supabaseAdmin.from("businesses").select("business_id, name").eq("owner_id", req.user.user_id).maybeSingle();
     if (!biz) return res.json({ success: true, branches_count: 0, staff_count: 0, shifts_count: 0, active_invites: 0 });
 
-    const branches = await prisma.branches.findMany({ where: { business_id: biz.business_id }, select: { branch_id: true } });
+    const branches = await prisma.branches.findMany({ where: { business_id: biz.business_id, deleted_at: null }, select: { branch_id: true } });
     const branchIds = branches.map(o => o.branch_id);
 
     const [staffCount, shiftCount, inviteCount] = await Promise.all([
@@ -942,7 +980,7 @@ const getBranchSkillsSummary = async (req, res) => {
     if (!biz) return res.json({ success: true, branches: [] });
 
     const branches = await prisma.branches.findMany({
-      where: { business_id: biz.business_id },
+      where: { business_id: biz.business_id, deleted_at: null },
       orderBy: { name: "asc" },
       select: { branch_id: true, name: true },
     });
@@ -967,4 +1005,4 @@ const getBranchSkillsSummary = async (req, res) => {
   }
 };
 
-module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs };
+module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs };

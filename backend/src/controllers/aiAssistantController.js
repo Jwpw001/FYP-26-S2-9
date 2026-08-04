@@ -12,6 +12,9 @@ async function chat(req, res) {
     if (!question?.trim()) {
       return res.status(400).json({ success: false, message: "Question is required." });
     }
+    if (question.length > 2000) {
+      return res.status(400).json({ success: false, message: "Question is too long (max 2000 characters)." });
+    }
     if (!userId || !role) {
       return res.status(401).json({ success: false, message: "Unauthorized." });
     }

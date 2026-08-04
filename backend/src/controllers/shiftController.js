@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUsers } = require("../utils/notify");
+const { logAudit } = require("../utils/auditLog");
 
 async function getAssignedStaffUserIds(shiftId) {
   const assignments = await prisma.task_assignments.findMany({
@@ -183,6 +184,11 @@ const updateShift = async (req, res) => {
       }
     } catch { /* notification failure shouldn't block the update */ }
 
+    await logAudit({
+      actorId: req.user.user_id, action: "shift_updated", entity: "shifts", entityId: shiftId,
+      before: existing, after: { title: shift.title, shift_date: shift.shift_date, status: shift.status },
+    });
+
     res.json({ success: true, message: "Shift updated successfully", shift });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -224,6 +230,11 @@ const deleteShift = async (req, res) => {
         relatedId: shiftId,
       });
     } catch { /* notification failure shouldn't block the deletion */ }
+
+    await logAudit({
+      actorId: req.user.user_id, action: "shift_deleted", entity: "shifts", entityId: shiftId,
+      before: { title: existing.title, shift_date: existing.shift_date, status: existing.status }, after: null,
+    });
 
     res.json({ success: true, message: "Shift deleted successfully" });
   } catch (error) {

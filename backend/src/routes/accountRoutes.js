@@ -27,8 +27,7 @@ router.get(
         ROLES.BUSINESS_OWNER,
         ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.BRANCH_CASUAL_STAFF,
-        ROLES.KREWBY_CASUAL_WORKER
+        ROLES.BRANCH_CASUAL_STAFF
     ),
     getAccount
 );
@@ -41,8 +40,7 @@ router.patch(
         ROLES.BUSINESS_OWNER,
         ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.BRANCH_CASUAL_STAFF,
-        ROLES.KREWBY_CASUAL_WORKER
+        ROLES.BRANCH_CASUAL_STAFF
     ),
     validate(updateAccountSchema),
     updateAccount
@@ -55,8 +53,7 @@ router.get(
         ROLES.SYSTEM_ADMIN,
         ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
-        ROLES.BRANCH_CASUAL_STAFF,
-        ROLES.KREWBY_CASUAL_WORKER
+        ROLES.BRANCH_CASUAL_STAFF
     ),
     getAccountSkills
 );

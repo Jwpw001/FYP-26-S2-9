@@ -10,28 +10,16 @@ const registerSchema = z.object({
         "business_owner",
         "manager",
         "regular_staff",
-        "casual_staff",
-        "krewby_casual_worker"
+        "casual_staff"
     ]).optional().nullable(),
 });
 
 const loginSchema = z.object({
     email: z.string().email("Invalid email format"),
-    password: z.string().optional()
-});
-
-const forgotPasswordSchema = z.object({
-    email: z.string().email("Invalid email format")
-});
-
-const resetPasswordSchema = z.object({
-    token: z.string().min(1, "Reset token is required"),
-    new_password: z.string().min(6, "Password must be at least 6 characters")
+    password: z.string().min(1, "Password is required")
 });
 
 module.exports = {
     registerSchema,
     loginSchema,
-    forgotPasswordSchema,
-    resetPasswordSchema
 };

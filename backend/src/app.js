@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const errorHandler = require("./middleware/errorMiddleware");
 const authRoutes = require("./routes/authRoutes");
@@ -11,7 +13,6 @@ const availabilityRoutes = require("./routes/availabilityRoutes");
 const shiftRoutes = require("./routes/shiftRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
-const attendanceRoutes = require("./routes/attendanceRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const aiAssistantRoutes = require("./routes/aiAssistantRoutes");
 const invitationRoutes = require("./routes/invitationRoutes");
@@ -22,9 +23,46 @@ const timesheetRoutes = require("./routes/timesheetRoutes");
 
 const app = express();
 
-app.use(cors());
+// Same-origin dev servers (Vite/Expo) plus whatever the deployed frontend's origin is —
+// set FRONTEND_URL in production so the API isn't reachable cross-origin from arbitrary sites.
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:8081",
+    process.env.FRONTEND_URL,
+].filter(Boolean);
+
+// Baseline security headers (X-Content-Type-Options, X-Frame-Options, HSTS, etc.) —
+// this is a pure JSON API with no HTML views, so helmet's default CSP is a no-op here.
+app.use(helmet());
+
+app.use(cors({
+    origin(origin, callback) {
+        // Allow no-origin requests (curl, mobile apps, server-to-server) and any allow-listed origin.
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error("Not allowed by CORS"));
+    },
+}));
 app.use(express.json());
 app.use(morgan("dev"));
+
+// Blanket rate limit across the API; login/register get a tighter limit below to slow brute-forcing.
+app.use(rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+}));
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: "Too many attempts. Please try again later." },
+});
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/register-business", authLimiter);
 
 app.get("/api/health", (req, res) => {
     res.status(200).json({
@@ -41,7 +79,6 @@ app.use("/api/availability", availabilityRoutes);
 app.use("/api/shifts", shiftRoutes);
 app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/notifications", notificationRoutes);
-app.use("/api/attendance", attendanceRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/ai-assistant", aiAssistantRoutes);
 app.use("/api/invitations", invitationRoutes);

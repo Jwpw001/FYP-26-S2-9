@@ -1,6 +1,8 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUser } = require("../utils/notify");
+const { checkLaborRules } = require("./taskController");
+const { logAudit } = require("../utils/auditLog");
 
 const ALLOWED_TOOLS = ["approve_leave", "reject_leave", "create_draft_shift", "assign_staff_to_task"];
 
@@ -62,6 +64,11 @@ async function execute(req, res) {
         data: { status: "approved" },
       });
 
+      await logAudit({
+        actorId: userId, action: "leave_approved", entity: "availability", entityId: Number(request_id),
+        before: { status: "pending" }, after: { status: "approved", via: "ai_assistant" },
+      });
+
       if (leave.staff?.user_id) {
         const from = leave.start_date ? new Date(leave.start_date).toISOString().slice(0, 10) : "?";
         const to   = leave.end_date   ? new Date(leave.end_date).toISOString().slice(0, 10)   : "?";
@@ -97,6 +104,11 @@ async function execute(req, res) {
         data: { status: "rejected" },
       });
 
+      await logAudit({
+        actorId: userId, action: "leave_rejected", entity: "availability", entityId: Number(request_id),
+        before: { status: "pending" }, after: { status: "rejected", reason: reason || null, via: "ai_assistant" },
+      });
+
       if (leave.staff?.user_id) {
         await notifyUser({
           recipientId: leave.staff.user_id,
@@ -127,6 +139,11 @@ async function execute(req, res) {
           status: "draft",
           created_by: userId,
         },
+      });
+
+      await logAudit({
+        actorId: userId, action: "shift_created", entity: "shifts", entityId: shift.shift_id,
+        before: null, after: { title, shift_date, start_time, end_time, status: "draft", via: "ai_assistant" },
       });
 
       message = `Draft shift "${title}" created for ${shift_date} (${start_time}–${end_time}). Shift ID: ${shift.shift_id}. Head to the Shifts page to add tasks and publish it.`;
@@ -161,8 +178,18 @@ async function execute(req, res) {
         return res.status(400).json({ success: false, message: `${staff_name} is already assigned to this task.` });
       }
 
-      await prisma.task_assignments.create({
+      const laborCheckFailure = await checkLaborRules(Number(staff_id), task.shift_id, branchId);
+      if (laborCheckFailure) {
+        return res.status(409).json({ success: false, message: laborCheckFailure });
+      }
+
+      const newAssignment = await prisma.task_assignments.create({
         data: { task_id: Number(task_id), staff_id: Number(staff_id) },
+      });
+
+      await logAudit({
+        actorId: userId, action: "staff_assigned", entity: "task_assignments", entityId: newAssignment.assignment_id,
+        before: null, after: { task_id: Number(task_id), staff_id: Number(staff_id), via: "ai_assistant" },
       });
 
       message = `${staff_name} has been assigned to "${task_name}" in "${shift_title}".`;
