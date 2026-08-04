@@ -49,26 +49,26 @@ function OptionCard({ icon: Icon, title, tagline, desc, bullets, accentColor, ac
         <Icon size={26} color={accentColor} />
       </div>
 
-      <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: accentColor, marginBottom: "8px" }}>
+      <p style={{ fontSize: "18px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: accentColor, marginBottom: "8px" }}>
         {tagline}
       </p>
-      <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "12px", letterSpacing: "-0.02em" }}>
+      <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", marginBottom: "12px", letterSpacing: "-0.02em" }}>
         {title}
       </h2>
-      <p style={{ fontSize: "14px", color: "#64748B", lineHeight: 1.7, marginBottom: "20px" }}>
+      <p style={{ fontSize: "21px", color: "#64748B", lineHeight: 1.7, marginBottom: "20px" }}>
         {desc}
       </p>
 
       <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", display: "flex", flexDirection: "column", gap: "10px" }}>
         {bullets.map(b => (
-          <li key={b} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "13px", color: "#475569" }}>
+          <li key={b} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "20px", color: "#475569" }}>
             <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: accentBg, color: accentColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}><Check size={11} strokeWidth={3} /></span>
             {b}
           </li>
         ))}
       </ul>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: accentColor, fontWeight: "700", fontSize: "14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: accentColor, fontWeight: "700", fontSize: "21px" }}>
         Get started <ArrowIcon />
       </div>
     </button>
@@ -86,7 +86,7 @@ export default function GetStarted() {
         <button onClick={() => goTo("/")} style={{ display: "flex", alignItems: "center", gap: "10px", background: "none", border: "none", cursor: "pointer" }}>
           <img src="/logo_noText.png" alt="Krewby" style={{ height: "30px", objectFit: "contain" }} />
         </button>
-        <button onClick={() => goTo("/login")} style={{ background: "none", border: "1.5px solid #E2E8F0", color: "#64748B", padding: "8px 18px", borderRadius: "9px", fontWeight: "600", fontSize: "14px", cursor: "pointer" }}>
+        <button onClick={() => goTo("/login")} style={{ background: "none", border: "1.5px solid #E2E8F0", color: "#64748B", padding: "8px 18px", borderRadius: "9px", fontWeight: "600", fontSize: "21px", cursor: "pointer" }}>
           Already have an account? Log in
         </button>
       </nav>
@@ -96,13 +96,13 @@ export default function GetStarted() {
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "52px", animation: "fadeInUp 0.5s ease both" }}>
-          <span style={{ display: "inline-block", fontSize: "11px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: "#3B82F6", background: "#EFF6FF", padding: "5px 14px", borderRadius: "100px", marginBottom: "20px", border: "1px solid #BFDBFE" }}>
+          <span style={{ display: "inline-block", fontSize: "18px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: "#3B82F6", background: "#EFF6FF", padding: "5px 14px", borderRadius: "100px", marginBottom: "20px", border: "1px solid #BFDBFE" }}>
             Join Krewby
           </span>
           <h1 style={{ fontSize: "clamp(28px,4vw,44px)", fontWeight: "800", color: "#0F172A", letterSpacing: "-0.03em", marginBottom: "14px" }}>
             How would you like to get started?
           </h1>
-          <p style={{ fontSize: "16px", color: "#64748B", maxWidth: "480px", lineHeight: 1.7, margin: "0 auto" }}>
+          <p style={{ fontSize: "21px", color: "#64748B", maxWidth: "480px", lineHeight: 1.7, margin: "0 auto" }}>
             Choose the option that best describes you. We'll set up the right experience from the start.
           </p>
         </div>

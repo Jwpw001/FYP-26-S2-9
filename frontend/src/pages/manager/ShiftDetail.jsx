@@ -9,6 +9,7 @@ import {
   Tag, Check, Users, GripVertical, Search, Pencil,
 } from "lucide-react";
 import { api } from "../../lib/api";
+import { toTitleCase } from "../../utils/text";
 
 if (typeof document !== "undefined" && !document.getElementById("sd2-styles")) {
   const style = document.createElement("style");
@@ -34,10 +35,10 @@ function calcYears(hired_at) {
 }
 
 const DIFF_STYLES = {
-  junior: { badge: { display:"inline-flex",alignItems:"center",gap:"3px",fontSize:"10px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#F0FDF4",color:"#15803D",border:"1px solid #BBF7D0" }, icon:"🟢" },
-  mid:    { badge: { display:"inline-flex",alignItems:"center",gap:"3px",fontSize:"10px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#EFF6FF",color:"#1D4ED8",border:"1px solid #BFDBFE" }, icon:"🔵" },
-  senior: { badge: { display:"inline-flex",alignItems:"center",gap:"3px",fontSize:"10px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#FFF7ED",color:"#C2410C",border:"1px solid #FED7AA" }, icon:"🟠" },
-  expert: { badge: { display:"inline-flex",alignItems:"center",gap:"3px",fontSize:"10px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#FDF4FF",color:"#7E22CE",border:"1px solid #E9D5FF" }, icon:"🟣" },
+  junior: { badge: { display:"inline-flex",alignItems:"center",gap:"3px",fontSize:"17px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#F0FDF4",color:"#15803D",border:"1px solid #BBF7D0" }, icon:"🟢" },
+  mid:    { badge: { display:"inline-flex",alignItems:"center",gap:"3px",fontSize:"17px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#EFF6FF",color:"#1D4ED8",border:"1px solid #BFDBFE" }, icon:"🔵" },
+  senior: { badge: { display:"inline-flex",alignItems:"center",gap:"3px",fontSize:"17px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#FFF7ED",color:"#C2410C",border:"1px solid #FED7AA" }, icon:"🟠" },
+  expert: { badge: { display:"inline-flex",alignItems:"center",gap:"3px",fontSize:"17px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#FDF4FF",color:"#7E22CE",border:"1px solid #E9D5FF" }, icon:"🟣" },
 };
 
 const STATUS_STYLES = {
@@ -150,8 +151,9 @@ export default function ShiftDetail() {
     if (!editShiftForm.title.trim()) { showToast("Title is required.", "error"); return; }
     setSavingShiftEdit(true);
     try {
+      const title = toTitleCase(editShiftForm.title.trim());
       const { error } = await supabase.from("shifts").update({
-        title:      editShiftForm.title.trim(),
+        title,
         shift_date: editShiftForm.shift_date || undefined,
         start_time: editShiftForm.start_time || undefined,
         end_time:   editShiftForm.end_time   || undefined,
@@ -160,7 +162,7 @@ export default function ShiftDetail() {
       if (error) throw error;
       setShift(p => ({
         ...p,
-        title:      editShiftForm.title.trim(),
+        title,
         shift_date: editShiftForm.shift_date,
         start_time: editShiftForm.start_time,
         end_time:   editShiftForm.end_time,
@@ -188,7 +190,7 @@ export default function ShiftDetail() {
     setSavingTaskEdit(true);
     try {
       const res = await api.patch(`/api/shifts/tasks/${taskId}`, {
-        title:      editTaskForm.title.trim(),
+        title:      toTitleCase(editTaskForm.title.trim()),
         skill_id:   editTaskForm.skill_id ? Number(editTaskForm.skill_id) : null,
         difficulty: editTaskForm.difficulty || null,
         start_time: editTaskForm.start_time || null,
@@ -256,7 +258,7 @@ export default function ShiftDetail() {
     setSavingTask(true);
     try {
       const res = await api.post(`/api/shifts/${id}/tasks`, {
-        title:      taskForm.title.trim(),
+        title:      toTitleCase(taskForm.title.trim()),
         skill_id:   taskForm.skill_id ? Number(taskForm.skill_id) : null,
         difficulty: taskForm.difficulty || null,
         start_time: taskForm.start_time || null,
@@ -501,7 +503,7 @@ export default function ShiftDetail() {
             {canAssign && (
               <button
                 onClick={()=>{setShowTaskForm(v=>!v);setTaskForm({title:"",skill_id:"",start_time:"",end_time:""}); }}
-                style={{background:showTaskForm?"#F1F5F9":"#0F172A",color:showTaskForm?"#64748B":"#FFF",border:"none",padding:"8px 16px",borderRadius:"9px",fontSize:"13px",fontWeight:"600",cursor:"pointer"}}>
+                style={{background:showTaskForm?"#F1F5F9":"#0F172A",color:showTaskForm?"#64748B":"#FFF",border:"none",padding:"8px 16px",borderRadius:"9px",fontSize:"20px",fontWeight:"600",cursor:"pointer"}}>
                 {showTaskForm?"Cancel":"+ Add Task"}
               </button>
             )}
@@ -511,7 +513,7 @@ export default function ShiftDetail() {
         {/* Add task form */}
         {showTaskForm && (
           <div style={{background:"#F8FAFC",border:"1.5px solid #BFDBFE",borderRadius:"14px",padding:"20px",marginBottom:"20px"}}>
-            <p style={{fontSize:"14px",fontWeight:"700",color:"#1E293B",marginBottom:"16px"}}>New Task</p>
+            <p style={{fontSize:"21px",fontWeight:"700",color:"#1E293B",marginBottom:"16px"}}>New Task</p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 160px 140px 100px 100px",gap:"12px",marginBottom:"16px"}}>
               <div>
                 <label style={s.formLabel}>Task Name *</label>
@@ -551,7 +553,7 @@ export default function ShiftDetail() {
               </div>
             </div>
             <button onClick={addTask} disabled={savingTask}
-              style={{background:savingTask?"#93C5FD":"#2563EB",color:"#FFF",border:"none",padding:"9px 22px",borderRadius:"9px",fontSize:"14px",fontWeight:"700",cursor:savingTask?"default":"pointer"}}>
+              style={{background:savingTask?"#93C5FD":"#2563EB",color:"#FFF",border:"none",padding:"9px 22px",borderRadius:"9px",fontSize:"21px",fontWeight:"700",cursor:savingTask?"default":"pointer"}}>
               {savingTask?"Adding…":"Add Task"}
             </button>
           </div>
@@ -561,8 +563,8 @@ export default function ShiftDetail() {
         {tasks.length===0 ? (
           <div style={{textAlign:"center",padding:"48px 20px",background:"#FFF",border:"1px solid #E2E8F0",borderRadius:"14px"}}>
             <div style={{marginBottom:"12px",opacity:.4}}><Tag size={36} color="#64748B"/></div>
-            <p style={{fontSize:"15px",fontWeight:"600",color:"#64748B",marginBottom:"4px"}}>No tasks yet</p>
-            <p style={{fontSize:"13px",color:"#94A3B8"}}>Click "+ Add Task" to define the work for this shift.</p>
+            <p style={{fontSize:"22px",fontWeight:"600",color:"#64748B",marginBottom:"4px"}}>No tasks yet</p>
+            <p style={{fontSize:"20px",color:"#94A3B8"}}>Click "+ Add Task" to define the work for this shift.</p>
           </div>
         ) : tasks.map(task => {
           const assignee     = task.task_assignments?.[0];
@@ -635,7 +637,7 @@ export default function ShiftDetail() {
                   </div>
                   <div style={{display:"flex",gap:"8px"}}>
                     <button onClick={()=>saveEditTask(task.task_id)} disabled={savingTaskEdit}
-                      style={{background:savingTaskEdit?"#93C5FD":"#2563EB",color:"#FFF",border:"none",padding:"7px 18px",borderRadius:"8px",fontSize:"13px",fontWeight:"700",cursor:savingTaskEdit?"default":"pointer"}}>
+                      style={{background:savingTaskEdit?"#93C5FD":"#2563EB",color:"#FFF",border:"none",padding:"7px 18px",borderRadius:"8px",fontSize:"20px",fontWeight:"700",cursor:savingTaskEdit?"default":"pointer"}}>
                       {savingTaskEdit?"Saving…":"Save"}
                     </button>
                     <button onClick={()=>setEditTaskId(null)} style={s.ghostBtn}>Cancel</button>
@@ -649,8 +651,8 @@ export default function ShiftDetail() {
                     <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
                       <p style={s.taskTitle}>{task.title}</p>
                       <span style={{...s.taskStatusBadge,background:st.bg,color:st.color}}>{st.label}</span>
-                      {isDropZone && isDragOver && <span style={{fontSize:"11px",color:"#2563EB",fontWeight:"600"}}>Drop here</span>}
-                      {isDropZone && !isDragOver && !isDropping && <span style={{fontSize:"11px",color:"#94A3B8",fontStyle:"italic"}}>← drag staff here</span>}
+                      {isDropZone && isDragOver && <span style={{fontSize:"18px",color:"#2563EB",fontWeight:"600"}}>Drop here</span>}
+                      {isDropZone && !isDragOver && !isDropping && <span style={{fontSize:"18px",color:"#94A3B8",fontStyle:"italic"}}>← drag staff here</span>}
                       {isDropping && <span style={{width:"14px",height:"14px",borderRadius:"50%",border:"2px solid #E2E8F0",borderTopColor:"#2563EB",animation:"spin .7s linear infinite",display:"inline-block"}}/>}
                     </div>
                     <div style={{display:"flex",gap:"6px",flexWrap:"wrap",marginTop:"5px"}}>
@@ -709,15 +711,15 @@ export default function ShiftDetail() {
                   {aiNote.loading ? (
                     <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
                       <span style={{width:"12px",height:"12px",borderRadius:"50%",border:"2px solid #E2E8F0",borderTopColor:"#6366F1",animation:"spin .7s linear infinite",display:"inline-block",flexShrink:0}}/>
-                      <span style={{fontSize:"12px",color:"#94A3B8"}}>AI is evaluating this assignment…</span>
+                      <span style={{fontSize:"19px",color:"#94A3B8"}}>AI is evaluating this assignment…</span>
                     </div>
                   ) : (
                     <div style={{display:"flex",alignItems:"flex-start",gap:"8px"}}>
-                      <span style={{fontSize:"14px",flexShrink:0,marginTop:"1px"}}>{aiNote.suitable?"✅":"⚠️"}</span>
+                      <span style={{fontSize:"21px",flexShrink:0,marginTop:"1px"}}>{aiNote.suitable?"✅":"⚠️"}</span>
                       <div style={{flex:1,minWidth:0}}>
-                        <p style={{fontSize:"12px",color:"#1E293B",lineHeight:1.5}}>{aiNote.message}</p>
+                        <p style={{fontSize:"19px",color:"#1E293B",lineHeight:1.5}}>{aiNote.message}</p>
                         {aiNote.alternative && (
-                          <p style={{fontSize:"11px",color:"#92400E",marginTop:"4px",fontWeight:"600"}}>
+                          <p style={{fontSize:"18px",color:"#92400E",marginTop:"4px",fontWeight:"600"}}>
                             💡 Consider <strong>{aiNote.alternative.name}</strong> — {aiNote.alternative.reason}
                           </p>
                         )}
@@ -754,10 +756,10 @@ export default function ShiftDetail() {
           <div style={{padding:"16px 18px 0",flexShrink:0}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px"}}>
               <div>
-                <h3 style={{fontSize:"15px",fontWeight:"800",color:"#0F172A",letterSpacing:"-0.2px"}}>Staff Roster</h3>
+                <h3 style={{fontSize:"22px",fontWeight:"800",color:"#0F172A",letterSpacing:"-0.2px"}}>Staff Roster</h3>
                 {activeTask
-                  ? <p style={{fontSize:"11px",color:"#6366F1",marginTop:"2px",fontWeight:"600"}}>Assigning: {activeTask.title}</p>
-                  : <p style={{fontSize:"11px",color:"#94A3B8",marginTop:"2px"}}>Select a task to assign</p>}
+                  ? <p style={{fontSize:"18px",color:"#6366F1",marginTop:"2px",fontWeight:"600"}}>Assigning: {activeTask.title}</p>
+                  : <p style={{fontSize:"18px",color:"#94A3B8",marginTop:"2px"}}>Select a task to assign</p>}
               </div>
               <button style={{background:"none",border:"none",cursor:"pointer",color:"#94A3B8",display:"flex",padding:"4px",marginTop:"2px"}} onClick={()=>setRosterOpen(false)}>
                 <X size={17}/>
@@ -772,8 +774,8 @@ export default function ShiftDetail() {
                 {label:"On Leave",  val:roster.filter(r=>r.is_on_leave).length, color:"#DC2626", bg:"#FEF2F2"},
               ].map(stat=>(
                 <div key={stat.label} style={{flex:1,background:stat.bg,borderRadius:"8px",padding:"6px 8px",textAlign:"center"}}>
-                  <p style={{fontSize:"15px",fontWeight:"800",color:stat.color,lineHeight:1}}>{stat.val}</p>
-                  <p style={{fontSize:"9px",fontWeight:"600",color:stat.color,opacity:.7,marginTop:"2px",textTransform:"uppercase",letterSpacing:".04em"}}>{stat.label}</p>
+                  <p style={{fontSize:"22px",fontWeight:"800",color:stat.color,lineHeight:1}}>{stat.val}</p>
+                  <p style={{fontSize:"16px",fontWeight:"600",color:stat.color,opacity:.7,marginTop:"2px",textTransform:"uppercase",letterSpacing:".04em"}}>{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -785,7 +787,7 @@ export default function ShiftDetail() {
                 placeholder="Search by name…"
                 value={rosterSearch}
                 onChange={e=>setRosterSearch(e.target.value)}
-                style={{width:"100%",padding:"8px 10px 8px 30px",border:"1.5px solid #E2E8F0",borderRadius:"9px",fontSize:"13px",color:"#1E293B",background:"#F8FAFC",boxSizing:"border-box",outline:"none"}}
+                style={{width:"100%",padding:"8px 10px 8px 30px",border:"1.5px solid #E2E8F0",borderRadius:"9px",fontSize:"20px",color:"#1E293B",background:"#F8FAFC",boxSizing:"border-box",outline:"none"}}
               />
               {rosterSearch && (
                 <button onClick={()=>setRosterSearch("")} style={{position:"absolute",right:"8px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"#94A3B8",padding:"2px",display:"flex"}}>
@@ -802,7 +804,7 @@ export default function ShiftDetail() {
                 ...(activeTask?.skill_id ? [{v:"skilled",l:`Has Skill (${skilledCount})`}] : []),
               ].map(f=>(
                 <button key={f.v} onClick={()=>setRosterFilter(f.v)}
-                  style={{fontSize:"11px",fontWeight:"600",padding:"4px 9px",borderRadius:"100px",border:"none",cursor:"pointer",
+                  style={{fontSize:"18px",fontWeight:"600",padding:"4px 9px",borderRadius:"100px",border:"none",cursor:"pointer",
                     background:rosterFilter===f.v?"#0F172A":"#F1F5F9",
                     color:rosterFilter===f.v?"#FFF":"#64748B",
                     transition:"background 0.15s"}}>
@@ -820,7 +822,7 @@ export default function ShiftDetail() {
                   {v:"casual", l:`Casual (${casualCount})`},
                 ].map(f=>(
                   <button key={f.v} onClick={()=>setRosterTypeFilter(f.v)}
-                    style={{fontSize:"10px",fontWeight:"600",padding:"3px 8px",borderRadius:"100px",
+                    style={{fontSize:"17px",fontWeight:"600",padding:"3px 8px",borderRadius:"100px",
                       border:`1px solid ${rosterTypeFilter===f.v?"#6366F1":"#E2E8F0"}`,
                       cursor:"pointer",
                       background:rosterTypeFilter===f.v?"#EDE9FE":"#FFF",
@@ -850,7 +852,7 @@ export default function ShiftDetail() {
 
           {/* Drag hint */}
           <div style={{padding:"6px 18px",background:"#F0F7FF",borderBottom:"1px solid #DBEAFE",flexShrink:0}}>
-            <p style={{fontSize:"11px",color:"#1D4ED8",fontWeight:"600"}}>🖱 Drag a card onto a task to assign</p>
+            <p style={{fontSize:"18px",color:"#1D4ED8",fontWeight:"600"}}>🖱 Drag a card onto a task to assign</p>
           </div>
 
           {/* Staff list */}
@@ -860,7 +862,7 @@ export default function ShiftDetail() {
                 {[1,2,3,4,5].map(i=><Shimmer key={i} h="70px" r="10px"/>)}
               </div>
             ) : filteredRoster.length===0 ? (
-              <div style={{textAlign:"center",padding:"32px 0",color:"#94A3B8",fontSize:"13px"}}>
+              <div style={{textAlign:"center",padding:"32px 0",color:"#94A3B8",fontSize:"20px"}}>
                 {roster.length===0 ? "No staff found for this branch." : "No staff match this filter."}
               </div>
             ) : filteredRoster.map((staff,idx) => {
@@ -897,40 +899,40 @@ export default function ShiftDetail() {
                   {draggable && <GripVertical size={13} color="#CBD5E1" style={{flexShrink:0,marginTop:"2px"}}/>}
                   <div style={{width:"34px",height:"34px",borderRadius:"50%",flexShrink:0,
                     background:isBest?"#6366F1":quality&&!isCanConsider?"#2563EB":isCanConsider?"#D97706":isUnavailable?"#EF4444":"#94A3B8",
-                    color:"#FFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:"700"}}>
+                    color:"#FFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",fontWeight:"700"}}>
                     {staff.full_name[0]?.toUpperCase()}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
 
                     {/* Row 1: Name + top badge */}
                     <div style={{display:"flex",alignItems:"center",gap:"5px",flexWrap:"wrap"}}>
-                      <p style={{fontSize:"13px",fontWeight:"700",color:"#0F172A"}}>{staff.full_name}</p>
-                      {isBest && <span style={{fontSize:"9px",fontWeight:"800",color:"#6366F1",background:"#EDE9FE",padding:"2px 6px",borderRadius:"100px",letterSpacing:".03em"}}>★ Best Match</span>}
+                      <p style={{fontSize:"20px",fontWeight:"700",color:"#0F172A"}}>{staff.full_name}</p>
+                      {isBest && <span style={{fontSize:"16px",fontWeight:"800",color:"#6366F1",background:"#EDE9FE",padding:"2px 6px",borderRadius:"100px",letterSpacing:".03em"}}>★ Best Match</span>}
                     </div>
 
                     {/* Row 2: Type · Hours · Exp level */}
                     <div style={{display:"flex",alignItems:"center",gap:"5px",flexWrap:"wrap",marginTop:"3px"}}>
-                      <span style={{fontSize:"10px",fontWeight:"600",padding:"1px 6px",borderRadius:"100px",
+                      <span style={{fontSize:"17px",fontWeight:"600",padding:"1px 6px",borderRadius:"100px",
                         background:staff.staff_type==="casual"?"#FFF7ED":"#F1F5F9",
                         color:staff.staff_type==="casual"?"#C2410C":"#475569"}}>
                         {staff.staff_type==="casual"?"Casual":"Regular"}
                       </span>
-                      <span style={{fontSize:"10px",color:"#94A3B8"}}>·</span>
-                      <span style={{fontSize:"10px",fontWeight:"600",color:overHours?"#DC2626":"#64748B"}}>
+                      <span style={{fontSize:"17px",color:"#94A3B8"}}>·</span>
+                      <span style={{fontSize:"17px",fontWeight:"600",color:overHours?"#DC2626":"#64748B"}}>
                         {staff.hours_this_week}h/wk{overHours?" ⚠":""}
                       </span>
                       {staff.exp_level && DIFF_STYLES[staff.exp_level] && (
                         <>
-                          <span style={{fontSize:"10px",color:"#94A3B8"}}>·</span>
-                          <span style={{...DIFF_STYLES[staff.exp_level].badge,padding:"1px 6px",fontSize:"9px"}}>
+                          <span style={{fontSize:"17px",color:"#94A3B8"}}>·</span>
+                          <span style={{...DIFF_STYLES[staff.exp_level].badge,padding:"1px 6px",fontSize:"16px"}}>
                             {DIFF_STYLES[staff.exp_level].icon} {staff.exp_level.charAt(0).toUpperCase()+staff.exp_level.slice(1)}
                           </span>
                         </>
                       )}
                       {staff.staff_type==="casual" && staff.casual_avail_from && (
                         <>
-                          <span style={{fontSize:"10px",color:"#94A3B8"}}>·</span>
-                          <span style={{fontSize:"9px",fontWeight:"600",color:"#0369A1",background:"#F0F9FF",border:"1px solid #BAE6FD",padding:"1px 6px",borderRadius:"100px"}}>
+                          <span style={{fontSize:"17px",color:"#94A3B8"}}>·</span>
+                          <span style={{fontSize:"16px",fontWeight:"600",color:"#0369A1",background:"#F0F9FF",border:"1px solid #BAE6FD",padding:"1px 6px",borderRadius:"100px"}}>
                             🕐 {staff.casual_avail_from}–{staff.casual_avail_to}
                           </span>
                         </>
@@ -953,15 +955,15 @@ export default function ShiftDetail() {
                           </span>
                         )}
                         {staff.other_shift_today && (
-                          <span style={{fontSize:"9px",fontWeight:"700",color:"#92400E",background:"#FEF3C7",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FDE68A"}}>
+                          <span style={{fontSize:"16px",fontWeight:"700",color:"#92400E",background:"#FEF3C7",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FDE68A"}}>
                             Also working today · {staff.other_shift_today.title}
                             {staff.other_shift_today.start_time && ` ${staff.other_shift_today.start_time}–${staff.other_shift_today.end_time}`}
                           </span>
                         )}
                         {isAssigned             && <span style={s.badgeGray}>Already Assigned</span>}
-                        {underQualified         && <span style={{fontSize:"9px",fontWeight:"700",color:"#991B1B",background:"#FEE2E2",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FECACA"}}>⚠ Below required level</span>}
+                        {underQualified         && <span style={{fontSize:"16px",fontWeight:"700",color:"#991B1B",background:"#FEE2E2",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FECACA"}}>⚠ Below required level</span>}
                         {isCanConsider          && (
-                          <span style={{fontSize:"9px",fontWeight:"700",color:"#92400E",background:"#FEF3C7",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FDE68A"}}>
+                          <span style={{fontSize:"16px",fontWeight:"700",color:"#92400E",background:"#FEF3C7",padding:"1px 6px",borderRadius:"100px",border:"1px solid #FDE68A"}}>
                             ⚡ Can Consider · {staff.casual_avail_from
                               ? `Available ${staff.casual_avail_from}–${staff.casual_avail_to}, task needs ${toHHMM(activeTask?.start_time)}–${toHHMM(activeTask?.end_time)}`
                               : "No avail. declared"}
@@ -979,12 +981,12 @@ export default function ShiftDetail() {
                           return (
                             <>
                               {matchingSk.map(sk => (
-                                <span key={sk.skill_id} style={{fontSize:"10px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#EDE9FE",color:"#5B21B6",border:"1px solid #DDD6FE",display:"inline-flex",alignItems:"center",gap:"3px"}}>
+                                <span key={sk.skill_id} style={{fontSize:"17px",fontWeight:"700",padding:"2px 7px",borderRadius:"100px",background:"#EDE9FE",color:"#5B21B6",border:"1px solid #DDD6FE",display:"inline-flex",alignItems:"center",gap:"3px"}}>
                                   ✓ {sk.name}{sk.experience_level ? ` · ${sk.experience_level.charAt(0).toUpperCase()+sk.experience_level.slice(1)}` : ""}
                                 </span>
                               ))}
                               {otherSk.map(sk => (
-                                <span key={sk.skill_id} style={{fontSize:"9px",fontWeight:"500",padding:"2px 6px",borderRadius:"100px",background:"#F1F5F9",color:"#64748B"}}>
+                                <span key={sk.skill_id} style={{fontSize:"16px",fontWeight:"500",padding:"2px 6px",borderRadius:"100px",background:"#F1F5F9",color:"#64748B"}}>
                                   {sk.name}
                                 </span>
                               ))}
@@ -1001,7 +1003,7 @@ export default function ShiftDetail() {
 
           {/* Footer */}
           <div style={{padding:"10px 18px",borderTop:"1px solid #F1F5F9",flexShrink:0,background:"#FAFAFA"}}>
-            <p style={{fontSize:"11px",color:"#94A3B8",textAlign:"center"}}>
+            <p style={{fontSize:"18px",color:"#94A3B8",textAlign:"center"}}>
               {filteredRoster.length} shown · {availableCount} available · {roster.filter(r=>r.already_assigned).length} assigned
             </p>
           </div>
@@ -1050,7 +1052,7 @@ export default function ShiftDetail() {
             <div style={{display:"flex",gap:"8px",justifyContent:"flex-end",marginTop:"22px"}}>
               <button style={s.ghostBtn} onClick={()=>setEditShiftOpen(false)} disabled={savingShiftEdit}>Cancel</button>
               <button
-                style={{background:savingShiftEdit?"#93C5FD":"#2563EB",border:"none",borderRadius:"9px",padding:"8px 20px",fontSize:"13px",fontWeight:"700",color:"#FFF",cursor:savingShiftEdit?"default":"pointer"}}
+                style={{background:savingShiftEdit?"#93C5FD":"#2563EB",border:"none",borderRadius:"9px",padding:"8px 20px",fontSize:"20px",fontWeight:"700",color:"#FFF",cursor:savingShiftEdit?"default":"pointer"}}
                 onClick={saveEditShift} disabled={savingShiftEdit}>
                 {savingShiftEdit?"Saving…":"Save Changes"}
               </button>
@@ -1069,20 +1071,20 @@ export default function ShiftDetail() {
             </div>
             {conflictModal.hardBlocks.length>0 && (
               <div style={{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:"10px",padding:"14px 16px",marginBottom:"12px"}}>
-                <p style={{fontSize:"12px",fontWeight:"700",color:"#991B1B",marginBottom:"8px",textTransform:"uppercase"}}>Cannot publish:</p>
-                {conflictModal.hardBlocks.map((b,i)=><p key={i} style={{fontSize:"13px",color:"#7F1D1D",marginBottom:"4px"}}>• {b}</p>)}
+                <p style={{fontSize:"19px",fontWeight:"700",color:"#991B1B",marginBottom:"8px",textTransform:"uppercase"}}>Cannot publish:</p>
+                {conflictModal.hardBlocks.map((b,i)=><p key={i} style={{fontSize:"20px",color:"#7F1D1D",marginBottom:"4px"}}>• {b}</p>)}
               </div>
             )}
             {conflictModal.warnings.length>0 && (
               <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:"10px",padding:"14px 16px",marginBottom:"12px"}}>
-                <p style={{fontSize:"12px",fontWeight:"700",color:"#92400E",marginBottom:"8px",textTransform:"uppercase"}}>Warnings:</p>
-                {conflictModal.warnings.map((w,i)=><p key={i} style={{fontSize:"13px",color:"#78350F",marginBottom:"4px"}}>• {w}</p>)}
+                <p style={{fontSize:"19px",fontWeight:"700",color:"#92400E",marginBottom:"8px",textTransform:"uppercase"}}>Warnings:</p>
+                {conflictModal.warnings.map((w,i)=><p key={i} style={{fontSize:"20px",color:"#78350F",marginBottom:"4px"}}>• {w}</p>)}
               </div>
             )}
             <div style={{display:"flex",gap:"8px",justifyContent:"flex-end",marginTop:"16px"}}>
               <button style={s.ghostBtn} onClick={()=>setConflictModal(null)}>Cancel</button>
               {conflictModal.hardBlocks.length===0 && (
-                <button style={{background:"#D97706",border:"none",borderRadius:"9px",padding:"8px 16px",fontSize:"13px",fontWeight:"700",color:"#FFF",cursor:"pointer"}} onClick={doPublish} disabled={publishing}>
+                <button style={{background:"#D97706",border:"none",borderRadius:"9px",padding:"8px 16px",fontSize:"20px",fontWeight:"700",color:"#FFF",cursor:"pointer"}} onClick={doPublish} disabled={publishing}>
                   {publishing?"Publishing…":"Publish Anyway"}
                 </button>
               )}
@@ -1098,12 +1100,12 @@ export default function ShiftDetail() {
             <div style={{width:"48px",height:"48px",borderRadius:"50%",margin:"0 auto 14px",background:confirmModal.danger?"#FEF2F2":"#EFF6FF",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <AlertTriangle size={22} color={confirmModal.danger?"#EF4444":"#2563EB"}/>
             </div>
-            <h3 style={{fontSize:"17px",fontWeight:"800",color:"#1E293B",marginBottom:"8px"}}>{confirmModal.title}</h3>
-            <p style={{fontSize:"13.5px",color:"#64748B",lineHeight:1.6,marginBottom:"22px"}}>{confirmModal.body}</p>
+            <h3 style={{fontSize:"22px",fontWeight:"800",color:"#1E293B",marginBottom:"8px"}}>{confirmModal.title}</h3>
+            <p style={{fontSize:"20.5px",color:"#64748B",lineHeight:1.6,marginBottom:"22px"}}>{confirmModal.body}</p>
             <div style={{display:"flex",gap:"10px",justifyContent:"center"}}>
               <button style={s.ghostBtn} onClick={()=>setConfirmModal(null)} disabled={confirmBusy}>Cancel</button>
               <button
-                style={{background:confirmModal.danger?"#EF4444":"#2563EB",border:"none",borderRadius:"9px",padding:"8px 18px",fontSize:"13px",fontWeight:"700",color:"#FFF",cursor:"pointer",opacity:confirmBusy?.6:1}}
+                style={{background:confirmModal.danger?"#EF4444":"#2563EB",border:"none",borderRadius:"9px",padding:"8px 18px",fontSize:"20px",fontWeight:"700",color:"#FFF",cursor:"pointer",opacity:confirmBusy?.6:1}}
                 disabled={confirmBusy}
                 onClick={async()=>{ setConfirmBusy(true); try{await confirmModal.onConfirm();setConfirmModal(null);}finally{setConfirmBusy(false);} }}
               >
@@ -1119,7 +1121,7 @@ export default function ShiftDetail() {
         <div style={{
           position:"fixed",bottom:"28px",right:rosterOpen?"388px":"28px",zIndex:9999,
           background:toast.type==="success"?"#22C55E":"#EF4444",
-          color:"#FFF",padding:"12px 20px",borderRadius:"10px",fontSize:"14px",fontWeight:"600",
+          color:"#FFF",padding:"12px 20px",borderRadius:"10px",fontSize:"21px",fontWeight:"600",
           boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
           animation:"toastIn 0.3s ease both",
           transition:"right 0.25s ease",
@@ -1133,55 +1135,55 @@ export default function ShiftDetail() {
 }
 
 const s = {
-  back: {background:"none",border:"none",fontSize:"13px",fontWeight:"600",color:"#64748B",cursor:"pointer",marginBottom:"20px",padding:0},
-  empty: {textAlign:"center",padding:"40px",color:"#64748B",fontSize:"14px"},
+  back: {background:"none",border:"none",fontSize:"20px",fontWeight:"600",color:"#64748B",cursor:"pointer",marginBottom:"20px",padding:0},
+  empty: {textAlign:"center",padding:"40px",color:"#64748B",fontSize:"21px"},
   shiftCard: {background:"#FFF",border:"1px solid #E2E8F0",borderRadius:"16px",padding:"22px 24px",marginBottom:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"},
   shiftCardTop: {display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"18px",flexWrap:"wrap",gap:"14px"},
   shiftTitleRow: {display:"flex",alignItems:"center",gap:"10px",marginBottom:"10px",flexWrap:"wrap"},
-  shiftTitle: {fontSize:"20px",fontWeight:"800",color:"#0F172A",letterSpacing:"-0.3px"},
-  badge: {display:"inline-block",padding:"3px 10px",borderRadius:"100px",fontSize:"11px",fontWeight:"700",textTransform:"capitalize"},
+  shiftTitle: {fontSize:"23px",fontWeight:"800",color:"#0F172A",letterSpacing:"-0.3px"},
+  badge: {display:"inline-block",padding:"3px 10px",borderRadius:"100px",fontSize:"18px",fontWeight:"700",textTransform:"capitalize"},
   shiftMetaRow: {display:"flex",flexWrap:"wrap",gap:"6px"},
-  metaPill: {display:"inline-flex",alignItems:"center",gap:"5px",fontSize:"12px",color:"#475569",background:"#F1F5F9",border:"1px solid #E2E8F0",borderRadius:"100px",padding:"3px 10px",fontWeight:"500"},
+  metaPill: {display:"inline-flex",alignItems:"center",gap:"5px",fontSize:"19px",color:"#475569",background:"#F1F5F9",border:"1px solid #E2E8F0",borderRadius:"100px",padding:"3px 10px",fontWeight:"500"},
   shiftActions: {display:"flex",gap:"8px",flexWrap:"wrap",alignItems:"center"},
   deleteIconBtn: {display:"flex",alignItems:"center",justifyContent:"center",width:"34px",height:"34px",background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:"9px",color:"#EF4444",cursor:"pointer",padding:0,flexShrink:0},
   editIconBtn: {display:"flex",alignItems:"center",justifyContent:"center",width:"34px",height:"34px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"9px",color:"#2563EB",cursor:"pointer",padding:0,flexShrink:0},
   editTaskBtn: {display:"flex",alignItems:"center",justifyContent:"center",width:"28px",height:"28px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"7px",color:"#2563EB",cursor:"pointer",padding:0,flexShrink:0},
-  publishBtn: {background:"#2563EB",border:"none",borderRadius:"9px",padding:"8px 16px",fontSize:"13px",fontWeight:"700",color:"#FFF",cursor:"pointer"},
-  unpublishBtn: {background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:"9px",padding:"8px 14px",fontSize:"13px",fontWeight:"600",color:"#1E293B",cursor:"pointer"},
-  cancelBtn: {background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:"9px",padding:"8px 14px",fontSize:"13px",fontWeight:"600",color:"#991B1B",cursor:"pointer"},
+  publishBtn: {background:"#2563EB",border:"none",borderRadius:"9px",padding:"8px 16px",fontSize:"20px",fontWeight:"700",color:"#FFF",cursor:"pointer"},
+  unpublishBtn: {background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:"9px",padding:"8px 14px",fontSize:"20px",fontWeight:"600",color:"#1E293B",cursor:"pointer"},
+  cancelBtn: {background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:"9px",padding:"8px 14px",fontSize:"20px",fontWeight:"600",color:"#991B1B",cursor:"pointer"},
   staffingRow: {display:"flex",alignItems:"center",gap:"12px"},
   staffingBar: {flex:1,height:"6px",background:"#F1F5F9",borderRadius:"100px",overflow:"hidden"},
   staffingFill: {height:"100%",borderRadius:"100px",transition:"width 0.3s ease"},
-  staffingText: {fontSize:"13px",color:"#64748B",fontWeight:"500",whiteSpace:"nowrap"},
-  sectionTitle: {fontSize:"15px",fontWeight:"700",color:"#1E293B"},
-  rosterBtn: {display:"flex",alignItems:"center",gap:"6px",padding:"8px 16px",borderRadius:"9px",fontSize:"13px",fontWeight:"600",cursor:"pointer"},
-  formLabel: {display:"block",fontSize:"12px",fontWeight:"600",color:"#64748B",marginBottom:"6px"},
-  formInput: {display:"block",width:"100%",padding:"9px 12px",border:"1.5px solid #E2E8F0",borderRadius:"9px",fontSize:"14px",color:"#1E293B",background:"#FFF",boxSizing:"border-box"},
+  staffingText: {fontSize:"20px",color:"#64748B",fontWeight:"500",whiteSpace:"nowrap"},
+  sectionTitle: {fontSize:"22px",fontWeight:"700",color:"#1E293B"},
+  rosterBtn: {display:"flex",alignItems:"center",gap:"6px",padding:"8px 16px",borderRadius:"9px",fontSize:"20px",fontWeight:"600",cursor:"pointer"},
+  formLabel: {display:"block",fontSize:"19px",fontWeight:"600",color:"#64748B",marginBottom:"6px"},
+  formInput: {display:"block",width:"100%",padding:"9px 12px",border:"1.5px solid #E2E8F0",borderRadius:"9px",fontSize:"21px",color:"#1E293B",background:"#FFF",boxSizing:"border-box"},
   taskCard: {background:"#FFF",border:"1px solid #E2E8F0",borderRadius:"14px",padding:"18px 20px",marginBottom:"12px",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"},
   taskCardTop: {display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"12px",gap:"10px"},
-  taskTitle: {fontSize:"15px",fontWeight:"700",color:"#0F172A"},
-  taskStatusBadge: {fontSize:"10px",fontWeight:"700",padding:"2px 8px",borderRadius:"100px"},
-  skillTag: {display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"11px",fontWeight:"600",color:"#6D28D9",background:"#EDE9FE",border:"1px solid #DDD6FE",borderRadius:"100px",padding:"2px 8px"},
-  timeTag: {display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"11px",fontWeight:"500",color:"#0369A1",background:"#F0F9FF",border:"1px solid #BAE6FD",borderRadius:"100px",padding:"2px 8px"},
-  assignBtn: {display:"flex",alignItems:"center",gap:"5px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"7px",padding:"5px 12px",fontSize:"12px",fontWeight:"600",color:"#1D4ED8",cursor:"pointer"},
+  taskTitle: {fontSize:"22px",fontWeight:"700",color:"#0F172A"},
+  taskStatusBadge: {fontSize:"17px",fontWeight:"700",padding:"2px 8px",borderRadius:"100px"},
+  skillTag: {display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"18px",fontWeight:"600",color:"#6D28D9",background:"#EDE9FE",border:"1px solid #DDD6FE",borderRadius:"100px",padding:"2px 8px"},
+  timeTag: {display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"18px",fontWeight:"500",color:"#0369A1",background:"#F0F9FF",border:"1px solid #BAE6FD",borderRadius:"100px",padding:"2px 8px"},
+  assignBtn: {display:"flex",alignItems:"center",gap:"5px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"7px",padding:"5px 12px",fontSize:"19px",fontWeight:"600",color:"#1D4ED8",cursor:"pointer"},
   deleteTaskBtn: {display:"flex",alignItems:"center",justifyContent:"center",width:"28px",height:"28px",background:"none",border:"1px solid #E2E8F0",borderRadius:"7px",color:"#CBD5E1",cursor:"pointer",padding:0,flexShrink:0},
   assigneeRow: {display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:"10px"},
-  assigneeAvatar: {width:"30px",height:"30px",borderRadius:"50%",background:"#22C55E",color:"#FFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:"700",flexShrink:0},
-  assigneeName: {fontSize:"13px",fontWeight:"600",color:"#1E293B"},
-  assigneeEmail: {fontSize:"11px",color:"#64748B"},
-  ackYes: {display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"11px",color:"#059669",fontWeight:"600",background:"#ECFDF5",padding:"2px 7px",borderRadius:"100px"},
-  ackNo: {fontSize:"11px",color:"#D97706",fontWeight:"500",background:"#FFFBEB",padding:"2px 7px",borderRadius:"100px"},
-  removeBtn: {background:"none",border:"none",fontSize:"13px",color:"#94A3B8",cursor:"pointer",padding:"2px 5px",lineHeight:1},
-  emptyAssignee: {fontSize:"12px",color:"#94A3B8",padding:"8px 0 2px",fontStyle:"italic"},
+  assigneeAvatar: {width:"30px",height:"30px",borderRadius:"50%",background:"#22C55E",color:"#FFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"19px",fontWeight:"700",flexShrink:0},
+  assigneeName: {fontSize:"20px",fontWeight:"600",color:"#1E293B"},
+  assigneeEmail: {fontSize:"18px",color:"#64748B"},
+  ackYes: {display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"18px",color:"#059669",fontWeight:"600",background:"#ECFDF5",padding:"2px 7px",borderRadius:"100px"},
+  ackNo: {fontSize:"18px",color:"#D97706",fontWeight:"500",background:"#FFFBEB",padding:"2px 7px",borderRadius:"100px"},
+  removeBtn: {background:"none",border:"none",fontSize:"20px",color:"#94A3B8",cursor:"pointer",padding:"2px 5px",lineHeight:1},
+  emptyAssignee: {fontSize:"19px",color:"#94A3B8",padding:"8px 0 2px",fontStyle:"italic"},
   aiNote: {marginTop:"10px",padding:"10px 12px",borderRadius:"10px",border:"1px solid #E2E8F0"},
   overlay: {position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px"},
   modal: {background:"#FFF",borderRadius:"16px",padding:"28px",width:"100%",maxWidth:"560px",maxHeight:"80vh",overflowY:"auto",animation:"modalIn 0.25s ease both",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"},
   modalHeader: {display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"},
-  modalTitle: {fontSize:"17px",fontWeight:"700",color:"#1E293B"},
-  closeBtn: {background:"none",border:"none",fontSize:"18px",color:"#94A3B8",cursor:"pointer",padding:"2px 6px"},
-  ghostBtn: {background:"#F1F5F9",border:"none",borderRadius:"9px",padding:"8px 16px",fontSize:"13px",fontWeight:"600",color:"#64748B",cursor:"pointer"},
-  badgeRed: {fontSize:"10px",fontWeight:"600",color:"#991B1B",background:"#FEE2E2",padding:"2px 6px",borderRadius:"100px"},
-  badgeYellow: {fontSize:"10px",fontWeight:"600",color:"#92400E",background:"#FFFBEB",padding:"2px 6px",borderRadius:"100px"},
-  badgeGray: {fontSize:"10px",fontWeight:"500",color:"#64748B",background:"#F1F5F9",padding:"2px 6px",borderRadius:"100px"},
-  badgePurple: {fontSize:"10px",fontWeight:"600",color:"#6D28D9",background:"#EDE9FE",padding:"2px 6px",borderRadius:"100px"},
+  modalTitle: {fontSize:"22px",fontWeight:"700",color:"#1E293B"},
+  closeBtn: {background:"none",border:"none",fontSize:"23px",color:"#94A3B8",cursor:"pointer",padding:"2px 6px"},
+  ghostBtn: {background:"#F1F5F9",border:"none",borderRadius:"9px",padding:"8px 16px",fontSize:"20px",fontWeight:"600",color:"#64748B",cursor:"pointer"},
+  badgeRed: {fontSize:"17px",fontWeight:"600",color:"#991B1B",background:"#FEE2E2",padding:"2px 6px",borderRadius:"100px"},
+  badgeYellow: {fontSize:"17px",fontWeight:"600",color:"#92400E",background:"#FFFBEB",padding:"2px 6px",borderRadius:"100px"},
+  badgeGray: {fontSize:"17px",fontWeight:"500",color:"#64748B",background:"#F1F5F9",padding:"2px 6px",borderRadius:"100px"},
+  badgePurple: {fontSize:"17px",fontWeight:"600",color:"#6D28D9",background:"#EDE9FE",padding:"2px 6px",borderRadius:"100px"},
 };

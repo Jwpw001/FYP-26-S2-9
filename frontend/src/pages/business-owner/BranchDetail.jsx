@@ -92,9 +92,9 @@ function DonutChart({ weights, size = 140 }) {
 function NumFieldInline({ label, value, onChange, min, max, disabled }) {
   return (
     <div>
-      <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#64748B", marginBottom: "5px" }}>{label}</label>
+      <label style={{ display: "block", fontSize: "18px", fontWeight: "600", color: "#64748B", marginBottom: "5px" }}>{label}</label>
       <input type="number" value={value} onChange={e => onChange(Number(e.target.value))} min={min} max={max} disabled={disabled}
-        style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "14px", color: "#1E293B", background: disabled ? "#F8FAFC" : "#FFF", boxSizing: "border-box", cursor: disabled ? "default" : "text" }} />
+        style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "21px", color: "#1E293B", background: disabled ? "#F8FAFC" : "#FFF", boxSizing: "border-box", cursor: disabled ? "default" : "text" }} />
     </div>
   );
 }
@@ -378,7 +378,7 @@ export default function BranchDetail() {
   if (loading) {
     return (
       <BusinessOwnerLayout title="Branch Details">
-        <div style={{ textAlign: "center", padding: "60px", color: "#64748B", fontSize: "14px" }}>
+        <div style={{ textAlign: "center", padding: "60px", color: "#64748B", fontSize: "21px" }}>
           Loading branch…
         </div>
       </BusinessOwnerLayout>
@@ -426,7 +426,7 @@ export default function BranchDetail() {
             >
               <Trash2 size={14} /> Delete Branch
             </button>
-            <p style={{ fontSize: "11px", color: "#94A3B8", textAlign: "center", marginTop: "6px", lineHeight: 1.4 }}>
+            <p style={{ fontSize: "18px", color: "#94A3B8", textAlign: "center", marginTop: "6px", lineHeight: 1.4 }}>
               Deleting also removes this branch's staff, shifts, and reports.
             </p>
           </div>
@@ -473,7 +473,7 @@ export default function BranchDetail() {
                   {DAYS.map((day, i) => {
                     const active = savedBizSettings?.operating_days?.[i] === 1;
                     return (
-                      <span key={day} style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", border: `1.5px solid ${active ? "#2563EB" : "#E2E8F0"}`, background: active ? "#EFF6FF" : "#F8FAFC", color: active ? "#2563EB" : "#CBD5E1" }}>
+                      <span key={day} style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "19px", fontWeight: "600", border: `1.5px solid ${active ? "#2563EB" : "#E2E8F0"}`, background: active ? "#EFF6FF" : "#F8FAFC", color: active ? "#2563EB" : "#CBD5E1" }}>
                         {day}
                       </span>
                     );
@@ -499,16 +499,16 @@ export default function BranchDetail() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
           <div>
             <h3 style={s.formTitle}>Daily Role Requirements</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>Roles and headcount needed every operating day</p>
+            <p style={{ fontSize: "19px", color: "#94A3B8", marginTop: "2px" }}>Roles and headcount needed every operating day</p>
           </div>
           {!editingRoles ? (
-            <button style={{ background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" }} onClick={startEditRoles}>
+            <button style={{ background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "20px", fontWeight: "600", color: "#1E293B", cursor: "pointer" }} onClick={startEditRoles}>
               Edit Roles
             </button>
           ) : (
             <div style={{ display: "flex", gap: "8px" }}>
-              <button style={{ background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" }} onClick={() => setEditingRoles(false)}>Cancel</button>
-              <button style={{ background: "#F59E0B", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "700", color: "#1C1917", cursor: "pointer" }} onClick={saveRoles} disabled={rolesSaving}>
+              <button style={{ background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "20px", fontWeight: "600", color: "#1E293B", cursor: "pointer" }} onClick={() => setEditingRoles(false)}>Cancel</button>
+              <button style={{ background: "#F59E0B", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "20px", fontWeight: "700", color: "#1C1917", cursor: "pointer" }} onClick={saveRoles} disabled={rolesSaving}>
                 {rolesSaving ? "Saving…" : "Save"}
               </button>
             </div>
@@ -523,22 +523,22 @@ export default function BranchDetail() {
           roleTemplates.length === 0 ? (
             <div style={{ textAlign: "center", padding: "36px", background: "#FFF", border: "1.5px dashed #E2E8F0", borderRadius: "16px" }}>
               <Briefcase size={28} color="#CBD5E1" />
-              <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "8px" }}>No role requirements set. Click "Edit Roles" to add some.</p>
+              <p style={{ fontSize: "20px", color: "#94A3B8", marginTop: "8px" }}>No role requirements set. Click "Edit Roles" to add some.</p>
             </div>
           ) : (
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 80px", padding: "10px 16px", background: "#F8FAFC", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", gap: "8px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 80px", padding: "10px 16px", background: "#F8FAFC", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", gap: "8px" }}>
                 <span>Role</span><span>Required Skill</span><span>Headcount</span>
               </div>
               {roleTemplates.map((t, i) => (
                 <div key={t.template_id} style={{ display: "grid", gridTemplateColumns: "2fr 2fr 80px", padding: "12px 16px", gap: "8px", alignItems: "center", borderTop: i > 0 ? "1px solid #F1F5F9" : "none" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>{t.role_name}</span>
-                  <span style={{ fontSize: "13px", color: t.skills ? "#1E293B" : "#94A3B8" }}>
+                  <span style={{ fontSize: "21px", fontWeight: "600", color: "#1E293B" }}>{t.role_name}</span>
+                  <span style={{ fontSize: "20px", color: t.skills ? "#1E293B" : "#94A3B8" }}>
                     {t.skills ? (
-                      <span style={{ background: "#EFF6FF", color: "#1D4ED8", padding: "2px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: "600" }}>{t.skills.name}</span>
+                      <span style={{ background: "#EFF6FF", color: "#1D4ED8", padding: "2px 10px", borderRadius: "100px", fontSize: "19px", fontWeight: "600" }}>{t.skills.name}</span>
                     ) : "Any / None"}
                   </span>
-                  <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{t.headcount}</span>
+                  <span style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B" }}>{t.headcount}</span>
                 </div>
               ))}
             </div>
@@ -547,8 +547,8 @@ export default function BranchDetail() {
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "16px" }}>
             {rolesDraft.length > 0 && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 32px", gap: "8px", padding: "0 4px", marginBottom: "10px" }}>
-                <span style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em" }}>Skill / Role</span>
-                <span style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em" }}>Count</span>
+                <span style={{ fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em" }}>Skill / Role</span>
+                <span style={{ fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em" }}>Count</span>
                 <span />
               </div>
             )}
@@ -575,7 +575,7 @@ export default function BranchDetail() {
                 </div>
               ))}
             </div>
-            <button onClick={() => setRolesDraft(p => [...p, { role_name: "", skill_id: "", headcount: 1 }])} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#F8FAFC", border: "1.5px dashed #CBD5E1", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
+            <button onClick={() => setRolesDraft(p => [...p, { role_name: "", skill_id: "", headcount: 1 }])} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#F8FAFC", border: "1.5px dashed #CBD5E1", borderRadius: "9px", padding: "8px 16px", fontSize: "20px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
               <Plus size={14} /> Add Role
             </button>
           </div>
@@ -586,7 +586,7 @@ export default function BranchDetail() {
       <div style={s.staffSection}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
           <h3 style={s.formTitle}>Staff at this Branch</h3>
-          <span style={{ fontSize: "12px", color: "#94A3B8" }}>
+          <span style={{ fontSize: "19px", color: "#94A3B8" }}>
             {staffLoading ? "Loading…" : `${staff.length} member${staff.length !== 1 ? "s" : ""}`}
           </span>
         </div>
@@ -609,7 +609,7 @@ export default function BranchDetail() {
         ) : staff.length === 0 ? (
           <div style={s.staffEmpty}>
             <Users size={36} color="#CBD5E1" />
-            <p style={{ fontSize: "14px", color: "#94A3B8", marginTop: "10px" }}>No staff assigned to this branch yet.</p>
+            <p style={{ fontSize: "21px", color: "#94A3B8", marginTop: "10px" }}>No staff assigned to this branch yet.</p>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
@@ -620,15 +620,15 @@ export default function BranchDetail() {
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
                     <UserAvatar name={name} avatar_url={m.users?.avatar_url} size={44} />
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
-                      <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.users?.email || "—"}</p>
+                      <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+                      <p style={{ fontSize: "19px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.users?.email || "—"}</p>
                     </div>
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
-                    <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: m.staff_type === "casual" ? "#F3E8FF" : "#DBEAFE", color: m.staff_type === "casual" ? "#6B21A8" : "#1E40AF" }}>
+                    <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "18px", fontWeight: "600", background: m.staff_type === "casual" ? "#F3E8FF" : "#DBEAFE", color: m.staff_type === "casual" ? "#6B21A8" : "#1E40AF" }}>
                       {m.staff_type === "casual" ? "Casual" : "Regular"}
                     </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: "600", color: m.is_active ? "#16A34A" : "#94A3B8" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "19px", fontWeight: "600", color: m.is_active ? "#16A34A" : "#94A3B8" }}>
                       <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: m.is_active ? "#22C55E" : "#D1D5DB", display: "inline-block" }} />
                       {m.is_active ? "Active" : "Inactive"}
                     </span>
@@ -676,8 +676,8 @@ export default function BranchDetail() {
                 <Settings2 size={18} color="#2563EB" />
               </div>
               <div>
-                <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Branch Settings</h3>
-                <p style={{ fontSize: "12px", color: "#94A3B8" }}>{branch.name}</p>
+                <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B" }}>Branch Settings</h3>
+                <p style={{ fontSize: "19px", color: "#94A3B8" }}>{branch.name}</p>
               </div>
             </div>
             <button onClick={closeSettings} style={{ width: "32px", height: "32px", borderRadius: "8px", border: "1px solid #E2E8F0", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748B" }}>
@@ -686,7 +686,7 @@ export default function BranchDetail() {
           </div>
 
           {(bizError || bizSuccess) && (
-            <div style={{ background: bizError ? "#FEF2F2" : "#F0FDF4", borderBottom: `1px solid ${bizError ? "#FECACA" : "#BBF7D0"}`, padding: "10px 24px", fontSize: "13px", color: bizError ? "#DC2626" : "#16A34A", display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+            <div style={{ background: bizError ? "#FEF2F2" : "#F0FDF4", borderBottom: `1px solid ${bizError ? "#FECACA" : "#BBF7D0"}`, padding: "10px 24px", fontSize: "20px", color: bizError ? "#DC2626" : "#16A34A", display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
               {bizSuccess && (<Check size={14} strokeWidth={2.5} />)}
               {bizError || bizSuccess}
             </div>
@@ -696,32 +696,32 @@ export default function BranchDetail() {
             <div style={{ overflowY: "auto", padding: "24px 28px", borderRight: "1px solid #F1F5F9" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "24px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Branch Name</label>
+                  <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Branch Name</label>
                   <input value={modalName} onChange={e => setModalName(e.target.value)} disabled={!editingBizSetup} placeholder="e.g. Main Branch"
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "14px", color: "#1E293B", background: editingBizSetup ? "#FFF" : "#F8FAFC", boxSizing: "border-box" }} />
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "21px", color: "#1E293B", background: editingBizSetup ? "#FFF" : "#F8FAFC", boxSizing: "border-box" }} />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Address</label>
+                  <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Address</label>
                   <input value={modalAddress} onChange={e => setModalAddress(e.target.value)} disabled={!editingBizSetup} placeholder="e.g. 123 Main St, City"
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "14px", color: "#1E293B", background: editingBizSetup ? "#FFF" : "#F8FAFC", boxSizing: "border-box" }} />
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "21px", color: "#1E293B", background: editingBizSetup ? "#FFF" : "#F8FAFC", boxSizing: "border-box" }} />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Opening Time</label>
+                    <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Opening Time</label>
                     <input type="time" value={modalOpenTime} onChange={e => setModalOpenTime(e.target.value)} disabled={!editingBizSetup}
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "14px", color: "#1E293B", background: editingBizSetup ? "#FFF" : "#F8FAFC", boxSizing: "border-box" }} />
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "21px", color: "#1E293B", background: editingBizSetup ? "#FFF" : "#F8FAFC", boxSizing: "border-box" }} />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Closing Time</label>
+                    <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>Closing Time</label>
                     <input type="time" value={modalCloseTime} onChange={e => setModalCloseTime(e.target.value)} disabled={!editingBizSetup}
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "14px", color: "#1E293B", background: editingBizSetup ? "#FFF" : "#F8FAFC", boxSizing: "border-box" }} />
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "21px", color: "#1E293B", background: editingBizSetup ? "#FFF" : "#F8FAFC", boxSizing: "border-box" }} />
                   </div>
                 </div>
                 <div style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", overflow: "hidden" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px" }}>
                     <div>
-                      <p style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>Allow off day requests</p>
-                      <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px" }}>Staff can submit requests for days off</p>
+                      <p style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>Allow off day requests</p>
+                      <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "1px" }}>Staff can submit requests for days off</p>
                     </div>
                     <button type="button" onClick={() => editingBizSetup && setModalAllowOffDay(v => !v)} disabled={!editingBizSetup}
                       style={{ width: "42px", height: "22px", borderRadius: "11px", border: "none", background: modalAllowOffDay ? "#2563EB" : "#D1D5DB", cursor: editingBizSetup ? "pointer" : "default", position: "relative", transition: "background 0.2s", opacity: editingBizSetup ? 1 : 0.7, flexShrink: 0 }}>
@@ -731,15 +731,15 @@ export default function BranchDetail() {
                   {modalAllowOffDay && (
                     <div style={{ borderTop: "1px solid #E2E8F0", padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div>
-                        <p style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>Off days per week</p>
-                        <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px" }}>Max days off a staff member can request</p>
+                        <p style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>Off days per week</p>
+                        <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "1px" }}>Max days off a staff member can request</p>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <button type="button" onClick={() => editingBizSetup && setBiz("off_days_per_week", Math.max(1, (bizSettings.off_days_per_week || 1) - 1))} disabled={!editingBizSetup || (bizSettings.off_days_per_week || 1) <= 1}
                           style={{ width: "28px", height: "28px", borderRadius: "7px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#475569", cursor: editingBizSetup && (bizSettings.off_days_per_week || 1) > 1 ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "700", opacity: !editingBizSetup || (bizSettings.off_days_per_week || 1) <= 1 ? 0.4 : 1 }}>
                           −
                         </button>
-                        <span style={{ width: "32px", textAlign: "center", fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{bizSettings.off_days_per_week || 1}</span>
+                        <span style={{ width: "32px", textAlign: "center", fontSize: "22px", fontWeight: "700", color: "#1E293B" }}>{bizSettings.off_days_per_week || 1}</span>
                         <button type="button" onClick={() => editingBizSetup && setBiz("off_days_per_week", Math.min(7, (bizSettings.off_days_per_week || 1) + 1))} disabled={!editingBizSetup || (bizSettings.off_days_per_week || 1) >= 7}
                           style={{ width: "28px", height: "28px", borderRadius: "7px", border: "1.5px solid #2563EB40", background: "#EFF6FF", color: "#2563EB", cursor: editingBizSetup && (bizSettings.off_days_per_week || 1) < 7 ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "700", opacity: !editingBizSetup || (bizSettings.off_days_per_week || 1) >= 7 ? 0.4 : 1 }}>
                           +
@@ -751,17 +751,17 @@ export default function BranchDetail() {
               </div>
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-                <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Operating days</p>
+                <p style={{ fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Operating days</p>
                 {!editingBizSetup ? (
-                  <button onClick={() => setEditingBizSetup(true)} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 14px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#475569", fontSize: "12px", fontWeight: "700", cursor: "pointer" }}>
+                  <button onClick={() => setEditingBizSetup(true)} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 14px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#475569", fontSize: "19px", fontWeight: "700", cursor: "pointer" }}>
                     <Pencil size={12} /> Edit
                   </button>
                 ) : (
                   <div style={{ display: "flex", gap: "6px" }}>
-                    <button onClick={cancelBizSetup} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 12px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#64748B", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                    <button onClick={cancelBizSetup} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 12px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#64748B", fontSize: "19px", fontWeight: "600", cursor: "pointer" }}>
                       <X size={12} /> Cancel
                     </button>
-                    <button onClick={saveBizSettings} disabled={bizSaving === "settings"} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 16px", borderRadius: "8px", border: "none", background: "#2563EB", color: "#FFF", fontSize: "12px", fontWeight: "700", cursor: "pointer", opacity: bizSaving === "settings" ? 0.7 : 1 }}>
+                    <button onClick={saveBizSettings} disabled={bizSaving === "settings"} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 16px", borderRadius: "8px", border: "none", background: "#2563EB", color: "#FFF", fontSize: "19px", fontWeight: "700", cursor: "pointer", opacity: bizSaving === "settings" ? 0.7 : 1 }}>
                       {bizSaving === "settings" ? (<Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} />) : (<Save size={12} />)}
                       {bizSaving === "settings" ? "Saving…" : "Save"}
                     </button>
@@ -771,13 +771,13 @@ export default function BranchDetail() {
               <div style={{ display: "flex", gap: "7px", marginBottom: "24px", flexWrap: "wrap" }}>
                 {DAYS.map((day, i) => (
                   <button key={day} type="button" onClick={() => toggleBizDay(i)} disabled={!editingBizSetup}
-                    style={{ padding: "7px 16px", borderRadius: "100px", border: `1.5px solid ${bizSettings.operating_days[i] ? "#2563EB" : "#E2E8F0"}`, background: bizSettings.operating_days[i] ? "#EFF6FF" : "#FFF", color: bizSettings.operating_days[i] ? "#2563EB" : "#94A3B8", fontSize: "13px", fontWeight: "600", cursor: editingBizSetup ? "pointer" : "default", transition: "all 0.15s", opacity: !editingBizSetup && !bizSettings.operating_days[i] ? 0.45 : 1 }}>
+                    style={{ padding: "7px 16px", borderRadius: "100px", border: `1.5px solid ${bizSettings.operating_days[i] ? "#2563EB" : "#E2E8F0"}`, background: bizSettings.operating_days[i] ? "#EFF6FF" : "#FFF", color: bizSettings.operating_days[i] ? "#2563EB" : "#94A3B8", fontSize: "20px", fontWeight: "600", cursor: editingBizSetup ? "pointer" : "default", transition: "all 0.15s", opacity: !editingBizSetup && !bizSettings.operating_days[i] ? 0.45 : 1 }}>
                     {day}
                   </button>
                 ))}
               </div>
 
-              <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>Work rules</p>
+              <p style={{ fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>Work rules</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "16px" }}>
                 <NumFieldInline label="Standard hours/day" value={bizSettings.work_hours_day} onChange={v => setBiz("work_hours_day", v)} min={1} max={24} disabled={!editingBizSetup} />
                 <NumFieldInline label="Max hours/day" value={bizSettings.max_work_hours_day} onChange={v => setBiz("max_work_hours_day", v)} min={1} max={24} disabled={!editingBizSetup} />
@@ -787,8 +787,8 @@ export default function BranchDetail() {
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", marginBottom: "24px" }}>
                 <div>
-                  <p style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>Allow overtime</p>
-                  <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px" }}>Workers can be scheduled beyond standard hours</p>
+                  <p style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>Allow overtime</p>
+                  <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "1px" }}>Workers can be scheduled beyond standard hours</p>
                 </div>
                 <button type="button" onClick={() => editingBizSetup && setBiz("allow_overtime", !bizSettings.allow_overtime)} disabled={!editingBizSetup}
                   style={{ width: "42px", height: "22px", borderRadius: "11px", border: "none", background: bizSettings.allow_overtime ? "#2563EB" : "#D1D5DB", cursor: editingBizSetup ? "pointer" : "default", position: "relative", transition: "background 0.2s", opacity: editingBizSetup ? 1 : 0.7, flexShrink: 0 }}>
@@ -796,13 +796,13 @@ export default function BranchDetail() {
                 </button>
               </div>
 
-              <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>Public holidays</p>
+              <p style={{ fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>Public holidays</p>
               <div style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", maxHeight: "200px", overflowY: "auto" }}>
                 {bizSettings.holidays.map((h, i) => (
                   <div key={h.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderBottom: i < bizSettings.holidays.length - 1 ? "1px solid #F1F5F9" : "none" }}>
                     <div>
-                      <p style={{ fontSize: "12px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
-                      <p style={{ fontSize: "11px", color: "#94A3B8" }}>{h.date}</p>
+                      <p style={{ fontSize: "19px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
+                      <p style={{ fontSize: "18px", color: "#94A3B8" }}>{h.date}</p>
                     </div>
                     <button type="button" onClick={() => toggleBizHoliday(i)} disabled={!editingBizSetup}
                       style={{ width: "34px", height: "18px", borderRadius: "9px", border: "none", background: h.enabled ? "#22C55E" : "#D1D5DB", cursor: editingBizSetup ? "pointer" : "default", position: "relative", transition: "background 0.2s", flexShrink: 0, opacity: editingBizSetup ? 1 : 0.7 }}>
@@ -817,19 +817,19 @@ export default function BranchDetail() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <Zap size={15} color="#F59E0B" />
-                  <h4 style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>Smart allocation</h4>
+                  <h4 style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B" }}>Smart allocation</h4>
                 </div>
                 {!editingBizAlloc ? (
-                  <button onClick={() => setEditingBizAlloc(true)} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 12px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#475569", fontSize: "12px", fontWeight: "700", cursor: "pointer" }}>
+                  <button onClick={() => setEditingBizAlloc(true)} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 12px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#475569", fontSize: "19px", fontWeight: "700", cursor: "pointer" }}>
                     <Pencil size={12} /> Edit
                   </button>
                 ) : (
                   <div style={{ display: "flex", gap: "6px" }}>
-                    <button onClick={cancelBizAlloc} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#64748B", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                    <button onClick={cancelBizAlloc} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#64748B", fontSize: "19px", fontWeight: "600", cursor: "pointer" }}>
                       <X size={12} /> Cancel
                     </button>
                     <button onClick={saveBizAlloc} disabled={bizSaving === "alloc" || WEIGHTS.reduce((sum, w) => sum + (bizAlloc[w.key] || 0), 0) !== 100}
-                      style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 12px", borderRadius: "8px", border: "none", background: "#2563EB", color: "#FFF", fontSize: "12px", fontWeight: "700", cursor: "pointer", opacity: (bizSaving === "alloc" || WEIGHTS.reduce((sum, w) => sum + (bizAlloc[w.key] || 0), 0) !== 100) ? 0.6 : 1 }}>
+                      style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 12px", borderRadius: "8px", border: "none", background: "#2563EB", color: "#FFF", fontSize: "19px", fontWeight: "700", cursor: "pointer", opacity: (bizSaving === "alloc" || WEIGHTS.reduce((sum, w) => sum + (bizAlloc[w.key] || 0), 0) !== 100) ? 0.6 : 1 }}>
                       {bizSaving === "alloc" ? (<Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} />) : (<Save size={12} />)}
                       Save
                     </button>
@@ -848,9 +848,9 @@ export default function BranchDetail() {
                         <DonutChart weights={donutData} />
                         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                           <span style={{ fontSize: "24px", fontWeight: "800", color: allocValid ? "#0F172A" : "#DC2626", lineHeight: 1 }}>{allocTotal}</span>
-                          <span style={{ fontSize: "10px", color: "#94A3B8", fontWeight: "600", marginTop: "2px" }}>of 100%</span>
+                          <span style={{ fontSize: "17px", color: "#94A3B8", fontWeight: "600", marginTop: "2px" }}>of 100%</span>
                           {allocValid && (
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "10px", fontWeight: "700", color: "#16A34A", marginTop: "4px" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "17px", fontWeight: "700", color: "#16A34A", marginTop: "4px" }}>
                               <Check size={10} strokeWidth={3} /> Balanced
                             </span>
                           )}
@@ -866,7 +866,7 @@ export default function BranchDetail() {
                             <div style={{ width: "26px", height: "26px", borderRadius: "7px", background: w.color + "12", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <Icon size={12} color={w.color} strokeWidth={2.2} />
                             </div>
-                            <span style={{ flex: 1, fontSize: "12px", fontWeight: "600", color: "#1E293B" }}>{w.label}</span>
+                            <span style={{ flex: 1, fontSize: "19px", fontWeight: "600", color: "#1E293B" }}>{w.label}</span>
                             <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                               {editingBizAlloc && (
                                 <button type="button" onClick={() => adjustWeight(w.key, -5)} disabled={val <= 0}
@@ -875,7 +875,7 @@ export default function BranchDetail() {
                                 </button>
                               )}
                               <div style={{ width: "44px", textAlign: "center", background: w.color + "10", borderRadius: "6px", padding: "2px 0" }}>
-                                <span style={{ fontSize: "13px", fontWeight: "800", color: w.color }}>{val}%</span>
+                                <span style={{ fontSize: "20px", fontWeight: "800", color: w.color }}>{val}%</span>
                               </div>
                               {editingBizAlloc && (
                                 <button type="button" onClick={() => adjustWeight(w.key, 5)} disabled={val >= 100}
@@ -891,7 +891,7 @@ export default function BranchDetail() {
                     {editingBizAlloc && (
                       <div style={{ textAlign: "center", marginTop: "10px" }}>
                         <button type="button" onClick={() => setBizAlloc({ ...ALLOC_DEFAULTS })}
-                          style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "600", color: "#94A3B8", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "6px" }}>
+                          style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "18px", fontWeight: "600", color: "#94A3B8", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "6px" }}>
                           <RotateCcw size={11} /> Reset to defaults
                         </button>
                       </div>
@@ -925,50 +925,50 @@ function fmtTimeDisplay(t) {
 }
 
 const s = {
-  back: { background: "none", border: "none", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer", marginBottom: "20px", padding: 0 },
+  back: { background: "none", border: "none", fontSize: "20px", fontWeight: "600", color: "#64748B", cursor: "pointer", marginBottom: "20px", padding: 0 },
   layout: { display: "grid", gridTemplateColumns: "280px 1fr", gap: "20px", alignItems: "start" },
 
   profileCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "24px", textAlign: "center" },
   avatarLg: { width: "72px", height: "72px", borderRadius: "16px", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" },
-  profileName: { fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "6px" },
-  profileMeta: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "13px", color: "#64748B", marginBottom: "12px" },
-  profileMetaMuted: { fontSize: "13px", color: "#94A3B8", marginBottom: "12px" },
+  profileName: { fontSize: "22px", fontWeight: "800", color: "#1E293B", marginBottom: "6px" },
+  profileMeta: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "20px", color: "#64748B", marginBottom: "12px" },
+  profileMetaMuted: { fontSize: "20px", color: "#94A3B8", marginBottom: "12px" },
   cardActions: { marginTop: "16px", display: "flex", flexDirection: "column", gap: "4px" },
-  actionBtn: { width: "100%", padding: "9px", borderRadius: "9px", fontSize: "13px", fontWeight: "600", cursor: "pointer" },
+  actionBtn: { width: "100%", padding: "9px", borderRadius: "9px", fontSize: "20px", fontWeight: "600", cursor: "pointer" },
 
   managerSection: { marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #F1F5F9", textAlign: "left" },
-  managerLabel: { display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "10px" },
-  managerEmpty: { fontSize: "13px", color: "#94A3B8" },
+  managerLabel: { display: "flex", alignItems: "center", gap: "5px", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "10px" },
+  managerEmpty: { fontSize: "20px", color: "#94A3B8" },
   managerRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" },
-  managerAvatar: { width: "32px", height: "32px", borderRadius: "50%", background: "#F59E0B", color: "#1C1917", fontSize: "13px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  managerName: { fontSize: "13px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  managerEmail: { fontSize: "11px", color: "#64748B", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  managerAvatar: { width: "32px", height: "32px", borderRadius: "50%", background: "#F59E0B", color: "#1C1917", fontSize: "20px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  managerName: { fontSize: "20px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  managerEmail: { fontSize: "18px", color: "#64748B", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
 
   formCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "24px" },
   formHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" },
-  formTitle: { fontSize: "15px", fontWeight: "700", color: "#1E293B" },
-  editBtn: { background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
-  cancelBtn: { background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
-  saveBtn: { background: "#F59E0B", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "700", color: "#1C1917", cursor: "pointer" },
+  formTitle: { fontSize: "22px", fontWeight: "700", color: "#1E293B" },
+  editBtn: { background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "20px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
+  cancelBtn: { background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "20px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
+  saveBtn: { background: "#F59E0B", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "20px", fontWeight: "700", color: "#1C1917", cursor: "pointer" },
 
-  error: { background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 12px", borderRadius: "9px", fontSize: "13px", marginBottom: "16px" },
-  successMsg: { background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#166534", padding: "10px 12px", borderRadius: "9px", fontSize: "13px", marginBottom: "16px" },
+  error: { background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 12px", borderRadius: "9px", fontSize: "20px", marginBottom: "16px" },
+  successMsg: { background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#166534", padding: "10px 12px", borderRadius: "9px", fontSize: "20px", marginBottom: "16px" },
 
   fields: { display: "flex", flexDirection: "column", gap: "16px" },
   field: {},
-  label: { display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "6px" },
-  value: { fontSize: "14px", color: "#1E293B", fontWeight: "500" },
-  input: { display: "block", width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", color: "#1E293B", background: "#FFFFFF", boxSizing: "border-box" },
+  label: { display: "block", fontSize: "19px", fontWeight: "600", color: "#64748B", marginBottom: "6px" },
+  value: { fontSize: "21px", color: "#1E293B", fontWeight: "500" },
+  input: { display: "block", width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "21px", color: "#1E293B", background: "#FFFFFF", boxSizing: "border-box" },
 
   staffSection: { marginTop: "20px" },
   staffEmpty: { textAlign: "center", padding: "40px 20px", background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px" },
   staffCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" },
-  staffAvatar: { width: "44px", height: "44px", borderRadius: "50%", color: "#FFFFFF", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  staffAvatar: { width: "44px", height: "44px", borderRadius: "50%", color: "#FFFFFF", fontSize: "21px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
 
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center" },
   modal: { background: "#FFFFFF", borderRadius: "16px", padding: "32px 28px", width: "360px", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" },
   modalIcon: { fontSize: "36px", marginBottom: "12px" },
-  modalTitle: { fontSize: "18px", fontWeight: "800", color: "#1E293B", marginBottom: "10px" },
-  modalBody: { fontSize: "14px", color: "#64748B", lineHeight: 1.6, marginBottom: "24px" },
+  modalTitle: { fontSize: "23px", fontWeight: "800", color: "#1E293B", marginBottom: "10px" },
+  modalBody: { fontSize: "21px", color: "#64748B", lineHeight: 1.6, marginBottom: "24px" },
   modalActions: { display: "flex", gap: "10px", justifyContent: "center" },
 };

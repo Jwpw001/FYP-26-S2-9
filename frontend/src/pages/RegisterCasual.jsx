@@ -44,8 +44,8 @@ export default function RegisterCasual() {
         <div style={s.card}>
           <div style={{ textAlign: "center", padding: "8px 0 24px" }}>
             <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎉</div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1C1B18", marginBottom: "10px" }}>Application Submitted!</h2>
-            <p style={{ fontSize: "14px", color: "#64748B", lineHeight: 1.6, maxWidth: "320px", margin: "0 auto 28px" }}>
+            <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1C1B18", marginBottom: "10px" }}>Application Submitted!</h2>
+            <p style={{ fontSize: "21px", color: "#64748B", lineHeight: 1.6, maxWidth: "320px", margin: "0 auto 28px" }}>
               Your application is now pending review. The business owner will approve or reject your account shortly. You'll receive a notification once it's reviewed.
             </p>
             <button onClick={() => navigate("/casual-staff/dashboard")} style={s.btn}>
@@ -155,23 +155,23 @@ const s = {
   logoBox: {
     width: "36px", height: "36px", borderRadius: "9px",
     background: "#F59E0B", color: "#1C1917",
-    fontSize: "16px", fontWeight: "800",
+    fontSize: "21px", fontWeight: "800",
     display: "flex", alignItems: "center", justifyContent: "center",
   },
-  logoText: { fontSize: "18px", fontWeight: "800", color: "#0F172A" },
-  heading: { fontSize: "22px", fontWeight: "800", color: "#1C1B18", marginBottom: "6px" },
-  sub: { fontSize: "13px", color: "#64748B", marginBottom: "24px" },
+  logoText: { fontSize: "23px", fontWeight: "800", color: "#0F172A" },
+  heading: { fontSize: "25px", fontWeight: "800", color: "#1C1B18", marginBottom: "6px" },
+  sub: { fontSize: "20px", color: "#64748B", marginBottom: "24px" },
   errorBox: {
     background: "#FEF2F2", border: "1px solid #FECACA",
     borderRadius: "10px", padding: "11px 14px",
-    fontSize: "13px", color: "#DC2626", marginBottom: "4px",
+    fontSize: "20px", color: "#DC2626", marginBottom: "4px",
   },
   fieldGroup: { display: "flex", flexDirection: "column", gap: "5px" },
-  label: { fontSize: "12px", fontWeight: "700", color: "#7A7870", textTransform: "uppercase", letterSpacing: "0.05em" },
-  hint: { fontSize: "11px", color: "#A09D97", marginTop: "2px" },
+  label: { fontSize: "19px", fontWeight: "700", color: "#7A7870", textTransform: "uppercase", letterSpacing: "0.05em" },
+  hint: { fontSize: "18px", color: "#A09D97", marginTop: "2px" },
   input: {
     border: "1.5px solid #E5E2DC", borderRadius: "10px",
-    padding: "10px 13px", fontSize: "14px", color: "#1C1B18",
+    padding: "10px 13px", fontSize: "21px", color: "#1C1B18",
     background: "#FAFAF8", outline: "none",
     transition: "border-color 0.15s",
   },
@@ -179,17 +179,17 @@ const s = {
     display: "flex", alignItems: "center", gap: "10px", margin: "4px 0",
   },
   dividerText: {
-    fontSize: "11px", fontWeight: "700", color: "#A09D97",
+    fontSize: "18px", fontWeight: "700", color: "#A09D97",
     textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
     padding: "0 4px", background: "#fff",
   },
   btn: {
     background: "#F59E0B", color: "#1C1917",
     border: "none", borderRadius: "10px",
-    padding: "12px", fontSize: "14px", fontWeight: "700",
+    padding: "12px", fontSize: "21px", fontWeight: "700",
     cursor: "pointer", marginTop: "4px",
     transition: "background 0.15s",
   },
-  footer: { fontSize: "13px", color: "#64748B", textAlign: "center", marginTop: "20px" },
+  footer: { fontSize: "20px", color: "#64748B", textAlign: "center", marginTop: "20px" },
   link: { color: "#2563EB", fontWeight: "600", textDecoration: "none" },
 };

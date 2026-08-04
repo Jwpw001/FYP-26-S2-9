@@ -224,13 +224,13 @@ export default function ManagerDashboard() {
 
         {/* Greeting */}
         <div>
-          <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B", margin: "0 0 4px", letterSpacing: "-0.02em" }}>
+          <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B", margin: "0 0 4px", letterSpacing: "-0.02em" }}>
             Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "Manager"}
           </h2>
-          <p style={{ fontSize: "14px", color: "#64748B", margin: 0 }}>
+          <p style={{ fontSize: "21px", color: "#64748B", margin: 0 }}>
             Here's what's happening at your branch today.
             {branchName && (
-              <span style={{ marginLeft: "10px", fontSize: "13px", fontWeight: "600", color: "#2563EB", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "99px", padding: "2px 10px" }}>
+              <span style={{ marginLeft: "10px", fontSize: "20px", fontWeight: "600", color: "#2563EB", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "99px", padding: "2px 10px" }}>
                 {branchName}
               </span>
             )}
@@ -247,10 +247,10 @@ export default function ManagerDashboard() {
                   <svg width="18" height="18" fill="none" stroke="#D97706" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
                 </div>
                 <div>
-                  <p style={{ fontSize: "14px", fontWeight: "700", color: "#92400E", margin: 0 }}>
+                  <p style={{ fontSize: "21px", fontWeight: "700", color: "#92400E", margin: 0 }}>
                     {unackedShifts.length} Published Shift{unackedShifts.length !== 1 ? "s" : ""} with Unacknowledged Assignments
                   </p>
-                  <p style={{ fontSize: "12px", color: "#B45309", margin: "2px 0 0" }}>Click to see which staff haven't confirmed</p>
+                  <p style={{ fontSize: "19px", color: "#B45309", margin: "2px 0 0" }}>Click to see which staff haven't confirmed</p>
                 </div>
               </div>
               <svg width="16" height="16" fill="none" stroke="#D97706" strokeWidth="2" viewBox="0 0 24 24"
@@ -261,7 +261,7 @@ export default function ManagerDashboard() {
             {alertOpen && (
               <div style={{ padding: "0 20px 14px", display: "flex", flexDirection: "column", gap: "6px" }}>
                 {unackedShifts.map(sh => (
-                  <div key={sh.shift_id} style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", padding: "6px 0", borderTop: "1px solid #FEF3C7" }}>
+                  <div key={sh.shift_id} style={{ display: "flex", justifyContent: "space-between", fontSize: "19.5px", padding: "6px 0", borderTop: "1px solid #FEF3C7" }}>
                     <span style={{ fontWeight: "600", color: "#1E293B" }}>{sh.title || "Shift"}</span>
                     <span style={{ color: "#64748B" }}>{fmtDate(sh.shift_date)} · {sh.staffNames.join(", ")}</span>
                   </div>
@@ -274,12 +274,12 @@ export default function ManagerDashboard() {
         {/* Today's Roster — gantt */}
         <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-            <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", margin: 0 }}>Today's Roster</h3>
-            <span style={{ fontSize: "11px", color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "6px", padding: "3px 9px", fontWeight: "500" }}>8AM – 10PM</span>
+            <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B", margin: 0 }}>Today's Roster</h3>
+            <span style={{ fontSize: "18px", color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "6px", padding: "3px 9px", fontWeight: "500" }}>8AM – 10PM</span>
           </div>
           {/* Time labels */}
           <div style={{ paddingLeft: "130px", marginBottom: "8px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10.5px", color: "#94A3B8", fontWeight: "600" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "17.5px", color: "#94A3B8", fontWeight: "600" }}>
               {TIME_LABELS.map(t => <span key={t}>{t}</span>)}
             </div>
           </div>
@@ -293,16 +293,16 @@ export default function ManagerDashboard() {
               ))}
             </div>
           ) : rosterRows.length === 0 ? (
-            <p style={{ fontSize: "13px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No published shifts assigned today.</p>
+            <p style={{ fontSize: "20px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No published shifts assigned today.</p>
           ) : (
             rosterRows.map((row, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "9px 0", borderTop: "1px solid #F1F5F9" }}>
                 <div style={{ width: "118px", flexShrink: 0, display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
                   <UserAvatar name={row.name} avatar_url={row.avatar_url} size={26} fontSize={11} />
-                  <span style={{ fontSize: "12.5px", fontWeight: "600", color: "#1E293B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.name}</span>
+                  <span style={{ fontSize: "19.5px", fontWeight: "600", color: "#1E293B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.name}</span>
                 </div>
                 <div style={{ flex: 1, position: "relative", height: "28px", background: "#FAFBFC", borderRadius: "6px" }}>
-                  <div style={{ position: "absolute", top: "2px", height: "24px", left: `${row.left}%`, width: `${row.width}%`, background: row.bg, color: row.color, border: `1px solid ${row.border}`, borderRadius: "6px", display: "flex", alignItems: "center", padding: "0 8px", fontSize: "11px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: "2px", height: "24px", left: `${row.left}%`, width: `${row.width}%`, background: row.bg, color: row.color, border: `1px solid ${row.border}`, borderRadius: "6px", display: "flex", alignItems: "center", padding: "0 8px", fontSize: "18px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden" }}>
                     {row.label}
                   </div>
                 </div>
@@ -316,8 +316,8 @@ export default function ManagerDashboard() {
 
           {/* Weekly Workload */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px" }}>
-            <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", margin: "0 0 4px" }}>Weekly Workload</h3>
-            <p style={{ fontSize: "12px", color: "#94A3B8", margin: "0 0 18px" }}>Shifts scheduled per day</p>
+            <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B", margin: "0 0 4px" }}>Weekly Workload</h3>
+            <p style={{ fontSize: "19px", color: "#94A3B8", margin: "0 0 18px" }}>Shifts scheduled per day</p>
             <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
               {DAYS_SHORT.map((day, i) => {
                 const count  = weekCounts[i];
@@ -325,7 +325,7 @@ export default function ManagerDashboard() {
                 const isToday = i === todayDow;
                 return (
                   <div key={day} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={{ width: "34px", fontSize: "12px", fontWeight: "600", color: isToday ? "#0D9488" : "#94A3B8", flexShrink: 0 }}>{day}</span>
+                    <span style={{ width: "34px", fontSize: "19px", fontWeight: "600", color: isToday ? "#0D9488" : "#94A3B8", flexShrink: 0 }}>{day}</span>
                     <div style={{ flex: 1, height: "20px", background: "#F1F5F9", borderRadius: "6px", overflow: "hidden" }}>
                       {loading ? (
                         <div style={{ height: "100%", width: "40%", background: "#E2E8F0", borderRadius: "6px", animation: "shimmer 1.4s infinite linear" }} />
@@ -333,7 +333,7 @@ export default function ManagerDashboard() {
                         <div style={{ height: "100%", width: `${pct}%`, background: isToday ? "#0D9488" : "#5EEAD4", borderRadius: "6px", transition: "width .5s ease" }} />
                       )}
                     </div>
-                    <span style={{ width: "18px", fontSize: "12px", fontWeight: "700", color: "#0D9488", textAlign: "right", flexShrink: 0 }}>
+                    <span style={{ width: "18px", fontSize: "19px", fontWeight: "700", color: "#0D9488", textAlign: "right", flexShrink: 0 }}>
                       {loading ? "" : count}
                     </span>
                   </div>
@@ -350,7 +350,7 @@ export default function ManagerDashboard() {
                 const active = approvalTab === key;
                 return (
                   <button key={key} onClick={() => setApprovalTab(key)}
-                    style={{ flex: 1, padding: "8px", borderRadius: "9px", border: `1px solid ${active ? "#BFDBFE" : "#E2E8F0"}`, background: active ? "#EFF6FF" : "transparent", color: active ? "#2563EB" : "#94A3B8", fontSize: "12.5px", fontWeight: "700", cursor: "pointer" }}>
+                    style={{ flex: 1, padding: "8px", borderRadius: "9px", border: `1px solid ${active ? "#BFDBFE" : "#E2E8F0"}`, background: active ? "#EFF6FF" : "transparent", color: active ? "#2563EB" : "#94A3B8", fontSize: "19.5px", fontWeight: "700", cursor: "pointer" }}>
                     {label} ({count})
                   </button>
                 );
@@ -364,13 +364,13 @@ export default function ManagerDashboard() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {(onLeave ? leaveItems : swapItems).length === 0 ? (
-                  <p style={{ fontSize: "12.5px", color: "#94A3B8", textAlign: "center", padding: "16px 0", margin: 0 }}>All caught up.</p>
+                  <p style={{ fontSize: "19.5px", color: "#94A3B8", textAlign: "center", padding: "16px 0", margin: 0 }}>All caught up.</p>
                 ) : (
                   (onLeave ? leaveItems : swapItems).map((item) => (
                     <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "9px 10px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "10px" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: "12.5px", fontWeight: "600", color: "#1E293B", margin: 0 }}>{item.name}</p>
-                        <p style={{ fontSize: "11px", color: "#94A3B8", margin: "1px 0 0" }}>{item.range}</p>
+                        <p style={{ fontSize: "19.5px", fontWeight: "600", color: "#1E293B", margin: 0 }}>{item.name}</p>
+                        <p style={{ fontSize: "18px", color: "#94A3B8", margin: "1px 0 0" }}>{item.range}</p>
                       </div>
                       <button onClick={() => {
                         if (onLeave) setLeaveItems(p => p.filter(x => x.id !== item.id));
@@ -397,7 +397,7 @@ export default function ManagerDashboard() {
         {/* Quick actions */}
         <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "18px 22px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
           {[
-            { label: "Create Task",   icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>, link: "/manager/shifts/new" },
+            { label: "Create Shift",  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>, link: "/manager/shifts/new" },
             { label: "View Staff",    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>, link: "/manager/staff" },
             { label: "Approve Leave", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>, link: "/manager/availability" },
             { label: "View Reports",  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg>, link: "/manager/reports" },
@@ -407,7 +407,7 @@ export default function ManagerDashboard() {
       </div>
 
       {toast && (
-        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "error" ? "#EF4444" : "#22C55E", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,.15)", animation: "toastIn .3s ease both" }}>
+        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "error" ? "#EF4444" : "#22C55E", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontSize: "21px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,.15)", animation: "toastIn .3s ease both" }}>
           {toast.msg}
         </div>
       )}
@@ -419,7 +419,7 @@ function QuickBtn({ label, icon, onClick }) {
   const [hov, setHov] = useState(false);
   return (
     <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ flex: 1, minWidth: "150px", display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", background: hov ? "#EFF6FF" : "#F8FAFC", border: `1px solid ${hov ? "#BFDBFE" : "#E2E8F0"}`, borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: hov ? "#2563EB" : "#1E293B", cursor: "pointer", transition: "all .15s" }}>
+      style={{ flex: 1, minWidth: "150px", display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", background: hov ? "#EFF6FF" : "#F8FAFC", border: `1px solid ${hov ? "#BFDBFE" : "#E2E8F0"}`, borderRadius: "10px", fontSize: "20px", fontWeight: "600", color: hov ? "#2563EB" : "#1E293B", cursor: "pointer", transition: "all .15s" }}>
       {icon}{label}
     </button>
   );

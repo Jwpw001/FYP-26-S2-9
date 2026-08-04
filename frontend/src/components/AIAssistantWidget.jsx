@@ -122,7 +122,7 @@ function ActionCard({ msg, onConfirm, onCancel }) {
 
   if (msg.status === "cancelled") {
     return (
-      <div style={{ marginBottom: 10, padding: "9px 13px", borderRadius: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", fontSize: 12.5, color: "#94A3B8" }}>
+      <div style={{ marginBottom: 10, padding: "9px 13px", borderRadius: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", fontSize: 19.5, color: "#94A3B8" }}>
         Action cancelled.
       </div>
     );
@@ -130,7 +130,7 @@ function ActionCard({ msg, onConfirm, onCancel }) {
 
   if (msg.status === "done") {
     return (
-      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#F0FDF4", border: "1px solid #86EFAC", fontSize: 13, color: "#16A34A", fontWeight: 600 }}>
+      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#F0FDF4", border: "1px solid #86EFAC", fontSize: 20, color: "#16A34A", fontWeight: 600 }}>
         ✓ {msg.result}
       </div>
     );
@@ -138,7 +138,7 @@ function ActionCard({ msg, onConfirm, onCancel }) {
 
   if (msg.status === "error") {
     return (
-      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#FEF2F2", border: "1px solid #FCA5A5", fontSize: 13, color: "#DC2626" }}>
+      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#FEF2F2", border: "1px solid #FCA5A5", fontSize: 20, color: "#DC2626" }}>
         ✗ {msg.result}
       </div>
     );
@@ -156,26 +156,26 @@ function ActionCard({ msg, onConfirm, onCancel }) {
         <div style={{
           width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
           background: meta.color, display: "flex", alignItems: "center",
-          justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 800,
+          justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 800,
         }}>{meta.icon}</div>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <span style={{ fontSize: 18, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.05em" }}>
           {meta.label}
         </span>
       </div>
-      <p style={{ fontSize: 12.5, color: "#1E293B", whiteSpace: "pre-wrap", margin: "0 0 10px", lineHeight: 1.5 }}>
+      <p style={{ fontSize: 19.5, color: "#1E293B", whiteSpace: "pre-wrap", margin: "0 0 10px", lineHeight: 1.5 }}>
         {describeAction(msg.name, msg.args)}
       </p>
       <div style={{ display: "flex", gap: 7 }}>
         <button
           onClick={onCancel}
-          style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", fontSize: 19, fontWeight: 600, cursor: "pointer" }}
         >
           Cancel
         </button>
         <button
           onClick={async () => { setBusy(true); await onConfirm(); setBusy(false); }}
           disabled={busy}
-          style={{ flex: 1.4, padding: "7px 0", borderRadius: 8, border: "none", background: meta.color, color: "#fff", fontSize: 12, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}
+          style={{ flex: 1.4, padding: "7px 0", borderRadius: 8, border: "none", background: meta.color, color: "#fff", fontSize: 19, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}
         >
           {busy ? "Working…" : "Confirm ✓"}
         </button>
@@ -209,7 +209,7 @@ function Message({ msg, onConfirm, onCancel }) {
           width: 28, height: 28, borderRadius: "50%",
           background: `linear-gradient(135deg, ${ACCENT}, #8B5CF6)`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0, marginRight: 8, marginTop: 2,
+          fontSize: 20, fontWeight: 700, color: "#fff", flexShrink: 0, marginRight: 8, marginTop: 2,
         }}>K</div>
       )}
       <div style={{
@@ -218,7 +218,7 @@ function Message({ msg, onConfirm, onCancel }) {
         color: isUser ? "#fff" : "#1E293B",
         padding: "9px 13px",
         borderRadius: isUser ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-        fontSize: 13.5,
+        fontSize: 20.5,
         lineHeight: 1.55,
         whiteSpace: "pre-wrap",
         boxShadow: isUser ? "0 2px 8px rgba(99,102,241,0.25)" : "0 1px 4px rgba(0,0,0,0.06)",
@@ -532,11 +532,11 @@ export default function AIAssistantWidget() {
               width: 34, height: 34, borderRadius: "50%",
               background: "rgba(255,255,255,0.2)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, fontWeight: 800, color: "#fff",
+              fontSize: 21, fontWeight: 800, color: "#fff",
             }}>K</div>
             <div style={{ flex: 1 }}>
-              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>AI Workforce Assistant</div>
-              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 21 }}>AI Workforce Assistant</div>
+              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 18 }}>
                 Read-only · Powered by GPT-4o mini
               </div>
             </div>
@@ -546,7 +546,7 @@ export default function AIAssistantWidget() {
               style={{
                 background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 8,
                 padding: "5px 8px", cursor: "pointer",
-                fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.85)",
+                fontSize: 17, fontWeight: 700, color: "rgba(255,255,255,0.85)",
                 letterSpacing: "0.03em",
               }}
             >
@@ -574,7 +574,7 @@ export default function AIAssistantWidget() {
                   width: 28, height: 28, borderRadius: "50%",
                   background: `linear-gradient(135deg, ${ACCENT}, #8B5CF6)`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0,
+                  fontSize: 20, fontWeight: 700, color: "#fff", flexShrink: 0,
                 }}>K</div>
                 <div style={{ background: "#F1F5F9", borderRadius: "16px 16px 16px 4px", padding: "2px 4px" }}>
                   <TypingIndicator />
@@ -591,7 +591,7 @@ export default function AIAssistantWidget() {
                 <button key={s} onClick={() => send(s)} style={{
                   background: "#F1F5F9", border: "1px solid #E2E8F0",
                   borderRadius: 20, padding: "5px 11px",
-                  fontSize: 11.5, color: "#475569", cursor: "pointer",
+                  fontSize: 18.5, color: "#475569", cursor: "pointer",
                   transition: "background 0.15s, color 0.15s",
                 }}
                   onMouseEnter={(e) => {
@@ -629,7 +629,7 @@ export default function AIAssistantWidget() {
               style={{
                 flex: 1, resize: "none",
                 border: "1.5px solid #E2E8F0", borderRadius: 12,
-                padding: "9px 12px", fontSize: 13,
+                padding: "9px 12px", fontSize: 20,
                 fontFamily: "inherit", outline: "none",
                 background: "#F8FAFC", color: "#1E293B",
                 lineHeight: 1.4,
@@ -702,7 +702,7 @@ export default function AIAssistantWidget() {
           </div>
 
           <div style={{
-            textAlign: "center", fontSize: 10.5, color: "#94A3B8",
+            textAlign: "center", fontSize: 17.5, color: "#94A3B8",
             paddingBottom: 8, paddingTop: 2,
           }}>
             Read-only assistant · Cannot perform system actions

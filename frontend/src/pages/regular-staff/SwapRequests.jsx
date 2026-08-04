@@ -82,26 +82,26 @@ function WeekCalendar({ weekStart, requests, shifts = [] }) {
         return (
           <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", background: isToday ? "#EFF6FF" : "#FFF" }}>
             <div style={{ padding: "10px 6px 8px", textAlign: "center", borderBottom: "1px solid #F1F5F9" }}>
-              <p style={{ fontSize: "9px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "5px" }}>{DAY_LABELS[i]}</p>
+              <p style={{ fontSize: "16px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "5px" }}>{DAY_LABELS[i]}</p>
               <div style={{ width: "28px", height: "28px", borderRadius: "50%", margin: "0 auto", background: isToday ? "#2563EB" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <p style={{ fontSize: "13px", fontWeight: isToday ? "800" : "600", color: isToday ? "#FFF" : "#1E293B" }}>{d.getDate()}</p>
+                <p style={{ fontSize: "20px", fontWeight: isToday ? "800" : "600", color: isToday ? "#FFF" : "#1E293B" }}>{d.getDate()}</p>
               </div>
             </div>
             <div style={{ padding: "5px 3px", minHeight: "64px", display: "flex", flexDirection: "column", gap: "3px" }}>
               {dayShifts.map(s => (
                 <div key={s.assignment_id}
                   style={{ borderLeft: "3px solid #7C3AED", background: "#EDE9FE", borderRadius: "0 5px 5px 0", padding: "3px 5px", overflow: "hidden" }}>
-                  <p style={{ fontSize: "9px", fontWeight: "700", color: "#4C1D95", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <p style={{ fontSize: "16px", fontWeight: "700", color: "#4C1D95", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {s.shifts?.title || "Shift"}
                   </p>
-                  <p style={{ fontSize: "8px", color: "#7C3AED" }}>{s.shifts?.start_time?.slice(0,5)}</p>
+                  <p style={{ fontSize: "15px", color: "#7C3AED" }}>{s.shifts?.start_time?.slice(0,5)}</p>
                 </div>
               ))}
               {hits.map(e => {
                 const sc = STATUS_COLORS[e.status] || STATUS_COLORS.pending;
                 return (
                   <div key={e.id} title={`${e.title} — ${e.status}`}
-                    style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`, borderRadius: "4px", padding: "2px 4px", fontSize: "8px", fontWeight: "700", opacity: e.status === "rejected" ? 0.45 : 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: e.status === "rejected" ? "line-through" : "none" }}>
+                    style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`, borderRadius: "4px", padding: "2px 4px", fontSize: "15px", fontWeight: "700", opacity: e.status === "rejected" ? 0.45 : 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: e.status === "rejected" ? "line-through" : "none" }}>
                     {e.type === "swap" ? "↔ " : "▲ "}{e.title}
                   </div>
                 );
@@ -268,15 +268,15 @@ export default function SwapRequests({ Layout = StaffLayout }) {
 
         {/* Header */}
         <div style={{ marginBottom: "24px" }}>
-          <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Swap & Replacement Requests</h2>
-          <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+          <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Swap & Replacement Requests</h2>
+          <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
             {pendingCount > 0 ? `${pendingCount} pending` : "No pending requests"} · tap a shift below to request a swap or replacement
           </p>
         </div>
 
         {/* Your Upcoming Shifts — task-style list */}
         <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 22px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "14px" }}>Your Upcoming Shifts</h3>
+          <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B", marginBottom: "14px" }}>Your Upcoming Shifts</h3>
 
           {loading ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -291,7 +291,7 @@ export default function SwapRequests({ Layout = StaffLayout }) {
           ) : myShifts.length === 0 ? (
             <div style={{ textAlign: "center", padding: "28px 0" }}>
               <RefreshCw size={28} color="#CBD5E1" style={{ margin: "0 auto 10px" }} />
-              <p style={{ fontSize: "14px", color: "#94A3B8" }}>No upcoming published shifts to request a swap for.</p>
+              <p style={{ fontSize: "21px", color: "#94A3B8" }}>No upcoming published shifts to request a swap for.</p>
             </div>
           ) : (
             myShifts.map((a, idx) => {
@@ -308,13 +308,13 @@ export default function SwapRequests({ Layout = StaffLayout }) {
                   style={{ display: "flex", alignItems: "center", gap: "16px", padding: "13px 0", borderBottom: "1px solid #F1F5F9", cursor: "default", borderRadius: "6px", transition: "background 0.12s", animation: `fadeSlideUp 0.3s ease ${idx * 0.06}s both` }}>
                   {/* Date block */}
                   <div style={{ minWidth: "50px", textAlign: "center", background: "#EFF6FF", borderRadius: "10px", padding: "8px 4px", flexShrink: 0 }}>
-                    <p style={{ fontSize: "10px", fontWeight: "700", color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.04em" }}>{dayAbbr}</p>
-                    <p style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", lineHeight: 1.1 }}>{dayNum}</p>
+                    <p style={{ fontSize: "17px", fontWeight: "700", color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.04em" }}>{dayAbbr}</p>
+                    <p style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B", lineHeight: 1.1 }}>{dayNum}</p>
                   </div>
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B", marginBottom: "2px" }}>{shift?.title || "Shift"}</p>
-                    <p style={{ fontSize: "12px", color: "#64748B" }}>
+                    <p style={{ fontSize: "21px", fontWeight: "600", color: "#1E293B", marginBottom: "2px" }}>{shift?.title || "Shift"}</p>
+                    <p style={{ fontSize: "19px", color: "#64748B" }}>
                       {shift?.start_time?.slice(0, 5)} – {shift?.end_time?.slice(0, 5)}
                       <span style={{ marginLeft: "10px", color: "#CBD5E1" }}>·</span>
                       <span style={{ marginLeft: "8px" }}>{fmtDate(shift?.shift_date)}</span>
@@ -322,13 +322,13 @@ export default function SwapRequests({ Layout = StaffLayout }) {
                   </div>
                   {/* Action */}
                   {hasExisting ? (
-                    <span style={{ padding: "5px 14px", background: "#FFFBEB", color: "#D97706", border: "1px solid #FDE68A", borderRadius: "100px", fontSize: "12px", fontWeight: "600", flexShrink: 0 }}>
+                    <span style={{ padding: "5px 14px", background: "#FFFBEB", color: "#D97706", border: "1px solid #FDE68A", borderRadius: "100px", fontSize: "19px", fontWeight: "600", flexShrink: 0 }}>
                       Requested
                     </span>
                   ) : (
                     <button className="swap-req-btn"
                       onClick={() => { setSwapModal(a); setSwapForm({ request_type: "swap", reason: "" }); setError(""); }}
-                      style={{ padding: "8px 18px", background: "#2563EB", color: "#FFF", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: "600", cursor: "pointer", flexShrink: 0, transition: "background 0.15s" }}>
+                      style={{ padding: "8px 18px", background: "#2563EB", color: "#FFF", border: "none", borderRadius: "8px", fontSize: "20px", fontWeight: "600", cursor: "pointer", flexShrink: 0, transition: "background 0.15s" }}>
                       ↔ Request Swap
                     </button>
                   )}
@@ -344,7 +344,7 @@ export default function SwapRequests({ Layout = StaffLayout }) {
             <button onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(d); }} style={navBtn}>
               <ChevronLeft size={16} />
             </button>
-            <span style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>{fmtWeekRange(weekStart)}</span>
+            <span style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B" }}>{fmtWeekRange(weekStart)}</span>
             <button onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(d); }} style={navBtn}>
               <ChevronRight size={16} />
             </button>
@@ -354,14 +354,14 @@ export default function SwapRequests({ Layout = StaffLayout }) {
           <div style={{ display: "flex", gap: "14px", marginBottom: "12px", flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
               <div style={{ width: "10px", height: "10px", borderRadius: "3px", background: "#EDE9FE", border: "1px solid #7C3AED" }} />
-              <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>Your Shift</span>
+              <span style={{ fontSize: "18px", fontWeight: "600", color: "#64748B" }}>Your Shift</span>
             </div>
             {[["pending", "Pending"], ["approved", "Approved"], ["rejected", "Rejected"]].map(([key, label]) => {
               const sc = STATUS_COLORS[key];
               return (
                 <div key={key} style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                   <div style={{ width: "10px", height: "10px", borderRadius: "3px", background: sc.bg, border: `1px solid ${sc.border}` }} />
-                  <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>{label}</span>
+                  <span style={{ fontSize: "18px", fontWeight: "600", color: "#64748B" }}>{label}</span>
                 </div>
               );
             })}
@@ -374,7 +374,7 @@ export default function SwapRequests({ Layout = StaffLayout }) {
         <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", marginBottom: "16px", width: "fit-content" }}>
           {FILTER_TABS.map(t => (
             <button key={t.value} onClick={() => setFilter(t.value)}
-              style={{ padding: "7px 16px", background: filter === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: filter === t.value ? "600" : "500", color: filter === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filter === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
+              style={{ padding: "7px 16px", background: filter === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "20px", fontWeight: filter === t.value ? "600" : "500", color: filter === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filter === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
               {t.label}
             </button>
           ))}
@@ -395,8 +395,8 @@ export default function SwapRequests({ Layout = StaffLayout }) {
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div style={{ marginBottom: "12px" }}><RefreshCw size={36} color="#CBD5E1" /></div>
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No {filter === "all" ? "" : filter + " "}swap requests</p>
-            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "6px" }}>Tap a shift above when you need to swap or find cover.</p>
+            <p style={{ fontSize: "21px", fontWeight: "600", color: "#64748B" }}>No {filter === "all" ? "" : filter + " "}swap requests</p>
+            <p style={{ fontSize: "20px", color: "#94A3B8", marginTop: "6px" }}>Tap a shift above when you need to swap or find cover.</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -407,12 +407,12 @@ export default function SwapRequests({ Layout = StaffLayout }) {
                 <div key={r.swap_id}
                   style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${i * 0.06}s both` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-                    <span style={{ padding: "5px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", background: typeColor.bg, color: typeColor.color }}>
+                    <span style={{ padding: "5px 12px", borderRadius: "100px", fontSize: "19px", fontWeight: "700", background: typeColor.bg, color: typeColor.color }}>
                       {r.request_type === "swap"
                         ? <><RefreshCw size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />Shift Swap</>
                         : <><AlertCircle size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />Replacement</>}
                     </span>
-                    <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", ...statusStyle(r.status) }}>
+                    <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "19px", fontWeight: "600", ...statusStyle(r.status) }}>
                       {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                     </span>
                   </div>
@@ -423,7 +423,7 @@ export default function SwapRequests({ Layout = StaffLayout }) {
                       <InfoItem label="Time"  value={`${shift.start_time?.slice(0,5)} – ${shift.end_time?.slice(0,5)}`} />
                     </div>
                   )}
-                  {r.reason && <p style={{ fontSize: "13px", color: "#64748B", fontStyle: "italic", marginTop: "12px" }}>"{r.reason}"</p>}
+                  {r.reason && <p style={{ fontSize: "20px", color: "#64748B", fontStyle: "italic", marginTop: "12px" }}>"{r.reason}"</p>}
                 </div>
               );
             })}
@@ -445,12 +445,12 @@ export default function SwapRequests({ Layout = StaffLayout }) {
                 return (
                   <>
                     <div style={{ minWidth: "54px", textAlign: "center", background: "#EFF6FF", borderRadius: "10px", padding: "9px 6px", flexShrink: 0 }}>
-                      <p style={{ fontSize: "10px", fontWeight: "700", color: "#2563EB", textTransform: "uppercase" }}>{d ? d.toLocaleDateString("en-SG", { weekday: "short" }).toUpperCase() : "—"}</p>
-                      <p style={{ fontSize: "20px", fontWeight: "900", color: "#1E293B", lineHeight: 1 }}>{d ? d.getDate() : "—"}</p>
+                      <p style={{ fontSize: "17px", fontWeight: "700", color: "#2563EB", textTransform: "uppercase" }}>{d ? d.toLocaleDateString("en-SG", { weekday: "short" }).toUpperCase() : "—"}</p>
+                      <p style={{ fontSize: "23px", fontWeight: "900", color: "#1E293B", lineHeight: 1 }}>{d ? d.getDate() : "—"}</p>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", lineHeight: 1.2 }}>{shift?.title || "Shift"}</h3>
-                      <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px" }}>
+                      <h3 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B", lineHeight: 1.2 }}>{shift?.title || "Shift"}</h3>
+                      <p style={{ fontSize: "20px", color: "#64748B", marginTop: "3px" }}>
                         {fmtDate(shift?.shift_date)} · {shift?.start_time?.slice(0,5)} – {shift?.end_time?.slice(0,5)}
                       </p>
                     </div>
@@ -463,7 +463,7 @@ export default function SwapRequests({ Layout = StaffLayout }) {
               </button>
             </div>
 
-            {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "9px", fontSize: "13px", marginBottom: "16px" }}>{error}</div>}
+            {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "9px", fontSize: "20px", marginBottom: "16px" }}>{error}</div>}
 
             {/* Request type */}
             <div style={{ marginBottom: "18px" }}>
@@ -476,7 +476,7 @@ export default function SwapRequests({ Layout = StaffLayout }) {
                   const active = swapForm.request_type === opt.value;
                   return (
                     <button key={opt.value} onClick={() => setSwapForm(p => ({ ...p, request_type: opt.value }))}
-                      style={{ flex: 1, padding: "10px 8px", border: `2px solid ${active ? opt.activeBorder : "#E2E8F0"}`, background: active ? opt.activeBg : "#FFF", borderRadius: "10px", fontSize: "13px", fontWeight: "700", color: active ? opt.activeColor : "#94A3B8", cursor: "pointer", transition: "all 0.15s" }}>
+                      style={{ flex: 1, padding: "10px 8px", border: `2px solid ${active ? opt.activeBorder : "#E2E8F0"}`, background: active ? opt.activeBg : "#FFF", borderRadius: "10px", fontSize: "20px", fontWeight: "700", color: active ? opt.activeColor : "#94A3B8", cursor: "pointer", transition: "all 0.15s" }}>
                       {opt.label}
                     </button>
                   );
@@ -495,11 +495,11 @@ export default function SwapRequests({ Layout = StaffLayout }) {
             {/* Actions */}
             <div style={{ display: "flex", gap: "8px" }}>
               <button onClick={() => setSwapModal(null)}
-                style={{ flex: 1, padding: "11px", background: "#F1F5F9", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
+                style={{ flex: 1, padding: "11px", background: "#F1F5F9", border: "none", borderRadius: "10px", fontSize: "21px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
                 Cancel
               </button>
               <button onClick={handleSubmit} disabled={saving}
-                style={{ flex: 2, padding: "11px", background: saving ? "#93C5FD" : "#2563EB", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", color: "#FFF", cursor: saving ? "default" : "pointer", transition: "background 0.15s" }}>
+                style={{ flex: 2, padding: "11px", background: saving ? "#93C5FD" : "#2563EB", border: "none", borderRadius: "10px", fontSize: "21px", fontWeight: "700", color: "#FFF", cursor: saving ? "default" : "pointer", transition: "background 0.15s" }}>
                 {saving ? "Submitting…" : "Submit Request"}
               </button>
             </div>
@@ -508,7 +508,7 @@ export default function SwapRequests({ Layout = StaffLayout }) {
       )}
 
       {toast && (
-        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both" }}>
+        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontSize: "21px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both" }}>
           {toast.msg}
         </div>
       )}
@@ -519,8 +519,8 @@ export default function SwapRequests({ Layout = StaffLayout }) {
 function InfoItem({ label, value }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-      <span style={{ fontSize: "11px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
-      <span style={{ fontSize: "14px", fontWeight: "500", color: "#1E293B" }}>{value}</span>
+      <span style={{ fontSize: "18px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
+      <span style={{ fontSize: "21px", fontWeight: "500", color: "#1E293B" }}>{value}</span>
     </div>
   );
 }
@@ -535,6 +535,6 @@ function statusStyle(status) {
   return map[status] || map.pending;
 }
 
-const lbl = { display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "6px" };
-const inp = { display: "block", width: "100%", padding: "10px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", background: "#FFF", color: "#1E293B", boxSizing: "border-box" };
+const lbl = { display: "block", fontSize: "19px", fontWeight: "600", color: "#64748B", marginBottom: "6px" };
+const inp = { display: "block", width: "100%", padding: "10px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "21px", background: "#FFF", color: "#1E293B", boxSizing: "border-box" };
 const navBtn = { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center", color: "#475569" };

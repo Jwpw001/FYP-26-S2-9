@@ -236,8 +236,8 @@ export default function AddStaff() {
               <Search size={13} color="#7A7870" strokeWidth={2}/>
               <input value={skillSearch} onChange={e => setSkillSearch(e.target.value)}
                 placeholder="Search skills…"
-                style={{ border:"none", outline:"none", fontSize:"12px", color:"#1C1B18", background:"transparent", flex:1, fontFamily:"inherit" }}/>
-              {skillSearch && <button onClick={() => setSkillSearch("")} style={{ background:"none", border:"none", color:"#7A7870", cursor:"pointer", fontSize:"15px", lineHeight:1, padding:"0" }}>×</button>}
+                style={{ border:"none", outline:"none", fontSize:"19px", color:"#1C1B18", background:"transparent", flex:1, fontFamily:"inherit" }}/>
+              {skillSearch && <button onClick={() => setSkillSearch("")} style={{ background:"none", border:"none", color:"#7A7870", cursor:"pointer", fontSize:"22px", lineHeight:1, padding:"0" }}>×</button>}
             </div>
           )}
           <div style={s.skillGridNew}>
@@ -275,18 +275,18 @@ export default function AddStaff() {
           {/* Experience details for selected skills */}
           {selectedSkills.length > 0 && (
             <div style={{ marginTop: "18px", display: "flex", flexDirection: "column", gap: "10px" }}>
-              <p style={{ fontSize: "11px", fontWeight: "700", color: "#7A7870", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <p style={{ fontSize: "18px", fontWeight: "700", color: "#7A7870", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Experience Details
               </p>
               {selectedSkills.map(sel => (
                 <div key={sel.skill_id} style={{ background: "#F7F6F3", border: "1px solid #E5E2DC", borderRadius: "10px", padding: "12px 14px" }}>
-                  <p style={{ fontSize: "13px", fontWeight: "700", color: "#1C1B18", marginBottom: "10px" }}>{sel.name}</p>
+                  <p style={{ fontSize: "20px", fontWeight: "700", color: "#1C1B18", marginBottom: "10px" }}>{sel.name}</p>
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px" }}>
                     {LEVELS.map(lv => (
                       <button key={lv} type="button"
                         onClick={() => updateSkillField(sel.skill_id, "experience_level", lv)}
                         style={{
-                          padding: "4px 12px", borderRadius: "99px", fontSize: "11px", fontWeight: "700", cursor: "pointer",
+                          padding: "4px 12px", borderRadius: "99px", fontSize: "18px", fontWeight: "700", cursor: "pointer",
                           background: sel.experience_level === lv ? "#1C1B18" : "#FFFFFF",
                           color: sel.experience_level === lv ? "#FFFFFF" : "#7A7870",
                           border: `1.5px solid ${sel.experience_level === lv ? "#1C1B18" : "#D8D5CE"}`,
@@ -296,18 +296,18 @@ export default function AddStaff() {
                     ))}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span style={{ fontSize: "11px", fontWeight: "600", color: "#7A7870", marginRight: "6px" }}>Years</span>
+                    <span style={{ fontSize: "18px", fontWeight: "600", color: "#7A7870", marginRight: "6px" }}>Years</span>
                     <button type="button"
                       onClick={() => updateSkillField(sel.skill_id, "years_of_experience", Math.max(0, (Number(sel.years_of_experience) || 0) - 1))}
                       style={{ width: "28px", height: "28px", borderRadius: "50%", border: "1.5px solid #D8D5CE", background: "#FFFFFF", color: "#1C1B18", fontSize: "16px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }}>
                       −
                     </button>
                     <div style={{ minWidth: "52px", height: "28px", background: "#FFFFFF", border: "1.5px solid #D8D5CE", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "3px" }}>
-                      <span style={{ fontSize: "13px", fontWeight: "700", color: "#1C1B18" }}>
+                      <span style={{ fontSize: "20px", fontWeight: "700", color: "#1C1B18" }}>
                         {sel.years_of_experience !== "" && sel.years_of_experience != null ? sel.years_of_experience : "—"}
                       </span>
                       {(sel.years_of_experience !== "" && sel.years_of_experience != null) && (
-                        <span style={{ fontSize: "10px", color: "#7A7870", fontWeight: "600" }}>yr{Number(sel.years_of_experience) !== 1 ? "s" : ""}</span>
+                        <span style={{ fontSize: "17px", color: "#7A7870", fontWeight: "600" }}>yr{Number(sel.years_of_experience) !== 1 ? "s" : ""}</span>
                       )}
                     </div>
                     <button type="button"
@@ -317,7 +317,7 @@ export default function AddStaff() {
                     </button>
                     {(sel.years_of_experience !== "" && sel.years_of_experience != null && Number(sel.years_of_experience) > 0) && (
                       <button type="button" onClick={() => updateSkillField(sel.skill_id, "years_of_experience", "")}
-                        style={{ background: "none", border: "none", color: "#A09D97", cursor: "pointer", fontSize: "13px", marginLeft: "2px", padding: "0 2px" }}>×</button>
+                        style={{ background: "none", border: "none", color: "#A09D97", cursor: "pointer", fontSize: "20px", marginLeft: "2px", padding: "0 2px" }}>×</button>
                     )}
                   </div>
                 </div>
@@ -340,25 +340,25 @@ export default function AddStaff() {
 }
 
 const s = {
-  back: { background:"none", border:"none", fontSize:"13px", fontWeight:"600",
+  back: { background:"none", border:"none", fontSize:"20px", fontWeight:"600",
     color:"#7A7870", cursor:"pointer", marginBottom:"20px", padding:0 },
   layout: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"20px", marginBottom:"20px" },
   section: { background:"#FFFFFF", border:"1px solid #E5E2DC", borderRadius:"14px", padding:"24px" },
-  sectionTitle: { fontSize:"15px", fontWeight:"700", color:"#1C1B18", marginBottom:"4px" },
-  sectionSub: { fontSize:"13px", color:"#7A7870", marginBottom:"16px" },
+  sectionTitle: { fontSize:"22px", fontWeight:"700", color:"#1C1B18", marginBottom:"4px" },
+  sectionSub: { fontSize:"20px", color:"#7A7870", marginBottom:"16px" },
   error: { background:"#FEF2F2", border:"1px solid #FECACA", color:"#991B1B",
-    padding:"10px 12px", borderRadius:"9px", fontSize:"13px", marginBottom:"16px" },
+    padding:"10px 12px", borderRadius:"9px", fontSize:"20px", marginBottom:"16px" },
   successMsg: { background:"#F0FDF4", border:"1px solid #BBF7D0", color:"#166534",
-    padding:"10px 12px", borderRadius:"9px", fontSize:"13px", marginBottom:"16px" },
+    padding:"10px 12px", borderRadius:"9px", fontSize:"20px", marginBottom:"16px" },
   fields: { display:"flex", flexDirection:"column", gap:"14px" },
   field: {},
-  label: { display:"block", fontSize:"12px", fontWeight:"600", color:"#7A7870", marginBottom:"5px" },
+  label: { display:"block", fontSize:"19px", fontWeight:"600", color:"#7A7870", marginBottom:"5px" },
   input: { display:"block", width:"100%", padding:"9px 13px", border:"1.5px solid #D8D5CE",
-    borderRadius:"9px", fontSize:"14px", background:"#FFFFFF", color:"#1C1B18", boxSizing:"border-box" },
-  hint: { fontSize:"11px", color:"#A09D97", marginTop:"4px" },
+    borderRadius:"9px", fontSize:"21px", background:"#FFFFFF", color:"#1C1B18", boxSizing:"border-box" },
+  hint: { fontSize:"18px", color:"#A09D97", marginTop:"4px" },
   daysRow: { display:"flex", gap:"6px", flexWrap:"wrap" },
   dayBtn: { padding:"6px 10px", border:"1.5px solid #E5E2DC", borderRadius:"8px",
-    fontSize:"12px", fontWeight:"600", color:"#7A7870", background:"#F7F6F3", cursor:"pointer" },
+    fontSize:"19px", fontWeight:"600", color:"#7A7870", background:"#F7F6F3", cursor:"pointer" },
   dayBtnActive: { background:"#1C1B18", color:"#FFFFFF", border:"1.5px solid #1C1B18" },
   skillGridNew: { display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:"12px" },
   skillCardNew: {
@@ -385,7 +385,7 @@ const s = {
     borderRadius:"50%",
     background:"#7A7870",
     color:"#FFFFFF",
-    fontSize:"16px",
+    fontSize:"21px",
     fontWeight:"700",
     display:"flex",
     alignItems:"center",
@@ -393,7 +393,7 @@ const s = {
     flexShrink:0,
   },
   skillCardName: {
-    fontSize:"13px",
+    fontSize:"20px",
     fontWeight:"600",
     color:"#1C1B18",
     margin:0,
@@ -414,10 +414,10 @@ const s = {
     justifyContent:"center",
     flexShrink:0,
   },
-  noSkills: { fontSize:"13px", color:"#A09D97" },
+  noSkills: { fontSize:"20px", color:"#A09D97" },
   actions: { display:"flex", justifyContent:"flex-end", gap:"10px" },
   cancelBtn: { background:"#F7F6F3", border:"1px solid #E5E2DC", borderRadius:"10px",
-    padding:"10px 20px", fontSize:"14px", fontWeight:"600", color:"#1C1B18", cursor:"pointer" },
+    padding:"10px 20px", fontSize:"21px", fontWeight:"600", color:"#1C1B18", cursor:"pointer" },
   saveBtn: { background:"#1C1B18", border:"none", borderRadius:"10px",
-    padding:"10px 20px", fontSize:"14px", fontWeight:"700", color:"#FFFFFF", cursor:"pointer" },
+    padding:"10px 20px", fontSize:"21px", fontWeight:"700", color:"#FFFFFF", cursor:"pointer" },
 };

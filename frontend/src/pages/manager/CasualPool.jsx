@@ -28,8 +28,8 @@ export default function CasualPool() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0F172A" }}>Casual Pool</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px" }}>
+            <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#0F172A" }}>Casual Pool</h2>
+            <p style={{ fontSize: "20px", color: "#64748B", marginTop: "3px" }}>
               Casual workers who have set this branch as a preferred location.
             </p>
           </div>
@@ -39,14 +39,14 @@ export default function CasualPool() {
             </svg>
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search workers…"
-              style={{ border: "none", outline: "none", background: "transparent", fontSize: "14px", color: "#1E293B", width: "180px" }} />
+              style={{ border: "none", outline: "none", background: "transparent", fontSize: "21px", color: "#1E293B", width: "180px" }} />
           </div>
         </div>
 
         {/* Count badge */}
         {!loading && (
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-            <span style={{ fontSize: "13px", fontWeight: "600", color: "#475569", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "99px", padding: "4px 12px" }}>
+            <span style={{ fontSize: "20px", fontWeight: "600", color: "#475569", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "99px", padding: "4px 12px" }}>
               {filtered.length} worker{filtered.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -61,10 +61,10 @@ export default function CasualPool() {
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px" }}>
             <Users size={36} color="#CBD5E1" style={{ margin: "0 auto 12px" }} />
-            <p style={{ fontSize: "15px", fontWeight: "600", color: "#94A3B8" }}>
+            <p style={{ fontSize: "22px", fontWeight: "600", color: "#94A3B8" }}>
               {search ? "No workers match your search" : "No casual workers for this branch yet"}
             </p>
-            <p style={{ fontSize: "13px", color: "#CBD5E1", marginTop: "6px" }}>
+            <p style={{ fontSize: "20px", color: "#CBD5E1", marginTop: "6px" }}>
               Workers will appear here once they select this branch as preferred.
             </p>
           </div>
@@ -92,8 +92,8 @@ function WorkerCard({ worker }) {
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{worker.full_name}</p>
-        <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B" }}>{worker.full_name}</p>
+        <p style={{ fontSize: "19px", color: "#94A3B8", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {worker.email}
         </p>
       </div>
@@ -103,7 +103,7 @@ function WorkerCard({ worker }) {
         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "240px" }}>
           {worker.skills.slice(0, 3).map(skill => (
             <span key={skill} style={{
-              fontSize: "11px", fontWeight: "600", color: "#7C3AED",
+              fontSize: "18px", fontWeight: "600", color: "#7C3AED",
               background: "#F5F3FF", border: "1px solid #EDE9FE",
               borderRadius: "99px", padding: "3px 9px",
               display: "flex", alignItems: "center", gap: "4px",
@@ -112,7 +112,7 @@ function WorkerCard({ worker }) {
             </span>
           ))}
           {worker.skills.length > 3 && (
-            <span style={{ fontSize: "11px", color: "#94A3B8", padding: "3px 6px" }}>+{worker.skills.length - 3}</span>
+            <span style={{ fontSize: "18px", color: "#94A3B8", padding: "3px 6px" }}>+{worker.skills.length - 3}</span>
           )}
         </div>
       )}
@@ -120,7 +120,7 @@ function WorkerCard({ worker }) {
       {/* Branch count */}
       <div style={{ display: "flex", alignItems: "center", gap: "5px", flexShrink: 0 }}>
         <Building2 size={13} color="#94A3B8" />
-        <span style={{ fontSize: "12px", color: "#94A3B8", fontWeight: "500" }}>
+        <span style={{ fontSize: "19px", color: "#94A3B8", fontWeight: "500" }}>
           {worker.branch_count} branch{worker.branch_count !== 1 ? "es" : ""}
         </span>
       </div>

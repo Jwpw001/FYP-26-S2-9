@@ -89,8 +89,8 @@ export default function AdminStaff() {
 
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"24px", flexWrap:"wrap", gap:"12px" }}>
           <div>
-            <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#0F172A" }}>All Staff</h2>
-            <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
+            <h2 style={{ fontSize:"25px", fontWeight:"800", color:"#0F172A" }}>All Staff</h2>
+            <p style={{ fontSize:"20px", color:"#64748B", marginTop:"2px" }}>
               {loading ? "Loading…" : `${counts.active} active · ${counts.all} total`}
             </p>
           </div>
@@ -102,11 +102,11 @@ export default function AdminStaff() {
           <div style={{ display:"flex", background:"#F1F5F9", borderRadius:"10px", padding:"3px", gap:"2px" }}>
             {TABS.map(t => (
               <button key={t.key} onClick={() => setFilter(t.key)}
-                style={{ padding:"6px 14px", borderRadius:"8px", border:"none", fontSize:"13px", fontWeight:"600", cursor:"pointer",
+                style={{ padding:"6px 14px", borderRadius:"8px", border:"none", fontSize:"20px", fontWeight:"600", cursor:"pointer",
                   background: filter===t.key ? "#FFF" : "transparent",
                   color: filter===t.key ? "#1E293B" : "#64748B",
                   boxShadow: filter===t.key ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}>
-                {t.label} <span style={{ fontSize:"11px", color: filter===t.key?"#3B82F6":"#94A3B8", marginLeft:"4px" }}>
+                {t.label} <span style={{ fontSize:"18px", color: filter===t.key?"#3B82F6":"#94A3B8", marginLeft:"4px" }}>
                   {t.key==="all"?counts.all:t.key==="regular"?counts.regular:counts.casual}
                 </span>
               </button>
@@ -124,7 +124,7 @@ export default function AdminStaff() {
 
           {/* Search */}
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…"
-            style={{ flex:1, minWidth:"200px", maxWidth:"320px", padding:"8px 13px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"13px", outline:"none" }} />
+            style={{ flex:1, minWidth:"200px", maxWidth:"320px", padding:"8px 13px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"20px", outline:"none" }} />
         </div>
 
         {/* Grid */}
@@ -146,7 +146,7 @@ export default function AdminStaff() {
         ) : filtered.length === 0 ? (
           <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"60px", textAlign:"center" }}>
             <p style={{ fontSize:"28px", marginBottom:"10px" }}><Users size={28} color="#64748B" /></p>
-            <p style={{ fontSize:"15px", fontWeight:"600", color:"#64748B" }}>No staff found</p>
+            <p style={{ fontSize:"22px", fontWeight:"600", color:"#64748B" }}>No staff found</p>
           </div>
         ) : (
           <>
@@ -164,14 +164,14 @@ export default function AdminStaff() {
                     <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"14px" }}>
                       <UserAvatar name={name} avatar_url={s.users?.avatar_url} size={44} />
                       <div style={{ minWidth:0 }}>
-                        <p style={{ fontSize:"14px", fontWeight:"700", color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{name}</p>
-                        <p style={{ fontSize:"12px", color:"#64748B", marginTop:"2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</p>
+                        <p style={{ fontSize:"21px", fontWeight:"700", color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{name}</p>
+                        <p style={{ fontSize:"19px", color:"#64748B", marginTop:"2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</p>
                       </div>
                     </div>
 
                     {/* Branch */}
                     {s.branches?.name && (
-                      <p style={{ fontSize:"11px", color:"#94A3B8", marginBottom:"10px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                      <p style={{ fontSize:"18px", color:"#94A3B8", marginBottom:"10px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                         <MapPin size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} /> {s.branches.name}
                       </p>
                     )}
@@ -180,19 +180,19 @@ export default function AdminStaff() {
                     {skills.length > 0 && (
                       <div style={{ display:"flex", flexWrap:"wrap", gap:"4px", marginBottom:"12px" }}>
                         {skills.slice(0,3).map(sk => (
-                          <span key={sk} style={{ fontSize:"11px", fontWeight:"600", padding:"2px 8px", borderRadius:"100px", background:"#F1F5F9", color:"#475569" }}>{sk}</span>
+                          <span key={sk} style={{ fontSize:"18px", fontWeight:"600", padding:"2px 8px", borderRadius:"100px", background:"#F1F5F9", color:"#475569" }}>{sk}</span>
                         ))}
-                        {skills.length > 3 && <span style={{ fontSize:"11px", color:"#94A3B8", padding:"2px 4px" }}>+{skills.length-3}</span>}
+                        {skills.length > 3 && <span style={{ fontSize:"18px", color:"#94A3B8", padding:"2px 4px" }}>+{skills.length-3}</span>}
                       </div>
                     )}
 
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingTop:"12px", borderTop:"1px solid #F1F5F9" }}>
-                      <span style={{ padding:"3px 10px", borderRadius:"100px", fontSize:"11px", fontWeight:"600",
+                      <span style={{ padding:"3px 10px", borderRadius:"100px", fontSize:"18px", fontWeight:"600",
                         background: s.staff_type==="regular"?"#DBEAFE":"#F3E8FF",
                         color: s.staff_type==="regular"?"#1E40AF":"#6B21A8" }}>
                         {s.staff_type==="regular"?"Regular":"Casual"}
                       </span>
-                      <span style={{ display:"inline-flex", alignItems:"center", gap:"5px", fontSize:"12px", fontWeight:"600",
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:"5px", fontSize:"19px", fontWeight:"600",
                         color: s.is_active?"#16A34A":"#94A3B8" }}>
                         <span style={{ width:"6px", height:"6px", borderRadius:"50%", background: s.is_active?"#22C55E":"#CBD5E1" }} />
                         {s.is_active?"Active":"Inactive"}
@@ -202,7 +202,7 @@ export default function AdminStaff() {
                 );
               })}
             </div>
-            <p style={{ textAlign:"center", fontSize:"13px", color:"#94A3B8", marginTop:"20px" }}>
+            <p style={{ textAlign:"center", fontSize:"20px", color:"#94A3B8", marginTop:"20px" }}>
               Showing {filtered.length} of {staff.length} staff
             </p>
           </>

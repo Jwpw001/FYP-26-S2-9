@@ -102,15 +102,15 @@ export default function SkillTags() {
             <div style={{ width: "48px", height: "48px", borderRadius: "50%", margin: "0 auto 14px", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <AlertTriangle size={22} color="#EF4444" />
             </div>
-            <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>Delete skill tag?</h3>
-            <p style={{ fontSize: "13px", color: "#64748B", lineHeight: 1.6, marginBottom: "22px" }}>
+            <h3 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>Delete skill tag?</h3>
+            <p style={{ fontSize: "20px", color: "#64748B", lineHeight: 1.6, marginBottom: "22px" }}>
               <strong>{deleteTarget.name}</strong> will be removed from all assigned staff.
             </p>
             <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
               <button onClick={() => setDeleteTarget(null)}
-                style={{ background: "#F1F5F9", border: "none", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>Cancel</button>
+                style={{ background: "#F1F5F9", border: "none", borderRadius: "9px", padding: "8px 16px", fontSize: "20px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>Cancel</button>
               <button onClick={confirmDelete}
-                style={{ background: "#EF4444", border: "none", borderRadius: "9px", padding: "8px 18px", fontSize: "13px", fontWeight: "700", color: "#FFF", cursor: "pointer" }}>Delete</button>
+                style={{ background: "#EF4444", border: "none", borderRadius: "9px", padding: "8px 18px", fontSize: "20px", fontWeight: "700", color: "#FFF", cursor: "pointer" }}>Delete</button>
             </div>
           </div>
         </div>
@@ -120,8 +120,8 @@ export default function SkillTags() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>Skill Tags</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+            <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A" }}>Skill Tags</h2>
+            <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
               {loading ? "Loading…" : `${skills.length} tag${skills.length !== 1 ? "s" : ""} · available platform-wide for staff assignment`}
             </p>
           </div>
@@ -129,24 +129,24 @@ export default function SkillTags() {
 
         {/* Add form */}
         <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px", marginBottom: "24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", marginBottom: "14px" }}>Add New Skill Tag</h3>
+          <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#0F172A", marginBottom: "14px" }}>Add New Skill Tag</h3>
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "flex-end" }}>
             <div style={{ flex: "1 1 160px" }}>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "5px" }}>Skill Name *</label>
+              <label style={{ display: "block", fontSize: "19px", fontWeight: "600", color: "#64748B", marginBottom: "5px" }}>Skill Name *</label>
               <input className="sk-input" value={newName} onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleAdd()}
                 placeholder="e.g. Barista"
-                style={{ width: "100%", padding: "9px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "13px", outline: "none", boxSizing: "border-box" }} />
+                style={{ width: "100%", padding: "9px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "20px", outline: "none", boxSizing: "border-box" }} />
             </div>
             <div style={{ flex: "2 1 220px" }}>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "5px" }}>Description (optional)</label>
+              <label style={{ display: "block", fontSize: "19px", fontWeight: "600", color: "#64748B", marginBottom: "5px" }}>Description (optional)</label>
               <input className="sk-input" value={newDesc} onChange={e => setNewDesc(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleAdd()}
                 placeholder="Brief description of this skill…"
-                style={{ width: "100%", padding: "9px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "13px", outline: "none", boxSizing: "border-box" }} />
+                style={{ width: "100%", padding: "9px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "20px", outline: "none", boxSizing: "border-box" }} />
             </div>
             <button onClick={handleAdd} disabled={adding}
-              style={{ padding: "9px 20px", borderRadius: "9px", fontSize: "13px", fontWeight: "600", border: "none", background: adding ? "#93C5FD" : "#3B82F6", color: "#FFF", cursor: adding ? "not-allowed" : "pointer", flexShrink: 0, height: "38px" }}>
+              style={{ padding: "9px 20px", borderRadius: "9px", fontSize: "20px", fontWeight: "600", border: "none", background: adding ? "#93C5FD" : "#3B82F6", color: "#FFF", cursor: adding ? "not-allowed" : "pointer", flexShrink: 0, height: "38px" }}>
               {adding ? "Adding…" : "+ Add Tag"}
             </button>
           </div>
@@ -158,7 +158,7 @@ export default function SkillTags() {
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search skill tags…"
-            style={{ width: "100%", padding: "9px 13px 9px 36px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#FFF", color: "#1E293B", outline: "none", boxSizing: "border-box" }} />
+            style={{ width: "100%", padding: "9px 13px 9px 36px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "20px", background: "#FFF", color: "#1E293B", outline: "none", boxSizing: "border-box" }} />
         </div>
 
         {/* Grid */}
@@ -178,10 +178,10 @@ export default function SkillTags() {
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center" }}>
             <p style={{ fontSize: "32px", marginBottom: "10px" }}><Tag size={32} color="#64748B" /></p>
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>
+            <p style={{ fontSize: "21px", fontWeight: "600", color: "#64748B" }}>
               {search ? "No tags match your search" : "No skill tags yet"}
             </p>
-            {!search && <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Add your first skill tag using the form above.</p>}
+            {!search && <p style={{ fontSize: "20px", color: "#94A3B8", marginTop: "4px" }}>Add your first skill tag using the form above.</p>}
           </div>
         ) : (
           <>
@@ -198,31 +198,31 @@ export default function SkillTags() {
                         <input autoFocus className="sk-input" value={editName}
                           onChange={e => setEditName(e.target.value)}
                           onKeyDown={e => { if (e.key === "Enter") handleUpdate(sk.skill_id); if (e.key === "Escape") setEditId(null); }}
-                          style={{ width: "100%", padding: "7px 11px", border: "1.5px solid #BFDBFE", borderRadius: "8px", fontSize: "13px", fontWeight: "600", outline: "none", boxSizing: "border-box", marginBottom: "8px" }} />
+                          style={{ width: "100%", padding: "7px 11px", border: "1.5px solid #BFDBFE", borderRadius: "8px", fontSize: "20px", fontWeight: "600", outline: "none", boxSizing: "border-box", marginBottom: "8px" }} />
                         <input className="sk-input" value={editDesc}
                           onChange={e => setEditDesc(e.target.value)}
                           placeholder="Description (optional)"
-                          style={{ width: "100%", padding: "7px 11px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "12px", outline: "none", boxSizing: "border-box", marginBottom: "12px" }} />
+                          style={{ width: "100%", padding: "7px 11px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "19px", outline: "none", boxSizing: "border-box", marginBottom: "12px" }} />
                         <div style={{ display: "flex", gap: "8px" }}>
                           <button onClick={() => handleUpdate(sk.skill_id)}
-                            style={{ padding: "5px 12px", borderRadius: "7px", border: "none", background: "#3B82F6", color: "#FFF", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>Save</button>
+                            style={{ padding: "5px 12px", borderRadius: "7px", border: "none", background: "#3B82F6", color: "#FFF", fontSize: "19px", fontWeight: "600", cursor: "pointer" }}>Save</button>
                           <button onClick={() => setEditId(null)}
-                            style={{ padding: "5px 12px", borderRadius: "7px", border: "1px solid #E2E8F0", background: "#F1F5F9", color: "#64748B", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>Cancel</button>
+                            style={{ padding: "5px 12px", borderRadius: "7px", border: "1px solid #E2E8F0", background: "#F1F5F9", color: "#64748B", fontSize: "19px", fontWeight: "600", cursor: "pointer" }}>Cancel</button>
                         </div>
                       </>
                     ) : (
                       <>
-                        <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "100px", fontSize: "13px", fontWeight: "700", marginBottom: "10px", ...cs }}>
+                        <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "100px", fontSize: "20px", fontWeight: "700", marginBottom: "10px", ...cs }}>
                           {sk.name}
                         </span>
-                        <p style={{ fontSize: "12px", color: sk.description ? "#64748B" : "#CBD5E1", marginBottom: "14px", minHeight: "18px" }}>
+                        <p style={{ fontSize: "19px", color: sk.description ? "#64748B" : "#CBD5E1", marginBottom: "14px", minHeight: "18px" }}>
                           {sk.description || "No description"}
                         </p>
                         <div style={{ display: "flex", gap: "8px", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
                           <button onClick={() => { setEditId(sk.skill_id); setEditName(sk.name); setEditDesc(sk.description || ""); }}
-                            style={{ padding: "5px 12px", borderRadius: "7px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#475569", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>Edit</button>
+                            style={{ padding: "5px 12px", borderRadius: "7px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#475569", fontSize: "19px", fontWeight: "600", cursor: "pointer" }}>Edit</button>
                           <button onClick={() => setDeleteTarget(sk)}
-                            style={{ padding: "5px 12px", borderRadius: "7px", border: "1.5px solid #FECACA", background: "#FEF2F2", color: "#991B1B", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>Delete</button>
+                            style={{ padding: "5px 12px", borderRadius: "7px", border: "1.5px solid #FECACA", background: "#FEF2F2", color: "#991B1B", fontSize: "19px", fontWeight: "600", cursor: "pointer" }}>Delete</button>
                         </div>
                       </>
                     )}
@@ -230,7 +230,7 @@ export default function SkillTags() {
                 );
               })}
             </div>
-            <p style={{ textAlign: "center", fontSize: "13px", color: "#94A3B8", marginTop: "20px" }}>
+            <p style={{ textAlign: "center", fontSize: "20px", color: "#94A3B8", marginTop: "20px" }}>
               {filtered.length} of {skills.length} tag{skills.length !== 1 ? "s" : ""}
             </p>
           </>
@@ -238,7 +238,7 @@ export default function SkillTags() {
       </div>
 
       {toast && (
-        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#FFF", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both" }}>
+        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#FFF", padding: "12px 20px", borderRadius: "10px", fontSize: "21px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both" }}>
           {toast.msg}
         </div>
       )}

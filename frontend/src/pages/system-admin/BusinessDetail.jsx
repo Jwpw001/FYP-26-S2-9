@@ -72,7 +72,7 @@ export default function BusinessDetail() {
       <div style={{ animation: "pageIn 0.35s ease both" }}>
 
         <button onClick={() => navigate("/system-admin/businesses")}
-          style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "20px", padding: 0 }}>
+          style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "20px", fontWeight: "600", cursor: "pointer", marginBottom: "20px", padding: 0 }}>
           <ArrowLeft size={15} /> Back to Businesses
         </button>
 
@@ -107,15 +107,15 @@ export default function BusinessDetail() {
 
                 {/* Name + description */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0F172A", letterSpacing: "-0.3px" }}>{business.name}</h2>
+                  <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#0F172A", letterSpacing: "-0.3px" }}>{business.name}</h2>
                   {business.description && (
-                    <p style={{ fontSize: "13px", color: "#64748B", marginTop: "4px", lineHeight: 1.5 }}>{business.description}</p>
+                    <p style={{ fontSize: "20px", color: "#64748B", marginTop: "4px", lineHeight: 1.5 }}>{business.description}</p>
                   )}
                 </div>
 
                 {/* Plan pills */}
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                  <span style={{ fontSize: "11px", fontWeight: "600", color: "#94A3B8", display: "flex", alignItems: "center", gap: "4px", marginRight: "2px" }}>
+                  <span style={{ fontSize: "18px", fontWeight: "600", color: "#94A3B8", display: "flex", alignItems: "center", gap: "4px", marginRight: "2px" }}>
                     <Star size={11} /> Plan
                   </span>
                   {["free","premium","enterprise"].map(p => {
@@ -123,7 +123,7 @@ export default function BusinessDetail() {
                     const active = business.plan === p;
                     return (
                       <button key={p} onClick={() => !active && changePlan(p)} disabled={planSaving}
-                        style={{ padding: "5px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", cursor: active ? "default" : "pointer",
+                        style={{ padding: "5px 14px", borderRadius: "100px", fontSize: "19px", fontWeight: "700", cursor: active ? "default" : "pointer",
                           border: `1.5px solid ${active ? ps.border : "#E2E8F0"}`,
                           background: active ? ps.bg : "transparent",
                           color: active ? ps.color : "#CBD5E1",
@@ -140,18 +140,18 @@ export default function BusinessDetail() {
               <div style={{ display: "flex", gap: "10px", marginTop: "20px", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "7px", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "10px", padding: "8px 14px" }}>
                   <GitBranch size={13} color="#2563EB" />
-                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#2563EB" }}>{branches.length}</span>
-                  <span style={{ fontSize: "12px", color: "#3B82F6", fontWeight: "500" }}>{branches.length === 1 ? "Branch" : "Branches"}</span>
+                  <span style={{ fontSize: "20px", fontWeight: "700", color: "#2563EB" }}>{branches.length}</span>
+                  <span style={{ fontSize: "19px", color: "#3B82F6", fontWeight: "500" }}>{branches.length === 1 ? "Branch" : "Branches"}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "7px", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "10px", padding: "8px 14px" }}>
                   <Users size={13} color="#16A34A" />
-                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#16A34A" }}>{totalStaff}</span>
-                  <span style={{ fontSize: "12px", color: "#22C55E", fontWeight: "500" }}>Staff</span>
+                  <span style={{ fontSize: "20px", fontWeight: "700", color: "#16A34A" }}>{totalStaff}</span>
+                  <span style={{ fontSize: "19px", color: "#22C55E", fontWeight: "500" }}>Staff</span>
                 </div>
                 {business.created_at && (
                   <div style={{ display: "flex", alignItems: "center", gap: "7px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "10px", padding: "8px 14px" }}>
                     <Calendar size={13} color="#64748B" />
-                    <span style={{ fontSize: "12px", color: "#64748B", fontWeight: "500" }}>
+                    <span style={{ fontSize: "19px", color: "#64748B", fontWeight: "500" }}>
                       Registered {new Date(business.created_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}
                     </span>
                   </div>
@@ -162,8 +162,8 @@ export default function BusinessDetail() {
             {/* ── Branches section ── */}
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "18px", padding: "24px 28px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div style={{ marginBottom: "18px" }}>
-                <h3 style={{ fontSize: "15px", fontWeight: "800", color: "#0F172A" }}>Branches</h3>
-                <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "3px" }}>
+                <h3 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>Branches</h3>
+                <p style={{ fontSize: "19px", color: "#94A3B8", marginTop: "3px" }}>
                   {branches.length} {branches.length === 1 ? "branch" : "branches"} under this business
                 </p>
               </div>
@@ -173,8 +173,8 @@ export default function BusinessDetail() {
                   <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
                     <GitBranch size={22} color="#3B82F6" />
                   </div>
-                  <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>No branches yet</p>
-                  <p style={{ fontSize: "13px", color: "#94A3B8" }}>No branches have been created for this business.</p>
+                  <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>No branches yet</p>
+                  <p style={{ fontSize: "20px", color: "#94A3B8" }}>No branches have been created for this business.</p>
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: "12px" }}>
@@ -185,19 +185,19 @@ export default function BusinessDetail() {
                       <div key={branch.branch_id} className="branch-card"
                         onClick={() => navigate(`/system-admin/branches/${branch.branch_id}`)}
                         style={{ display: "flex", alignItems: "center", gap: "14px", padding: "16px 18px", border: "1px solid #E2E8F0", borderRadius: "14px", background: "#FAFAFA", animation: `fadeSlideUp 0.25s ease ${i * 0.04}s both`, cursor: "pointer" }}>
-                        <div style={{ width: "42px", height: "42px", borderRadius: "11px", background: oColor, color: "#FFF", fontSize: "16px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <div style={{ width: "42px", height: "42px", borderRadius: "11px", background: oColor, color: "#FFF", fontSize: "21px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           {branch.name[0]?.toUpperCase()}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{branch.name}</p>
-                          <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <p style={{ fontSize: "21px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{branch.name}</p>
+                          <p style={{ fontSize: "19px", color: "#94A3B8", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {branch.address || <span style={{ fontStyle: "italic", color: "#CBD5E1" }}>No address set</span>}
                           </p>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "#EFF6FF", padding: "3px 9px", borderRadius: "100px" }}>
                             <Users size={11} color="#2563EB" />
-                            <span style={{ fontSize: "11px", fontWeight: "700", color: "#2563EB" }}>{staffCount}</span>
+                            <span style={{ fontSize: "18px", fontWeight: "700", color: "#2563EB" }}>{staffCount}</span>
                           </div>
                           <ChevronRight size={14} color="#CBD5E1" />
                         </div>

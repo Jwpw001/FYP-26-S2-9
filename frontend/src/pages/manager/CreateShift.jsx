@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
+import { toTitleCase } from "../../utils/text";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { Plus, Trash2, Clock, Calendar, Tag, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
@@ -141,7 +142,7 @@ export default function CreateShift() {
     try {
       const res = await api.post("/api/shifts", {
         branch_id: branchId,
-        title: form.title.trim() || null,
+        title: form.title.trim() ? toTitleCase(form.title.trim()) : null,
         shift_date: form.shift_date,
         start_time: form.start_time,
         end_time: form.end_time,
@@ -174,7 +175,7 @@ export default function CreateShift() {
     try {
       for (const t of validTasks) {
         await api.post(`/api/shifts/${createdShift.shift_id}/tasks`, {
-          title: t.title.trim(),
+          title: toTitleCase(t.title.trim()),
           skill_id: t.skill_id ? Number(t.skill_id) : null,
           difficulty: t.difficulty || null,
           start_time: t.start_time || null,
@@ -215,7 +216,7 @@ export default function CreateShift() {
             }}>
               {step > st.n ? <CheckCircle2 size={13} /> : st.n}
             </div>
-            <span style={{ fontSize: "13px", fontWeight: step === st.n ? "700" : "500", color: step === st.n ? "#1C1B18" : "#94A3B8" }}>
+            <span style={{ fontSize: "20px", fontWeight: step === st.n ? "700" : "500", color: step === st.n ? "#1C1B18" : "#94A3B8" }}>
               {st.label}
             </span>
             {i < steps.length - 1 && <ArrowRight size={14} color="#CBD5E1" style={{ marginLeft: "4px" }} />}
@@ -252,7 +253,7 @@ export default function CreateShift() {
                   <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px" }}>
                     {DAY_NAMES.map((d, i) => (
                       <span key={d} style={{
-                        fontSize: "10px", fontWeight: "700", padding: "2px 7px", borderRadius: "99px",
+                        fontSize: "17px", fontWeight: "700", padding: "2px 7px", borderRadius: "99px",
                         border: `1.5px solid ${operatingDays[i] ? "#2563EB" : "#E2E8F0"}`,
                         background: operatingDays[i] ? "#EFF6FF" : "#F8FAFC",
                         color: operatingDays[i] ? "#2563EB" : "#CBD5E1",
@@ -421,31 +422,31 @@ function Field({ label, required, children }) {
 }
 
 const s = {
-  back: { background: "none", border: "none", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer", marginBottom: "16px", padding: 0, display: "flex", alignItems: "center", gap: "4px" },
+  back: { background: "none", border: "none", fontSize: "20px", fontWeight: "600", color: "#64748B", cursor: "pointer", marginBottom: "16px", padding: 0, display: "flex", alignItems: "center", gap: "4px" },
   stepRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px", flexWrap: "wrap" },
-  stepBubble: { width: "24px", height: "24px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "800", flexShrink: 0 },
+  stepBubble: { width: "24px", height: "24px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "800", flexShrink: 0 },
   card: { background: "#FFF", border: "1px solid #E5E2DC", borderRadius: "16px", padding: "24px", marginBottom: "20px" },
   cardHead: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" },
   cardIcon: { width: "32px", height: "32px", borderRadius: "9px", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  cardTitle: { fontSize: "15px", fontWeight: "700", color: "#1C1B18", flex: 1 },
-  taskHint: { fontSize: "11px", color: "#94A3B8", fontWeight: "500" },
-  taskSubtitle: { fontSize: "13px", color: "#64748B", marginBottom: "4px" },
-  errorBox: { display: "flex", alignItems: "center", gap: "8px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "10px", fontSize: "13px", marginBottom: "16px" },
-  warningText: { fontSize: "11px", color: "#D97706", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" },
+  cardTitle: { fontSize: "22px", fontWeight: "700", color: "#1C1B18", flex: 1 },
+  taskHint: { fontSize: "18px", color: "#94A3B8", fontWeight: "500" },
+  taskSubtitle: { fontSize: "20px", color: "#64748B", marginBottom: "4px" },
+  errorBox: { display: "flex", alignItems: "center", gap: "8px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "10px", fontSize: "20px", marginBottom: "16px" },
+  warningText: { fontSize: "18px", color: "#D97706", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" },
   fields: { display: "flex", flexDirection: "column", gap: "14px" },
-  label: { display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "5px" },
-  miniLabel: { display: "block", fontSize: "11px", fontWeight: "600", color: "#94A3B8", marginBottom: "4px" },
-  input: { display: "block", width: "100%", padding: "8px 11px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "13px", background: "#FAFAFA", color: "#1C1B18", boxSizing: "border-box", outline: "none", fontFamily: "inherit" },
+  label: { display: "block", fontSize: "19px", fontWeight: "600", color: "#64748B", marginBottom: "5px" },
+  miniLabel: { display: "block", fontSize: "18px", fontWeight: "600", color: "#94A3B8", marginBottom: "4px" },
+  input: { display: "block", width: "100%", padding: "8px 11px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "20px", background: "#FAFAFA", color: "#1C1B18", boxSizing: "border-box", outline: "none", fontFamily: "inherit" },
   row2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
-  pill: { display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "600", color: "#475569", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "99px", padding: "3px 10px" },
-  shiftSummary: { display: "flex", alignItems: "center", gap: "8px", background: "#F0F7FF", border: "1.5px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px", marginBottom: "16px", flexWrap: "wrap", fontSize: "13px" },
+  pill: { display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "18px", fontWeight: "600", color: "#475569", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "99px", padding: "3px 10px" },
+  shiftSummary: { display: "flex", alignItems: "center", gap: "8px", background: "#F0F7FF", border: "1.5px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px", marginBottom: "16px", flexWrap: "wrap", fontSize: "20px" },
   summaryDot: { width: "3px", height: "3px", borderRadius: "50%", background: "#94A3B8" },
   taskRow: { display: "flex", alignItems: "flex-end", gap: "10px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "14px" },
-  taskNum: { width: "24px", height: "24px", borderRadius: "50%", background: "#E2E8F0", color: "#64748B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "800", flexShrink: 0, marginBottom: "2px" },
+  taskNum: { width: "24px", height: "24px", borderRadius: "50%", background: "#E2E8F0", color: "#64748B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "800", flexShrink: 0, marginBottom: "2px" },
   removeTaskBtn: { background: "none", border: "none", color: "#CBD5E1", cursor: "pointer", display: "flex", alignItems: "center", padding: "6px", borderRadius: "6px", flexShrink: 0, marginBottom: "2px" },
-  addTaskBtn: { display: "flex", alignItems: "center", gap: "5px", background: "none", border: "1.5px dashed #CBD5E1", borderRadius: "10px", padding: "10px 16px", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer", width: "100%", justifyContent: "center", marginTop: "12px" },
+  addTaskBtn: { display: "flex", alignItems: "center", gap: "5px", background: "none", border: "1.5px dashed #CBD5E1", borderRadius: "10px", padding: "10px 16px", fontSize: "20px", fontWeight: "600", color: "#64748B", cursor: "pointer", width: "100%", justifyContent: "center", marginTop: "12px" },
   actions: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "#FFF", border: "1px solid #E5E2DC", borderRadius: "14px", padding: "14px 20px" },
-  cancelBtn: { background: "none", border: "none", fontSize: "13px", fontWeight: "600", color: "#94A3B8", cursor: "pointer", padding: "8px 12px" },
-  draftBtn: { background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", padding: "10px 20px", fontSize: "13px", fontWeight: "700", color: "#1C1B18", cursor: "pointer" },
-  publishBtn: { background: "#1C1B18", border: "none", borderRadius: "10px", padding: "10px 22px", fontSize: "13px", fontWeight: "700", color: "#FFF", cursor: "pointer" },
+  cancelBtn: { background: "none", border: "none", fontSize: "20px", fontWeight: "600", color: "#94A3B8", cursor: "pointer", padding: "8px 12px" },
+  draftBtn: { background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", padding: "10px 20px", fontSize: "20px", fontWeight: "700", color: "#1C1B18", cursor: "pointer" },
+  publishBtn: { background: "#1C1B18", border: "none", borderRadius: "10px", padding: "10px 22px", fontSize: "20px", fontWeight: "700", color: "#FFF", cursor: "pointer" },
 };

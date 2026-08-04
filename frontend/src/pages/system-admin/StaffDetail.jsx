@@ -83,7 +83,7 @@ export default function AdminStaffDetail() {
           )}
 
           <div style={{ marginTop:"16px", padding:"12px", background:"#F8FAFC", borderRadius:"9px", border:"1px solid #F1F5F9" }}>
-            <p style={{ fontSize:"12px", color:"#94A3B8", textAlign:"center", lineHeight:1.5 }}>
+            <p style={{ fontSize:"19px", color:"#94A3B8", textAlign:"center", lineHeight:1.5 }}>
               Staff management is handled by the manager.
             </p>
           </div>
@@ -102,7 +102,7 @@ export default function AdminStaffDetail() {
                 <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
                   {DAYS.map((day,idx) => {
                     const on = (member.default_work_days||"0000000").padEnd(7,"0")[idx]==="1";
-                    return <span key={day} style={{ padding:"5px 10px", borderRadius:"8px", fontSize:"12px", fontWeight:"700",
+                    return <span key={day} style={{ padding:"5px 10px", borderRadius:"8px", fontSize:"19px", fontWeight:"700",
                       background:on?"#DBEAFE":"#F1F5F9", color:on?"#1E40AF":"#94A3B8", border:`1.5px solid ${on?"#BFDBFE":"#E2E8F0"}` }}>{day}</span>;
                   })}
                 </div>
@@ -111,13 +111,13 @@ export default function AdminStaffDetail() {
           </div>
 
           <div style={{ borderTop:"1px solid #F1F5F9", paddingTop:"20px" }}>
-            <h4 style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B", marginBottom:"12px" }}>Skill Tags</h4>
+            <h4 style={{ fontSize:"20px", fontWeight:"700", color:"#1E293B", marginBottom:"12px" }}>Skill Tags</h4>
             {assigned.length === 0
-              ? <p style={{ fontSize:"13px", color:"#94A3B8" }}>No skill tags assigned.</p>
+              ? <p style={{ fontSize:"20px", color:"#94A3B8" }}>No skill tags assigned.</p>
               : <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
                   {allSkills.filter(sk => assigned.includes(sk.skill_id)).map(sk => (
                     <span key={sk.skill_id}
-                      style={{ padding:"6px 12px", borderRadius:"100px", fontSize:"13px", fontWeight:"500",
+                      style={{ padding:"6px 12px", borderRadius:"100px", fontSize:"20px", fontWeight:"500",
                         background:"#0F172A", color:"#FFF", border:"1.5px solid #0F172A" }}>
                       {sk.name}
                     </span>
@@ -133,36 +133,36 @@ export default function AdminStaffDetail() {
 }
 
 function Field({ label, children }) {
-  return <div><label style={{ display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"6px" }}>{label}</label>{children}</div>;
+  return <div><label style={{ display:"block", fontSize:"19px", fontWeight:"600", color:"#64748B", marginBottom:"6px" }}>{label}</label>{children}</div>;
 }
 
 const s = {
-  back:        { background:"none", border:"none", fontSize:"13px", fontWeight:"600", color:"#64748B", cursor:"pointer", marginBottom:"20px", padding:0 },
+  back:        { background:"none", border:"none", fontSize:"20px", fontWeight:"600", color:"#64748B", cursor:"pointer", marginBottom:"20px", padding:0 },
   layout:      { display:"grid", gridTemplateColumns:"280px 1fr", gap:"20px", alignItems:"start" },
   profileCard: { background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"24px", textAlign:"center" },
   avatarLg:    { width:"72px", height:"72px", borderRadius:"50%", color:"#FFF", fontSize:"26px", fontWeight:"800", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px" },
-  profileName: { fontSize:"17px", fontWeight:"800", color:"#1E293B", marginBottom:"4px" },
-  profileEmail:{ fontSize:"13px", color:"#64748B", marginBottom:"12px" },
-  typeBadge:   { display:"inline-block", padding:"3px 10px", borderRadius:"100px", fontSize:"12px", fontWeight:"600", marginBottom:"16px" },
-  metaRow:     { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderTop:"1px solid #F1F5F9", fontSize:"13px" },
+  profileName: { fontSize:"22px", fontWeight:"800", color:"#1E293B", marginBottom:"4px" },
+  profileEmail:{ fontSize:"20px", color:"#64748B", marginBottom:"12px" },
+  typeBadge:   { display:"inline-block", padding:"3px 10px", borderRadius:"100px", fontSize:"19px", fontWeight:"600", marginBottom:"16px" },
+  metaRow:     { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderTop:"1px solid #F1F5F9", fontSize:"20px" },
   metaLabel:   { color:"#64748B", fontWeight:"500" },
-  metaVal:     { color:"#1E293B", fontWeight:"600", fontSize:"12px", textAlign:"right", maxWidth:"60%" },
-  statusBadge: { padding:"2px 8px", borderRadius:"100px", fontSize:"11px", fontWeight:"600" },
+  metaVal:     { color:"#1E293B", fontWeight:"600", fontSize:"19px", textAlign:"right", maxWidth:"60%" },
+  statusBadge: { padding:"2px 8px", borderRadius:"100px", fontSize:"18px", fontWeight:"600" },
   cardActions: { marginTop:"16px", display:"flex", flexDirection:"column", gap:"4px" },
-  actionBtn:   { width:"100%", padding:"9px", borderRadius:"9px", fontSize:"13px", fontWeight:"600", cursor:"pointer" },
+  actionBtn:   { width:"100%", padding:"9px", borderRadius:"9px", fontSize:"20px", fontWeight:"600", cursor:"pointer" },
   formCard:    { background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"24px" },
   formHeader:  { display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"20px" },
-  formTitle:   { fontSize:"15px", fontWeight:"700", color:"#1E293B" },
-  editBtn:     { background:"#F1F5F9", border:"1px solid #E2E8F0", borderRadius:"8px", padding:"7px 14px", fontSize:"13px", fontWeight:"600", color:"#1E293B", cursor:"pointer" },
-  cancelBtn:   { background:"#F1F5F9", border:"1px solid #E2E8F0", borderRadius:"8px", padding:"7px 14px", fontSize:"13px", fontWeight:"600", color:"#1E293B", cursor:"pointer" },
-  saveBtn:     { background:"#2563EB", border:"none", borderRadius:"8px", padding:"7px 14px", fontSize:"13px", fontWeight:"600", color:"#FFF", cursor:"pointer" },
-  errBox:      { background:"#FEF2F2", border:"1px solid #FECACA", color:"#991B1B", padding:"10px 12px", borderRadius:"9px", fontSize:"13px", marginBottom:"16px" },
-  okBox:       { background:"#F0FDF4", border:"1px solid #BBF7D0", color:"#166534", padding:"10px 12px", borderRadius:"9px", fontSize:"13px", marginBottom:"16px" },
+  formTitle:   { fontSize:"22px", fontWeight:"700", color:"#1E293B" },
+  editBtn:     { background:"#F1F5F9", border:"1px solid #E2E8F0", borderRadius:"8px", padding:"7px 14px", fontSize:"20px", fontWeight:"600", color:"#1E293B", cursor:"pointer" },
+  cancelBtn:   { background:"#F1F5F9", border:"1px solid #E2E8F0", borderRadius:"8px", padding:"7px 14px", fontSize:"20px", fontWeight:"600", color:"#1E293B", cursor:"pointer" },
+  saveBtn:     { background:"#2563EB", border:"none", borderRadius:"8px", padding:"7px 14px", fontSize:"20px", fontWeight:"600", color:"#FFF", cursor:"pointer" },
+  errBox:      { background:"#FEF2F2", border:"1px solid #FECACA", color:"#991B1B", padding:"10px 12px", borderRadius:"9px", fontSize:"20px", marginBottom:"16px" },
+  okBox:       { background:"#F0FDF4", border:"1px solid #BBF7D0", color:"#166534", padding:"10px 12px", borderRadius:"9px", fontSize:"20px", marginBottom:"16px" },
   fields:      { display:"flex", flexDirection:"column", gap:"16px", marginBottom:"24px" },
-  label:       { display:"block", fontSize:"12px", fontWeight:"600", color:"#64748B", marginBottom:"6px" },
-  value:       { fontSize:"14px", color:"#1E293B", fontWeight:"500" },
-  input:       { display:"block", width:"100%", padding:"9px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px", color:"#1E293B", background:"#FFF", boxSizing:"border-box" },
-  hint:        { fontSize:"11px", color:"#94A3B8", marginTop:"4px" },
+  label:       { display:"block", fontSize:"19px", fontWeight:"600", color:"#64748B", marginBottom:"6px" },
+  value:       { fontSize:"21px", color:"#1E293B", fontWeight:"500" },
+  input:       { display:"block", width:"100%", padding:"9px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"21px", color:"#1E293B", background:"#FFF", boxSizing:"border-box" },
+  hint:        { fontSize:"18px", color:"#94A3B8", marginTop:"4px" },
   overlay:     { position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:9000, display:"flex", alignItems:"center", justifyContent:"center" },
   modal:       { background:"#FFF", borderRadius:"16px", padding:"32px 28px", width:"360px", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" },
 };

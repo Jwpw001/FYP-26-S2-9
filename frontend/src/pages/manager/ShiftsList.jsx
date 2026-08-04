@@ -74,7 +74,6 @@ export default function ShiftsList() {
   const userId = user?.user_id;
 
   const [shifts, setShifts]         = useState([]);
-  const [krewbyAssigned, setKrewbyAssigned] = useState([]); // [{ shift_id, role_id, status }]
   const [branchInfo, setBranchInfo] = useState({ branch_id: null });
   const [operatingDays, setOperatingDays] = useState(null); // null = not loaded yet
   const [loading, setLoading]       = useState(true);
@@ -136,14 +135,6 @@ export default function ShiftsList() {
         }
 
         if (!cancelled) setShifts(shiftRows || []);
-
-        // Load krewby requests for this branch to factor into fill status
-        const { data: krewbyRows } = await supabase
-          .from("krewby_requests")
-          .select("shift_id, role_id, status")
-          .eq("branch_id", oid)
-          .in("status", ["assigned", "approved"]);
-        if (!cancelled) setKrewbyAssigned(krewbyRows || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -418,15 +409,15 @@ export default function ShiftsList() {
             <div style={{ display:"flex", gap:"10px", marginTop:"12px", flexWrap:"wrap" }}>
               {weekStats.map(s => (
                 <div key={s.label} style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"10px", padding:"9px 14px", minWidth:"96px" }}>
-                  <div style={{ fontSize:"18px", fontWeight:"800", lineHeight:"1.1", color:"#1E293B" }}>{s.value}</div>
-                  <div style={{ fontSize:"11px", color:"#64748B", fontWeight:"600", marginTop:"2px" }}>{s.label}</div>
+                  <div style={{ fontSize:"23px", fontWeight:"800", lineHeight:"1.1", color:"#1E293B" }}>{s.value}</div>
+                  <div style={{ fontSize:"18px", color:"#64748B", fontWeight:"600", marginTop:"2px" }}>{s.label}</div>
                 </div>
               ))}
             </div>
           </div>
           <button onClick={() => goTo("/manager/shifts/new")}
-            style={{ background:"#2563EB", color:"#fff", border:"none", borderRadius:"10px", padding:"11px 18px", fontSize:"14px", fontWeight:"700", cursor:"pointer", display:"flex", alignItems:"center", gap:"7px", boxShadow:"0 4px 14px rgba(37,99,235,0.25)", flexShrink:0 }}>
-            <span style={{ fontSize:"16px", lineHeight:"1" }}>+</span> Create Shift
+            style={{ background:"#2563EB", color:"#fff", border:"none", borderRadius:"10px", padding:"11px 18px", fontSize:"21px", fontWeight:"700", cursor:"pointer", display:"flex", alignItems:"center", gap:"7px", boxShadow:"0 4px 14px rgba(37,99,235,0.25)", flexShrink:0 }}>
+            <span style={{ fontSize:"21px", lineHeight:"1" }}>+</span> Create Shift
           </button>
         </div>
 
@@ -436,7 +427,7 @@ export default function ShiftsList() {
           <div style={{ display:"flex", background:"#EFF1F4", borderRadius:"9px", padding:"3px", gap:"2px" }}>
             {[{v:"calendar",l:"Calendar"},{v:"list",l:"List"}].map(({v,l}) => (
               <button key={v} onClick={() => { setView(v); setSelectMode(false); setSelected(new Set()); }}
-                style={{ padding:"6px 14px", borderRadius:"7px", fontSize:"12.5px", fontWeight:"700", border:"none", cursor:"pointer", transition:"all 0.15s",
+                style={{ padding:"6px 14px", borderRadius:"7px", fontSize:"19.5px", fontWeight:"700", border:"none", cursor:"pointer", transition:"all 0.15s",
                   background: view === v ? "#fff" : "transparent",
                   color: view === v ? "#1E293B" : "#64748B",
                   boxShadow: view === v ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
@@ -449,7 +440,7 @@ export default function ShiftsList() {
             <div style={{ display:"flex", background:"#EFF1F4", borderRadius:"9px", padding:"3px", gap:"2px" }}>
               {[{v:"day",l:"Day"},{v:"week",l:"Week"},{v:"month",l:"Month"}].map(({v,l}) => (
                 <button key={v} onClick={() => setCalendarScope(v)}
-                  style={{ padding:"6px 14px", borderRadius:"7px", fontSize:"12.5px", fontWeight:"700", border:"none", cursor:"pointer", transition:"all 0.15s",
+                  style={{ padding:"6px 14px", borderRadius:"7px", fontSize:"19.5px", fontWeight:"700", border:"none", cursor:"pointer", transition:"all 0.15s",
                     background: calendarScope === v ? "#fff" : "transparent",
                     color: calendarScope === v ? "#1E293B" : "#64748B",
                     boxShadow: calendarScope === v ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
@@ -463,7 +454,7 @@ export default function ShiftsList() {
           {/* Status filters */}
           {STATUS_CHIPS.map(chip => (
             <button key={chip.value} onClick={() => setFilter(chip.value)}
-              style={{ padding:"7px 13px", borderRadius:"20px", fontSize:"12.5px", fontWeight:"700", cursor:"pointer", border:"1px solid", transition:"filter 0.15s",
+              style={{ padding:"7px 13px", borderRadius:"20px", fontSize:"19.5px", fontWeight:"700", cursor:"pointer", border:"1px solid", transition:"filter 0.15s",
                 background: filterStatus === chip.value ? "#2563EB" : "#fff",
                 color: filterStatus === chip.value ? "#fff" : "#4B5563",
                 borderColor: filterStatus === chip.value ? "#2563EB" : "#E2E8F0" }}>
@@ -472,7 +463,7 @@ export default function ShiftsList() {
           ))}
           {/* Select button */}
           <button onClick={() => { setSelectMode(p => !p); setSelected(new Set()); }}
-            style={{ marginLeft:"auto", padding:"8px 14px", borderRadius:"9px", fontSize:"12.5px", fontWeight:"700", cursor:"pointer", border:"1px solid", transition:"all 0.15s",
+            style={{ marginLeft:"auto", padding:"8px 14px", borderRadius:"9px", fontSize:"19.5px", fontWeight:"700", cursor:"pointer", border:"1px solid", transition:"all 0.15s",
               background: selectMode ? "#2563EB" : "#fff",
               color: selectMode ? "#fff" : "#4B5563",
               borderColor: selectMode ? "#2563EB" : "#E2E8F0" }}>
@@ -483,14 +474,14 @@ export default function ShiftsList() {
         {/* ── Select mode bulk bar ── */}
         {selectMode && (
           <div style={{ marginBottom:"12px", background:"#EEF2FF", border:"1px solid #C7D2FE", borderRadius:"10px", padding:"10px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <div style={{ fontSize:"13px", fontWeight:"700", color:"#4338CA" }}>{selected.size} selected</div>
+            <div style={{ fontSize:"20px", fontWeight:"700", color:"#4338CA" }}>{selected.size} selected</div>
             <div style={{ display:"flex", gap:"8px", opacity: selected.size > 0 ? 1 : 0.4, pointerEvents: selected.size > 0 ? "auto" : "none" }}>
               <button onClick={publishSelected} disabled={publishing}
-                style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"12.5px", fontWeight:"700", background:"#fff", border:"1px solid #C7D2FE", cursor:"pointer" }}>
+                style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"19.5px", fontWeight:"700", background:"#fff", border:"1px solid #C7D2FE", cursor:"pointer" }}>
                 {publishing ? "Publishing…" : "Publish"}
               </button>
               <button onClick={deleteSelected} disabled={deleting}
-                style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"12.5px", fontWeight:"700", background:"#FEF2F2", color:"#DC2626", border:"1px solid #FECACA", cursor:"pointer" }}>
+                style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"19.5px", fontWeight:"700", background:"#FEF2F2", color:"#DC2626", border:"1px solid #FECACA", cursor:"pointer" }}>
                 {deleting ? "Deleting…" : "Delete"}
               </button>
             </div>
@@ -500,19 +491,19 @@ export default function ShiftsList() {
         {/* ── Period navigation ── */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
           <button onClick={onPrevPeriod}
-            style={{ width:"34px", height:"34px", borderRadius:"9px", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", color:"#64748B", transition:"background 0.15s" }}>
+            style={{ width:"34px", height:"34px", borderRadius:"9px", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"21px", color:"#64748B", transition:"background 0.15s" }}>
             ←
           </button>
-          <div style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B" }}>{periodLabel}</div>
+          <div style={{ fontSize:"22px", fontWeight:"700", color:"#1E293B" }}>{periodLabel}</div>
           <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
             {(view === "list" || calendarScope === "week") && (
               <button onClick={() => openGenerateConfig(weekDates)}
-                style={{ background:"linear-gradient(135deg,#8B5CF6,#6D28D9)", color:"#fff", padding:"8px 14px", borderRadius:"9px", fontSize:"13px", fontWeight:"700", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:"6px", transition:"filter 0.15s" }}>
+                style={{ background:"linear-gradient(135deg,#8B5CF6,#6D28D9)", color:"#fff", padding:"8px 14px", borderRadius:"9px", fontSize:"20px", fontWeight:"700", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:"6px", transition:"filter 0.15s" }}>
                 <Sparkles size={13} /> Generate Week
               </button>
             )}
             <button onClick={onNextPeriod}
-              style={{ width:"34px", height:"34px", borderRadius:"9px", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", color:"#64748B", transition:"background 0.15s" }}>
+              style={{ width:"34px", height:"34px", borderRadius:"9px", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"21px", color:"#64748B", transition:"background 0.15s" }}>
               →
             </button>
           </div>
@@ -540,7 +531,7 @@ export default function ShiftsList() {
               if (dayShifts.length === 0) return null;
               return (
                 <div key={di}>
-                  <div style={{ padding:"12px 16px 4px", fontSize:"12px", fontWeight:"800", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.05em" }}>
+                  <div style={{ padding:"12px 16px 4px", fontSize:"19px", fontWeight:"800", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.05em" }}>
                     {DAYS[di]} {date.getDate()}
                   </div>
                   {dayShifts.map(shift => {
@@ -559,11 +550,11 @@ export default function ShiftsList() {
                           </div>
                         )}
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B" }}>{shift.title || "Shift"}</div>
-                          <div style={{ fontSize:"11.5px", color:"#64748B" }}>{(shift.shift_tasks||[]).length} task{(shift.shift_tasks||[]).length!==1?"s":""}</div>
+                          <div style={{ fontSize:"20px", fontWeight:"700", color:"#1E293B" }}>{shift.title || "Shift"}</div>
+                          <div style={{ fontSize:"18.5px", color:"#64748B" }}>{(shift.shift_tasks||[]).length} task{(shift.shift_tasks||[]).length!==1?"s":""}</div>
                         </div>
-                        <div style={{ fontSize:"12.5px", fontWeight:"600", color:"#4B5563" }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</div>
-                        <div style={{ fontSize:"10px", fontWeight:"800", textTransform:"uppercase", letterSpacing:"0.04em", color:c.pillText, background:c.pillBg, padding:"3px 8px", borderRadius:"6px" }}>
+                        <div style={{ fontSize:"19.5px", fontWeight:"600", color:"#4B5563" }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</div>
+                        <div style={{ fontSize:"17px", fontWeight:"800", textTransform:"uppercase", letterSpacing:"0.04em", color:c.pillText, background:c.pillBg, padding:"3px 8px", borderRadius:"6px" }}>
                           {shift.status}
                         </div>
                       </div>
@@ -573,7 +564,7 @@ export default function ShiftsList() {
               );
             })}
             {weekDates.every(date => getShiftsForDate(date).filter(s => filterStatus==="all"||s.status===filterStatus).length===0) && (
-              <div style={{ padding:"48px 16px", textAlign:"center", color:"#94A3B8", fontSize:"13px" }}>No shifts scheduled this week.</div>
+              <div style={{ padding:"48px 16px", textAlign:"center", color:"#94A3B8", fontSize:"20px" }}>No shifts scheduled this week.</div>
             )}
           </div>
         ) : calendarScope === "week" ? (
@@ -589,13 +580,13 @@ export default function ShiftsList() {
                     background: isToday ? "color-mix(in srgb,#2563EB 7%,white)" : "transparent" }}>
                     <div onClick={() => { setCalendarScope("day"); const off = Math.round((new Date(date.getFullYear(),date.getMonth(),date.getDate()) - new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()))/86400000); setDayOffset(off); }}
                       style={{ textAlign:"center", marginBottom:"12px", cursor:"pointer" }}>
-                      <div style={{ fontSize:"10.5px", fontWeight:"700", letterSpacing:"0.06em", color:"#64748B", textTransform:"uppercase" }}>{DAYS[i]}</div>
-                      <div style={{ width:"28px", height:"28px", borderRadius:"50%", margin:"4px auto 0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", fontWeight:"800",
+                      <div style={{ fontSize:"17.5px", fontWeight:"700", letterSpacing:"0.06em", color:"#64748B", textTransform:"uppercase" }}>{DAYS[i]}</div>
+                      <div style={{ width:"28px", height:"28px", borderRadius:"50%", margin:"4px auto 0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"15px", fontWeight:"800",
                         background: isToday ? "#2563EB" : "transparent",
                         color: isToday ? "#fff" : "#1E293B" }}>
                         {date.getDate()}
                       </div>
-                      {isOff && <div style={{ fontSize:"10px", fontWeight:"700", color:"#94A3B8", letterSpacing:"0.06em", marginTop:"3px" }}>OFF</div>}
+                      {isOff && <div style={{ fontSize:"17px", fontWeight:"700", color:"#94A3B8", letterSpacing:"0.06em", marginTop:"3px" }}>OFF</div>}
                     </div>
                     <div style={{ display:"flex", flexDirection:"column", gap:"7px" }}>
                       {dayShifts.map(shift => {
@@ -616,20 +607,20 @@ export default function ShiftsList() {
                                 {isSelected && <Check size={9} color="#fff" strokeWidth={3.5} />}
                               </div>
                             )}
-                            <div style={{ fontSize:"9px", fontWeight:"800", letterSpacing:"0.05em", textTransform:"uppercase", color:c.pillText, background:c.pillBg, display:"inline-block", padding:"2px 6px", borderRadius:"5px", marginBottom:"6px" }}>
+                            <div style={{ fontSize:"16px", fontWeight:"800", letterSpacing:"0.05em", textTransform:"uppercase", color:c.pillText, background:c.pillBg, display:"inline-block", padding:"2px 6px", borderRadius:"5px", marginBottom:"6px" }}>
                               {shift.status}
                             </div>
                             <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
-                              <div style={{ width:"19px", height:"19px", borderRadius:"50%", background:c.dot, color:"#fff", fontSize:"8px", fontWeight:"800", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{initials}</div>
+                              <div style={{ width:"19px", height:"19px", borderRadius:"50%", background:c.dot, color:"#fff", fontSize:"9px", fontWeight:"800", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{initials}</div>
                               <div style={{ minWidth:0 }}>
-                                <div style={{ fontSize:"12px", fontWeight:"700", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", color:"#1E293B" }}>{shift.title || "Shift"}</div>
-                                <div style={{ fontSize:"10.5px", color:"#64748B", whiteSpace:"nowrap" }}>{tasks.length} task{tasks.length!==1?"s":""}</div>
+                                <div style={{ fontSize:"19px", fontWeight:"700", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", color:"#1E293B" }}>{shift.title || "Shift"}</div>
+                                <div style={{ fontSize:"17.5px", color:"#64748B", whiteSpace:"nowrap" }}>{tasks.length} task{tasks.length!==1?"s":""}</div>
                               </div>
                             </div>
-                            <div style={{ fontSize:"10.5px", fontWeight:"600", color:"#4B5563", marginTop:"6px" }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</div>
+                            <div style={{ fontSize:"17.5px", fontWeight:"600", color:"#4B5563", marginTop:"6px" }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</div>
                             {tasks.length > 0 && (
                               <div style={{ marginTop:"7px" }}>
-                                <div style={{ fontSize:"9px", fontWeight:"700", color:"#64748B", marginBottom:"3px" }}>{doneTasks}/{tasks.length} done</div>
+                                <div style={{ fontSize:"16px", fontWeight:"700", color:"#64748B", marginBottom:"3px" }}>{doneTasks}/{tasks.length} done</div>
                                 <div style={{ height:"4px", borderRadius:"2px", background:"#E2E8F0", overflow:"hidden" }}>
                                   <div style={{ height:"100%", width:`${tasks.length>0?Math.round(doneTasks/tasks.length*100):0}%`, background:c.dot }} />
                                 </div>
@@ -640,7 +631,7 @@ export default function ShiftsList() {
                       })}
                       {!isOff && (
                         <div onClick={() => goTo(`/manager/shifts/new?date=${localDateStr(date)}`)}
-                          style={{ textAlign:"center", padding:"7px", borderRadius:"8px", border:"1.5px dashed #D1D5DB", color:"#94A3B8", fontSize:"14px", cursor:"pointer", transition:"background 0.15s,border-color 0.15s" }}
+                          style={{ textAlign:"center", padding:"7px", borderRadius:"8px", border:"1.5px dashed #D1D5DB", color:"#94A3B8", fontSize:"21px", cursor:"pointer", transition:"background 0.15s,border-color 0.15s" }}
                           onMouseEnter={e => { e.currentTarget.style.background="#F8FAFC"; e.currentTarget.style.borderColor="#94A3B8"; }}
                           onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.borderColor="#D1D5DB"; }}>
                           +
@@ -685,20 +676,20 @@ export default function ShiftsList() {
           return (
             <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"20px" }}>
               <div style={{ textAlign:"center", marginBottom:"16px" }}>
-                <div style={{ fontSize:"11px", fontWeight:"700", letterSpacing:"0.06em", color:"#64748B", textTransform:"uppercase" }}>
+                <div style={{ fontSize:"18px", fontWeight:"700", letterSpacing:"0.06em", color:"#64748B", textTransform:"uppercase" }}>
                   {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dayDate.getDay()]}
                 </div>
-                <div style={{ width:"38px", height:"38px", borderRadius:"50%", margin:"5px auto 0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"17px", fontWeight:"800",
+                <div style={{ width:"38px", height:"38px", borderRadius:"50%", margin:"5px auto 0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"22px", fontWeight:"800",
                   background: isToday ? "#2563EB" : "transparent", color: isToday ? "#fff" : "#1E293B", border: isToday ? "none" : "1px solid #E2E8F0" }}>
                   {dayDate.getDate()}
                 </div>
-                {isOff && <div style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", letterSpacing:"0.06em", marginTop:"5px" }}>OFF</div>}
+                {isOff && <div style={{ fontSize:"18px", fontWeight:"700", color:"#94A3B8", letterSpacing:"0.06em", marginTop:"5px" }}>OFF</div>}
               </div>
               <div style={{ overflowX:"auto", paddingBottom:"8px" }}>
                 <div style={{ width: (DAY_END-DAY_START)*HOUR_W+"px" }}>
                   <div style={{ display:"flex", borderBottom:"1px solid #F0F2F5", paddingBottom:"6px", marginBottom:"0" }}>
                     {hours.map(hr => (
-                      <div key={hr} style={{ width:HOUR_W+"px", flexShrink:0, textAlign:"center", fontSize:"11px", fontWeight:"700", color:"#94A3B8", borderRight:"1px solid #F0F2F5" }}>{hr}</div>
+                      <div key={hr} style={{ width:HOUR_W+"px", flexShrink:0, textAlign:"center", fontSize:"18px", fontWeight:"700", color:"#94A3B8", borderRight:"1px solid #F0F2F5" }}>{hr}</div>
                     ))}
                   </div>
                   <div style={{ position:"relative", height:timelineH+"px", minHeight:"68px",
@@ -719,11 +710,11 @@ export default function ShiftsList() {
                             cursor:"pointer", overflow:"hidden", transition:"box-shadow 0.15s", zIndex:2 }}
                           onMouseEnter={e => { e.currentTarget.style.boxShadow="0 6px 14px rgba(20,20,30,0.14)"; e.currentTarget.style.zIndex=6; }}
                           onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.zIndex=2; }}>
-                          <div style={{ fontSize:"9px", fontWeight:"800", letterSpacing:"0.04em", textTransform:"uppercase", color:c.pillText }}>{sh.status}</div>
-                          <div style={{ fontSize:"12px", fontWeight:"700", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", marginTop:"2px", color:"#1E293B" }}>{sh.title || "Shift"}</div>
-                          <div style={{ fontSize:"10.5px", color:"#64748B", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{toHHMM(sh.start_time)} – {toHHMM(sh.end_time)}</div>
+                          <div style={{ fontSize:"16px", fontWeight:"800", letterSpacing:"0.04em", textTransform:"uppercase", color:c.pillText }}>{sh.status}</div>
+                          <div style={{ fontSize:"19px", fontWeight:"700", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", marginTop:"2px", color:"#1E293B" }}>{sh.title || "Shift"}</div>
+                          <div style={{ fontSize:"17.5px", color:"#64748B", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{toHHMM(sh.start_time)} – {toHHMM(sh.end_time)}</div>
                           {tasks.length > 0 && (
-                            <div style={{ fontSize:"10px", fontWeight:"700", color:"#64748B", marginTop:"3px" }}>{doneTasks}/{tasks.length} tasks</div>
+                            <div style={{ fontSize:"17px", fontWeight:"700", color:"#64748B", marginTop:"3px" }}>{doneTasks}/{tasks.length} tasks</div>
                           )}
                         </div>
                       );
@@ -733,7 +724,7 @@ export default function ShiftsList() {
               </div>
               {!isOff && (
                 <div onClick={() => goTo(`/manager/shifts/new?date=${dayDateStr}`)}
-                  style={{ marginTop:"14px", textAlign:"center", padding:"9px", borderRadius:"9px", border:"1.5px dashed #D1D5DB", color:"#94A3B8", cursor:"pointer", fontSize:"13px", fontWeight:"600" }}>
+                  style={{ marginTop:"14px", textAlign:"center", padding:"9px", borderRadius:"9px", border:"1.5px dashed #D1D5DB", color:"#94A3B8", cursor:"pointer", fontSize:"20px", fontWeight:"600" }}>
                   + Add shift
                 </div>
               )}
@@ -747,7 +738,7 @@ export default function ShiftsList() {
             <div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", marginBottom:"6px" }}>
                 {DOW_HEADERS.map(d => (
-                  <div key={d} style={{ textAlign:"center", fontSize:"11px", fontWeight:"700", letterSpacing:"0.05em", color:"#64748B", padding:"6px 0" }}>{d}</div>
+                  <div key={d} style={{ textAlign:"center", fontSize:"18px", fontWeight:"700", letterSpacing:"0.05em", color:"#64748B", padding:"6px 0" }}>{d}</div>
                 ))}
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"5px" }}>
@@ -774,12 +765,12 @@ export default function ShiftsList() {
                         return (
                           <div key={pi} style={{ display:"flex", alignItems:"center", gap:"4px", marginTop:"4px" }}>
                             <div style={{ width:"5px", height:"5px", borderRadius:"50%", background:c.dot, flexShrink:0 }} />
-                            <div style={{ fontSize:"9.5px", fontWeight:"600", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", color:"#1E293B" }}>{sh.title || "Shift"}</div>
+                            <div style={{ fontSize:"16.5px", fontWeight:"600", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", color:"#1E293B" }}>{sh.title || "Shift"}</div>
                           </div>
                         );
                       })}
                       {moreCount > 0 && (
-                        <div style={{ fontSize:"8.5px", fontWeight:"700", color:"#64748B", marginTop:"2px" }}>+{moreCount} more</div>
+                        <div style={{ fontSize:"15.5px", fontWeight:"700", color:"#64748B", marginTop:"2px" }}>+{moreCount} more</div>
                       )}
                     </div>
                   );
@@ -803,8 +794,8 @@ export default function ShiftsList() {
                   <Sparkles size={14} color="#fff" />
                 </div>
                 <div>
-                  <p style={{ fontSize:"14px",fontWeight:"800",color:"#fff",margin:0,lineHeight:1 }}>AI Weekly Review</p>
-                  <p style={{ fontSize:"10px",color:"rgba(255,255,255,0.65)",margin:0,marginTop:"3px" }}>Full-week schedule analysis</p>
+                  <p style={{ fontSize:"21px",fontWeight:"800",color:"#fff",margin:0,lineHeight:1 }}>AI Weekly Review</p>
+                  <p style={{ fontSize:"17px",color:"rgba(255,255,255,0.65)",margin:0,marginTop:"3px" }}>Full-week schedule analysis</p>
                 </div>
               </div>
               <button onClick={() => setWeeklyReviewModal(s => ({ ...s, open:false }))}
@@ -817,7 +808,7 @@ export default function ShiftsList() {
               {weeklyReviewModal.loading ? (
                 <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"14px",padding:"32px 0" }}>
                   <div style={{ width:"36px",height:"36px",borderRadius:"50%",border:"3px solid #E0E7FF",borderTopColor:"#6366F1",animation:"aiSpin 0.8s linear infinite" }} />
-                  <p style={{ fontSize:"13px",color:"#94A3B8",margin:0 }}>Analysing your week…</p>
+                  <p style={{ fontSize:"20px",color:"#94A3B8",margin:0 }}>Analysing your week…</p>
                 </div>
               ) : (
                 weeklyReviewModal.text?.split("\n").filter(l => l.trim()).map((line, i) => {
@@ -829,8 +820,8 @@ export default function ShiftsList() {
                   const icon  = isCrit ? "❌" : isWarning ? "⚠️" : isGood ? "✅" : "•";
                   return (
                     <div key={i} style={{ display:"flex",gap:"9px",marginBottom:"10px",alignItems:"flex-start",background:bg,borderRadius:"9px",padding:bg !== "transparent" ? "9px 11px" : "2px 0" }}>
-                      <span style={{ fontSize:"13px",flexShrink:0,marginTop:"1px" }}>{icon}</span>
-                      <p style={{ fontSize:"13px",color,fontWeight: bg !== "transparent" ? "600" : "400",lineHeight:1.55,margin:0 }}>
+                      <span style={{ fontSize:"20px",flexShrink:0,marginTop:"1px" }}>{icon}</span>
+                      <p style={{ fontSize:"20px",color,fontWeight: bg !== "transparent" ? "600" : "400",lineHeight:1.55,margin:0 }}>
                         {line.replace(/^[-•·✅⚠️❌*]\s*/, "").trim()}
                       </p>
                     </div>
@@ -841,7 +832,7 @@ export default function ShiftsList() {
             {/* Footer */}
             <div style={{ padding:"12px 20px",borderTop:"1.5px solid #F1F5F9",display:"flex",justifyContent:"flex-end",background:"#FAFBFE",flexShrink:0 }}>
               <button onClick={() => setWeeklyReviewModal(s => ({ ...s, open:false }))}
-                style={{ padding:"7px 18px",borderRadius:"8px",border:"none",background:"#6366F1",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:"pointer" }}>
+                style={{ padding:"7px 18px",borderRadius:"8px",border:"none",background:"#6366F1",color:"#fff",fontSize:"19px",fontWeight:"700",cursor:"pointer" }}>
                 Close
               </button>
             </div>
@@ -864,8 +855,8 @@ export default function ShiftsList() {
                 <div style={{ display:"flex",alignItems:"center",gap:"12px" }}>
                   <div style={{ width:"38px",height:"38px",borderRadius:"10px",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><Sparkles size={18} color="#fff" /></div>
                   <div>
-                    <div style={{ fontSize:"15px",fontWeight:"800",color:"#fff",letterSpacing:"-0.2px" }}>AI Weekly Schedule</div>
-                    <div style={{ fontSize:"11px",color:"rgba(255,255,255,0.6)",fontWeight:"500",marginTop:"1px" }}>
+                    <div style={{ fontSize:"22px",fontWeight:"800",color:"#fff",letterSpacing:"-0.2px" }}>AI Weekly Schedule</div>
+                    <div style={{ fontSize:"18px",color:"rgba(255,255,255,0.6)",fontWeight:"500",marginTop:"1px" }}>
                       {weeklyAI.weekStart && new Date(weeklyAI.weekStart+"T00:00:00").toLocaleDateString("en-SG",{weekday:"short",day:"numeric",month:"short"})}
                       {" — "}
                       {weeklyAI.weekEnd && new Date(weeklyAI.weekEnd+"T00:00:00").toLocaleDateString("en-SG",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}
@@ -881,21 +872,21 @@ export default function ShiftsList() {
                       { n: staffSet.size,                label:"staff" },
                     ].map(({ n, label }) => (
                       <div key={label} style={{ textAlign:"center",background:"rgba(255,255,255,0.12)",borderRadius:"10px",padding:"5px 12px",backdropFilter:"blur(4px)",border:"1px solid rgba(255,255,255,0.15)" }}>
-                        <div style={{ fontSize:"15px",fontWeight:"800",color:"#fff",lineHeight:1 }}>{n}</div>
-                        <div style={{ fontSize:"10px",color:"rgba(255,255,255,0.6)",fontWeight:"500",marginTop:"2px" }}>{label}</div>
+                        <div style={{ fontSize:"22px",fontWeight:"800",color:"#fff",lineHeight:1 }}>{n}</div>
+                        <div style={{ fontSize:"17px",color:"rgba(255,255,255,0.6)",fontWeight:"500",marginTop:"2px" }}>{label}</div>
                       </div>
                     ));
                   })()}
                   {(weeklyAI.step === "preview" || weeklyAI.step === "creating") && (
                     <button onClick={runWeeklyReview} disabled={weeklyReviewModal.loading}
-                      style={{ display:"flex",alignItems:"center",gap:"6px",padding:"7px 14px",borderRadius:"10px",border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(6px)",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:"pointer",transition:"all 0.15s",flexShrink:0 }}>
+                      style={{ display:"flex",alignItems:"center",gap:"6px",padding:"7px 14px",borderRadius:"10px",border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.15)",backdropFilter:"blur(6px)",color:"#fff",fontSize:"19px",fontWeight:"700",cursor:"pointer",transition:"all 0.15s",flexShrink:0 }}>
                       {weeklyReviewModal.loading
                         ? <><span style={{ width:"10px",height:"10px",borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",display:"inline-block",animation:"aiSpin 0.7s linear infinite" }}/> Reviewing…</>
                         : <><Sparkles size={12}/> AI Review</>}
                     </button>
                   )}
                   {!["generating","creating"].includes(weeklyAI.step) && (
-                    <button onClick={() => setWeeklyAI(null)} style={{ width:"32px",height:"32px",borderRadius:"8px",background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.8)",fontSize:"14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><X size={14} /></button>
+                    <button onClick={() => setWeeklyAI(null)} style={{ width:"32px",height:"32px",borderRadius:"8px",background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.8)",fontSize:"21px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><X size={14} /></button>
                   )}
                 </div>
               </div>
@@ -910,8 +901,8 @@ export default function ShiftsList() {
                 const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
                 const SHIFT_DEFAULTS = ["Morning","Afternoon","Evening","Night"];
                 const sectionCard = { background:"#fff",borderRadius:"16px",border:"1.5px solid #E8EDF5",padding:"24px 28px",boxShadow:"0 1px 4px rgba(0,0,0,0.04)" };
-                const sectionTitle = { fontSize:"14px",fontWeight:"800",color:"#1E293B",marginBottom:"6px" };
-                const sectionSub   = { fontSize:"12px",color:"#94A3B8",marginBottom:"16px" };
+                const sectionTitle = { fontSize:"21px",fontWeight:"800",color:"#1E293B",marginBottom:"6px" };
+                const sectionSub   = { fontSize:"19px",color:"#94A3B8",marginBottom:"16px" };
                 return (
                   <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",height:"100%" }}>
 
@@ -935,7 +926,7 @@ export default function ShiftsList() {
                               }}
                                 style={{ flex:1,padding:"20px 10px",borderRadius:"12px",border:`2px solid ${active?"#6366F1":"#E2E8F0"}`,background:active?"#EEF2FF":"#F8FAFC",color:active?"#4F46E5":"#94A3B8",cursor:"pointer",transition:"all 0.15s",textAlign:"center" }}>
                                 <div style={{ fontSize:"28px",fontWeight:"900",lineHeight:1,color:active?"#4F46E5":"#1E293B" }}>{n}</div>
-                                <div style={{ fontSize:"11px",fontWeight:"600",marginTop:"5px",color:active?"#6366F1":"#94A3B8",textTransform:"uppercase",letterSpacing:"0.4px" }}>
+                                <div style={{ fontSize:"18px",fontWeight:"600",marginTop:"5px",color:active?"#6366F1":"#94A3B8",textTransform:"uppercase",letterSpacing:"0.4px" }}>
                                   {n===1?"single":n===2?"split":"triple"}
                                 </div>
                               </button>
@@ -952,11 +943,11 @@ export default function ShiftsList() {
                           {cfg.shiftNames.map((name, i) => (
                             <div key={i} style={{ display:"flex",alignItems:"center",gap:"12px" }}>
                               <div style={{ width:"28px",height:"28px",borderRadius:"8px",background:"#EEF2FF",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
-                                <span style={{ fontSize:"11px",fontWeight:"800",color:"#6366F1" }}>{i+1}</span>
+                                <span style={{ fontSize:"18px",fontWeight:"800",color:"#6366F1" }}>{i+1}</span>
                               </div>
                               <input value={name}
                                 onChange={e => { const n=[...cfg.shiftNames]; n[i]=e.target.value; setWeeklyAI(prev=>({...prev,config:{...prev.config,shiftNames:n}})); }}
-                                style={{ flex:1,padding:"10px 14px",borderRadius:"9px",border:"1.5px solid #E2E8F0",fontSize:"14px",color:"#1E293B",outline:"none",fontFamily:"inherit",background:"#F8FAFC" }}
+                                style={{ flex:1,padding:"10px 14px",borderRadius:"9px",border:"1.5px solid #E2E8F0",fontSize:"21px",color:"#1E293B",outline:"none",fontFamily:"inherit",background:"#F8FAFC" }}
                                 placeholder={SHIFT_DEFAULTS[i] || "Shift name"} />
                             </div>
                           ))}
@@ -977,7 +968,7 @@ export default function ShiftsList() {
                             <p style={sectionTitle}>Close a day this week?</p>
                             <p style={sectionSub}>Toggle any operating day off — AI will skip it</p>
                             {operatingEntries.length === 0 ? (
-                              <p style={{ fontSize:"13px",color:"#94A3B8",textAlign:"center",padding:"16px 0" }}>No operating days found for this week</p>
+                              <p style={{ fontSize:"20px",color:"#94A3B8",textAlign:"center",padding:"16px 0" }}>No operating days found for this week</p>
                             ) : (
                               <>
                                 <div style={{ display:"grid",gridTemplateColumns:`repeat(${operatingEntries.length},1fr)`,gap:"8px" }}>
@@ -990,9 +981,9 @@ export default function ShiftsList() {
                                         setWeeklyAI(prev=>({...prev,config:{...prev.config,offDays:offs}}));
                                       }}
                                         style={{ padding:"12px 4px",borderRadius:"12px",border:`2px solid ${isOff?"#FCA5A5":"#E2E8F0"}`,background:isOff?"#FEF2F2":"#F8FAFC",cursor:"pointer",transition:"all 0.15s",textAlign:"center" }}>
-                                        <div style={{ fontSize:"9px",fontWeight:"700",color:isOff?"#EF4444":"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"4px" }}>{DAY_LABELS[i]}</div>
-                                        <div style={{ fontSize:"18px",fontWeight:"800",color:isOff?"#DC2626":"#1E293B",lineHeight:1 }}>{d.getDate()}</div>
-                                        <div style={{ marginTop:"6px",fontSize:"13px",color:isOff?"#EF4444":"#CBD5E1" }}>{isOff?"✕":"·"}</div>
+                                        <div style={{ fontSize:"16px",fontWeight:"700",color:isOff?"#EF4444":"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"4px" }}>{DAY_LABELS[i]}</div>
+                                        <div style={{ fontSize:"23px",fontWeight:"800",color:isOff?"#DC2626":"#1E293B",lineHeight:1 }}>{d.getDate()}</div>
+                                        <div style={{ marginTop:"6px",fontSize:"20px",color:isOff?"#EF4444":"#CBD5E1" }}>{isOff?"✕":"·"}</div>
                                       </button>
                                     );
                                   })}
@@ -1000,11 +991,11 @@ export default function ShiftsList() {
                                 <div style={{ marginTop:"12px",display:"flex",gap:"16px" }}>
                                   <div style={{ display:"flex",alignItems:"center",gap:"6px" }}>
                                     <div style={{ width:"10px",height:"10px",borderRadius:"3px",background:"#F8FAFC",border:"2px solid #E2E8F0" }}/>
-                                    <span style={{ fontSize:"11px",color:"#94A3B8",fontWeight:"500" }}>Open</span>
+                                    <span style={{ fontSize:"18px",color:"#94A3B8",fontWeight:"500" }}>Open</span>
                                   </div>
                                   <div style={{ display:"flex",alignItems:"center",gap:"6px" }}>
                                     <div style={{ width:"10px",height:"10px",borderRadius:"3px",background:"#FEF2F2",border:"2px solid #FCA5A5" }}/>
-                                    <span style={{ fontSize:"11px",color:"#94A3B8",fontWeight:"500" }}>Closed</span>
+                                    <span style={{ fontSize:"18px",color:"#94A3B8",fontWeight:"500" }}>Closed</span>
                                   </div>
                                 </div>
                               </>
@@ -1020,7 +1011,7 @@ export default function ShiftsList() {
                         {weeklyAI.branchSkills.length === 0 && (
                           <div style={{ padding:"10px 12px",borderRadius:"8px",background:"#FFFBEB",border:"1.5px solid #FDE68A",marginBottom:"12px",display:"flex",gap:"8px",alignItems:"center" }}>
                             <AlertTriangle size={13} color="#D97706" style={{ flexShrink:0 }} />
-                            <span style={{ fontSize:"11px",color:"#92400E",fontWeight:"500" }}>No skills configured. Add them in the Skills section first.</span>
+                            <span style={{ fontSize:"18px",color:"#92400E",fontWeight:"500" }}>No skills configured. Add them in the Skills section first.</span>
                           </div>
                         )}
                         <div style={{ display:"flex",flexDirection:"column",gap:"16px" }}>
@@ -1037,7 +1028,7 @@ export default function ShiftsList() {
                                 {/* Shift label */}
                                 <div style={{ display:"flex",alignItems:"center",gap:"7px",marginBottom:"8px" }}>
                                   <div style={{ width:"8px",height:"8px",borderRadius:"50%",background:sc.dot,flexShrink:0 }}/>
-                                  <span style={{ fontSize:"12px",fontWeight:"700",color:sc.text,textTransform:"uppercase",letterSpacing:"0.4px" }}>{shiftName || `Shift ${si+1}`}</span>
+                                  <span style={{ fontSize:"19px",fontWeight:"700",color:sc.text,textTransform:"uppercase",letterSpacing:"0.4px" }}>{shiftName || `Shift ${si+1}`}</span>
                                 </div>
                                 {/* Role rows */}
                                 <div style={{ display:"flex",flexDirection:"column",gap:"6px",marginBottom:"6px" }}>
@@ -1062,7 +1053,7 @@ export default function ShiftsList() {
                                             sr[si]=updated;
                                             setWeeklyAI(prev=>({...prev,config:{...prev.config,shiftRoles:sr}}));
                                           }}
-                                          style={{ padding:"9px 12px",borderRadius:"8px",border:"1.5px solid #E2E8F0",fontSize:"13px",color:"#1E293B",outline:"none",fontFamily:"inherit",background:"#F8FAFC" }}/>
+                                          style={{ padding:"9px 12px",borderRadius:"8px",border:"1.5px solid #E2E8F0",fontSize:"20px",color:"#1E293B",outline:"none",fontFamily:"inherit",background:"#F8FAFC" }}/>
                                       )}
                                       <div style={{ display:"flex",alignItems:"center",border:"1.5px solid #E2E8F0",borderRadius:"8px",background:"#F8FAFC",overflow:"hidden" }}>
                                         <button onClick={() => {
@@ -1070,14 +1061,14 @@ export default function ShiftsList() {
                                           const updated=[...roles]; updated[j]={...updated[j],headcount:Math.max(1,r.headcount-1)};
                                           sr[si]=updated;
                                           setWeeklyAI(prev=>({...prev,config:{...prev.config,shiftRoles:sr}}));
-                                        }} style={{ width:"26px",height:"34px",border:"none",background:"none",color:sc.dot,fontSize:"16px",fontWeight:"700",cursor:"pointer",flexShrink:0 }}>−</button>
-                                        <span style={{ flex:1,textAlign:"center",fontSize:"13px",fontWeight:"700",color:"#1E293B" }}>{r.headcount}</span>
+                                        }} style={{ width:"26px",height:"34px",border:"none",background:"none",color:sc.dot,fontSize:"21px",fontWeight:"700",cursor:"pointer",flexShrink:0 }}>−</button>
+                                        <span style={{ flex:1,textAlign:"center",fontSize:"20px",fontWeight:"700",color:"#1E293B" }}>{r.headcount}</span>
                                         <button onClick={() => {
                                           const sr=[...(cfg.shiftRoles||[])];
                                           const updated=[...roles]; updated[j]={...updated[j],headcount:r.headcount+1};
                                           sr[si]=updated;
                                           setWeeklyAI(prev=>({...prev,config:{...prev.config,shiftRoles:sr}}));
-                                        }} style={{ width:"26px",height:"34px",border:"none",background:"none",color:sc.dot,fontSize:"16px",fontWeight:"700",cursor:"pointer",flexShrink:0 }}>+</button>
+                                        }} style={{ width:"26px",height:"34px",border:"none",background:"none",color:sc.dot,fontSize:"21px",fontWeight:"700",cursor:"pointer",flexShrink:0 }}>+</button>
                                       </div>
                                       <button onClick={() => {
                                         const sr=[...(cfg.shiftRoles||[])];
@@ -1094,7 +1085,7 @@ export default function ShiftsList() {
                                   const sr=[...(cfg.shiftRoles||[])];
                                   sr[si]=[...roles,{role_name:"",headcount:1}];
                                   setWeeklyAI(prev=>({...prev,config:{...prev.config,shiftRoles:sr}}));
-                                }} style={{ padding:"6px 14px",borderRadius:"8px",border:`1.5px dashed ${sc.border}`,background:sc.bg,color:sc.text,fontSize:"11px",fontWeight:"700",cursor:"pointer",width:"100%" }}>
+                                }} style={{ padding:"6px 14px",borderRadius:"8px",border:`1.5px dashed ${sc.border}`,background:sc.bg,color:sc.text,fontSize:"18px",fontWeight:"700",cursor:"pointer",width:"100%" }}>
                                   + Add Role to {shiftName || `Shift ${si+1}`}
                                 </button>
                               </div>
@@ -1150,12 +1141,12 @@ export default function ShiftsList() {
                   <div>
                     {/* Legend */}
                     <div style={{ display:"flex",alignItems:"center",gap:"8px",marginBottom:"20px",flexWrap:"wrap" }}>
-                      <span style={{ fontSize:"11px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginRight:"4px" }}>Skill level:</span>
+                      <span style={{ fontSize:"18px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginRight:"4px" }}>Skill level:</span>
                       {DIFF_LEVELS.map(lvl => {
                         const m = DIFF_META[lvl];
-                        return <span key={lvl} style={{ padding:"3px 10px",borderRadius:"100px",background:m.bg,border:`1.5px solid ${m.border}`,color:m.color,fontSize:"11px",fontWeight:"700" }}>{m.label}</span>;
+                        return <span key={lvl} style={{ padding:"3px 10px",borderRadius:"100px",background:m.bg,border:`1.5px solid ${m.border}`,color:m.color,fontSize:"18px",fontWeight:"700" }}>{m.label}</span>;
                       })}
-                      <span style={{ fontSize:"11px",color:"#94A3B8",marginLeft:"4px" }}>— click a role to cycle its required level</span>
+                      <span style={{ fontSize:"18px",color:"#94A3B8",marginLeft:"4px" }}>— click a role to cycle its required level</span>
                     </div>
 
                     {/* Calendar grid */}
@@ -1165,9 +1156,9 @@ export default function ShiftsList() {
                         return (
                           <div key={day.date} style={{ display:"flex",flexDirection:"column",gap:"8px" }}>
                             <div style={{ textAlign:"center",paddingBottom:"8px",borderBottom:`2px solid ${color}33` }}>
-                              <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",margin:0 }}>{day.label}</p>
-                              <p style={{ fontSize:"18px",fontWeight:"900",color:"#1E293B",margin:"2px 0 0",lineHeight:1 }}>{day.day}</p>
-                              <p style={{ fontSize:"10px",color:"#94A3B8",margin:0 }}>{day.month}</p>
+                              <p style={{ fontSize:"17px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",margin:0 }}>{day.label}</p>
+                              <p style={{ fontSize:"23px",fontWeight:"900",color:"#1E293B",margin:"2px 0 0",lineHeight:1 }}>{day.day}</p>
+                              <p style={{ fontSize:"17px",color:"#94A3B8",margin:0 }}>{day.month}</p>
                             </div>
 
                             {shiftSlots.map((slot, si) => {
@@ -1175,23 +1166,23 @@ export default function ShiftsList() {
                               return (
                                 <div key={si} style={{ borderRadius:"12px",border:`1.5px solid ${color}33`,overflow:"hidden",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
                                   <div style={{ background:`${color}12`,borderBottom:`1px solid ${color}22`,padding:"7px 10px" }}>
-                                    <p style={{ fontSize:"11px",fontWeight:"800",color,margin:0 }}>{slot.name}</p>
+                                    <p style={{ fontSize:"18px",fontWeight:"800",color,margin:0 }}>{slot.name}</p>
                                   </div>
                                   <div style={{ padding:"8px 10px",display:"flex",flexDirection:"column",gap:"6px" }}>
-                                    {roles.length === 0 && <p style={{ fontSize:"11px",color:"#94A3B8",margin:0 }}>No roles</p>}
+                                    {roles.length === 0 && <p style={{ fontSize:"18px",color:"#94A3B8",margin:0 }}>No roles</p>}
                                     {roles.map((r, j) => {
                                       const diff = getDiff(day.date, si, j);
                                       const dm = DIFF_META[diff];
                                       const nextDiff = DIFF_LEVELS[(DIFF_LEVELS.indexOf(diff)+1) % DIFF_LEVELS.length];
                                       return (
                                         <div key={j}>
-                                          <p style={{ fontSize:"10px",fontWeight:"600",color:"#64748B",margin:"0 0 3px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
+                                          <p style={{ fontSize:"17px",fontWeight:"600",color:"#64748B",margin:"0 0 3px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
                                             {r.role_name || "Role"} ×{r.headcount}
                                           </p>
                                           <button
                                             title={`Next: ${nextDiff}`}
                                             onClick={() => setDiff(day.date, si, j, nextDiff)}
-                                            style={{ width:"100%",padding:"4px 6px",borderRadius:"7px",border:`1.5px solid ${dm.border}`,background:dm.bg,color:dm.color,fontSize:"10px",fontWeight:"700",cursor:"pointer",textAlign:"center",transition:"all 0.12s" }}>
+                                            style={{ width:"100%",padding:"4px 6px",borderRadius:"7px",border:`1.5px solid ${dm.border}`,background:dm.bg,color:dm.color,fontSize:"17px",fontWeight:"700",cursor:"pointer",textAlign:"center",transition:"all 0.12s" }}>
                                             {dm.label}
                                           </button>
                                         </div>
@@ -1218,10 +1209,10 @@ export default function ShiftsList() {
                     <div style={{ position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center" }}><Sparkles size={26} color="#6366F1" /></div>
                   </div>
                   <div style={{ textAlign:"center" }}>
-                    <p style={{ fontSize:"17px",fontWeight:"800",color:"#1E293B",marginBottom:"6px" }}>
+                    <p style={{ fontSize:"22px",fontWeight:"800",color:"#1E293B",marginBottom:"6px" }}>
                       {weeklyAI.step === "rescheduling" ? "Balancing workload…" : "Building your week…"}
                     </p>
-                    <p style={{ fontSize:"13px",color:"#64748B",lineHeight:1.65,maxWidth:"300px" }}>
+                    <p style={{ fontSize:"20px",color:"#64748B",lineHeight:1.65,maxWidth:"300px" }}>
                       {weeklyAI.step === "rescheduling"
                         ? "Redistributing staff evenly across all shifts using availability, skills, and fair rotation."
                         : "Analysing staff availability, branch hours, and role templates to craft your schedule."}
@@ -1237,8 +1228,8 @@ export default function ShiftsList() {
               {weeklyAI.step === "error" && (
                 <div style={{ display:"flex",flexDirection:"column",alignItems:"center",padding:"80px 20px",gap:"14px" }}>
                   <div style={{ width:"64px",height:"64px",borderRadius:"50%",background:"#FEF2F2",border:"2px solid #FCA5A5",display:"flex",alignItems:"center",justifyContent:"center" }}><AlertTriangle size={28} color="#DC2626" /></div>
-                  <p style={{ fontSize:"16px",fontWeight:"800",color:"#DC2626" }}>Generation failed</p>
-                  <p style={{ fontSize:"13px",color:"#64748B",maxWidth:"360px",textAlign:"center",lineHeight:1.6 }}>{weeklyAI.message}</p>
+                  <p style={{ fontSize:"21px",fontWeight:"800",color:"#DC2626" }}>Generation failed</p>
+                  <p style={{ fontSize:"20px",color:"#64748B",maxWidth:"360px",textAlign:"center",lineHeight:1.6 }}>{weeklyAI.message}</p>
                 </div>
               )}
 
@@ -1246,22 +1237,22 @@ export default function ShiftsList() {
               {weeklyAI.step === "done" && (
                 <div style={{ display:"flex",flexDirection:"column",alignItems:"center",padding:"80px 20px",gap:"14px" }}>
                   <div style={{ width:"72px",height:"72px",borderRadius:"50%",background:"linear-gradient(135deg,#D1FAE5,#A7F3D0)",border:"2px solid #6EE7B7",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 8px 24px rgba(16,185,129,0.25)" }}><Check size={32} color="#059669" strokeWidth={3} /></div>
-                  <p style={{ fontSize:"18px",fontWeight:"800",color:"#059669" }}>{weeklyAI.created} shift{weeklyAI.created!==1?"s":""} saved as draft!</p>
-                  <p style={{ fontSize:"13px",color:"#64748B" }}>Review and publish them from the calendar view.</p>
+                  <p style={{ fontSize:"23px",fontWeight:"800",color:"#059669" }}>{weeklyAI.created} shift{weeklyAI.created!==1?"s":""} saved as draft!</p>
+                  <p style={{ fontSize:"20px",color:"#64748B" }}>Review and publish them from the calendar view.</p>
                 </div>
               )}
 
               {/* Missed casuals banner */}
               {(weeklyAI.step === "preview" || weeklyAI.step === "creating") && weeklyAI.missedCasuals?.length > 0 && (
                 <div style={{ margin:"0 0 16px",padding:"12px 16px",borderRadius:"12px",background:"#FFFBEB",border:"1.5px solid #FCD34D",display:"flex",alignItems:"flex-start",gap:"10px" }}>
-                  <span style={{ fontSize:"16px",flexShrink:0,marginTop:"1px" }}>⚠️</span>
+                  <span style={{ fontSize:"21px",flexShrink:0,marginTop:"1px" }}>⚠️</span>
                   <div>
-                    <p style={{ fontSize:"13px",fontWeight:"700",color:"#92400E",margin:0,marginBottom:"3px" }}>
+                    <p style={{ fontSize:"20px",fontWeight:"700",color:"#92400E",margin:0,marginBottom:"3px" }}>
                       {weeklyAI.missedCasuals.length === 1
                         ? `${weeklyAI.missedCasuals[0]} wasn't considered in this schedule`
                         : `${weeklyAI.missedCasuals.length} casual staff weren't considered in this schedule`}
                     </p>
-                    <p style={{ fontSize:"12px",color:"#B45309",margin:0 }}>
+                    <p style={{ fontSize:"19px",color:"#B45309",margin:0 }}>
                       {weeklyAI.missedCasuals.length > 1 && <><strong>{weeklyAI.missedCasuals.join(", ")}</strong> — </>}
                       They haven't submitted their availability for this week. Remind them to submit it, then regenerate.
                     </p>
@@ -1285,12 +1276,12 @@ export default function ShiftsList() {
             {/* ── Footer ── */}
             {weeklyAI.step === "config" && (
               <div style={{ padding:"14px 24px",borderTop:"1px solid #E8EDF5",display:"flex",alignItems:"center",gap:"12px",background:"#fff",flexShrink:0 }}>
-                <button onClick={() => setWeeklyAI(null)} style={{ padding:"9px 18px",borderRadius:"9px",border:"1.5px solid #E2E8F0",background:"#fff",fontSize:"13px",fontWeight:"600",color:"#64748B",cursor:"pointer" }}>
+                <button onClick={() => setWeeklyAI(null)} style={{ padding:"9px 18px",borderRadius:"9px",border:"1.5px solid #E2E8F0",background:"#fff",fontSize:"20px",fontWeight:"600",color:"#64748B",cursor:"pointer" }}>
                   Cancel
                 </button>
                 <div style={{ flex:1 }} />
                 <button onClick={() => setWeeklyAI(prev => ({ ...prev, step: "difficulty" }))}
-                  style={{ padding:"10px 24px",borderRadius:"9px",border:"none",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:"13px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",boxShadow:"0 4px 14px rgba(99,102,241,0.4)" }}>
+                  style={{ padding:"10px 24px",borderRadius:"9px",border:"none",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:"20px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",boxShadow:"0 4px 14px rgba(99,102,241,0.4)" }}>
                   Next: Set Difficulty →
                 </button>
               </div>
@@ -1299,12 +1290,12 @@ export default function ShiftsList() {
             {weeklyAI.step === "difficulty" && (
               <div style={{ padding:"14px 24px",borderTop:"1px solid #E8EDF5",display:"flex",alignItems:"center",gap:"12px",background:"#fff",flexShrink:0 }}>
                 <button onClick={() => setWeeklyAI(prev => ({ ...prev, step: "config" }))}
-                  style={{ padding:"9px 18px",borderRadius:"9px",border:"1.5px solid #E2E8F0",background:"#fff",fontSize:"13px",fontWeight:"600",color:"#64748B",cursor:"pointer" }}>
+                  style={{ padding:"9px 18px",borderRadius:"9px",border:"1.5px solid #E2E8F0",background:"#fff",fontSize:"20px",fontWeight:"600",color:"#64748B",cursor:"pointer" }}>
                   ← Back
                 </button>
-                <div style={{ flex:1,fontSize:"12px",color:"#94A3B8" }}>Set required skill level for each role — AI will match staff accordingly</div>
+                <div style={{ flex:1,fontSize:"19px",color:"#94A3B8" }}>Set required skill level for each role — AI will match staff accordingly</div>
                 <button onClick={() => runGenerate(weeklyAI.weekStart, weeklyAI.weekEnd, weeklyAI.config)}
-                  style={{ padding:"10px 24px",borderRadius:"9px",border:"none",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:"13px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",boxShadow:"0 4px 14px rgba(99,102,241,0.4)" }}>
+                  style={{ padding:"10px 24px",borderRadius:"9px",border:"none",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:"20px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",boxShadow:"0 4px 14px rgba(99,102,241,0.4)" }}>
                   <Sparkles size={13} /> Generate Schedule →
                 </button>
               </div>
@@ -1312,23 +1303,23 @@ export default function ShiftsList() {
 
             {(weeklyAI.step === "preview" || weeklyAI.step === "creating") && (
               <div style={{ padding:"14px 24px",borderTop:"1px solid #E8EDF5",display:"flex",alignItems:"center",gap:"10px",background:"#fff",flexShrink:0 }}>
-                <button onClick={() => setWeeklyAI(null)} style={{ padding:"9px 18px",borderRadius:"9px",border:"1.5px solid #E2E8F0",background:"#fff",fontSize:"13px",fontWeight:"600",color:"#64748B",cursor:"pointer" }}>
+                <button onClick={() => setWeeklyAI(null)} style={{ padding:"9px 18px",borderRadius:"9px",border:"1.5px solid #E2E8F0",background:"#fff",fontSize:"20px",fontWeight:"600",color:"#64748B",cursor:"pointer" }}>
                   Discard
                 </button>
                 {/* Reschedule button */}
                 <button onClick={runReschedule} disabled={weeklyAI.step==="creating"}
-                  style={{ padding:"9px 16px",borderRadius:"9px",border:"1.5px solid #C7D2FE",background:"#EEF2FF",fontSize:"13px",fontWeight:"700",color:"#4F46E5",cursor:"pointer",display:"flex",alignItems:"center",gap:"6px",transition:"all 0.15s" }}>
+                  style={{ padding:"9px 16px",borderRadius:"9px",border:"1.5px solid #C7D2FE",background:"#EEF2FF",fontSize:"20px",fontWeight:"700",color:"#4F46E5",cursor:"pointer",display:"flex",alignItems:"center",gap:"6px",transition:"all 0.15s" }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                     <path d="M3 3v5h5"/>
                   </svg>
                   Reschedule
                 </button>
-                <div style={{ flex:1,fontSize:"12px",color:"#94A3B8" }}>
+                <div style={{ flex:1,fontSize:"19px",color:"#94A3B8" }}>
                   {weeklyAI.accepted?.size ?? 0} of {weeklyAI.schedule?.length} shifts selected
                 </div>
                 <button onClick={confirmWeeklySchedule} disabled={weeklyAI.step==="creating"||!weeklyAI.accepted?.size}
-                  style={{ padding:"10px 22px",borderRadius:"9px",border:"none",fontSize:"13px",fontWeight:"700",cursor:!weeklyAI.accepted?.size?"not-allowed":"pointer",transition:"all 0.2s",whiteSpace:"nowrap",
+                  style={{ padding:"10px 22px",borderRadius:"9px",border:"none",fontSize:"20px",fontWeight:"700",cursor:!weeklyAI.accepted?.size?"not-allowed":"pointer",transition:"all 0.2s",whiteSpace:"nowrap",
                     background:!weeklyAI.accepted?.size?"#E2E8F0":"linear-gradient(135deg,#4F46E5,#7C3AED)",
                     color:!weeklyAI.accepted?.size?"#94A3B8":"#fff",
                     boxShadow:!weeklyAI.accepted?.size?"none":"0 4px 14px rgba(99,102,241,0.4)",
@@ -1360,7 +1351,7 @@ function ShiftRow({ shift, fill, onNav }) {
       style={{
         display: "grid", gridTemplateColumns: "1.5fr 2fr 1.2fr 1.2fr 1fr 80px",
         padding: "13px 18px", gap: "8px", alignItems: "center",
-        borderBottom: "1px solid #F1F5F9", fontSize: "13px", color: "#1E293B",
+        borderBottom: "1px solid #F1F5F9", fontSize: "20px", color: "#1E293B",
         background: hovered ? "#F8FAFC" : "transparent",
         transition: "background 0.15s", cursor: "pointer",
       }}>
@@ -1373,19 +1364,19 @@ function ShiftRow({ shift, fill, onNav }) {
           <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22C55E", flexShrink: 0, display: "inline-block" }} />
         )}
         {fill === "partial" && shift.status === "published" && (
-          <span style={{ fontSize: "10px", fontWeight: "700", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", padding: "1px 7px", borderRadius: "100px", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: "17px", fontWeight: "700", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", padding: "1px 7px", borderRadius: "100px", whiteSpace: "nowrap" }}>
             Understaffed
           </span>
         )}
       </span>
       <span>
-        <span style={{ display: "inline-block", padding: "3px 9px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", textTransform: "capitalize", ...STATUS_STYLES[shift.status] }}>
+        <span style={{ display: "inline-block", padding: "3px 9px", borderRadius: "100px", fontSize: "18px", fontWeight: "600", textTransform: "capitalize", ...STATUS_STYLES[shift.status] }}>
           {shift.status}
         </span>
       </span>
       <button
         onClick={e => { e.stopPropagation(); onNav(); }}
-        style={{ background: "none", border: "1px solid #E2E8F0", borderRadius: "7px", padding: "5px 10px", fontSize: "12px", fontWeight: "600", color: "#2563EB", cursor: "pointer" }}>
+        style={{ background: "none", border: "1px solid #E2E8F0", borderRadius: "7px", padding: "5px 10px", fontSize: "19px", fontWeight: "600", color: "#2563EB", cursor: "pointer" }}>
         View →
       </button>
     </div>
@@ -1406,11 +1397,11 @@ function WarnPill({ firstName, winLabel, pillBg, pillColor, pillBorder, tip }) {
         setShow(true);
       }}
       onMouseLeave={() => setShow(false)}
-      style={{ fontSize:"10px", fontWeight:"600", color:pillColor, background:pillBg, border:`1px solid ${pillBorder}`, padding:"2px 7px", borderRadius:"100px", whiteSpace:"nowrap", maxWidth:"100px", overflow:"hidden", textOverflow:"ellipsis", display:"flex", alignItems:"center", gap:"2px", cursor:"default", flexShrink:0, position:"relative" }}>
+      style={{ fontSize:"17px", fontWeight:"600", color:pillColor, background:pillBg, border:`1px solid ${pillBorder}`, padding:"2px 7px", borderRadius:"100px", whiteSpace:"nowrap", maxWidth:"100px", overflow:"hidden", textOverflow:"ellipsis", display:"flex", alignItems:"center", gap:"2px", cursor:"default", flexShrink:0, position:"relative" }}>
       <span style={{ flexShrink:0 }}>⚠</span>
       <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{firstName}{winLabel}</span>
       {show && (
-        <div style={{ position:"fixed", left:coord.x, top:coord.y, zIndex:9999999, background:"#0F172A", color:"#fff", fontSize:"11px", lineHeight:"1.6", padding:"9px 13px", borderRadius:"10px", maxWidth:"230px", whiteSpace:"normal", pointerEvents:"none", boxShadow:"0 8px 28px rgba(0,0,0,0.45)", width:"max-content" }}>
+        <div style={{ position:"fixed", left:coord.x, top:coord.y, zIndex:9999999, background:"#0F172A", color:"#fff", fontSize:"18px", lineHeight:"1.6", padding:"9px 13px", borderRadius:"10px", maxWidth:"230px", whiteSpace:"normal", pointerEvents:"none", boxShadow:"0 8px 28px rgba(0,0,0,0.45)", width:"max-content" }}>
           <div style={{ position:"absolute", top:"-5px", left:"14px", width:"9px", height:"9px", background:"#0F172A", transform:"rotate(45deg)", borderRadius:"2px" }} />
           {tip}
         </div>
@@ -1454,33 +1445,33 @@ function StaffRosterPicker({ branchStaff, rosterData, rosterLoading, assigned, h
 
   function availBadge(s) {
     const r = rosterData?.[s.name];
-    if (rosterLoading) return <span style={{ fontSize:"10px", color:"#CBD5E1" }}>…</span>;
+    if (rosterLoading) return <span style={{ fontSize:"17px", color:"#CBD5E1" }}>…</span>;
     if (!r) return null;
 
     if (r.is_on_leave)
-      return <span style={{ fontSize:"10px", fontWeight:"600", color:"#DC2626", background:"#FEF2F2", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>On leave</span>;
+      return <span style={{ fontSize:"17px", fontWeight:"600", color:"#DC2626", background:"#FEF2F2", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>On leave</span>;
 
     if (r.is_double_booked) {
       const b = r.double_booked_shift;
       const label = b ? `Booked ${b.start_time?.slice(0,5)}–${b.end_time?.slice(0,5)}` : "Double-booked";
-      return <span style={{ fontSize:"10px", fontWeight:"600", color:"#B45309", background:"#FFFBEB", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>{label}</span>;
+      return <span style={{ fontSize:"17px", fontWeight:"600", color:"#B45309", background:"#FFFBEB", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>{label}</span>;
     }
 
     if (s.type === "casual") {
       const { casual_available_today, casual_avail_from, casual_avail_to } = r;
       if (casual_available_today === false && !casual_avail_from)
-        return <span style={{ fontSize:"10px", fontWeight:"600", color:"#94A3B8", background:"#F1F5F9", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>Not available</span>;
+        return <span style={{ fontSize:"17px", fontWeight:"600", color:"#94A3B8", background:"#F1F5F9", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>Not available</span>;
       if (casual_available_today === false && casual_avail_from)
-        return <span style={{ fontSize:"10px", fontWeight:"600", color:"#D97706", background:"#FFFBEB", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>{casual_avail_from?.slice(0,5)}–{casual_avail_to?.slice(0,5)}</span>;
+        return <span style={{ fontSize:"17px", fontWeight:"600", color:"#D97706", background:"#FFFBEB", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>{casual_avail_from?.slice(0,5)}–{casual_avail_to?.slice(0,5)}</span>;
       if (casual_available_today === true && (casual_avail_from || casual_avail_to))
-        return <span style={{ fontSize:"10px", fontWeight:"600", color:"#059669", background:"#ECFDF5", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>{casual_avail_from?.slice(0,5)}–{casual_avail_to?.slice(0,5)}</span>;
+        return <span style={{ fontSize:"17px", fontWeight:"600", color:"#059669", background:"#ECFDF5", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>{casual_avail_from?.slice(0,5)}–{casual_avail_to?.slice(0,5)}</span>;
       if (casual_available_today === true)
-        return <span style={{ fontSize:"10px", fontWeight:"600", color:"#059669", background:"#ECFDF5", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>Available</span>;
+        return <span style={{ fontSize:"17px", fontWeight:"600", color:"#059669", background:"#ECFDF5", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>Available</span>;
       return null;
     }
 
     const h = r.hours_this_week || 0;
-    return <span style={{ fontSize:"10px", fontWeight:"600", color:"#059669", background:"#ECFDF5", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>{h > 0 ? `${h}h this week` : "Available"}</span>;
+    return <span style={{ fontSize:"17px", fontWeight:"600", color:"#059669", background:"#ECFDF5", padding:"1px 6px", borderRadius:"100px", whiteSpace:"nowrap" }}>{h > 0 ? `${h}h this week` : "Available"}</span>;
   }
 
   const filledColor = isFull ? accent.text : "#D97706";
@@ -1490,8 +1481,8 @@ function StaffRosterPicker({ branchStaff, rosterData, rosterLoading, assigned, h
   return (
     <div style={{ padding:"12px 14px", borderTop:"1px solid #F1F5F9" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"10px" }}>
-        <p style={{ fontSize:"10px", fontWeight:"600", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.3px" }}>Assign Staff</p>
-        <span style={{ fontSize:"11px", fontWeight:"700", color:filledColor, background:filledBg, padding:"2px 8px", borderRadius:"100px", border:`1px solid ${filledBdr}` }}>
+        <p style={{ fontSize:"17px", fontWeight:"600", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.3px" }}>Assign Staff</p>
+        <span style={{ fontSize:"18px", fontWeight:"700", color:filledColor, background:filledBg, padding:"2px 8px", borderRadius:"100px", border:`1px solid ${filledBdr}` }}>
           {filled}/{headcount} filled
         </span>
       </div>
@@ -1513,12 +1504,12 @@ function StaffRosterPicker({ branchStaff, rosterData, rosterLoading, assigned, h
               : null;
             return (
               <span key={name} title={warningTip || undefined}
-                style={{ display:"flex", alignItems:"center", gap:"4px", padding:"3px 10px 3px 8px", borderRadius:"100px", background: hasWarning ? "#F59E0B" : accent.top, color:"#fff", fontSize:"12px", fontWeight:"600", border: hasWarning ? "1.5px solid #D97706" : "1.5px solid transparent" }}>
-                <span style={{ width:"16px", height:"16px", borderRadius:"50%", background:"rgba(255,255,255,0.25)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"8px", fontWeight:"700" }}>
+                style={{ display:"flex", alignItems:"center", gap:"4px", padding:"3px 10px 3px 8px", borderRadius:"100px", background: hasWarning ? "#F59E0B" : accent.top, color:"#fff", fontSize:"19px", fontWeight:"600", border: hasWarning ? "1.5px solid #D97706" : "1.5px solid transparent" }}>
+                <span style={{ width:"16px", height:"16px", borderRadius:"50%", background:"rgba(255,255,255,0.25)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"9px", fontWeight:"700" }}>
                   {initials(name)}
                 </span>
                 {name}
-                {hasWarning && <span style={{ fontSize:"10px", lineHeight:1 }}>⚠️</span>}
+                {hasWarning && <span style={{ fontSize:"17px", lineHeight:1 }}>⚠️</span>}
                 <button onClick={() => toggle(name)} style={{ background:"none", border:"none", cursor:"pointer", padding:"0", display:"flex", color:"rgba(255,255,255,0.8)", lineHeight:1 }}>
                   <X size={11} />
                 </button>
@@ -1534,14 +1525,14 @@ function StaffRosterPicker({ branchStaff, rosterData, rosterLoading, assigned, h
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search staff…"
-          style={{ width:"100%", boxSizing:"border-box", padding:"6px 10px", borderRadius:"8px", border:"1.5px solid #E2E8F0", fontSize:"12px", color:"#1E293B", outline:"none", marginBottom:"8px", background:"#F8FAFC" }}
+          style={{ width:"100%", boxSizing:"border-box", padding:"6px 10px", borderRadius:"8px", border:"1.5px solid #E2E8F0", fontSize:"19px", color:"#1E293B", outline:"none", marginBottom:"8px", background:"#F8FAFC" }}
         />
       )}
 
       {/* Staff list */}
       {branchStaff.length === 0 ? (
         <input
-          style={{ width:"100%", boxSizing:"border-box", padding:"6px 10px", borderRadius:"8px", border:"1.5px solid #E2E8F0", fontSize:"12px", color:"#1E293B", outline:"none" }}
+          style={{ width:"100%", boxSizing:"border-box", padding:"6px 10px", borderRadius:"8px", border:"1.5px solid #E2E8F0", fontSize:"19px", color:"#1E293B", outline:"none" }}
           placeholder="Type staff names, comma-separated"
           value={assigned.join(", ")}
           onChange={e => onChange(e.target.value.split(",").map(x => x.trim()).filter(Boolean))}
@@ -1551,7 +1542,7 @@ function StaffRosterPicker({ branchStaff, rosterData, rosterLoading, assigned, h
           {[{ label:"Regular", rows: regular }, { label:"Casual", rows: casual }].map(({ label, rows }) =>
             rows.length === 0 ? null : (
               <div key={label}>
-                <p style={{ fontSize:"9px", fontWeight:"700", color:"#CBD5E1", textTransform:"uppercase", letterSpacing:"0.5px", padding:"4px 4px 2px" }}>{label}</p>
+                <p style={{ fontSize:"16px", fontWeight:"700", color:"#CBD5E1", textTransform:"uppercase", letterSpacing:"0.5px", padding:"4px 4px 2px" }}>{label}</p>
                 {rows.map(({ name, type }) => {
                   const sel = assigned.includes(name);
                   const r   = rosterData?.[name];
@@ -1559,14 +1550,14 @@ function StaffRosterPicker({ branchStaff, rosterData, rosterLoading, assigned, h
                   return (
                     <button key={name} onClick={() => toggle(name)}
                       style={{ width:"100%", display:"flex", alignItems:"center", gap:"10px", padding:"7px 8px", borderRadius:"8px", border:"none", background:sel ? accent.bg : "transparent", cursor:"pointer", textAlign:"left", transition:"background 0.1s", opacity: unavail && !sel ? 0.6 : 1 }}>
-                      <span style={{ width:"28px", height:"28px", borderRadius:"50%", background:sel ? accent.top : "#E2E8F0", color:sel ? "#fff" : "#64748B", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"10px", fontWeight:"700", flexShrink:0 }}>
+                      <span style={{ width:"28px", height:"28px", borderRadius:"50%", background:sel ? accent.top : "#E2E8F0", color:sel ? "#fff" : "#64748B", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"17px", fontWeight:"700", flexShrink:0 }}>
                         {initials(name)}
                       </span>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <span style={{ fontSize:"13px", fontWeight:"600", color:sel ? "#1E293B" : "#475569", display:"block", lineHeight:"1.2" }}>{name}</span>
+                        <span style={{ fontSize:"20px", fontWeight:"600", color:sel ? "#1E293B" : "#475569", display:"block", lineHeight:"1.2" }}>{name}</span>
                         <div style={{ marginTop:"2px" }}>{availBadge({ name, type })}</div>
                       </div>
-                      <span style={{ fontSize:"10px", fontWeight:"600", padding:"2px 7px", borderRadius:"100px", background:type === "regular" ? "#EFF6FF" : "#F0FDF4", color:type === "regular" ? "#3B82F6" : "#10B981", flexShrink:0 }}>
+                      <span style={{ fontSize:"17px", fontWeight:"600", padding:"2px 7px", borderRadius:"100px", background:type === "regular" ? "#EFF6FF" : "#F0FDF4", color:type === "regular" ? "#3B82F6" : "#10B981", flexShrink:0 }}>
                         {type === "regular" ? "Regular" : "Casual"}
                       </span>
                       {sel && <Check size={13} strokeWidth={3} color={accent.top} />}
@@ -1576,7 +1567,7 @@ function StaffRosterPicker({ branchStaff, rosterData, rosterLoading, assigned, h
               </div>
             )
           )}
-          {allFiltered.length === 0 && <p style={{ fontSize:"12px", color:"#94A3B8", padding:"8px 4px" }}>No staff match "{search}"</p>}
+          {allFiltered.length === 0 && <p style={{ fontSize:"19px", color:"#94A3B8", padding:"8px 4px" }}>No staff match "{search}"</p>}
         </div>
       )}
     </div>
@@ -1690,7 +1681,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
 
   const F = { // form input base style
     padding:"8px 10px", borderRadius:"8px", border:"1.5px solid #E2E8F0",
-    fontSize:"12px", color:"#1E293B", outline:"none", background:"#fff",
+    fontSize:"19px", color:"#1E293B", outline:"none", background:"#fff",
     width:"100%", boxSizing:"border-box", fontFamily:"inherit",
   };
 
@@ -1709,14 +1700,14 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
     <div>
       {/* Hint bar */}
       <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px" }}>
-        <span style={{ fontSize:"12px",color:"#94A3B8" }}>
+        <span style={{ fontSize:"19px",color:"#94A3B8" }}>
           Tap a card to <strong style={{color:"#1E293B"}}>select/deselect</strong> · click <strong style={{color:"#6366F1"}}>Edit</strong> to adjust
         </span>
         <div style={{ display:"flex",gap:"6px",alignItems:"center" }}>
           <span style={{ width:"10px",height:"10px",borderRadius:"3px",background:"#6366F1",display:"inline-block" }}/>
-          <span style={{ fontSize:"11px",color:"#64748B" }}>Selected</span>
+          <span style={{ fontSize:"18px",color:"#64748B" }}>Selected</span>
           <span style={{ width:"10px",height:"10px",borderRadius:"3px",background:"#E2E8F0",border:"1px solid #CBD5E1",display:"inline-block",marginLeft:"6px" }}/>
-          <span style={{ fontSize:"11px",color:"#64748B" }}>Deselected</span>
+          <span style={{ fontSize:"18px",color:"#64748B" }}>Deselected</span>
         </div>
       </div>
 
@@ -1744,16 +1735,16 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                 boxShadow: colHasEdit ? `0 0 0 2px ${cc.border}` : "none",
                 transition:"all 0.18s",
               }}>
-                <div style={{ fontSize:"9px",fontWeight:"700",color:colHasEdit?cc.text:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:"2px" }}>{dayAbbr}</div>
-                <div style={{ fontSize:"20px",fontWeight:"900",color:colHasEdit?cc.text:"#1E293B",lineHeight:1,marginBottom:"1px" }}>{dayNum}</div>
-                <div style={{ fontSize:"9px",color:"#94A3B8",fontWeight:"500" }}>{month}</div>
+                <div style={{ fontSize:"16px",fontWeight:"700",color:colHasEdit?cc.text:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.6px",marginBottom:"2px" }}>{dayAbbr}</div>
+                <div style={{ fontSize:"23px",fontWeight:"900",color:colHasEdit?cc.text:"#1E293B",lineHeight:1,marginBottom:"1px" }}>{dayNum}</div>
+                <div style={{ fontSize:"16px",color:"#94A3B8",fontWeight:"500" }}>{month}</div>
                 <div style={{ marginTop:"5px",height:"3px",borderRadius:"3px",background:colHasEdit?cc.top:"#E2E8F0" }} />
               </div>
 
               {/* Empty column placeholder */}
               {entries.length===0 && (
                 <div style={{ flex:1,minHeight:"60px",borderRadius:"10px",border:"1.5px dashed #E2E8F0",display:"flex",alignItems:"center",justifyContent:"center",background:"#FAFBFE" }}>
-                  <span style={{ fontSize:"11px",color:"#CBD5E1" }}>—</span>
+                  <span style={{ fontSize:"18px",color:"#CBD5E1" }}>—</span>
                 </div>
               )}
 
@@ -1789,7 +1780,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                     <div style={{ padding:"10px 10px 8px" }}>
                       {/* Time badge + checkbox */}
                       <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px" }}>
-                        <span style={{ fontSize:"10px",fontWeight:"800",color:checked||isEditing?cc.text:"#94A3B8",letterSpacing:"0.2px",background:checked||isEditing?cc.bg:"#F1F5F9",padding:"2px 6px",borderRadius:"4px" }}>
+                        <span style={{ fontSize:"17px",fontWeight:"800",color:checked||isEditing?cc.text:"#94A3B8",letterSpacing:"0.2px",background:checked||isEditing?cc.bg:"#F1F5F9",padding:"2px 6px",borderRadius:"4px" }}>
                           {s.start_time?.slice(0,5)}–{s.end_time?.slice(0,5)}
                         </span>
                         <div onClick={e=>{e.stopPropagation();onToggle(i);}}
@@ -1799,7 +1790,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                       </div>
 
                       {/* Title */}
-                      <div style={{ fontSize:"13px",fontWeight:"800",color:"#0F172A",lineHeight:1.25,marginBottom:"8px" }}>{s.title}</div>
+                      <div style={{ fontSize:"20px",fontWeight:"800",color:"#0F172A",lineHeight:1.25,marginBottom:"8px" }}>{s.title}</div>
 
                       {/* Role rows */}
                       <div style={{ display:"flex",flexDirection:"column",gap:"4px",marginBottom:"8px" }}>
@@ -1811,9 +1802,9 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                             <div key={j} style={{ background:ok?"#F0FDF4":"#FFF7ED",borderRadius:"6px",padding:"4px 7px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"4px" }}>
                               <div style={{ display:"flex",alignItems:"center",gap:"5px",minWidth:0 }}>
                                 <span style={{ width:"5px",height:"5px",borderRadius:"50%",background:cc.top,flexShrink:0 }}/>
-                                <span style={{ fontSize:"11px",fontWeight:"700",color:"#1E293B",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{r.role_name||"Role"}</span>
+                                <span style={{ fontSize:"18px",fontWeight:"700",color:"#1E293B",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{r.role_name||"Role"}</span>
                               </div>
-                              <span style={{ fontSize:"10px",fontWeight:"700",color:ok?"#059669":"#D97706",whiteSpace:"nowrap",flexShrink:0 }}>
+                              <span style={{ fontSize:"17px",fontWeight:"700",color:ok?"#059669":"#D97706",whiteSpace:"nowrap",flexShrink:0 }}>
                                 {assignedCount}/{need}
                               </span>
                             </div>
@@ -1855,13 +1846,13 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                                 );
                               }
                               return (
-                                <span key={k} style={{ fontSize:"10px",fontWeight:"600",color:cc.text,background:cc.bg,border:`1px solid ${cc.border}`,padding:"2px 7px",borderRadius:"100px",whiteSpace:"nowrap",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis" }}>
+                                <span key={k} style={{ fontSize:"17px",fontWeight:"600",color:cc.text,background:cc.bg,border:`1px solid ${cc.border}`,padding:"2px 7px",borderRadius:"100px",whiteSpace:"nowrap",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis" }}>
                                   {firstName}
                                 </span>
                               );
                             })}
                             {allStaff.length>4 && (
-                              <span style={{ fontSize:"10px",fontWeight:"600",color:"#64748B",background:"#F1F5F9",border:"1px solid #E2E8F0",padding:"2px 7px",borderRadius:"100px" }}>+{allStaff.length-4}</span>
+                              <span style={{ fontSize:"17px",fontWeight:"600",color:"#64748B",background:"#F1F5F9",border:"1px solid #E2E8F0",padding:"2px 7px",borderRadius:"100px" }}>+{allStaff.length-4}</span>
                             )}
                           </div>
                         );
@@ -1869,7 +1860,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
 
                       {/* Coverage summary */}
                       <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"7px" }}>
-                        <span style={{ fontSize:"10px",color:fullyStaffed?"#059669":totalSlots>0?"#D97706":"#94A3B8",fontWeight:"600" }}>
+                        <span style={{ fontSize:"17px",color:fullyStaffed?"#059669":totalSlots>0?"#D97706":"#94A3B8",fontWeight:"600" }}>
                           {totalSlots===0?"No roles":fullyStaffed?`Fully staffed (${filled})`:filled===0?"Unassigned":`${filled}/${totalSlots} assigned`}
                         </span>
                         {totalSlots > 0 && (
@@ -1883,7 +1874,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
 
                       {/* Edit button */}
                       <button onClick={e=>{e.stopPropagation(); startEdit(i);}}
-                        style={{ width:"100%",padding:"5px 0",borderRadius:"7px",border:`1px solid ${isEditing?cc.top:cc.border}`,background:isEditing?cc.top:cc.bg,color:isEditing?"#fff":cc.text,fontSize:"10px",fontWeight:"700",cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:"4px" }}>
+                        style={{ width:"100%",padding:"5px 0",borderRadius:"7px",border:`1px solid ${isEditing?cc.top:cc.border}`,background:isEditing?cc.top:cc.bg,color:isEditing?"#fff":cc.text,fontSize:"17px",fontWeight:"700",cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:"4px" }}>
                         ✎ Edit
                       </button>
                     </div>
@@ -1916,8 +1907,8 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                 <div style={{ display:"flex",alignItems:"center",gap:"12px" }}>
                   <div style={{ width:"4px",height:"36px",borderRadius:"2px",background:cc.top,flexShrink:0 }} />
                   <div>
-                    <p style={{ fontSize:"15px",fontWeight:"800",color:"#0F172A",lineHeight:1,marginBottom:"4px" }}>{draft.title || "Shift"}</p>
-                    <p style={{ fontSize:"12px",color:"#64748B",fontWeight:"500" }}>
+                    <p style={{ fontSize:"22px",fontWeight:"800",color:"#0F172A",lineHeight:1,marginBottom:"4px" }}>{draft.title || "Shift"}</p>
+                    <p style={{ fontSize:"19px",color:"#64748B",fontWeight:"500" }}>
                       {schedule[editingIdx]?.date} &nbsp;·&nbsp; {draft.start_time?.slice(0,5)}–{draft.end_time?.slice(0,5)}
                     </p>
                   </div>
@@ -1934,7 +1925,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                 <div style={{ flex:1,overflowY:"auto",padding:"22px",minWidth:0 }}>
 
                   {/* Basic fields */}
-                  <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"10px" }}>Shift details</p>
+                  <p style={{ fontSize:"17px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"10px" }}>Shift details</p>
                   <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:"12px",marginBottom:"22px" }}>
                     {[
                       { label:"Title",      field:"title",      type:"text", val:draft.title },
@@ -1942,7 +1933,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                       { label:"End time",   field:"end_time",   type:"time", val:draft.end_time },
                     ].map(f => (
                       <div key={f.field}>
-                        <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"6px" }}>{f.label}</p>
+                        <p style={{ fontSize:"17px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"6px" }}>{f.label}</p>
                         <input type={f.type} value={f.val} onChange={e => setDraftField(f.field, e.target.value)} style={F} />
                       </div>
                     ))}
@@ -1952,9 +1943,9 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
 
                   {/* Roles */}
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px" }}>
-                    <p style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px" }}>Roles & Assigned Staff</p>
+                    <p style={{ fontSize:"17px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.5px" }}>Roles & Assigned Staff</p>
                     <button onClick={addRole}
-                      style={{ padding:"4px 12px",borderRadius:"7px",border:`1.5px dashed ${cc.border}`,background:cc.bg,color:cc.text,fontSize:"11px",fontWeight:"700",cursor:"pointer" }}>
+                      style={{ padding:"4px 12px",borderRadius:"7px",border:`1.5px dashed ${cc.border}`,background:cc.bg,color:cc.text,fontSize:"18px",fontWeight:"700",cursor:"pointer" }}>
                       + Add Role
                     </button>
                   </div>
@@ -1969,7 +1960,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                             value={r.role_name}
                             placeholder="Role name"
                             onChange={e => setRoleField(j, "role_name", e.target.value)}
-                            style={{ flex:1,border:"none",background:"transparent",fontSize:"13px",fontWeight:"700",color:cc.text,outline:"none",fontFamily:"inherit" }} />
+                            style={{ flex:1,border:"none",background:"transparent",fontSize:"20px",fontWeight:"700",color:cc.text,outline:"none",fontFamily:"inherit" }} />
                           {/* Difficulty pill */}
                           {(() => {
                             const diff = r.difficulty || "any";
@@ -1984,17 +1975,17 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                               <button title="Skill level required — click to change" onClick={() => {
                                 const next = DIFF_CYCLE[(DIFF_CYCLE.indexOf(diff)+1)%DIFF_CYCLE.length];
                                 setRoleField(j, "difficulty", next);
-                              }} style={{ padding:"3px 9px",borderRadius:"100px",border:`1.5px solid ${ds.border}`,background:ds.bg,color:ds.color,fontSize:"10px",fontWeight:"700",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap" }}>
+                              }} style={{ padding:"3px 9px",borderRadius:"100px",border:`1.5px solid ${ds.border}`,background:ds.bg,color:ds.color,fontSize:"17px",fontWeight:"700",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap" }}>
                                 {diff === "any" ? "Any" : diff === "intermediate" ? "Mid+" : "Senior"}
                               </button>
                             );
                           })()}
                           <div style={{ display:"flex",alignItems:"center",gap:"6px",flexShrink:0 }}>
-                            <span style={{ fontSize:"11px",color:"#94A3B8" }}>×</span>
+                            <span style={{ fontSize:"18px",color:"#94A3B8" }}>×</span>
                             <input
                               type="number" min="1" value={r.headcount}
                               onChange={e => setRoleField(j, "headcount", Number(e.target.value))}
-                              style={{ width:"46px",padding:"4px 6px",borderRadius:"7px",border:`1.5px solid ${cc.border}`,fontSize:"13px",fontWeight:"700",textAlign:"center",outline:"none",background:"#fff",color:"#1E293B",fontFamily:"inherit" }} />
+                              style={{ width:"46px",padding:"4px 6px",borderRadius:"7px",border:`1.5px solid ${cc.border}`,fontSize:"20px",fontWeight:"700",textAlign:"center",outline:"none",background:"#fff",color:"#1E293B",fontFamily:"inherit" }} />
                           </div>
                           <button onClick={() => removeRole(j)}
                             style={{ width:"28px",height:"28px",borderRadius:"8px",border:"1px solid #FECACA",background:"#FEF2F2",color:"#DC2626",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
@@ -2026,8 +2017,8 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                         <Sparkles size={12} color="#fff" />
                       </div>
                       <div>
-                        <p style={{ fontSize:"12px",fontWeight:"800",color:"#4F46E5",margin:0 }}>AI Review</p>
-                        <p style={{ fontSize:"10px",color:"#818CF8",margin:0 }}>Assignments & suggestions</p>
+                        <p style={{ fontSize:"19px",fontWeight:"800",color:"#4F46E5",margin:0 }}>AI Review</p>
+                        <p style={{ fontSize:"17px",color:"#818CF8",margin:0 }}>Assignments & suggestions</p>
                       </div>
                     </div>
                   </div>
@@ -2036,7 +2027,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                     <button
                       onClick={runAiReview}
                       disabled={aiReviewLoading || rosterLoading}
-                      style={{ width:"100%",padding:"8px 14px",borderRadius:"8px",border:"none",background:aiReviewLoading?"#C7D2FE":"#6366F1",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:aiReviewLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",transition:"background 0.15s" }}>
+                      style={{ width:"100%",padding:"8px 14px",borderRadius:"8px",border:"none",background:aiReviewLoading?"#C7D2FE":"#6366F1",color:"#fff",fontSize:"19px",fontWeight:"700",cursor:aiReviewLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",transition:"background 0.15s" }}>
                       {aiReviewLoading
                         ? <><span style={{ width:"10px",height:"10px",borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",display:"inline-block",animation:"aiSpin 0.7s linear infinite" }}/> Reviewing…</>
                         : <><Sparkles size={11}/> {aiReview ? "Re-review shift" : "Review shift"}</>}
@@ -2050,10 +2041,10 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                         const isGood    = /✅|good|fully|covered|great/i.test(line);
                         return (
                           <div key={i} style={{ display:"flex",gap:"8px",marginBottom:"9px",alignItems:"flex-start" }}>
-                            <span style={{ fontSize:"13px",flexShrink:0,marginTop:"1px" }}>
+                            <span style={{ fontSize:"20px",flexShrink:0,marginTop:"1px" }}>
                               {isWarning ? "⚠️" : isGood ? "✅" : "•"}
                             </span>
-                            <p style={{ fontSize:"12px",color:isWarning?"#B45309":isGood?"#047857":"#374151",fontWeight:isWarning||isGood?"600":"400",lineHeight:1.55,margin:0 }}>
+                            <p style={{ fontSize:"19px",color:isWarning?"#B45309":isGood?"#047857":"#374151",fontWeight:isWarning||isGood?"600":"400",lineHeight:1.55,margin:0 }}>
                               {line.replace(/^[-•·✅⚠️*]\s*/, "").trim()}
                             </p>
                           </div>
@@ -2064,7 +2055,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
                         <div style={{ width:"40px",height:"40px",borderRadius:"12px",background:"#EEF2FF",display:"flex",alignItems:"center",justifyContent:"center" }}>
                           <Sparkles size={18} color="#6366F1" />
                         </div>
-                        <p style={{ fontSize:"12px",color:"#94A3B8",margin:0,lineHeight:1.6 }}>
+                        <p style={{ fontSize:"19px",color:"#94A3B8",margin:0,lineHeight:1.6 }}>
                           Click <strong style={{color:"#6366F1"}}>Review shift</strong> to check assignments, spot conflicts, and get staff suggestions.
                         </p>
                       </div>
@@ -2076,11 +2067,11 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
               {/* Footer */}
               <div style={{ padding:"14px 22px",borderTop:"1.5px solid #F1F5F9",display:"flex",justifyContent:"flex-end",gap:"10px",background:"#FAFBFE",flexShrink:0 }}>
                 <button onClick={cancelEdit}
-                  style={{ padding:"9px 20px",borderRadius:"10px",border:"1.5px solid #E2E8F0",background:"#fff",fontSize:"13px",fontWeight:"600",color:"#64748B",cursor:"pointer" }}>
+                  style={{ padding:"9px 20px",borderRadius:"10px",border:"1.5px solid #E2E8F0",background:"#fff",fontSize:"20px",fontWeight:"600",color:"#64748B",cursor:"pointer" }}>
                   Cancel
                 </button>
                 <button onClick={() => saveEdit(editingIdx)}
-                  style={{ padding:"9px 24px",borderRadius:"10px",border:"none",background:`linear-gradient(135deg,${cc.top},${cc2.top})`,color:"#fff",fontSize:"13px",fontWeight:"700",cursor:"pointer",boxShadow:`0 4px 14px ${cc.top}50`,display:"flex",alignItems:"center",gap:"7px" }}>
+                  style={{ padding:"9px 24px",borderRadius:"10px",border:"none",background:`linear-gradient(135deg,${cc.top},${cc2.top})`,color:"#fff",fontSize:"20px",fontWeight:"700",cursor:"pointer",boxShadow:`0 4px 14px ${cc.top}50`,display:"flex",alignItems:"center",gap:"7px" }}>
                   <Check size={14} strokeWidth={3} /> Save changes
                 </button>
               </div>
@@ -2101,7 +2092,7 @@ function CreateShiftBtn({ onClick }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         background: hovered ? "#1D4ED8" : "#2563EB", color: "#FFFFFF", border: "none",
-        padding: "10px 18px", borderRadius: "10px", fontSize: "14px",
+        padding: "10px 18px", borderRadius: "10px", fontSize: "21px",
         fontWeight: "600", cursor: "pointer", transition: "background 0.15s",
       }}>
       + Create Task
@@ -2115,7 +2106,7 @@ function ViewToggleBtn({ label, active, onClick }) {
       onClick={onClick}
       style={{
         padding: "6px 16px", background: active ? "#FFFFFF" : "transparent",
-        border: "none", borderRadius: "7px", fontSize: "13px",
+        border: "none", borderRadius: "7px", fontSize: "20px",
         fontWeight: active ? "600" : "500", color: active ? "#1E293B" : "#64748B",
         cursor: "pointer", boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
         transition: "all 0.15s",
@@ -2138,7 +2129,7 @@ function StatusChip({ label, active, onClick, status }) {
     <button
       onClick={onClick}
       style={{
-        padding: "6px 13px", borderRadius: "100px", fontSize: "12px", fontWeight: "600",
+        padding: "6px 13px", borderRadius: "100px", fontSize: "19px", fontWeight: "600",
         cursor: "pointer",
         border: active ? `1.5px solid ${m.activeBorder}` : "1.5px solid #E2E8F0",
         background: active ? m.activeBg : "#FFFFFF",
@@ -2160,7 +2151,7 @@ function WeekNavBtn({ label, onClick }) {
       style={{
         width: "32px", height: "32px", borderRadius: "8px",
         background: hovered ? "#EFF6FF" : "#F8FAFC",
-        border: "1px solid #E2E8F0", fontSize: "14px",
+        border: "1px solid #E2E8F0", fontSize: "21px",
         cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
         color: hovered ? "#2563EB" : "#64748B", transition: "all 0.15s",
       }}>
@@ -2209,18 +2200,18 @@ function ScheduleStatsPanel({ schedule, accepted }) {
     <div style={{ marginTop:"20px",borderRadius:"14px",border:"1.5px solid #E8EDF5",background:"#fff",overflow:"hidden" }}>
       {/* Header */}
       <div style={{ padding:"12px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",background:"#FAFBFE" }}>
-        <span style={{ fontSize:"13px",fontWeight:"800",color:"#1E293B" }}>Staff Workload</span>
+        <span style={{ fontSize:"20px",fontWeight:"800",color:"#1E293B" }}>Staff Workload</span>
         <div style={{ display:"flex",gap:"16px",alignItems:"center" }}>
           <div style={{ display:"flex",alignItems:"center",gap:"5px" }}>
             <div style={{ width:"8px",height:"8px",borderRadius:"50%",background:coverPct===100?"#059669":coverPct>50?"#D97706":"#DC2626" }}/>
-            <span style={{ fontSize:"12px",fontWeight:"600",color:"#475569" }}>Coverage: <strong style={{ color:coverPct===100?"#059669":"#D97706" }}>{filledSlots}/{totalSlots}</strong></span>
+            <span style={{ fontSize:"19px",fontWeight:"600",color:"#475569" }}>Coverage: <strong style={{ color:coverPct===100?"#059669":"#D97706" }}>{filledSlots}/{totalSlots}</strong></span>
           </div>
           <div style={{ display:"flex",alignItems:"center",gap:"5px" }}>
             <div style={{ width:"8px",height:"8px",borderRadius:"50%",background:balanceColor }}/>
-            <span style={{ fontSize:"12px",fontWeight:"600",color:"#475569" }}>Workload: <strong style={{ color:balanceColor }}>{balanceLabel}</strong></span>
+            <span style={{ fontSize:"19px",fontWeight:"600",color:"#475569" }}>Workload: <strong style={{ color:balanceColor }}>{balanceLabel}</strong></span>
           </div>
           {understaffedRoles > 0 && (
-            <span style={{ fontSize:"11px",fontWeight:"700",color:"#92400E",background:"#FFFBEB",border:"1px solid #FDE68A",padding:"2px 9px",borderRadius:"100px" }}>
+            <span style={{ fontSize:"18px",fontWeight:"700",color:"#92400E",background:"#FFFBEB",border:"1px solid #FDE68A",padding:"2px 9px",borderRadius:"100px" }}>
               {understaffedRoles} understaffed role{understaffedRoles!==1?"s":""}
             </span>
           )}
@@ -2228,7 +2219,7 @@ function ScheduleStatsPanel({ schedule, accepted }) {
       </div>
 
       {staffList.length === 0 ? (
-        <div style={{ padding:"24px",textAlign:"center",color:"#94A3B8",fontSize:"13px" }}>
+        <div style={{ padding:"24px",textAlign:"center",color:"#94A3B8",fontSize:"20px" }}>
           No staff assigned yet — click <strong style={{ color:"#6366F1" }}>Edit</strong> on any shift card to assign staff.
         </div>
       ) : (
@@ -2236,7 +2227,7 @@ function ScheduleStatsPanel({ schedule, accepted }) {
           {/* Column headers */}
           <div style={{ display:"grid",gridTemplateColumns:"1fr 80px 80px 1fr 60px",gap:"12px",alignItems:"center",padding:"4px 0 8px",borderBottom:"1px solid #F1F5F9",marginBottom:"4px" }}>
             {["Staff Member","Shifts","Hours","Workload","Avg"].map(h=>(
-              <span key={h} style={{ fontSize:"10px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.4px" }}>{h}</span>
+              <span key={h} style={{ fontSize:"17px",fontWeight:"700",color:"#94A3B8",textTransform:"uppercase",letterSpacing:"0.4px" }}>{h}</span>
             ))}
           </div>
           {staffList.map(({ name, shifts, hours }) => {
@@ -2246,25 +2237,25 @@ function ScheduleStatsPanel({ schedule, accepted }) {
             const barColor = overloaded ? "#F59E0B" : underloaded ? "#94A3B8" : "#6366F1";
             return (
               <div key={name} style={{ display:"grid",gridTemplateColumns:"1fr 80px 80px 1fr 60px",gap:"12px",alignItems:"center",padding:"9px 0",borderBottom:"1px solid #F8FAFC" }}>
-                <span style={{ fontSize:"13px",fontWeight:"600",color:"#1E293B",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{name}</span>
-                <span style={{ fontSize:"12px",color:"#64748B" }}>{shifts} shift{shifts!==1?"s":""}</span>
+                <span style={{ fontSize:"20px",fontWeight:"600",color:"#1E293B",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{name}</span>
+                <span style={{ fontSize:"19px",color:"#64748B" }}>{shifts} shift{shifts!==1?"s":""}</span>
                 <div style={{ display:"flex",alignItems:"center",gap:"4px" }}>
-                  <span style={{ fontSize:"13px",fontWeight:"700",color:"#1E293B" }}>{hours}h</span>
-                  {overloaded && <span style={{ fontSize:"9px",fontWeight:"700",color:"#92400E",background:"#FFFBEB",border:"1px solid #FDE68A",padding:"1px 5px",borderRadius:"100px" }}>High</span>}
-                  {underloaded && <span style={{ fontSize:"9px",fontWeight:"700",color:"#475569",background:"#F1F5F9",border:"1px solid #E2E8F0",padding:"1px 5px",borderRadius:"100px" }}>Low</span>}
+                  <span style={{ fontSize:"20px",fontWeight:"700",color:"#1E293B" }}>{hours}h</span>
+                  {overloaded && <span style={{ fontSize:"16px",fontWeight:"700",color:"#92400E",background:"#FFFBEB",border:"1px solid #FDE68A",padding:"1px 5px",borderRadius:"100px" }}>High</span>}
+                  {underloaded && <span style={{ fontSize:"16px",fontWeight:"700",color:"#475569",background:"#F1F5F9",border:"1px solid #E2E8F0",padding:"1px 5px",borderRadius:"100px" }}>Low</span>}
                 </div>
                 <div style={{ height:"7px",borderRadius:"4px",background:"#F1F5F9",overflow:"hidden" }}>
                   <div style={{ height:"100%",width:`${barPct}%`,borderRadius:"4px",background:barColor,transition:"width 0.4s" }}/>
                 </div>
-                <span style={{ fontSize:"11px",color:overloaded?"#D97706":underloaded?"#94A3B8":"#64748B",fontWeight:"600",textAlign:"right" }}>
+                <span style={{ fontSize:"18px",color:overloaded?"#D97706":underloaded?"#94A3B8":"#64748B",fontWeight:"600",textAlign:"right" }}>
                   {avgH > 0 ? `${hours > avgH ? "+" : ""}${(hours - avgH).toFixed(1)}h` : "—"}
                 </span>
               </div>
             );
           })}
           <div style={{ marginTop:"10px",display:"flex",gap:"16px" }}>
-            <span style={{ fontSize:"11px",color:"#94A3B8" }}>Avg per staff: <strong style={{ color:"#1E293B" }}>{avgH.toFixed(1)}h</strong></span>
-            <span style={{ fontSize:"11px",color:"#94A3B8" }}>Hour spread: <strong style={{ color:balanceColor }}>{spread.toFixed(1)}h</strong></span>
+            <span style={{ fontSize:"18px",color:"#94A3B8" }}>Avg per staff: <strong style={{ color:"#1E293B" }}>{avgH.toFixed(1)}h</strong></span>
+            <span style={{ fontSize:"18px",color:"#94A3B8" }}>Hour spread: <strong style={{ color:balanceColor }}>{spread.toFixed(1)}h</strong></span>
           </div>
         </div>
       )}
@@ -2305,16 +2296,16 @@ function AIReviewPanel({ schedule, accepted }) {
       <div style={{ padding:"12px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",background:"#FAFBFE" }}>
         <div style={{ display:"flex",alignItems:"center",gap:"8px" }}>
           <Sparkles size={14} color="#6366F1" />
-          <span style={{ fontSize:"13px",fontWeight:"800",color:"#1E293B" }}>AI Review</span>
+          <span style={{ fontSize:"20px",fontWeight:"800",color:"#1E293B" }}>AI Review</span>
           {state==="done" && review && (
-            <span style={{ fontSize:"11px",fontWeight:"700",color:scoreColor,background:scoreBg,border:`1px solid ${scoreBorder}`,padding:"2px 9px",borderRadius:"100px" }}>
+            <span style={{ fontSize:"18px",fontWeight:"700",color:scoreColor,background:scoreBg,border:`1px solid ${scoreBorder}`,padding:"2px 9px",borderRadius:"100px" }}>
               Score: {review.score}/100
             </span>
           )}
         </div>
         {state !== "loading" && (
           <button onClick={getReview}
-            style={{ padding:"6px 14px",borderRadius:"8px",border:"none",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",gap:"6px",boxShadow:"0 2px 8px rgba(99,102,241,0.3)" }}>
+            style={{ padding:"6px 14px",borderRadius:"8px",border:"none",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:"19px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",gap:"6px",boxShadow:"0 2px 8px rgba(99,102,241,0.3)" }}>
             <Sparkles size={11}/>{state==="done"?"Re-review":"Get AI Review"}
           </button>
         )}
@@ -2322,31 +2313,31 @@ function AIReviewPanel({ schedule, accepted }) {
 
       <div style={{ padding:"16px 20px" }}>
         {state === "idle" && (
-          <p style={{ fontSize:"13px",color:"#94A3B8",textAlign:"center",padding:"12px 0" }}>
+          <p style={{ fontSize:"20px",color:"#94A3B8",textAlign:"center",padding:"12px 0" }}>
             Get an AI analysis of your schedule — coverage gaps, workload balance, and improvement tips.
           </p>
         )}
         {state === "loading" && (
           <div style={{ display:"flex",alignItems:"center",gap:"10px",padding:"12px 0" }}>
             <div style={{ width:"16px",height:"16px",borderRadius:"50%",border:"2px solid #EEF2FF",borderTopColor:"#6366F1",animation:"aiSpin 0.7s linear infinite",flexShrink:0 }}/>
-            <span style={{ fontSize:"13px",color:"#6366F1",fontWeight:"600" }}>Analysing your schedule…</span>
+            <span style={{ fontSize:"20px",color:"#6366F1",fontWeight:"600" }}>Analysing your schedule…</span>
           </div>
         )}
         {state === "done" && review && (
           <div>
             <div style={{ display:"flex",alignItems:"flex-start",gap:"14px",marginBottom:"14px" }}>
               <div style={{ width:"54px",height:"54px",borderRadius:"50%",background:scoreBg,border:`2px solid ${scoreBorder}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
-                <span style={{ fontSize:"20px",fontWeight:"900",color:scoreColor }}>{review.score}</span>
+                <span style={{ fontSize:"23px",fontWeight:"900",color:scoreColor }}>{review.score}</span>
               </div>
-              <p style={{ fontSize:"13px",color:"#475569",lineHeight:1.6,paddingTop:"4px" }}>{review.summary}</p>
+              <p style={{ fontSize:"20px",color:"#475569",lineHeight:1.6,paddingTop:"4px" }}>{review.summary}</p>
             </div>
             <div style={{ display:"flex",flexDirection:"column",gap:"6px" }}>
               {(review.flags || []).map((flag, i) => {
                 const s = SEV[flag.severity] || SEV.info;
                 return (
                   <div key={i} style={{ display:"flex",alignItems:"flex-start",gap:"8px",padding:"9px 12px",borderRadius:"9px",background:s.bg,border:`1px solid ${s.border}` }}>
-                    <span style={{ fontSize:"13px",flexShrink:0,lineHeight:1.4 }}>{s.icon}</span>
-                    <span style={{ fontSize:"12px",color:s.text,fontWeight:"500",lineHeight:1.5 }}>{flag.message}</span>
+                    <span style={{ fontSize:"20px",flexShrink:0,lineHeight:1.4 }}>{s.icon}</span>
+                    <span style={{ fontSize:"19px",color:s.text,fontWeight:"500",lineHeight:1.5 }}>{flag.message}</span>
                   </div>
                 );
               })}
@@ -2354,9 +2345,9 @@ function AIReviewPanel({ schedule, accepted }) {
           </div>
         )}
         {state === "error" && (
-          <div style={{ textAlign:"center",padding:"12px 0",color:"#DC2626",fontSize:"13px" }}>
+          <div style={{ textAlign:"center",padding:"12px 0",color:"#DC2626",fontSize:"20px" }}>
             Failed to get review.{" "}
-            <button onClick={getReview} style={{ color:"#6366F1",background:"none",border:"none",cursor:"pointer",fontWeight:"700",fontSize:"13px" }}>Try again</button>
+            <button onClick={getReview} style={{ color:"#6366F1",background:"none",border:"none",cursor:"pointer",fontWeight:"700",fontSize:"20px" }}>Try again</button>
           </div>
         )}
       </div>
@@ -2375,7 +2366,7 @@ function SkillSelect({ value, options, onChange, placeholder = "Select a skill�
   }, [open]);
   return (
     <div ref={ref} style={{ position:"relative", width:"100%" }}>
-      <div onClick={() => setOpen(o => !o)} style={{ padding:"9px 32px 9px 12px",borderRadius:"8px",border:`1.5px solid ${open?"#6366F1":"#E2E8F0"}`,fontSize:"13px",color:value?"#1E293B":"#94A3B8",background:"#F8FAFC",cursor:"pointer",userSelect:"none",position:"relative",transition:"border-color 0.15s" }}>
+      <div onClick={() => setOpen(o => !o)} style={{ padding:"9px 32px 9px 12px",borderRadius:"8px",border:`1.5px solid ${open?"#6366F1":"#E2E8F0"}`,fontSize:"20px",color:value?"#1E293B":"#94A3B8",background:"#F8FAFC",cursor:"pointer",userSelect:"none",position:"relative",transition:"border-color 0.15s" }}>
         {value || placeholder}
         <svg style={{ position:"absolute",right:"10px",top:"50%",transform:`translateY(-50%) rotate(${open?"180deg":"0deg"})`,transition:"transform 0.15s",pointerEvents:"none" }} width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M2 4l4 4 4-4" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -2385,7 +2376,7 @@ function SkillSelect({ value, options, onChange, placeholder = "Select a skill�
         <div style={{ position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:"10px",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:9999,overflow:"hidden",maxHeight:"200px",overflowY:"auto" }}>
           {options.map(opt => (
             <div key={opt} onClick={() => { onChange(opt); setOpen(false); }}
-              style={{ padding:"9px 14px",fontSize:"13px",cursor:"pointer",fontWeight:opt===value?"600":"400",color:opt===value?"#4F46E5":"#1E293B",background:opt===value?"#EEF2FF":"#fff",transition:"background 0.1s" }}
+              style={{ padding:"9px 14px",fontSize:"20px",cursor:"pointer",fontWeight:opt===value?"600":"400",color:opt===value?"#4F46E5":"#1E293B",background:opt===value?"#EEF2FF":"#fff",transition:"background 0.1s" }}
               onMouseEnter={e => { if (opt!==value) e.currentTarget.style.background="#F8FAFC"; }}
               onMouseLeave={e => { if (opt!==value) e.currentTarget.style.background="#fff"; }}>
               {opt}

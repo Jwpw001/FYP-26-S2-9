@@ -149,8 +149,8 @@ export default function OMInvitations() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Invitations</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+            <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Invitations</h2>
+            <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
               {branchName ? `Inviting staff to ${branchName}` : "Invite staff to your branch"}
             </p>
           </div>
@@ -165,7 +165,7 @@ export default function OMInvitations() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
                 <p style={{ fontWeight: "700", color: "#166534", marginBottom: "4px" }}>Invitation sent to {successCode.email}!</p>
-                <p style={{ fontSize: "13px", color: "#4ADE80" }}>Share this code with them:</p>
+                <p style={{ fontSize: "20px", color: "#4ADE80" }}>Share this code with them:</p>
               </div>
               <button onClick={() => setSuccessCode(null)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer" }}><X size={16} /></button>
             </div>
@@ -175,7 +175,7 @@ export default function OMInvitations() {
               </span>
               <button onClick={() => copyCode(successCode.code)} style={s.iconBtn}>
                 {copied === `code-${successCode.code}` ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
-                <span style={{ fontSize: "12px", marginLeft: "4px" }}>{copied === `code-${successCode.code}` ? "Copied!" : "Copy code"}</span>
+                <span style={{ fontSize: "19px", marginLeft: "4px" }}>{copied === `code-${successCode.code}` ? "Copied!" : "Copy code"}</span>
               </button>
             </div>
           </div>
@@ -185,7 +185,7 @@ export default function OMInvitations() {
         {showForm && (
           <div style={{ ...s.formCard, animation: "fadeSlideUp 0.3s ease both" }}>
             <h3 style={s.formTitle}>Invite Staff Member</h3>
-            {branchName && <p style={{ fontSize: "12px", color: "#64748B", marginBottom: "14px" }}>Inviting to: <strong>{branchName}</strong></p>}
+            {branchName && <p style={{ fontSize: "19px", color: "#64748B", marginBottom: "14px" }}>Inviting to: <strong>{branchName}</strong></p>}
             <form onSubmit={handleSend}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "18px" }}>
                 <div>
@@ -204,7 +204,7 @@ export default function OMInvitations() {
                   />
                 </div>
               </div>
-              {error && <p style={{ color: "#EF4444", fontSize: "13px", marginBottom: "12px" }}>{error}</p>}
+              {error && <p style={{ color: "#EF4444", fontSize: "20px", marginBottom: "12px" }}>{error}</p>}
               <div style={{ display: "flex", gap: "10px" }}>
                 <button type="submit" disabled={submitting} style={s.btnPrimary}>
                   <Mail size={14} /> {submitting ? "Sending…" : "Send Invitation"}
@@ -220,7 +220,7 @@ export default function OMInvitations() {
           <div style={{ display: "flex", gap: "6px", marginBottom: "16px" }}>
             {["all", "pending", "accepted", "cancelled"].map(st => (
               <button key={st} onClick={() => setFilterStatus(st)}
-                style={{ padding: "6px 14px", borderRadius: "100px", border: "1.5px solid", fontSize: "12px", fontWeight: "600", cursor: "pointer",
+                style={{ padding: "6px 14px", borderRadius: "100px", border: "1.5px solid", fontSize: "19px", fontWeight: "600", cursor: "pointer",
                   borderColor: filterStatus === st ? "#0F172A" : "#E2E8F0",
                   background: filterStatus === st ? "#0F172A" : "#FFF",
                   color: filterStatus === st ? "#FFF" : "#64748B",
@@ -243,10 +243,10 @@ export default function OMInvitations() {
         ) : filtered.length === 0 ? (
           <div style={s.empty}>
             <UserCheck size={40} color="#CBD5E1" />
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>
+            <p style={{ fontSize: "21px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>
               {invites.length === 0 ? "No invitations sent yet" : "No invitations match this filter"}
             </p>
-            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Invite staff members to join your branch.</p>
+            <p style={{ fontSize: "20px", color: "#94A3B8", marginTop: "4px" }}>Invite staff members to join your branch.</p>
           </div>
         ) : (
           <div style={s.tableWrap}>
@@ -272,7 +272,7 @@ export default function OMInvitations() {
                       <td style={s.td}>
                         {inv.invitation_code ? (
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "13px", color: "#0F172A", letterSpacing: "0.08em" }}>
+                            <span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "20px", color: "#0F172A", letterSpacing: "0.08em" }}>
                               {inv.invitation_code}
                             </span>
                             <button onClick={() => copyCode(inv.invitation_code)} className="om-invite-icon-btn" style={{ ...s.iconBtn, padding: "3px 5px" }}>
@@ -286,7 +286,7 @@ export default function OMInvitations() {
                           {isExpired ? "expired" : inv.status}
                         </span>
                       </td>
-                      <td style={{ ...s.td, color: "#94A3B8", fontSize: "12px" }}>
+                      <td style={{ ...s.td, color: "#94A3B8", fontSize: "19px" }}>
                         {inv.expires_at ? <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Clock size={11} />{new Date(inv.expires_at).toLocaleDateString()}</span> : "—"}
                       </td>
                       <td style={s.td}>
@@ -304,7 +304,7 @@ export default function OMInvitations() {
                               </button>
                             </>
                           )}
-                          {inv.status === "accepted" && <span style={{ fontSize: "11px", color: "#059669", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle2 size={14} /> Joined</span>}
+                          {inv.status === "accepted" && <span style={{ fontSize: "18px", color: "#059669", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle2 size={14} /> Joined</span>}
                         </div>
                       </td>
                     </tr>
@@ -320,20 +320,20 @@ export default function OMInvitations() {
 }
 
 const s = {
-  btnPrimary: { display: "inline-flex", alignItems: "center", gap: "6px", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "13px", fontWeight: "700", cursor: "pointer" },
-  btnSecondary: { background: "#F1F5F9", color: "#475569", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "13px", fontWeight: "600", cursor: "pointer" },
+  btnPrimary: { display: "inline-flex", alignItems: "center", gap: "6px", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "20px", fontWeight: "700", cursor: "pointer" },
+  btnSecondary: { background: "#F1F5F9", color: "#475569", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "20px", fontWeight: "600", cursor: "pointer" },
   formCard: { background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
-  formTitle: { fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "8px" },
-  label: { display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" },
-  input: { width: "100%", padding: "9px 12px", border: "1px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", outline: "none", boxSizing: "border-box" },
+  formTitle: { fontSize: "22px", fontWeight: "700", color: "#1E293B", marginBottom: "8px" },
+  label: { display: "block", fontSize: "19px", fontWeight: "600", color: "#374151", marginBottom: "6px" },
+  input: { width: "100%", padding: "9px 12px", border: "1px solid #E2E8F0", borderRadius: "9px", fontSize: "21px", outline: "none", boxSizing: "border-box" },
   empty: { textAlign: "center", padding: "60px 20px", background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px" },
   tableWrap: { background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", overflow: "hidden" },
   table: { width: "100%", borderCollapse: "collapse" },
   thead: { background: "#F8FAFC" },
-  th: { padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #F1F5F9" },
+  th: { padding: "12px 16px", textAlign: "left", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #F1F5F9" },
   tr: { borderBottom: "1px solid #F8FAFC" },
-  td: { padding: "14px 16px", fontSize: "13px", color: "#334155" },
-  roleTag: { background: "#EFF6FF", color: "#3B82F6", fontSize: "11px", fontWeight: "600", padding: "3px 9px", borderRadius: "100px", textTransform: "capitalize", whiteSpace: "nowrap" },
-  statusBadge: { fontSize: "11px", fontWeight: "700", padding: "3px 10px", borderRadius: "100px", textTransform: "capitalize" },
+  td: { padding: "14px 16px", fontSize: "20px", color: "#334155" },
+  roleTag: { background: "#EFF6FF", color: "#3B82F6", fontSize: "18px", fontWeight: "600", padding: "3px 9px", borderRadius: "100px", textTransform: "capitalize", whiteSpace: "nowrap" },
+  statusBadge: { fontSize: "18px", fontWeight: "700", padding: "3px 10px", borderRadius: "100px", textTransform: "capitalize" },
   iconBtn: { background: "none", border: "1px solid #E2E8F0", borderRadius: "6px", padding: "5px 7px", cursor: "pointer", display: "inline-flex", alignItems: "center", color: "#64748B" },
 };

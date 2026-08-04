@@ -50,7 +50,7 @@ function TrendBadge({ pct }) {
   const up = pct >= 0;
   const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "11px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "18px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
       <Icon size={11} /> {Math.abs(pct)}%
     </span>
   );
@@ -69,8 +69,8 @@ function StatStrip({ stats, loading }) {
                 <span style={{ fontSize: "30px", fontWeight: "800", color: "#0F172A", lineHeight: 1 }}>{s.value}</span>
                 {s.pct !== null && s.pct !== undefined && <TrendBadge pct={s.pct} />}
               </div>
-              <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", margin: "8px 0 2px" }}>{s.label}</p>
-              <p style={{ fontSize: "11px", color: "#94A3B8", margin: 0 }}>{s.sub}</p>
+              <p style={{ fontSize: "19px", fontWeight: "600", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", margin: "8px 0 2px" }}>{s.label}</p>
+              <p style={{ fontSize: "18px", color: "#94A3B8", margin: 0 }}>{s.sub}</p>
             </>
           )}
         </div>
@@ -83,14 +83,14 @@ function BarMeterSection({ title, sub, rows, loading }) {
   const total = rows.reduce((s, r) => s + r.count, 0);
   return (
     <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-      <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: 0 }}>{title}</h3>
-      <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 16px" }}>{sub}</p>
+      <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#0F172A", margin: 0 }}>{title}</h3>
+      <p style={{ fontSize: "19px", color: "#94A3B8", margin: "3px 0 16px" }}>{sub}</p>
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {[1, 2, 3].map(i => <Shimmer key={i} h="30px" />)}
         </div>
       ) : rows.length === 0 ? (
-        <p style={{ fontSize: "13px", color: "#94A3B8", textAlign: "center", padding: "16px 0" }}>No data</p>
+        <p style={{ fontSize: "20px", color: "#94A3B8", textAlign: "center", padding: "16px 0" }}>No data</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {rows.map(r => {
@@ -99,8 +99,8 @@ function BarMeterSection({ title, sub, rows, loading }) {
             return (
               <div key={r.status}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "5px" }}>
-                  <span style={{ fontSize: "12.5px", fontWeight: "600", color: "#374151", textTransform: "capitalize" }}>{r.status?.replace(/_/g, " ")}</span>
-                  <span style={{ fontSize: "12px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{r.count}</strong> · {pct}%</span>
+                  <span style={{ fontSize: "19.5px", fontWeight: "600", color: "#374151", textTransform: "capitalize" }}>{r.status?.replace(/_/g, " ")}</span>
+                  <span style={{ fontSize: "19px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{r.count}</strong> · {pct}%</span>
                 </div>
                 <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
                   <div style={{ height: "100%", borderRadius: "100px", background: color, width: `${pct}%` }} />
@@ -411,8 +411,8 @@ export default function Reports() {
         ["TS Approval Rate",       `${kpis.tsApprovalRate ?? 0}%`],
         ["Pending Leave (period)", kpis.pendingLeave],
       ],
-      headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 15 },
+      bodyStyles: { fontSize: 15 },
       columnStyles: { 1: { halign: "right" } },
       margin: { left: 14, right: 14 },
     });
@@ -421,13 +421,13 @@ export default function Reports() {
     autoTable(doc, {
       startY: y, head: [["Shifts by Status", "Count"]],
       body: shiftsByStatus.map(s => [s.status, s.count]),
-      headStyles: { fillColor: [217, 119, 6], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [217, 119, 6], textColor: 255, fontSize: 15 }, bodyStyles: { fontSize: 15 },
       columnStyles: { 1: { halign: "right" } }, margin: { left: 14, right: pageW / 2 + 2 },
     });
     autoTable(doc, {
       startY: y, head: [["Timesheet Status", "Count"]],
       body: timesheetBreakdown.map(t => [t.status, t.count]),
-      headStyles: { fillColor: [124, 58, 237], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [124, 58, 237], textColor: 255, fontSize: 15 }, bodyStyles: { fontSize: 15 },
       columnStyles: { 1: { halign: "right" } }, margin: { left: pageW / 2 + 2, right: 14 },
     });
     y = doc.lastAutoTable.finalY + 8;
@@ -436,7 +436,7 @@ export default function Reports() {
       autoTable(doc, {
         startY: y, head: [["Leave by Status", "Count"]],
         body: leaveByStatus.map(l => [l.status, l.count]),
-        headStyles: { fillColor: [8, 145, 178], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+        headStyles: { fillColor: [8, 145, 178], textColor: 255, fontSize: 15 }, bodyStyles: { fontSize: 15 },
         columnStyles: { 1: { halign: "right" } }, margin: { left: 14, right: pageW / 2 + 2 },
       });
       y = doc.lastAutoTable.finalY + 8;
@@ -454,7 +454,7 @@ export default function Reports() {
           const score = Math.round(Math.min(s.shifts * 8, 25) + Math.min(s.hoursLogged / 2, 25) + (approvalRate != null ? approvalRate * 35 : 17.5) + Math.max(0, 15 - s.leaveCount * 3));
           return [s.name, s.staff_type, s.shifts, s.hoursLogged.toFixed(1), s.tsApproved, s.tsPending, s.tsRejected, s.leaveCount, score];
         }),
-        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 7 }, bodyStyles: { fontSize: 7 },
+        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 14 }, bodyStyles: { fontSize: 14 },
         columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" }, 8: { halign: "right" } },
         margin: { left: 14, right: 14 },
       });
@@ -473,10 +473,10 @@ export default function Reports() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "22px" }}>
               <button onClick={() => setShowHistory(false)}
-                style={{ width: "34px", height: "34px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: "pointer", color: "#64748B", fontSize: "16px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+                style={{ width: "34px", height: "34px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: "pointer", color: "#64748B", fontSize: "21px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
               <div>
-                <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Report History</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0" }}>All reports you have exported</p>
+                <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Report History</h2>
+                <p style={{ fontSize: "20px", color: "#64748B", margin: "4px 0 0" }}>All reports you have exported</p>
               </div>
             </div>
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
@@ -487,16 +487,16 @@ export default function Reports() {
               ) : historyRows.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 0" }}>
                   <History size={36} color="#CBD5E1" style={{ marginBottom: "12px" }} />
-                  <p style={{ fontSize: "14px", fontWeight: "600", color: "#94A3B8" }}>No exports yet</p>
-                  <p style={{ fontSize: "13px", color: "#CBD5E1", marginTop: "4px" }}>Download a CSV or PDF from the Reports page to see history here.</p>
+                  <p style={{ fontSize: "21px", fontWeight: "600", color: "#94A3B8" }}>No exports yet</p>
+                  <p style={{ fontSize: "20px", color: "#CBD5E1", marginTop: "4px" }}>Download a CSV or PDF from the Reports page to see history here.</p>
                 </div>
               ) : (
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "500px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "20px", minWidth: "500px" }}>
                     <thead>
                       <tr style={{ borderBottom: "2px solid #F1F5F9" }}>
                         {["Title", "Format", "Period", "Downloaded"].map(h => (
-                          <th key={h} style={{ padding: "10px 12px", textAlign: h === "Format" || h === "Downloaded" ? "center" : "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                          <th key={h} style={{ padding: "10px 12px", textAlign: h === "Format" || h === "Downloaded" ? "center" : "left", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -505,10 +505,10 @@ export default function Reports() {
                         <tr key={r.report_id} style={{ borderBottom: "1px solid #F8FAFC" }}>
                           <td style={{ padding: "12px", fontWeight: "600", color: "#1E293B" }}>{r.title || "Report"}</td>
                           <td style={{ padding: "12px", textAlign: "center" }}>
-                            <span style={{ fontSize: "11px", fontWeight: "700", padding: "2px 10px", borderRadius: "100px", background: r.format === "pdf" ? "#FEF2F2" : "#F0FDF4", color: r.format === "pdf" ? "#DC2626" : "#16A34A", textTransform: "uppercase" }}>{r.format}</span>
+                            <span style={{ fontSize: "18px", fontWeight: "700", padding: "2px 10px", borderRadius: "100px", background: r.format === "pdf" ? "#FEF2F2" : "#F0FDF4", color: r.format === "pdf" ? "#DC2626" : "#16A34A", textTransform: "uppercase" }}>{r.format}</span>
                           </td>
-                          <td style={{ padding: "12px", color: "#64748B", fontSize: "12px" }}>{r.period_start} – {r.period_end}</td>
-                          <td style={{ padding: "12px", textAlign: "center", color: "#94A3B8", fontSize: "12px" }}>{r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
+                          <td style={{ padding: "12px", color: "#64748B", fontSize: "19px" }}>{r.period_start} – {r.period_end}</td>
+                          <td style={{ padding: "12px", textAlign: "center", color: "#94A3B8", fontSize: "19px" }}>{r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -523,8 +523,8 @@ export default function Reports() {
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "22px", flexWrap: "wrap", gap: "12px" }}>
               <div>
-                <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Reports</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0" }}>
+                <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Reports</h2>
+                <p style={{ fontSize: "20px", color: "#64748B", margin: "4px 0 0" }}>
                   {branchName ? `${branchName} — ` : ""}Branch performance overview
                 </p>
               </div>
@@ -532,21 +532,21 @@ export default function Reports() {
                 <div style={{ display: "flex", background: "#F1F5F9", borderRadius: "10px", padding: "3px", gap: "2px" }}>
                   {PERIODS.map((p, i) => (
                     <button key={p.label} onClick={() => setPeriod(i)} className="mgr-rpt-tab"
-                      style={{ padding: "6px 16px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "background 0.15s", background: period === i ? "#FFF" : "transparent", color: period === i ? "#0F172A" : "#64748B", boxShadow: period === i ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
+                      style={{ padding: "6px 16px", borderRadius: "8px", border: "none", fontSize: "20px", fontWeight: "600", cursor: "pointer", transition: "background 0.15s", background: period === i ? "#FFF" : "transparent", color: period === i ? "#0F172A" : "#64748B", boxShadow: period === i ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
                       {p.label}
                     </button>
                   ))}
                 </div>
                 <button onClick={downloadCSV} disabled={loading}
-                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "20px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
                   <Download size={14} strokeWidth={2} /> CSV
                 </button>
                 <button onClick={downloadPDF} disabled={loading}
-                  style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "20px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
                   <Download size={14} strokeWidth={2} /> PDF
                 </button>
                 <button onClick={openHistory}
-                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "20px", fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap" }}>
                   History
                 </button>
               </div>
@@ -564,14 +564,14 @@ export default function Reports() {
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
                 <div>
-                  <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Daily Activity</h3>
-                  <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 0" }}>Last {Math.min(days, 30)} days</p>
+                  <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Daily Activity</h3>
+                  <p style={{ fontSize: "19px", color: "#94A3B8", margin: "3px 0 0" }}>Last {Math.min(days, 30)} days</p>
                 </div>
                 <div style={{ display: "flex", gap: "16px" }}>
                   {chartSeries.map(s => (
                     <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <div style={{ width: "10px", height: "3px", borderRadius: "2px", background: s.color }} />
-                      <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>{s.label}</span>
+                      <span style={{ fontSize: "18px", fontWeight: "600", color: "#64748B" }}>{s.label}</span>
                     </div>
                   ))}
                 </div>
@@ -584,19 +584,19 @@ export default function Reports() {
             {/* Staff Performance Table */}
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div style={{ marginBottom: "18px" }}>
-                <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Staff Performance</h3>
-                <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 0" }}>All staff · sorted by score · period: {PERIODS[period].label}</p>
+                <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Staff Performance</h3>
+                <p style={{ fontSize: "19px", color: "#94A3B8", margin: "3px 0 0" }}>All staff · sorted by score · period: {PERIODS[period].label}</p>
               </div>
               {loading ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {Array.from({ length: 4 }).map((_, i) => <Shimmer key={i} h="48px" />)}
                 </div>
               ) : staffKpis.length === 0 ? (
-                <p style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", padding: "32px 0" }}>No staff data available.</p>
+                <p style={{ color: "#94A3B8", fontSize: "20px", textAlign: "center", padding: "32px 0" }}>No staff data available.</p>
               ) : (
                 <div style={{ overflowX: "auto" }}>
                   <StaffKpiTable rows={staffKpis} />
-                  <p style={{ fontSize: "11px", color: "#CBD5E1", marginTop: "14px", textAlign: "right" }}>
+                  <p style={{ fontSize: "18px", color: "#CBD5E1", marginTop: "14px", textAlign: "right" }}>
                     Score = Shifts (25) + Hours (25) + Timesheets (35) + Leave (15) · max 100
                   </p>
                 </div>
@@ -618,11 +618,11 @@ export default function Reports() {
 
 function StaffKpiTable({ rows }) {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "720px" }}>
+    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "20px", minWidth: "720px" }}>
       <thead>
         <tr style={{ borderBottom: "2px solid #F1F5F9" }}>
           {["Staff", "Type", "Shifts", "Hours", "Timesheets", "Leave", "Score"].map(h => (
-            <th key={h} style={{ padding: "10px 12px", textAlign: h === "Staff" ? "left" : "center", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+            <th key={h} style={{ padding: "10px 12px", textAlign: h === "Staff" ? "left" : "center", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
           ))}
         </tr>
       </thead>
@@ -640,12 +640,12 @@ function StaffKpiTable({ rows }) {
                   <UserAvatar name={s.name} avatar_url={s.avatar_url} size={32} />
                   <div>
                     <p style={{ fontWeight: "600", color: "#0F172A", margin: 0, whiteSpace: "nowrap" }}>{s.name}</p>
-                    {!s.is_active && <p style={{ fontSize: "10px", color: "#DC2626", fontWeight: "600", margin: 0 }}>Inactive</p>}
+                    {!s.is_active && <p style={{ fontSize: "17px", color: "#DC2626", fontWeight: "600", margin: 0 }}>Inactive</p>}
                   </div>
                 </div>
               </td>
               <td style={{ padding: "13px 12px", textAlign: "center" }}>
-                <span style={{ fontSize: "11px", fontWeight: "600", padding: "3px 9px", borderRadius: "100px", background: s.staff_type === "regular" ? "#EFF6FF" : "#F5F3FF", color: s.staff_type === "regular" ? "#2563EB" : "#7C3AED", textTransform: "capitalize" }}>{s.staff_type}</span>
+                <span style={{ fontSize: "18px", fontWeight: "600", padding: "3px 9px", borderRadius: "100px", background: s.staff_type === "regular" ? "#EFF6FF" : "#F5F3FF", color: s.staff_type === "regular" ? "#2563EB" : "#7C3AED", textTransform: "capitalize" }}>{s.staff_type}</span>
               </td>
               <td style={{ padding: "13px 12px", textAlign: "center", fontWeight: "700", color: s.shifts > 0 ? "#0F172A" : "#CBD5E1" }}>{s.shifts}</td>
               <td style={{ padding: "13px 12px", textAlign: "center", fontWeight: "700", color: s.hoursLogged > 0 ? "#0F172A" : "#CBD5E1" }}>
@@ -653,11 +653,11 @@ function StaffKpiTable({ rows }) {
               </td>
               <td style={{ padding: "13px 12px", textAlign: "center" }}>
                 {tsTotal === 0
-                  ? <span style={{ color: "#CBD5E1", fontSize: "12px" }}>—</span>
+                  ? <span style={{ color: "#CBD5E1", fontSize: "19px" }}>—</span>
                   : <div style={{ display: "flex", gap: "4px", justifyContent: "center", flexWrap: "wrap" }}>
-                      {s.tsApproved > 0 && <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "100px", background: "#F0FDF4", color: "#16A34A" }}>✓ {s.tsApproved}</span>}
-                      {s.tsPending  > 0 && <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "100px", background: "#FFFBEB", color: "#D97706" }}>⏳ {s.tsPending}</span>}
-                      {s.tsRejected > 0 && <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "100px", background: "#FEF2F2", color: "#DC2626" }}>✗ {s.tsRejected}</span>}
+                      {s.tsApproved > 0 && <span style={{ fontSize: "18px", fontWeight: "600", padding: "2px 7px", borderRadius: "100px", background: "#F0FDF4", color: "#16A34A" }}>✓ {s.tsApproved}</span>}
+                      {s.tsPending  > 0 && <span style={{ fontSize: "18px", fontWeight: "600", padding: "2px 7px", borderRadius: "100px", background: "#FFFBEB", color: "#D97706" }}>⏳ {s.tsPending}</span>}
+                      {s.tsRejected > 0 && <span style={{ fontSize: "18px", fontWeight: "600", padding: "2px 7px", borderRadius: "100px", background: "#FEF2F2", color: "#DC2626" }}>✗ {s.tsRejected}</span>}
                     </div>
                 }
               </td>
@@ -665,7 +665,7 @@ function StaffKpiTable({ rows }) {
                 {s.leaveCount > 0 ? s.leaveCount : "—"}
               </td>
               <td style={{ padding: "13px 12px", textAlign: "center" }}>
-                <span style={{ display: "inline-block", fontWeight: "800", fontSize: "13px", padding: "4px 12px", borderRadius: "8px", background: scoreBg, color: scoreColor, minWidth: "44px" }}>{score}</span>
+                <span style={{ display: "inline-block", fontWeight: "800", fontSize: "20px", padding: "4px 12px", borderRadius: "8px", background: scoreBg, color: scoreColor, minWidth: "44px" }}>{score}</span>
               </td>
             </tr>
           );

@@ -80,15 +80,15 @@ export default function Attendance() {
         {/* Header */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"24px", flexWrap:"wrap", gap:"12px" }}>
           <div>
-            <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#1E293B" }}>Timesheet</h2>
-            <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
+            <h2 style={{ fontSize:"25px", fontWeight:"800", color:"#1E293B" }}>Timesheet</h2>
+            <p style={{ fontSize:"20px", color:"#64748B", marginTop:"2px" }}>
               {activeTab === "submissions" ? "Review staff timesheet submissions" : "Track approved working hours per staff"}
             </p>
           </div>
           <div style={{ display:"flex", gap:"3px", background:"#F1F5F9", borderRadius:"10px", padding:"3px" }}>
             {[["submissions","Submissions"],["hours","Working Hours"]].map(([id, label]) => (
               <button key={id} onClick={() => setActiveTab(id)}
-                style={{ padding:"7px 18px", borderRadius:"8px", border:"none", cursor:"pointer", fontSize:"13px", fontWeight:"600", transition:"all 0.15s",
+                style={{ padding:"7px 18px", borderRadius:"8px", border:"none", cursor:"pointer", fontSize:"20px", fontWeight:"600", transition:"all 0.15s",
                   background: activeTab===id ? "#FFF" : "transparent",
                   color:      activeTab===id ? "#1E293B" : "#64748B",
                   boxShadow:  activeTab===id ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
@@ -108,7 +108,7 @@ export default function Attendance() {
         <div style={{ position:"fixed", bottom:"28px", right:"28px", zIndex:9999,
           background: toast.ok ? "#22C55E" : "#EF4444",
           color:"#FFF", padding:"12px 20px", borderRadius:"10px",
-          fontSize:"14px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
+          fontSize:"21px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
           animation:"toastIn 0.3s ease both" }}>
           {toast.msg}
         </div>
@@ -285,18 +285,18 @@ function Submissions({ branchId, managerId, showToast }) {
           <div style={{ display:"flex", gap:"3px", background:"#F1F5F9", borderRadius:"10px", padding:"3px" }}>
             {[["pending","Pending"],["approved","Approved"],["rejected","Rejected"],["all","All"]].map(([f, label]) => (
               <button key={f} onClick={() => setFilter(f)}
-                style={{ padding:"6px 14px", borderRadius:"7px", border:"none", cursor:"pointer", fontSize:"12px", fontWeight:"600", transition:"all 0.15s",
+                style={{ padding:"6px 14px", borderRadius:"7px", border:"none", cursor:"pointer", fontSize:"19px", fontWeight:"600", transition:"all 0.15s",
                   background: filter===f ? "#FFF" : "transparent",
                   color:      filter===f ? "#1E293B" : "#64748B",
                   boxShadow:  filter===f ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>
                 {label}
                 {f === "pending" && pendingCount > 0 && (
-                  <span style={{ marginLeft:"5px", background:"#EF4444", color:"#FFF", fontSize:"10px", fontWeight:"700", padding:"1px 5px", borderRadius:"100px" }}>{pendingCount}</span>
+                  <span style={{ marginLeft:"5px", background:"#EF4444", color:"#FFF", fontSize:"17px", fontWeight:"700", padding:"1px 5px", borderRadius:"100px" }}>{pendingCount}</span>
                 )}
               </button>
             ))}
           </div>
-          <span style={{ fontSize:"12px", color:"#94A3B8" }}>{filtered.length} submission{filtered.length !== 1 ? "s" : ""}</span>
+          <span style={{ fontSize:"19px", color:"#94A3B8" }}>{filtered.length} submission{filtered.length !== 1 ? "s" : ""}</span>
         </div>
 
         {/* Bulk action bar */}
@@ -307,7 +307,7 @@ function Submissions({ branchId, managerId, showToast }) {
             <label style={{ display:"flex", alignItems:"center", gap:"7px", cursor:"pointer", userSelect:"none" }}>
               <input type="checkbox" checked={allChecked} onChange={toggleAll}
                 style={{ width:"15px", height:"15px", accentColor:"#2563EB", cursor:"pointer" }} />
-              <span style={{ fontSize:"12px", fontWeight:"600", color:"#475569" }}>
+              <span style={{ fontSize:"19px", fontWeight:"600", color:"#475569" }}>
                 {someChecked ? `${checked.size} selected` : "Select all"}
               </span>
             </label>
@@ -320,13 +320,13 @@ function Submissions({ branchId, managerId, showToast }) {
                 <button onClick={() => bulkDecideList(filtered.filter(r => r.status === "pending").map(r => r.timesheet_id), "approved")}
                   disabled={bulkActing || filtered.filter(r => r.status === "pending").length === 0}
                   style={{ padding:"6px 14px", borderRadius:"8px", border:"none", background:"#22C55E", color:"#FFF",
-                    fontSize:"12px", fontWeight:"700", cursor:"pointer", opacity: (bulkActing || !filtered.some(r => r.status==="pending")) ? 0.5 : 1, transition:"opacity 0.15s" }}>
+                    fontSize:"19px", fontWeight:"700", cursor:"pointer", opacity: (bulkActing || !filtered.some(r => r.status==="pending")) ? 0.5 : 1, transition:"opacity 0.15s" }}>
                   Approve All
                 </button>
                 <button onClick={() => bulkDecideList(filtered.filter(r => r.status === "pending").map(r => r.timesheet_id), "rejected")}
                   disabled={bulkActing || filtered.filter(r => r.status === "pending").length === 0}
                   style={{ padding:"6px 14px", borderRadius:"8px", border:"1.5px solid #FECACA", background:"#FFF5F5", color:"#EF4444",
-                    fontSize:"12px", fontWeight:"700", cursor:"pointer", opacity: (bulkActing || !filtered.some(r => r.status==="pending")) ? 0.5 : 1, transition:"opacity 0.15s" }}>
+                    fontSize:"19px", fontWeight:"700", cursor:"pointer", opacity: (bulkActing || !filtered.some(r => r.status==="pending")) ? 0.5 : 1, transition:"opacity 0.15s" }}>
                   Reject All
                 </button>
               </>
@@ -339,19 +339,19 @@ function Submissions({ branchId, managerId, showToast }) {
                   <>
                     <button onClick={() => bulkDecide("approved")} disabled={bulkActing}
                       style={{ padding:"6px 14px", borderRadius:"8px", border:"none", background:"#22C55E", color:"#FFF",
-                        fontSize:"12px", fontWeight:"700", cursor:"pointer", opacity: bulkActing ? 0.6:1 }}>
+                        fontSize:"19px", fontWeight:"700", cursor:"pointer", opacity: bulkActing ? 0.6:1 }}>
                       {bulkActing ? "…" : `Approve (${checkedPending.length})`}
                     </button>
                     <button onClick={() => bulkDecide("rejected")} disabled={bulkActing}
                       style={{ padding:"6px 14px", borderRadius:"8px", border:"1.5px solid #FECACA", background:"#FFF5F5", color:"#EF4444",
-                        fontSize:"12px", fontWeight:"700", cursor:"pointer", opacity: bulkActing ? 0.6:1 }}>
+                        fontSize:"19px", fontWeight:"700", cursor:"pointer", opacity: bulkActing ? 0.6:1 }}>
                       {bulkActing ? "…" : `Reject (${checkedPending.length})`}
                     </button>
                   </>
                 )}
                 <button onClick={() => setChecked(new Set())}
                   style={{ padding:"6px 12px", borderRadius:"8px", border:"1px solid #E2E8F0", background:"#FFF", color:"#64748B",
-                    fontSize:"12px", fontWeight:"600", cursor:"pointer" }}>
+                    fontSize:"19px", fontWeight:"600", cursor:"pointer" }}>
                   Clear
                 </button>
               </>
@@ -377,8 +377,8 @@ function Submissions({ branchId, managerId, showToast }) {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"60px", textAlign:"center" }}>
-            <p style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B", marginBottom:"6px" }}>No {filter === "all" ? "" : filter} submissions</p>
-            <p style={{ fontSize:"13px", color:"#94A3B8" }}>Staff submissions will appear here once they report their shifts.</p>
+            <p style={{ fontSize:"22px", fontWeight:"700", color:"#1E293B", marginBottom:"6px" }}>No {filter === "all" ? "" : filter} submissions</p>
+            <p style={{ fontSize:"20px", color:"#94A3B8" }}>Staff submissions will appear here once they report their shifts.</p>
           </div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
@@ -409,18 +409,18 @@ function Submissions({ branchId, managerId, showToast }) {
                     {/* Main info */}
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:"8px", flexWrap:"wrap" }}>
-                        <span style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>{r.staffName}</span>
-                        <span style={{ padding:"2px 8px", borderRadius:"100px", fontSize:"11px", fontWeight:"700", background:st.bg, color:st.color }}>{st.label}</span>
+                        <span style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B" }}>{r.staffName}</span>
+                        <span style={{ padding:"2px 8px", borderRadius:"100px", fontSize:"18px", fontWeight:"700", background:st.bg, color:st.color }}>{st.label}</span>
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:"5px", marginTop:"3px", flexWrap:"wrap" }}>
-                        <span style={{ fontSize:"12px", fontWeight:"600", color:"#475569" }}>{r.shiftTitle}</span>
-                        <span style={{ color:"#CBD5E1", fontSize:"11px" }}>·</span>
-                        <span style={{ fontSize:"12px", color:"#64748B" }}>{fmtDate(r.log_date)}</span>
+                        <span style={{ fontSize:"19px", fontWeight:"600", color:"#475569" }}>{r.shiftTitle}</span>
+                        <span style={{ color:"#CBD5E1", fontSize:"18px" }}>·</span>
+                        <span style={{ fontSize:"19px", color:"#64748B" }}>{fmtDate(r.log_date)}</span>
                       </div>
                     </div>
 
                     {/* Hours */}
-                    <span style={{ fontSize:"16px", fontWeight:"800", color:"#1E293B", flexShrink:0 }}>{fmtHours(parseFloat(r.hours_worked || 0))}</span>
+                    <span style={{ fontSize:"21px", fontWeight:"800", color:"#1E293B", flexShrink:0 }}>{fmtHours(parseFloat(r.hours_worked || 0))}</span>
 
                     {/* Chevron */}
                     <svg width="15" height="15" fill="none" stroke="#CBD5E1" strokeWidth="2" viewBox="0 0 24 24"
@@ -473,7 +473,7 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
 
       {/* Panel header */}
       <div style={{ padding:"20px 22px 16px", borderBottom:"1px solid #F1F5F9", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <span style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>Submission Report</span>
+        <span style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B" }}>Submission Report</span>
         <button onClick={onClose}
           style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8", padding:"4px", borderRadius:"6px" }}>
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -485,8 +485,8 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
         <div style={{ display:"flex", alignItems:"center", gap:"14px", marginBottom:"22px" }}>
           <UserAvatar name={ts.staffName} avatar_url={ts.staffAvatar} size={52} />
           <div>
-            <p style={{ fontSize:"17px", fontWeight:"800", color:"#1E293B" }}>{ts.staffName}</p>
-            <span style={{ padding:"3px 9px", borderRadius:"100px", fontSize:"11px", fontWeight:"700", background:st.bg, color:st.color }}>{st.label}</span>
+            <p style={{ fontSize:"22px", fontWeight:"800", color:"#1E293B" }}>{ts.staffName}</p>
+            <span style={{ padding:"3px 9px", borderRadius:"100px", fontSize:"18px", fontWeight:"700", background:st.bg, color:st.color }}>{st.label}</span>
           </div>
         </div>
 
@@ -494,13 +494,13 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
         <div style={{ display:"flex", flexDirection:"column", gap:"12px", marginBottom:"22px" }}>
           <MetaRow icon="📋" label="Shift" value={ts.shiftTitle} />
           <MetaRow icon="📅" label="Date"  value={fmtDate(ts.log_date)} />
-          <MetaRow icon="⏱️" label="Hours Logged" value={<span style={{ fontSize:"18px", fontWeight:"800", color:"#059669" }}>{fmtHours(parseFloat(ts.hours_worked || 0))}</span>} />
+          <MetaRow icon="⏱️" label="Hours Logged" value={<span style={{ fontSize:"23px", fontWeight:"800", color:"#059669" }}>{fmtHours(parseFloat(ts.hours_worked || 0))}</span>} />
         </div>
 
         {/* Description */}
         <div style={{ background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:"12px", padding:"16px", marginBottom:"22px" }}>
-          <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", letterSpacing:"0.05em", marginBottom:"8px" }}>DESCRIPTION</p>
-          <p style={{ fontSize:"14px", color:"#334155", lineHeight:1.65 }}>{ts.description || "No description provided."}</p>
+          <p style={{ fontSize:"18px", fontWeight:"700", color:"#94A3B8", letterSpacing:"0.05em", marginBottom:"8px" }}>DESCRIPTION</p>
+          <p style={{ fontSize:"21px", color:"#334155", lineHeight:1.65 }}>{ts.description || "No description provided."}</p>
         </div>
 
         {/* Evidence */}
@@ -508,18 +508,18 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
           <button onClick={downloadEvidence} disabled={downloading}
             style={{ display:"flex", alignItems:"center", gap:"8px", width:"100%", padding:"12px 14px", marginBottom:"22px",
               border:"1.5px solid #E2E8F0", borderRadius:"12px", background:"#FFF", cursor: downloading ? "not-allowed":"pointer",
-              opacity: downloading ? 0.6:1, fontSize:"13px", fontWeight:"600", color:"#1E293B", textAlign:"left" }}>
-            <span style={{ fontSize:"16px" }}>📎</span>
+              opacity: downloading ? 0.6:1, fontSize:"20px", fontWeight:"600", color:"#1E293B", textAlign:"left" }}>
+            <span style={{ fontSize:"21px" }}>📎</span>
             <span style={{ flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               {ts.evidence_name || "Evidence file"}
             </span>
-            <span style={{ fontSize:"12px", fontWeight:"700", color:"#2563EB" }}>{downloading ? "Opening…" : "Download"}</span>
+            <span style={{ fontSize:"19px", fontWeight:"700", color:"#2563EB" }}>{downloading ? "Opening…" : "Download"}</span>
           </button>
         )}
 
         {/* Reviewed info */}
         {ts.reviewed_at && !isPending && (
-          <p style={{ fontSize:"12px", color:"#94A3B8", marginBottom:"16px" }}>
+          <p style={{ fontSize:"19px", color:"#94A3B8", marginBottom:"16px" }}>
             {ts.status === "approved" ? "Approved" : "Rejected"} on{" "}
             {new Date(ts.reviewed_at).toLocaleDateString("en-SG", { day:"numeric", month:"short", year:"numeric" })}
           </p>
@@ -530,12 +530,12 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
           <div style={{ display:"flex", gap:"10px" }}>
             <button onClick={() => onDecide(ts.timesheet_id, "approved")} disabled={!!acting}
               style={{ flex:1, padding:"11px", borderRadius:"10px", border:"none", background:"#22C55E", color:"#FFF",
-                fontSize:"14px", fontWeight:"700", cursor: acting ? "not-allowed":"pointer", opacity: acting ? 0.6:1, transition:"opacity 0.15s" }}>
+                fontSize:"21px", fontWeight:"700", cursor: acting ? "not-allowed":"pointer", opacity: acting ? 0.6:1, transition:"opacity 0.15s" }}>
               {acting === ts.timesheet_id ? "…" : "Approve"}
             </button>
             <button onClick={() => onDecide(ts.timesheet_id, "rejected")} disabled={!!acting}
               style={{ flex:1, padding:"11px", borderRadius:"10px", border:"1.5px solid #FECACA", background:"#FFF5F5", color:"#EF4444",
-                fontSize:"14px", fontWeight:"700", cursor: acting ? "not-allowed":"pointer", opacity: acting ? 0.6:1, transition:"opacity 0.15s" }}>
+                fontSize:"21px", fontWeight:"700", cursor: acting ? "not-allowed":"pointer", opacity: acting ? 0.6:1, transition:"opacity 0.15s" }}>
               {acting === ts.timesheet_id ? "…" : "Reject"}
             </button>
           </div>
@@ -548,9 +548,9 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
 function MetaRow({ icon, label, value }) {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
-      <span style={{ fontSize:"15px", width:"20px", textAlign:"center", flexShrink:0 }}>{icon}</span>
-      <span style={{ fontSize:"12px", fontWeight:"700", color:"#94A3B8", minWidth:"80px" }}>{label}</span>
-      <span style={{ fontSize:"13px", color:"#334155", fontWeight:"600" }}>{value}</span>
+      <span style={{ fontSize:"22px", width:"20px", textAlign:"center", flexShrink:0 }}>{icon}</span>
+      <span style={{ fontSize:"19px", fontWeight:"700", color:"#94A3B8", minWidth:"80px" }}>{label}</span>
+      <span style={{ fontSize:"20px", color:"#334155", fontWeight:"600" }}>{value}</span>
     </div>
   );
 }
@@ -654,7 +654,7 @@ function WorkingHours({ branchId }) {
     return () => { cancelled = true; };
   }, [branchId, period, customStart, customEnd]);
 
-  if (!branchId) return <div style={{ textAlign:"center", padding:"64px", color:"#94A3B8", fontSize:"14px" }}>Loading…</div>;
+  if (!branchId) return <div style={{ textAlign:"center", padding:"64px", color:"#94A3B8", fontSize:"21px" }}>Loading…</div>;
 
   const [startDate, endDate] = getRange(period);
   const totalHours = staffData.reduce((s, x) => s + x.totalHours, 0);
@@ -666,7 +666,7 @@ function WorkingHours({ branchId }) {
         <div style={{ display:"flex", gap:"3px", background:"#F1F5F9", borderRadius:"10px", padding:"3px" }}>
           {[["week","This Week"],["month","This Month"],["custom","Custom"]].map(([id,label]) => (
             <button key={id} onClick={() => setPeriod(id)}
-              style={{ padding:"6px 14px", borderRadius:"7px", border:"none", cursor:"pointer", fontSize:"12px", fontWeight:"600", transition:"all 0.15s",
+              style={{ padding:"6px 14px", borderRadius:"7px", border:"none", cursor:"pointer", fontSize:"19px", fontWeight:"600", transition:"all 0.15s",
                 background: period===id ? "#FFF" : "transparent",
                 color:      period===id ? "#1E293B" : "#64748B",
                 boxShadow:  period===id ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>
@@ -677,14 +677,14 @@ function WorkingHours({ branchId }) {
         {period === "custom" && (
           <>
             <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
-              style={{ padding:"6px 10px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"13px", color:"#1E293B", outline:"none" }} />
-            <span style={{ color:"#94A3B8", fontSize:"13px" }}>to</span>
+              style={{ padding:"6px 10px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"20px", color:"#1E293B", outline:"none" }} />
+            <span style={{ color:"#94A3B8", fontSize:"20px" }}>to</span>
             <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
-              style={{ padding:"6px 10px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"13px", color:"#1E293B", outline:"none" }} />
+              style={{ padding:"6px 10px", border:"1.5px solid #E2E8F0", borderRadius:"8px", fontSize:"20px", color:"#1E293B", outline:"none" }} />
           </>
         )}
         {period !== "custom" && startDate && (
-          <span style={{ fontSize:"12px", color:"#94A3B8" }}>{fmtDateShort(startDate)} – {fmtDateShort(endDate)}</span>
+          <span style={{ fontSize:"19px", color:"#94A3B8" }}>{fmtDateShort(startDate)} – {fmtDateShort(endDate)}</span>
         )}
       </div>
 
@@ -697,8 +697,8 @@ function WorkingHours({ branchId }) {
             { label:"Avg per Staff",              value: fmtHours(staffData.length ? totalHours/staffData.length : 0), color:"#7C3AED" },
           ].map(k => (
             <div key={k.label} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"12px", padding:"16px 20px" }}>
-              <p style={{ fontSize:"22px", fontWeight:"800", color:k.color }}>{k.value}</p>
-              <p style={{ fontSize:"12px", fontWeight:"600", color:"#64748B", marginTop:"4px" }}>{k.label}</p>
+              <p style={{ fontSize:"25px", fontWeight:"800", color:k.color }}>{k.value}</p>
+              <p style={{ fontSize:"19px", fontWeight:"600", color:"#64748B", marginTop:"4px" }}>{k.label}</p>
             </div>
           ))}
         </div>
@@ -710,7 +710,7 @@ function WorkingHours({ branchId }) {
           {Array.from({length:4}).map((_,i) => <Shimmer key={i} h="72px" r="12px" />)}
         </div>
       ) : staffData.length === 0 ? (
-        <div style={{ textAlign:"center", padding:"64px", color:"#64748B", fontSize:"14px", background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px" }}>
+        <div style={{ textAlign:"center", padding:"64px", color:"#64748B", fontSize:"21px", background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px" }}>
           No approved timesheets found for this period.
         </div>
       ) : (
@@ -721,15 +721,15 @@ function WorkingHours({ branchId }) {
               <div key={s.staffId} style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"12px", overflow:"hidden" }}>
                 <div onClick={() => setExpanded(p => ({ ...p, [s.staffId]: !isOpen }))}
                   style={{ display:"flex", alignItems:"center", gap:"14px", padding:"14px 18px", cursor:"pointer" }}>
-                  <span style={{ fontSize:"11px", fontWeight:"700", color:"#CBD5E1", minWidth:"20px" }}>#{i+1}</span>
+                  <span style={{ fontSize:"18px", fontWeight:"700", color:"#CBD5E1", minWidth:"20px" }}>#{i+1}</span>
                   <UserAvatar name={s.name} avatar_url={s.avatar_url} size={40} />
                   <div style={{ flex:1, minWidth:0 }}>
-                    <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>{s.name}</p>
-                    <p style={{ fontSize:"12px", color:"#64748B", marginTop:"1px" }}>{s.records.length} approved submission{s.records.length !== 1 ? "s" : ""}</p>
+                    <p style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B" }}>{s.name}</p>
+                    <p style={{ fontSize:"19px", color:"#64748B", marginTop:"1px" }}>{s.records.length} approved submission{s.records.length !== 1 ? "s" : ""}</p>
                   </div>
                   <div style={{ textAlign:"right", minWidth:"80px" }}>
-                    <p style={{ fontSize:"20px", fontWeight:"800", color:"#059669" }}>{fmtHours(s.totalHours)}</p>
-                    <p style={{ fontSize:"11px", color:"#94A3B8" }}>approved</p>
+                    <p style={{ fontSize:"23px", fontWeight:"800", color:"#059669" }}>{fmtHours(s.totalHours)}</p>
+                    <p style={{ fontSize:"18px", color:"#94A3B8" }}>approved</p>
                   </div>
                   <svg width="16" height="16" fill="none" stroke="#94A3B8" strokeWidth="2" viewBox="0 0 24 24"
                     style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0)", transition:"transform 0.2s", flexShrink:0 }}>
@@ -744,20 +744,20 @@ function WorkingHours({ branchId }) {
                         {/* Date block */}
                         <div style={{ width:"38px", height:"42px", borderRadius:"9px", background:"#F1F5F9",
                           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                          <span style={{ fontSize:"9px", fontWeight:"700", color:"#94A3B8", lineHeight:1 }}>
+                          <span style={{ fontSize:"16px", fontWeight:"700", color:"#94A3B8", lineHeight:1 }}>
                             {new Date(r.log_date+"T00:00:00").toLocaleDateString("en-SG",{month:"short"}).toUpperCase()}
                           </span>
-                          <span style={{ fontSize:"14px", fontWeight:"800", color:"#475569", lineHeight:1 }}>
+                          <span style={{ fontSize:"21px", fontWeight:"800", color:"#475569", lineHeight:1 }}>
                             {new Date(r.log_date+"T00:00:00").getDate()}
                           </span>
                         </div>
                         <div style={{ flex:1, minWidth:0 }}>
-                          <p style={{ fontSize:"12px", fontWeight:"600", color:"#1E293B" }}>{r.shiftTitle}</p>
+                          <p style={{ fontSize:"19px", fontWeight:"600", color:"#1E293B" }}>{r.shiftTitle}</p>
                           {r.description && (
-                            <p style={{ fontSize:"11px", color:"#94A3B8", marginTop:"2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.description}</p>
+                            <p style={{ fontSize:"18px", color:"#94A3B8", marginTop:"2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.description}</p>
                           )}
                         </div>
-                        <span style={{ fontSize:"13px", fontWeight:"800", color:"#059669", flexShrink:0 }}>{fmtHours(r.hours)}</span>
+                        <span style={{ fontSize:"20px", fontWeight:"800", color:"#059669", flexShrink:0 }}>{fmtHours(r.hours)}</span>
                       </div>
                     ))}
                   </div>

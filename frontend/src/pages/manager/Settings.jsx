@@ -165,7 +165,7 @@ export default function ManagerSettings() {
   const allocValid = allocTotal === 100;
   const donutData  = WEIGHTS.map(w => ({ color: w.color, value: alloc?.[w.key] || 0 }));
 
-  const disabledInput = { width: "100%", padding: "11px 14px", borderRadius: "10px", border: "1.5px solid #E2E8F0", fontSize: "14px", color: "#64748B", background: "#F8FAFC", cursor: "default", boxSizing: "border-box", outline: "none" };
+  const disabledInput = { width: "100%", padding: "11px 14px", borderRadius: "10px", border: "1.5px solid #E2E8F0", fontSize: "21px", color: "#64748B", background: "#F8FAFC", cursor: "default", boxSizing: "border-box", outline: "none" };
 
   return (
     <ManagerLayout title="Settings">
@@ -175,7 +175,7 @@ export default function ManagerSettings() {
         <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", borderRight: "1px solid #F1F5F9" }}>
 
           {(error || success) && (
-            <div style={{ background: error ? "#FEF2F2" : "#F0FDF4", border: `1px solid ${error ? "#FECACA" : "#BBF7D0"}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "13px", color: error ? "#DC2626" : "#16A34A", display: "flex", alignItems: "center", gap: "6px" }}>
+            <div style={{ background: error ? "#FEF2F2" : "#F0FDF4", border: `1px solid ${error ? "#FECACA" : "#BBF7D0"}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "20px", color: error ? "#DC2626" : "#16A34A", display: "flex", alignItems: "center", gap: "6px" }}>
               {success && <Check size={14} strokeWidth={2.5} />}
               {error || success}
             </div>
@@ -188,13 +188,13 @@ export default function ManagerSettings() {
                 <Settings2 size={20} color="#2563EB" />
               </div>
               <div>
-                <h2 style={{ fontSize: "18px", fontWeight: "800", color: "#0F172A", marginBottom: "2px" }}>Business setup</h2>
-                <p style={{ fontSize: "12px", color: "#94A3B8" }}>Operating schedule, work rules, and public holidays</p>
+                <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#0F172A", marginBottom: "2px" }}>Business setup</h2>
+                <p style={{ fontSize: "19px", color: "#94A3B8" }}>Operating schedule, work rules, and public holidays</p>
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "10px", background: "#F8FAFC", border: "1.5px solid #E2E8F0" }}>
               <Lock size={13} color="#94A3B8" />
-              <span style={{ fontSize: "12px", fontWeight: "600", color: "#94A3B8" }}>View only</span>
+              <span style={{ fontSize: "19px", fontWeight: "600", color: "#94A3B8" }}>View only</span>
             </div>
           </div>
 
@@ -205,7 +205,7 @@ export default function ManagerSettings() {
               <div style={{ display: "flex", gap: "8px", marginBottom: "28px", flexWrap: "wrap" }}>
                 {DAYS.map((day, i) => (
                   <div key={day}
-                    style={{ padding: "8px 18px", borderRadius: "100px", border: `1.5px solid ${settings.operating_days[i] ? "#2563EB" : "#E2E8F0"}`, background: settings.operating_days[i] ? "#EFF6FF" : "#F8FAFC", color: settings.operating_days[i] ? "#2563EB" : "#94A3B8", fontSize: "13px", fontWeight: "600", opacity: !settings.operating_days[i] ? 0.5 : 1 }}>
+                    style={{ padding: "8px 18px", borderRadius: "100px", border: `1.5px solid ${settings.operating_days[i] ? "#2563EB" : "#E2E8F0"}`, background: settings.operating_days[i] ? "#EFF6FF" : "#F8FAFC", color: settings.operating_days[i] ? "#2563EB" : "#94A3B8", fontSize: "20px", fontWeight: "600", opacity: !settings.operating_days[i] ? 0.5 : 1 }}>
                     {day}
                   </div>
                 ))}
@@ -249,8 +249,8 @@ export default function ManagerSettings() {
               {/* Overtime */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px" }}>
                 <div>
-                  <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>Allow overtime</p>
-                  <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>Workers can be scheduled beyond standard hours</p>
+                  <p style={{ fontSize: "21px", fontWeight: "600", color: "#1E293B" }}>Allow overtime</p>
+                  <p style={{ fontSize: "19px", color: "#94A3B8", marginTop: "2px" }}>Workers can be scheduled beyond standard hours</p>
                 </div>
                 <div style={{ width: "44px", height: "24px", borderRadius: "12px", background: settings.allow_overtime ? "#2563EB" : "#D1D5DB", position: "relative", opacity: 0.7 }}>
                   <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#fff", position: "absolute", top: "3px", left: settings.allow_overtime ? "23px" : "3px", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }} />
@@ -258,7 +258,7 @@ export default function ManagerSettings() {
               </div>
             </>
           ) : (
-            <div style={{ textAlign: "center", padding: "60px 20px", color: "#94A3B8", fontSize: "13px" }}>No settings configured yet.</div>
+            <div style={{ textAlign: "center", padding: "60px 20px", color: "#94A3B8", fontSize: "20px" }}>No settings configured yet.</div>
           )}
         </div>
 
@@ -269,11 +269,11 @@ export default function ManagerSettings() {
           <div style={{ padding: "28px 24px 20px", borderBottom: "1px solid #F1F5F9" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
               <Calendar size={16} color="#2563EB" />
-              <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>Public holidays</h3>
-              <span style={{ fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px", background: "#EEF2FF", color: "#4F46E5", border: "1px solid #C7D2FE" }}>SG 2026</span>
+              <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B" }}>Public holidays</h3>
+              <span style={{ fontSize: "17px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px", background: "#EEF2FF", color: "#4F46E5", border: "1px solid #C7D2FE" }}>SG 2026</span>
               <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "auto" }}>
                 <Lock size={11} color="#CBD5E1" />
-                <span style={{ fontSize: "10px", color: "#CBD5E1", fontWeight: "600" }}>Read only</span>
+                <span style={{ fontSize: "17px", color: "#CBD5E1", fontWeight: "600" }}>Read only</span>
               </div>
             </div>
             {settings ? (
@@ -281,8 +281,8 @@ export default function ManagerSettings() {
                 {settings.holidays.map((h, i) => (
                   <div key={h.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: i < settings.holidays.length - 1 ? "1px solid #F1F5F9" : "none" }}>
                     <div>
-                      <p style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
-                      <p style={{ fontSize: "11px", color: "#94A3B8" }}>{h.date}</p>
+                      <p style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
+                      <p style={{ fontSize: "18px", color: "#94A3B8" }}>{h.date}</p>
                     </div>
                     <div style={{ width: "36px", height: "20px", borderRadius: "10px", background: h.enabled ? "#22C55E" : "#D1D5DB", position: "relative", opacity: 0.6, flexShrink: 0 }}>
                       <div style={{ width: "14px", height: "14px", borderRadius: "50%", background: "#fff", position: "absolute", top: "3px", left: h.enabled ? "19px" : "3px", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
@@ -291,7 +291,7 @@ export default function ManagerSettings() {
                 ))}
               </div>
             ) : (
-              <p style={{ fontSize: "12px", color: "#CBD5E1", textAlign: "center", padding: "20px" }}>No holidays data.</p>
+              <p style={{ fontSize: "19px", color: "#CBD5E1", textAlign: "center", padding: "20px" }}>No holidays data.</p>
             )}
           </div>
 
@@ -300,7 +300,7 @@ export default function ManagerSettings() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Zap size={16} color="#F59E0B" />
-                <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>Smart allocation</h3>
+                <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B" }}>Smart allocation</h3>
               </div>
               {!editingAlloc ? (
                 <button onClick={() => setEditingAlloc(true)} style={btnEditSm}>
@@ -323,9 +323,9 @@ export default function ManagerSettings() {
                 <DonutChart weights={donutData} />
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: "26px", fontWeight: "800", color: allocValid ? "#0F172A" : "#DC2626", lineHeight: 1, transition: "color 0.3s" }}>{allocTotal}</span>
-                  <span style={{ fontSize: "10px", color: "#94A3B8", fontWeight: "600", marginTop: "2px" }}>of 100%</span>
+                  <span style={{ fontSize: "17px", color: "#94A3B8", fontWeight: "600", marginTop: "2px" }}>of 100%</span>
                   {allocValid && (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "10px", fontWeight: "700", color: "#16A34A", marginTop: "4px" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "17px", fontWeight: "700", color: "#16A34A", marginTop: "4px" }}>
                       <Check size={10} strokeWidth={3} /> Balanced
                     </span>
                   )}
@@ -345,7 +345,7 @@ export default function ManagerSettings() {
                     <div style={{ width: "28px", height: "28px", borderRadius: "7px", background: w.color + "12", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <Icon size={13} color={w.color} strokeWidth={2.2} />
                     </div>
-                    <span style={{ flex: 1, fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>{w.label}</span>
+                    <span style={{ flex: 1, fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>{w.label}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                       {editingAlloc && (
                         <button type="button" onClick={() => adjustWeight(w.key, -5)} disabled={val <= 0}
@@ -354,7 +354,7 @@ export default function ManagerSettings() {
                         </button>
                       )}
                       <div style={{ width: "46px", textAlign: "center", background: w.color + "10", borderRadius: "7px", padding: "3px 0" }}>
-                        <span style={{ fontSize: "14px", fontWeight: "800", color: w.color }}>{val}%</span>
+                        <span style={{ fontSize: "21px", fontWeight: "800", color: w.color }}>{val}%</span>
                       </div>
                       {editingAlloc && (
                         <button type="button" onClick={() => adjustWeight(w.key, 5)} disabled={val >= 100}
@@ -371,7 +371,7 @@ export default function ManagerSettings() {
             {editingAlloc && (
               <div style={{ textAlign: "center", marginTop: "12px" }}>
                 <button type="button" onClick={() => setAlloc({ ...ALLOC_DEFAULTS })}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "600", color: "#94A3B8", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "6px" }}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "18px", fontWeight: "600", color: "#94A3B8", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "6px" }}
                   onMouseEnter={e => e.currentTarget.style.color = "#475569"}
                   onMouseLeave={e => e.currentTarget.style.color = "#94A3B8"}>
                   <RotateCcw size={11} /> Reset to defaults
@@ -381,7 +381,7 @@ export default function ManagerSettings() {
           </div>
 
           <div style={{ padding: "12px 20px", borderTop: "1px solid #F1F5F9", flexShrink: 0 }}>
-            <p style={{ fontSize: "10px", color: "#CBD5E1", textAlign: "center", lineHeight: 1.5 }}>
+            <p style={{ fontSize: "17px", color: "#CBD5E1", textAlign: "center", lineHeight: 1.5 }}>
               Business setup is managed by the Business Owner. You can adjust smart allocation weights for this branch.
             </p>
           </div>
@@ -392,10 +392,10 @@ export default function ManagerSettings() {
   );
 }
 
-const sectionLabel = { fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px", marginTop: "4px", display: "flex", alignItems: "center" };
-const fieldLabel   = { display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "6px" };
+const sectionLabel = { fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px", marginTop: "4px", display: "flex", alignItems: "center" };
+const fieldLabel   = { display: "block", fontSize: "20px", fontWeight: "600", color: "#374151", marginBottom: "6px" };
 
-const btnEditSm   = { display: "inline-flex", alignItems: "center", gap: "5px", padding: "7px 14px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#fff", color: "#475569", fontSize: "12px", fontWeight: "700", cursor: "pointer" };
-const btnCancelSm = { display: "inline-flex", alignItems: "center", gap: "4px", padding: "7px 12px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#fff", color: "#64748B", fontSize: "12px", fontWeight: "600", cursor: "pointer" };
-const btnSaveSm   = { display: "inline-flex", alignItems: "center", gap: "5px", padding: "7px 14px", borderRadius: "8px", border: "none", background: "#2563EB", color: "#fff", fontSize: "12px", fontWeight: "700", cursor: "pointer", boxShadow: "0 2px 6px rgba(37,99,235,0.2)" };
+const btnEditSm   = { display: "inline-flex", alignItems: "center", gap: "5px", padding: "7px 14px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#fff", color: "#475569", fontSize: "19px", fontWeight: "700", cursor: "pointer" };
+const btnCancelSm = { display: "inline-flex", alignItems: "center", gap: "4px", padding: "7px 12px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#fff", color: "#64748B", fontSize: "19px", fontWeight: "600", cursor: "pointer" };
+const btnSaveSm   = { display: "inline-flex", alignItems: "center", gap: "5px", padding: "7px 14px", borderRadius: "8px", border: "none", background: "#2563EB", color: "#fff", fontSize: "19px", fontWeight: "700", cursor: "pointer", boxShadow: "0 2px 6px rgba(37,99,235,0.2)" };
 const stepBtn     = { width: "26px", height: "26px", borderRadius: "7px", border: "1.5px solid", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" };

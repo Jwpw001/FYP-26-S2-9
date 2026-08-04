@@ -69,7 +69,7 @@ export default function BranchDetail() {
       <div style={{ animation: "pageIn 0.35s ease both" }}>
 
         <button onClick={() => goTo(`/system-admin/businesses/${branch?.business_id ?? ""}`)}
-          style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "22px", padding: 0 }}>
+          style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "20px", fontWeight: "600", cursor: "pointer", marginBottom: "22px", padding: 0 }}>
           <ArrowLeft size={15} /> Back to {branch?.businesses?.name ?? "Business"}
         </button>
 
@@ -85,25 +85,25 @@ export default function BranchDetail() {
           <>
             {/* Branch header */}
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: "16px" }}>
-              <div style={{ width: "56px", height: "56px", borderRadius: "14px", background: avatarColor(branch.name), color: "#FFF", fontSize: "20px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: "56px", height: "56px", borderRadius: "14px", background: avatarColor(branch.name), color: "#FFF", fontSize: "23px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {branch.name[0]?.toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
-                <h2 style={{ fontSize: "17px", fontWeight: "800", color: "#0F172A" }}>{branch.name}</h2>
+                <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>{branch.name}</h2>
                 {branch.address && (
-                  <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <p style={{ fontSize: "20px", color: "#64748B", marginTop: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
                     <MapPin size={12} /> {branch.address}
                   </p>
                 )}
               </div>
               <div style={{ display: "flex", gap: "10px" }}>
                 <div style={{ textAlign: "center", background: "#ECFDF5", borderRadius: "10px", padding: "10px 18px" }}>
-                  <p style={{ fontSize: "18px", fontWeight: "800", color: "#059669" }}>{activeCount}</p>
-                  <p style={{ fontSize: "11px", fontWeight: "600", color: "#6EE7B7", marginTop: "2px" }}>Active</p>
+                  <p style={{ fontSize: "23px", fontWeight: "800", color: "#059669" }}>{activeCount}</p>
+                  <p style={{ fontSize: "18px", fontWeight: "600", color: "#6EE7B7", marginTop: "2px" }}>Active</p>
                 </div>
                 <div style={{ textAlign: "center", background: "#F8FAFC", borderRadius: "10px", padding: "10px 18px" }}>
-                  <p style={{ fontSize: "18px", fontWeight: "800", color: "#94A3B8" }}>{staff.length - activeCount}</p>
-                  <p style={{ fontSize: "11px", fontWeight: "600", color: "#CBD5E1", marginTop: "2px" }}>Inactive</p>
+                  <p style={{ fontSize: "23px", fontWeight: "800", color: "#94A3B8" }}>{staff.length - activeCount}</p>
+                  <p style={{ fontSize: "18px", fontWeight: "600", color: "#CBD5E1", marginTop: "2px" }}>Inactive</p>
                 </div>
               </div>
             </div>
@@ -112,12 +112,12 @@ export default function BranchDetail() {
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "18px" }}>
                 <ShieldCheck size={16} color="#7C3AED" />
-                <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#0F172A" }}>Managers</h3>
-                <span style={{ marginLeft: "auto", fontSize: "12px", fontWeight: "600", color: "#94A3B8" }}>{managers.length} assigned</span>
+                <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#0F172A" }}>Managers</h3>
+                <span style={{ marginLeft: "auto", fontSize: "19px", fontWeight: "600", color: "#94A3B8" }}>{managers.length} assigned</span>
               </div>
 
               {managers.length === 0 ? (
-                <p style={{ fontSize: "13px", color: "#CBD5E1", fontStyle: "italic" }}>No managers assigned to this branch.</p>
+                <p style={{ fontSize: "20px", color: "#CBD5E1", fontStyle: "italic" }}>No managers assigned to this branch.</p>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: "14px" }}>
                   {managers.map((m, i) => {
@@ -130,25 +130,25 @@ export default function BranchDetail() {
                         onClick={() => goTo(`/system-admin/managers/${m.users?.user_id}`, { state: { from: backPath } })}
                         style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.28s ease ${i * 0.05}s both`, cursor: "pointer" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-                          <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: color, color: "#FFF", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: color, color: "#FFF", fontSize: "21px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             {name[0]?.toUpperCase()}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
-                            <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
+                            <p style={{ fontSize: "21px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+                            <p style={{ fontSize: "19px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
                           </div>
                         </div>
                         {skills.length > 0 && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "12px" }}>
                             {skills.slice(0,3).map(sk => (
-                              <span key={sk} style={{ fontSize: "11px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px", background: "#F1F5F9", color: "#475569" }}>{sk}</span>
+                              <span key={sk} style={{ fontSize: "18px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px", background: "#F1F5F9", color: "#475569" }}>{sk}</span>
                             ))}
-                            {skills.length > 3 && <span style={{ fontSize: "11px", color: "#94A3B8", padding: "2px 4px" }}>+{skills.length - 3}</span>}
+                            {skills.length > 3 && <span style={{ fontSize: "18px", color: "#94A3B8", padding: "2px 4px" }}>+{skills.length - 3}</span>}
                           </div>
                         )}
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
-                          <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: "#EDE9FE", color: "#6D28D9" }}>Manager</span>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: "600", color: m.is_active ? "#16A34A" : "#94A3B8" }}>
+                          <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "18px", fontWeight: "600", background: "#EDE9FE", color: "#6D28D9" }}>Manager</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "19px", fontWeight: "600", color: m.is_active ? "#16A34A" : "#94A3B8" }}>
                             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: m.is_active ? "#22C55E" : "#CBD5E1" }} />
                             {m.is_active ? "Active" : "Inactive"}
                           </span>
@@ -164,8 +164,8 @@ export default function BranchDetail() {
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "18px" }}>
                 <Users size={16} color="#3B82F6" />
-                <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#0F172A" }}>Staff Members</h3>
-                <span style={{ marginLeft: "auto", fontSize: "12px", fontWeight: "600", color: "#94A3B8" }}>{staff.length} total</span>
+                <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#0F172A" }}>Staff Members</h3>
+                <span style={{ marginLeft: "auto", fontSize: "19px", fontWeight: "600", color: "#94A3B8" }}>{staff.length} total</span>
               </div>
 
               {staff.length === 0 ? (
@@ -173,8 +173,8 @@ export default function BranchDetail() {
                   <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
                     <Users size={22} color="#3B82F6" />
                   </div>
-                  <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>No staff assigned</p>
-                  <p style={{ fontSize: "13px", color: "#94A3B8" }}>Staff assigned to this branch will appear here.</p>
+                  <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>No staff assigned</p>
+                  <p style={{ fontSize: "20px", color: "#94A3B8" }}>Staff assigned to this branch will appear here.</p>
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: "16px" }}>
@@ -189,31 +189,31 @@ export default function BranchDetail() {
                         style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${i * 0.04}s both`, cursor: "pointer" }}>
 
                         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
-                          <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: color, color: "#FFF", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: color, color: "#FFF", fontSize: "21px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             {name[0]?.toUpperCase() || "?"}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
-                            <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
+                            <p style={{ fontSize: "21px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+                            <p style={{ fontSize: "19px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
                           </div>
                         </div>
 
                         {skills.length > 0 && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "12px" }}>
                             {skills.slice(0,3).map(sk => (
-                              <span key={sk} style={{ fontSize: "11px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px", background: "#F1F5F9", color: "#475569" }}>{sk}</span>
+                              <span key={sk} style={{ fontSize: "18px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px", background: "#F1F5F9", color: "#475569" }}>{sk}</span>
                             ))}
-                            {skills.length > 3 && <span style={{ fontSize: "11px", color: "#94A3B8", padding: "2px 4px" }}>+{skills.length - 3}</span>}
+                            {skills.length > 3 && <span style={{ fontSize: "18px", color: "#94A3B8", padding: "2px 4px" }}>+{skills.length - 3}</span>}
                           </div>
                         )}
 
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
-                          <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600",
+                          <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "18px", fontWeight: "600",
                             background: s.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF",
                             color: s.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
                             {s.staff_type === "regular" ? "Regular" : "Casual"}
                           </span>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: "600", color: s.is_active ? "#16A34A" : "#94A3B8" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "19px", fontWeight: "600", color: s.is_active ? "#16A34A" : "#94A3B8" }}>
                             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: s.is_active ? "#22C55E" : "#CBD5E1" }} />
                             {s.is_active ? "Active" : "Inactive"}
                           </span>

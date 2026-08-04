@@ -1,28 +1,49 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { AlertTriangle } from "lucide-react";
 
-export default function ForgotPassword() {
-  const [email, setEmail] = useState("");
+export default function ResetPassword() {
+  const navigate = useNavigate();
+  const [ready, setReady] = useState(false);
+  const [invalid, setInvalid] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
+  const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Supabase's client parses the recovery token out of the URL hash and fires this
+    // event once it's established a temporary "password recovery" session.
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setReady(true);
+    });
+    // If the link's token already expired/was invalid, no session will ever appear.
+    const timeout = setTimeout(() => {
+      supabase.auth.getSession().then(({ data }) => {
+        if (!data.session) setInvalid(true);
+        else setReady(true);
+      });
+    }, 2500);
+    return () => { sub.subscription.unsubscribe(); clearTimeout(timeout); };
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    if (password !== confirmPassword) { setError("Passwords don't match."); return; }
+
     setLoading(true);
     setError("");
-
     try {
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
-        { redirectTo: `${window.location.origin}/reset-password` }
-      );
-      if (resetErr) throw resetErr;
-      setSent(true);
+      const { error: updateErr } = await supabase.auth.updateUser({ password });
+      if (updateErr) throw updateErr;
+      setDone(true);
+      await supabase.auth.signOut();
+      setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      setError("Could not send reset email. Check the address and try again.");
+      setError(err.message || "Could not reset password. Please request a new link.");
     } finally {
       setLoading(false);
     }
@@ -36,23 +57,23 @@ export default function ForgotPassword() {
           <span style={styles.logoText}>Krewby</span>
         </Link>
 
-        {sent ? (
+        {invalid ? (
           <div style={styles.successBox}>
-            <p style={styles.successTitle}>Check your email</p>
-            <p style={styles.successDesc}>
-              We've sent a password reset link to <strong>{email}</strong>. It
-              expires in 1 hour.
-            </p>
-            <Link to="/login" style={styles.backLink}>
-              Back to sign in
-            </Link>
+            <p style={styles.successTitle}>Link expired</p>
+            <p style={styles.successDesc}>This password reset link is invalid or has expired.</p>
+            <Link to="/forgot-password" style={styles.backLink}>Request a new link</Link>
           </div>
+        ) : done ? (
+          <div style={styles.successBox}>
+            <p style={styles.successTitle}>Password updated</p>
+            <p style={styles.successDesc}>Redirecting you to sign in…</p>
+          </div>
+        ) : !ready ? (
+          <p style={styles.sub}>Verifying your reset link…</p>
         ) : (
           <>
-            <h2 style={styles.title}>Reset your password</h2>
-            <p style={styles.sub}>
-              Enter your account email and we'll send you a reset link.
-            </p>
+            <h2 style={styles.title}>Set a new password</h2>
+            <p style={styles.sub}>Choose a new password for your account.</p>
 
             {error && (
               <div style={{ ...styles.error, display: "flex", alignItems: "center", gap: "6px" }} role="alert">
@@ -61,33 +82,35 @@ export default function ForgotPassword() {
             )}
 
             <form onSubmit={handleSubmit} noValidate>
-              <label htmlFor="reset-email" style={styles.label}>
-                Email address
-              </label>
+              <label htmlFor="new-password" style={styles.label}>New password</label>
               <input
-                id="reset-email"
+                id="new-password"
                 style={styles.input}
-                type="email"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                placeholder="you@example.com"
-                required
+                type="password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                placeholder="Min. 6 characters"
                 disabled={loading}
-                autoComplete="email"
+                autoComplete="new-password"
+              />
+              <label htmlFor="confirm-password" style={{ ...styles.label, marginTop: "14px" }}>Confirm password</label>
+              <input
+                id="confirm-password"
+                style={styles.input}
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
+                placeholder="Repeat password"
+                disabled={loading}
+                autoComplete="new-password"
               />
               <button
                 style={{ ...styles.button, ...(loading ? styles.buttonDisabled : {}) }}
                 disabled={loading}
               >
-                {loading ? "Sending…" : "Send reset link"}
+                {loading ? "Saving…" : "Reset password"}
               </button>
             </form>
-
-            <div style={styles.footer}>
-              <Link to="/login" style={styles.backLink}>
-                ← Back to sign in
-              </Link>
-            </div>
           </>
         )}
       </div>
@@ -119,18 +142,6 @@ const styles = {
     gap: "10px",
     textDecoration: "none",
     marginBottom: "28px",
-  },
-  logoBox: {
-    width: "34px",
-    height: "34px",
-    borderRadius: "9px",
-    background: "#1C1B18",
-    color: "#FFFFFF",
-    fontSize: "21px",
-    fontWeight: "700",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
   },
   logoText: {
     fontSize: "21px",
@@ -196,16 +207,6 @@ const styles = {
     opacity: 0.65,
     cursor: "not-allowed",
   },
-  footer: {
-    marginTop: "20px",
-    textAlign: "center",
-  },
-  backLink: {
-    fontSize: "20px",
-    fontWeight: "600",
-    color: "#7A7870",
-    textDecoration: "none",
-  },
   successBox: {
     textAlign: "center",
     paddingTop: "8px",
@@ -221,5 +222,11 @@ const styles = {
     color: "#7A7870",
     lineHeight: "1.6",
     marginBottom: "24px",
+  },
+  backLink: {
+    fontSize: "20px",
+    fontWeight: "600",
+    color: "#7A7870",
+    textDecoration: "none",
   },
 };

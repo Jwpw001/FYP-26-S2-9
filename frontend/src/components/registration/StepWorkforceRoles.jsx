@@ -78,24 +78,24 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
     <>
       <button onClick={onBack} style={backBtn}>← Back</button>
 
-      <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" }}>Workforce roles</h2>
-      <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "24px" }}>Pick from existing skill tags or create custom roles for your business.</p>
+      <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" }}>Workforce roles</h2>
+      <p style={{ fontSize: "21px", color: "#64748B", marginBottom: "24px" }}>Pick from existing skill tags or create custom roles for your business.</p>
 
       {error && <div style={errorBox}>{error}</div>}
 
       {/* Selected roles */}
       <div style={{ background: selected.length > 0 ? "#fff" : "#F8FAFC", border: `1.5px ${selected.length > 0 ? "solid" : "dashed"} ${selected.length > 0 ? "#E2E8F0" : "#CBD5E1"}`, borderRadius: "16px", padding: "18px 20px", marginBottom: "20px", minHeight: "68px", transition: "all 0.2s" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: selected.length > 0 ? "12px" : "0" }}>
-          <p style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <p style={{ fontSize: "19px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             {selected.length > 0 ? `Selected roles (${selected.length})` : "No roles selected yet"}
           </p>
           {selected.length > 0 && selected.length < 3 && (
-            <span style={{ fontSize: "11px", fontWeight: "600", color: "#F59E0B", background: "#FFFBEB", padding: "2px 8px", borderRadius: "100px", border: "1px solid #FDE68A" }}>
+            <span style={{ fontSize: "18px", fontWeight: "600", color: "#F59E0B", background: "#FFFBEB", padding: "2px 8px", borderRadius: "100px", border: "1px solid #FDE68A" }}>
               Need {3 - selected.length} more
             </span>
           )}
           {selected.length >= 3 && (
-            <span style={{ fontSize: "11px", fontWeight: "600", color: "#16A34A", background: "#F0FDF4", padding: "2px 8px", borderRadius: "100px", border: "1px solid #BBF7D0", display: "flex", alignItems: "center", gap: "3px" }}>
+            <span style={{ fontSize: "18px", fontWeight: "600", color: "#16A34A", background: "#F0FDF4", padding: "2px 8px", borderRadius: "100px", border: "1px solid #BBF7D0", display: "flex", alignItems: "center", gap: "3px" }}>
               <Check size={10} strokeWidth={3} /> Good to go
             </span>
           )}
@@ -106,7 +106,7 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
               const p = palette(r.role_name);
               return (
                 <span key={r.role_name} className="sel-chip"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 10px 6px 12px", borderRadius: "10px", fontSize: "13px", fontWeight: "600", background: p.bg, color: p.text, border: `1.5px solid ${p.border}`, animationDelay: `${i * 0.04}s` }}>
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 10px 6px 12px", borderRadius: "10px", fontSize: "20px", fontWeight: "600", background: p.bg, color: p.text, border: `1.5px solid ${p.border}`, animationDelay: `${i * 0.04}s` }}>
                   {r.role_name}
                   <button type="button" onClick={() => removeRole(r.role_name)}
                     style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", display: "flex", borderRadius: "50%", transition: "background 0.15s" }}
@@ -119,7 +119,7 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
             })}
           </div>
         ) : (
-          <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Click skill tags below to add them</p>
+          <p style={{ fontSize: "20px", color: "#94A3B8", marginTop: "4px" }}>Click skill tags below to add them</p>
         )}
       </div>
 
@@ -127,7 +127,7 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
       <div style={{ position: "relative", marginBottom: "14px" }}>
         <Search size={15} color="#94A3B8" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 1 }} />
         <input className="custom-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search skill tags…"
-          style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: "12px", border: "1.5px solid #E2E8F0", fontSize: "13px", background: "#fff", color: "#1E293B", boxSizing: "border-box", transition: "border-color 0.15s, box-shadow 0.15s" }} />
+          style={{ width: "100%", padding: "11px 14px 11px 38px", borderRadius: "12px", border: "1.5px solid #E2E8F0", fontSize: "20px", background: "#fff", color: "#1E293B", boxSizing: "border-box", transition: "border-color 0.15s, box-shadow 0.15s" }} />
         {search && (
           <button type="button" onClick={() => setSearch("")}
             style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "#F1F5F9", border: "none", borderRadius: "50%", width: "20px", height: "20px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
@@ -146,7 +146,7 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <p style={{ fontSize: "13px", color: "#94A3B8" }}>{search ? `No skill tags matching "${search}"` : "All skill tags selected"}</p>
+            <p style={{ fontSize: "20px", color: "#94A3B8" }}>{search ? `No skill tags matching "${search}"` : "All skill tags selected"}</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
@@ -163,7 +163,7 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
                     border: `1.5px solid ${isHovered ? p.border : "#E8ECF1"}`,
                     background: isHovered ? p.bg : "#FAFBFC",
                     color: isHovered ? p.text : "#475569",
-                    fontSize: "13px", fontWeight: isHovered ? "600" : "500",
+                    fontSize: "20px", fontWeight: isHovered ? "600" : "500",
                     display: "flex", alignItems: "center", gap: "5px",
                   }}>
                   <Plus size={13} strokeWidth={isHovered ? 2.5 : 2} style={{ transition: "transform 0.15s", transform: isHovered ? "rotate(0deg)" : "rotate(0deg)" }} />
@@ -174,7 +174,7 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
           </div>
         )}
         {!loading && filtered.length > 0 && (
-          <p style={{ fontSize: "11px", color: "#CBD5E1", textAlign: "center", marginTop: "12px" }}>
+          <p style={{ fontSize: "18px", color: "#CBD5E1", textAlign: "center", marginTop: "12px" }}>
             {filtered.length} skill tag{filtered.length !== 1 ? "s" : ""} available
           </p>
         )}
@@ -184,14 +184,14 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
       <div style={{ background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "16px", padding: "16px 20px", marginBottom: "28px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
           <Sparkles size={14} color="#7C3AED" />
-          <p style={{ fontSize: "12px", fontWeight: "700", color: "#7C3AED", textTransform: "uppercase", letterSpacing: "0.05em" }}>Create custom role</p>
+          <p style={{ fontSize: "19px", fontWeight: "700", color: "#7C3AED", textTransform: "uppercase", letterSpacing: "0.05em" }}>Create custom role</p>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           <input className="custom-input" value={customInput} onChange={e => setCustomInput(e.target.value)} placeholder="e.g. Team Lead, Shift Runner…"
             onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustom())}
-            style={{ flex: 1, padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #E2E8F0", fontSize: "13px", background: "#FAFBFC", color: "#1E293B", boxSizing: "border-box", transition: "border-color 0.15s, box-shadow 0.15s" }} />
+            style={{ flex: 1, padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #E2E8F0", fontSize: "20px", background: "#FAFBFC", color: "#1E293B", boxSizing: "border-box", transition: "border-color 0.15s, box-shadow 0.15s" }} />
           <button type="button" onClick={addCustom} disabled={!customInput.trim()}
-            style={{ padding: "10px 20px", borderRadius: "10px", border: "none", background: customInput.trim() ? "linear-gradient(135deg, #7C3AED, #6D28D9)" : "#E2E8F0", color: customInput.trim() ? "#fff" : "#94A3B8", fontSize: "13px", fontWeight: "600", cursor: customInput.trim() ? "pointer" : "not-allowed", transition: "all 0.15s", boxShadow: customInput.trim() ? "0 2px 8px rgba(124,58,237,0.3)" : "none" }}>
+            style={{ padding: "10px 20px", borderRadius: "10px", border: "none", background: customInput.trim() ? "linear-gradient(135deg, #7C3AED, #6D28D9)" : "#E2E8F0", color: customInput.trim() ? "#fff" : "#94A3B8", fontSize: "20px", fontWeight: "600", cursor: customInput.trim() ? "pointer" : "not-allowed", transition: "all 0.15s", boxShadow: customInput.trim() ? "0 2px 8px rgba(124,58,237,0.3)" : "none" }}>
             + Add
           </button>
         </div>
@@ -200,11 +200,11 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
       {/* Buttons */}
       <div style={{ display: "flex", gap: "12px" }}>
         <button type="button" onClick={onSkip}
-          style={{ flex: 1, padding: "14px", background: "#fff", color: "#64748B", border: "1.5px solid #E2E8F0", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" }}>
+          style={{ flex: 1, padding: "14px", background: "#fff", color: "#64748B", border: "1.5px solid #E2E8F0", borderRadius: "12px", fontSize: "22px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" }}>
           Skip for now
         </button>
         <button type="button" onClick={onNext} disabled={!hasMinimum}
-          style={{ flex: 1, padding: "14px", background: hasMinimum ? "#2563EB" : "#93C5FD", color: "#fff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700", cursor: hasMinimum ? "pointer" : "not-allowed", transition: "all 0.15s", boxShadow: hasMinimum ? "0 2px 8px rgba(37,99,235,0.3)" : "none" }}>
+          style={{ flex: 1, padding: "14px", background: hasMinimum ? "#2563EB" : "#93C5FD", color: "#fff", border: "none", borderRadius: "12px", fontSize: "22px", fontWeight: "700", cursor: hasMinimum ? "pointer" : "not-allowed", transition: "all 0.15s", boxShadow: hasMinimum ? "0 2px 8px rgba(37,99,235,0.3)" : "none" }}>
           Next →
         </button>
       </div>
@@ -212,5 +212,5 @@ export default function StepWorkforceRoles({ form, setField, error, onNext, onSk
   );
 }
 
-const backBtn = { display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" };
-const errorBox = { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "13px", color: "#DC2626" };
+const backBtn = { display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "20px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" };
+const errorBox = { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "20px", color: "#DC2626" };

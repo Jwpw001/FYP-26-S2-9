@@ -37,12 +37,12 @@ function ConicDonut({ pct, color, track, label, sub }) {
     <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
       <div style={{ width: "82px", height: "82px", borderRadius: "50%", background: `conic-gradient(${color} 0deg ${deg}deg, ${track} ${deg}deg 360deg)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         <div style={{ width: "62px", height: "62px", borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: "17px", fontWeight: "800", color: "#0F172A" }}>{pct}%</span>
+          <span style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>{pct}%</span>
         </div>
       </div>
       <div>
-        <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B", margin: 0 }}>{label}</p>
-        <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 0" }}>{sub}</p>
+        <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B", margin: 0 }}>{label}</p>
+        <p style={{ fontSize: "19px", color: "#94A3B8", margin: "3px 0 0" }}>{sub}</p>
       </div>
     </div>
   );
@@ -143,15 +143,15 @@ export default function BODashboard() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "4px" }}>
-                  <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0F172A", letterSpacing: "-0.3px", margin: 0 }}>{business?.name}</h2>
-                  <span style={{ fontSize: "11px", fontWeight: "700", padding: "3px 10px", borderRadius: "100px", background: ps.bg, color: ps.color, border: `1px solid ${ps.border}`, textTransform: "uppercase", letterSpacing: ".05em" }}>{ps.label}</span>
+                  <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#0F172A", letterSpacing: "-0.3px", margin: 0 }}>{business?.name}</h2>
+                  <span style={{ fontSize: "18px", fontWeight: "700", padding: "3px 10px", borderRadius: "100px", background: ps.bg, color: ps.color, border: `1px solid ${ps.border}`, textTransform: "uppercase", letterSpacing: ".05em" }}>{ps.label}</span>
                 </div>
-                <p style={{ fontSize: "13px", color: "#64748B", margin: 0 }}>{[business?.contact_email, business?.address].filter(Boolean).join(" · ")}</p>
+                <p style={{ fontSize: "20px", color: "#64748B", margin: 0 }}>{[business?.contact_email, business?.address].filter(Boolean).join(" · ")}</p>
               </div>
               <div style={{ textAlign: "right" }}>
-                <p style={{ fontSize: "11px", color: "#94A3B8", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: ".05em", fontWeight: "700" }}>This month</p>
-                <p style={{ fontSize: "22px", fontWeight: "800", color: "#16A34A", margin: 0 }}>+{staffCount}</p>
-                <p style={{ fontSize: "11px", color: "#94A3B8", margin: "1px 0 0" }}>active staff</p>
+                <p style={{ fontSize: "18px", color: "#94A3B8", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: ".05em", fontWeight: "700" }}>This month</p>
+                <p style={{ fontSize: "25px", fontWeight: "800", color: "#16A34A", margin: 0 }}>+{staffCount}</p>
+                <p style={{ fontSize: "18px", color: "#94A3B8", margin: "1px 0 0" }}>active staff</p>
               </div>
             </div>
           )}
@@ -175,13 +175,13 @@ export default function BODashboard() {
               </div>
               <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px", display: "flex", flexDirection: "column", gap: "10px", animation: "popIn .4s ease 160ms both" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B", margin: 0 }}>Growth Trend</p>
-                  <span style={{ fontSize: "12px", fontWeight: "700", color: "#16A34A" }}>▲ {branchCount} branches</span>
+                  <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B", margin: 0 }}>Growth Trend</p>
+                  <span style={{ fontSize: "19px", fontWeight: "700", color: "#16A34A" }}>▲ {branchCount} branches</span>
                 </div>
                 <svg width="100%" height="46" viewBox="0 0 160 46" preserveAspectRatio="none">
                   <polyline points="0,38 25,32 50,34 75,20 100,24 125,10 160,6" fill="none" stroke="#4F46E5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <p style={{ fontSize: "11px", color: "#94A3B8", margin: 0 }}>Workforce growth · last 7 weeks</p>
+                <p style={{ fontSize: "18px", color: "#94A3B8", margin: 0 }}>Workforce growth · last 7 weeks</p>
               </div>
             </>
           )}
@@ -192,13 +192,13 @@ export default function BODashboard() {
 
           {/* Branch Performance */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px 26px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A", margin: "0 0 18px" }}>Branch Performance</h3>
+            <h3 style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A", margin: "0 0 18px" }}>Branch Performance</h3>
             {loading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {[1,2,3].map(i => <Shimmer key={i} h="56px" r="10px" />)}
               </div>
             ) : branches.length === 0 ? (
-              <p style={{ fontSize: "13px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No branches yet.</p>
+              <p style={{ fontSize: "20px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No branches yet.</p>
             ) : (
               branches.map(b => (
                 <div key={b.branch_id} style={{ borderBottom: "1px solid #F1F5F9", padding: "12px 0" }}>
@@ -209,19 +209,19 @@ export default function BODashboard() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-                        <span style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>{b.name}</span>
-                        <span style={{ fontSize: "12px", color: "#94A3B8" }}>{b.staff} staff</span>
+                        <span style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B" }}>{b.name}</span>
+                        <span style={{ fontSize: "19px", color: "#94A3B8" }}>{b.staff} staff</span>
                       </div>
                       <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${b.pct}%`, background: b.barColor, borderRadius: "100px" }} />
                       </div>
                     </div>
-                    <span style={{ fontSize: "11px", fontWeight: "700", padding: "3px 9px", borderRadius: "100px", background: b.statusBg, color: b.statusColor, flexShrink: 0 }}>{b.label}</span>
+                    <span style={{ fontSize: "18px", fontWeight: "700", padding: "3px 9px", borderRadius: "100px", background: b.statusBg, color: b.statusColor, flexShrink: 0 }}>{b.label}</span>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="2.5" style={{ flexShrink: 0, transform: expandedBranch === b.branch_id ? "rotate(180deg)" : "none", transition: "transform .2s" }}><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
                   {expandedBranch === b.branch_id && (
                     <div style={{ marginTop: "12px", marginLeft: "50px" }}>
-                      <p style={{ fontSize: "12px", color: "#64748B", margin: 0 }}>{b.address || "No address set"}</p>
+                      <p style={{ fontSize: "19px", color: "#64748B", margin: 0 }}>{b.address || "No address set"}</p>
                     </div>
                   )}
                 </div>
@@ -231,13 +231,13 @@ export default function BODashboard() {
 
           {/* Quick Actions with tab detail */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px 26px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A", margin: "0 0 16px" }}>Quick Actions</h3>
+            <h3 style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A", margin: "0 0 16px" }}>Quick Actions</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
               {QUICK_ACTIONS.map(a => (
                 <div key={a.key} onClick={() => { setSelectedAction(a.key); goTo(a.link); }}
                   style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "10px", cursor: "pointer", background: selAct === a.key ? "#F8FAFC" : "transparent", transition: "background .15s" }}>
                   <div style={{ width: "32px", height: "32px", borderRadius: "9px", background: a.bg, color: a.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{a.icon}</div>
-                  <span style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B", flex: 1 }}>{a.label}</span>
+                  <span style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B", flex: 1 }}>{a.label}</span>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                 </div>
               ))}
@@ -249,10 +249,10 @@ export default function BODashboard() {
                 <>
                   {selAct === "branches" && (
                     <>
-                      <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".05em", margin: "0 0 10px" }}>{branchCount} Branches</p>
+                      <p style={{ fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".05em", margin: "0 0 10px" }}>{branchCount} Branches</p>
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         {branches.slice(0, 4).map(b => (
-                          <div key={b.branch_id} style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px" }}>
+                          <div key={b.branch_id} style={{ display: "flex", justifyContent: "space-between", fontSize: "19.5px" }}>
                             <span style={{ color: "#1E293B", fontWeight: "600" }}>{b.name}</span>
                             <span style={{ color: "#94A3B8" }}>{b.label}</span>
                           </div>
@@ -262,18 +262,18 @@ export default function BODashboard() {
                   )}
                   {selAct === "workforce" && (
                     <>
-                      <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".05em", margin: "0 0 10px" }}>{staffCount} Active Staff</p>
-                      <p style={{ fontSize: "12.5px", color: "#64748B", margin: 0 }}>Spread across {branchCount} branch{branchCount !== 1 ? "es" : ""}.</p>
+                      <p style={{ fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".05em", margin: "0 0 10px" }}>{staffCount} Active Staff</p>
+                      <p style={{ fontSize: "19.5px", color: "#64748B", margin: 0 }}>Spread across {branchCount} branch{branchCount !== 1 ? "es" : ""}.</p>
                     </>
                   )}
                   {selAct === "invitations" && (
-                    <p style={{ fontSize: "12.5px", color: "#64748B", margin: 0 }}>View and manage pending staff invitations.</p>
+                    <p style={{ fontSize: "19.5px", color: "#64748B", margin: 0 }}>View and manage pending staff invitations.</p>
                   )}
                   {selAct === "skills" && (
-                    <p style={{ fontSize: "12.5px", color: "#64748B", margin: 0 }}>Manage the skill tags used across your branches.</p>
+                    <p style={{ fontSize: "19.5px", color: "#64748B", margin: 0 }}>Manage the skill tags used across your branches.</p>
                   )}
                   {selAct === "reports" && (
-                    <p style={{ fontSize: "12.5px", color: "#64748B", margin: 0 }}>View analytics, attendance and payroll reports.</p>
+                    <p style={{ fontSize: "19.5px", color: "#64748B", margin: 0 }}>View analytics, attendance and payroll reports.</p>
                   )}
                 </>
               )}
@@ -283,13 +283,13 @@ export default function BODashboard() {
 
         {/* Recent Activity */}
         <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px 26px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A", margin: "0 0 18px" }}>Recent Activity</h3>
+          <h3 style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A", margin: "0 0 18px" }}>Recent Activity</h3>
           {loading ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {[1,2,3].map(i => <div key={i} style={{ display: "flex", gap: "14px" }}><Shimmer w="9px" h="9px" r="50%" /><Shimmer h="34px" r="6px" /></div>)}
             </div>
           ) : activity.length === 0 ? (
-            <p style={{ fontSize: "13px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No recent activity.</p>
+            <p style={{ fontSize: "20px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No recent activity.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column" }}>
               {activity.map((ac, i) => (
@@ -299,8 +299,8 @@ export default function BODashboard() {
                     {i < activity.length - 1 && <div style={{ width: "1px", flex: 1, background: "#F1F5F9", marginTop: "4px" }} />}
                   </div>
                   <div style={{ paddingBottom: "2px" }}>
-                    <p style={{ fontSize: "13px", color: "#334155", margin: 0 }}><b style={{ color: "#0F172A" }}>{ac.who}</b> {ac.text}</p>
-                    <p style={{ fontSize: "11px", color: "#94A3B8", margin: "2px 0 0" }}>{ac.when}</p>
+                    <p style={{ fontSize: "20px", color: "#334155", margin: 0 }}><b style={{ color: "#0F172A" }}>{ac.who}</b> {ac.text}</p>
+                    <p style={{ fontSize: "18px", color: "#94A3B8", margin: "2px 0 0" }}>{ac.when}</p>
                   </div>
                 </div>
               ))}

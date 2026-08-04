@@ -129,14 +129,14 @@ export default function AdminDashboard() {
         {/* Welcome bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", margin: "0 0 4px", letterSpacing: "-0.02em" }}>
+            <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", margin: "0 0 4px", letterSpacing: "-0.02em" }}>
               Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "Admin"}
             </h2>
-            <p style={{ fontSize: "13px", color: "#94A3B8", margin: 0 }}>{today}</p>
+            <p style={{ fontSize: "20px", color: "#94A3B8", margin: 0 }}>{today}</p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#22C55E", animation: "pulse 2s ease-in-out infinite", flexShrink: 0 }} />
-            <span style={{ background: "#0F172A", color: "#fff", fontSize: "11px", fontWeight: "600", padding: "5px 12px", borderRadius: "100px", letterSpacing: ".06em", textTransform: "uppercase" }}>System Admin</span>
+            <span style={{ background: "#0F172A", color: "#fff", fontSize: "18px", fontWeight: "600", padding: "5px 12px", borderRadius: "100px", letterSpacing: ".06em", textTransform: "uppercase" }}>System Admin</span>
           </div>
         </div>
 
@@ -160,7 +160,7 @@ export default function AdminDashboard() {
               {i > 0 && <div style={{ width: "1px", height: "34px", background: "#E2E8F0", marginRight: "0px", flexShrink: 0 }} />}
               <div style={{ flex: 1, textAlign: "center" }}>
                 <p style={{ fontSize: "24px", fontWeight: "800", color: item.color, margin: 0 }}>{item.val}</p>
-                <p style={{ fontSize: "11px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".05em", margin: "2px 0 0" }}>{item.label}</p>
+                <p style={{ fontSize: "18px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".05em", margin: "2px 0 0" }}>{item.label}</p>
               </div>
             </div>
           ))}
@@ -171,7 +171,7 @@ export default function AdminDashboard() {
 
           {/* Donut — Businesses by Plan */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A", margin: "0 0 18px" }}>Businesses by Plan</h3>
+            <h3 style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A", margin: "0 0 18px" }}>Businesses by Plan</h3>
             {loading ? (
               <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
                 <Shimmer w="120px" h="120px" r="50%" />
@@ -183,16 +183,16 @@ export default function AdminDashboard() {
               <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
                 <div style={{ width: "120px", height: "120px", borderRadius: "50%", background: `conic-gradient(${conicParts.join(",")})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>{stats.businesses}</span>
-                    <span style={{ fontSize: "9px", color: "#94A3B8", fontWeight: "600" }}>total</span>
+                    <span style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A" }}>{stats.businesses}</span>
+                    <span style={{ fontSize: "16px", color: "#94A3B8", fontWeight: "600" }}>total</span>
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {planSlices.map(s => (
                     <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <span style={{ width: "9px", height: "9px", borderRadius: "3px", background: s.color, flexShrink: 0 }} />
-                      <span style={{ fontSize: "12.5px", color: "#334155", fontWeight: "600" }}>{s.label}</span>
-                      <span style={{ fontSize: "12.5px", color: "#94A3B8", marginLeft: "auto" }}>{s.count}</span>
+                      <span style={{ fontSize: "19.5px", color: "#334155", fontWeight: "600" }}>{s.label}</span>
+                      <span style={{ fontSize: "19.5px", color: "#94A3B8", marginLeft: "auto" }}>{s.count}</span>
                     </div>
                   ))}
                 </div>
@@ -203,8 +203,8 @@ export default function AdminDashboard() {
           {/* Platform Growth bar chart */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "18px" }}>
-              <h3 style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Platform Growth</h3>
-              <span style={{ fontSize: "12px", fontWeight: "700", color: "#16A34A" }}>▲ {stats.businesses} businesses</span>
+              <h3 style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Platform Growth</h3>
+              <span style={{ fontSize: "19px", fontWeight: "700", color: "#16A34A" }}>▲ {stats.businesses} businesses</span>
             </div>
             {loading ? (
               <div style={{ display: "flex", alignItems: "flex-end", gap: "14px", height: "120px" }}>
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
                     <div style={{ flex: 1, display: "flex", alignItems: "flex-end", width: "100%" }}>
                       <div style={{ width: "100%", height: `${gb.pct}%`, minHeight: "6px", borderRadius: "6px 6px 3px 3px", background: gb.color }} />
                     </div>
-                    <span style={{ fontSize: "10.5px", fontWeight: "600", color: "#94A3B8" }}>{gb.label}</span>
+                    <span style={{ fontSize: "17.5px", fontWeight: "600", color: "#94A3B8" }}>{gb.label}</span>
                   </div>
                 ))}
               </div>
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
 
           {/* Quick Actions */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A", margin: "0 0 16px" }}>Quick Actions</h3>
+            <h3 style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A", margin: "0 0 16px" }}>Quick Actions</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               {quickActions.map(a => (
                 <QuickActionRow key={a.label} action={a} onClick={() => goTo(a.link)} />
@@ -240,13 +240,13 @@ export default function AdminDashboard() {
 
           {/* Recent Platform Activity */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A", margin: "0 0 16px" }}>Recent Platform Activity</h3>
+            <h3 style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A", margin: "0 0 16px" }}>Recent Platform Activity</h3>
             {loading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {[1,2,3].map(i => <div key={i} style={{ display: "flex", gap: "14px" }}><Shimmer w="9px" h="9px" r="50%" /><Shimmer h="32px" r="6px" /></div>)}
               </div>
             ) : activity.length === 0 ? (
-              <p style={{ fontSize: "13px", color: "#94A3B8", textAlign: "center", padding: "20px 0" }}>No recent activity.</p>
+              <p style={{ fontSize: "20px", color: "#94A3B8", textAlign: "center", padding: "20px 0" }}>No recent activity.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {activity.map((ac, i) => (
@@ -256,8 +256,8 @@ export default function AdminDashboard() {
                       {i < activity.length - 1 && <div style={{ width: "1px", flex: 1, background: "#F1F5F9", marginTop: "4px" }} />}
                     </div>
                     <div style={{ paddingBottom: "2px" }}>
-                      <p style={{ fontSize: "13px", color: "#334155", margin: 0 }}>{ac.text}</p>
-                      <p style={{ fontSize: "11px", color: "#94A3B8", margin: "2px 0 0" }}>{ac.when}</p>
+                      <p style={{ fontSize: "20px", color: "#334155", margin: 0 }}>{ac.text}</p>
+                      <p style={{ fontSize: "18px", color: "#94A3B8", margin: "2px 0 0" }}>{ac.when}</p>
                     </div>
                   </div>
                 ))}
@@ -280,8 +280,8 @@ function QuickActionRow({ action, onClick }) {
         {action.icon}
       </div>
       <div>
-        <p style={{ fontSize: "13px", fontWeight: "700", color: "#0F172A", margin: 0 }}>{action.label}</p>
-        <p style={{ fontSize: "11.5px", color: "#94A3B8", margin: "1px 0 0" }}>{action.desc}</p>
+        <p style={{ fontSize: "20px", fontWeight: "700", color: "#0F172A", margin: 0 }}>{action.label}</p>
+        <p style={{ fontSize: "18.5px", color: "#94A3B8", margin: "1px 0 0" }}>{action.desc}</p>
       </div>
     </div>
   );

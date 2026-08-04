@@ -4,6 +4,7 @@ import { PageTransitionProvider } from "./components/PageTransition";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword  from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import GetStarted from "./pages/GetStarted";
 import RegisterBusiness from "./pages/RegisterBusiness";
@@ -70,11 +71,6 @@ import AcceptInvite  from "./pages/AcceptInvite";
 import JoinByCode    from "./pages/JoinByCode";
 import OMInvitations      from "./pages/manager/Invitations";
 
-// System Admin — Krewby operations
-import AdminApplications  from "./pages/system-admin/Applications";
-import AdminRequests      from "./pages/system-admin/Requests";
-
-
 // Layouts
 import StaffLayout   from "./components/layout/StaffLayout";
 import CasualLayout  from "./components/layout/CasualLayout";
@@ -93,6 +89,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/register/business" element={<RegisterBusiness />} />
         <Route path="/register/account" element={<CreateAccount />} />
@@ -128,8 +125,6 @@ function App() {
         <Route path="/system-admin/staff/:id"             element={<PR roles={["system_admin"]}><AdminStaffDetail /></PR>} />
         <Route path="/system-admin/reports"               element={<PR roles={["system_admin"]}><AdminReports /></PR>} />
         <Route path="/system-admin/report-history"        element={<PR roles={["system_admin"]}><AdminReportHistory /></PR>} />
-        <Route path="/system-admin/applications"          element={<PR roles={["system_admin"]}><AdminApplications /></PR>} />
-        <Route path="/system-admin/requests"              element={<PR roles={["system_admin"]}><AdminRequests /></PR>} />
         <Route path="/system-admin/notifications" element={<PR roles={["system_admin"]}>
           <NotificationsPage Layout={AdminLayout} />
         </PR>} />

@@ -48,7 +48,7 @@ function TrendBadge({ pct }) {
   const up = pct >= 0;
   const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "11px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "18px", fontWeight: "700", color: up ? "#16A34A" : "#DC2626", background: up ? "#F0FDF4" : "#FEF2F2", padding: "2px 7px", borderRadius: "100px" }}>
       <Icon size={11} /> {Math.abs(pct)}%
     </span>
   );
@@ -67,8 +67,8 @@ function StatStrip({ stats, loading }) {
                 <span style={{ fontSize: "30px", fontWeight: "800", color: "#0F172A", lineHeight: 1 }}>{s.value}</span>
                 {s.pct !== null && s.pct !== undefined && <TrendBadge pct={s.pct} />}
               </div>
-              <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", margin: "8px 0 2px" }}>{s.label}</p>
-              <p style={{ fontSize: "11px", color: "#94A3B8", margin: 0 }}>{s.sub}</p>
+              <p style={{ fontSize: "19px", fontWeight: "600", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", margin: "8px 0 2px" }}>{s.label}</p>
+              <p style={{ fontSize: "18px", color: "#94A3B8", margin: 0 }}>{s.sub}</p>
             </>
           )}
         </div>
@@ -81,14 +81,14 @@ function BarMeterSection({ title, sub, rows, loading }) {
   const total = rows.reduce((s, r) => s + r.count, 0);
   return (
     <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-      <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: 0 }}>{title}</h3>
-      <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 16px" }}>{sub}</p>
+      <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#0F172A", margin: 0 }}>{title}</h3>
+      <p style={{ fontSize: "19px", color: "#94A3B8", margin: "3px 0 16px" }}>{sub}</p>
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {[1, 2, 3].map(i => <Shimmer key={i} h="30px" />)}
         </div>
       ) : rows.length === 0 ? (
-        <p style={{ fontSize: "13px", color: "#94A3B8", textAlign: "center", padding: "16px 0" }}>No data</p>
+        <p style={{ fontSize: "20px", color: "#94A3B8", textAlign: "center", padding: "16px 0" }}>No data</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {rows.map(r => {
@@ -97,8 +97,8 @@ function BarMeterSection({ title, sub, rows, loading }) {
             return (
               <div key={r.status}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "5px" }}>
-                  <span style={{ fontSize: "12.5px", fontWeight: "600", color: "#374151", textTransform: "capitalize" }}>{r.status?.replace(/_/g, " ")}</span>
-                  <span style={{ fontSize: "12px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{r.count}</strong> · {pct}%</span>
+                  <span style={{ fontSize: "19.5px", fontWeight: "600", color: "#374151", textTransform: "capitalize" }}>{r.status?.replace(/_/g, " ")}</span>
+                  <span style={{ fontSize: "19px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{r.count}</strong> · {pct}%</span>
                 </div>
                 <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
                   <div style={{ height: "100%", borderRadius: "100px", background: color, width: `${pct}%` }} />
@@ -331,8 +331,8 @@ export default function BOReports() {
         ["Shifts (period)",           kpis.shifts,  `${delta(kpis.shifts, kpis.shiftsPrev)}%`],
         ["Leave Requests (period)",   kpis.leave,   `${delta(kpis.leave, kpis.leavePrev)}%`],
       ],
-      headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 15 },
+      bodyStyles: { fontSize: 15 },
       columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } },
       margin: { left: 14, right: 14 },
     });
@@ -343,8 +343,8 @@ export default function BOReports() {
       startY: y,
       head: [["Branch", "Total Staff", "Active Staff", "Total Shifts", "Published"]],
       body: branchRows.map(o => [o.name, o.totalStaff, o.activeStaff, o.shifts, o.published]),
-      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontSize: 15 },
+      bodyStyles: { fontSize: 15 },
       columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
       margin: { left: 14, right: 14 },
     });
@@ -354,13 +354,13 @@ export default function BOReports() {
     autoTable(doc, {
       startY: y, head: [["Shifts by Status", "Count"]],
       body: shiftsByStatus.map(s => [s.status, s.count]),
-      headStyles: { fillColor: [217, 119, 6], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [217, 119, 6], textColor: 255, fontSize: 15 }, bodyStyles: { fontSize: 15 },
       columnStyles: { 1: { halign: "right" } }, margin: { left: 14, right: pageW / 2 + 2 },
     });
     autoTable(doc, {
       startY: y, head: [["Leave by Status", "Count"]],
       body: leaveByStatus.map(l => [l.status, l.count]),
-      headStyles: { fillColor: [8, 145, 178], textColor: 255, fontSize: 8 }, bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [8, 145, 178], textColor: 255, fontSize: 15 }, bodyStyles: { fontSize: 15 },
       columnStyles: { 1: { halign: "right" } }, margin: { left: pageW / 2 + 2, right: 14 },
     });
     doc.save(`${businessName.toLowerCase().replace(/\s+/g, "-")}-report-${PERIODS[period].label}-${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -379,10 +379,10 @@ export default function BOReports() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "22px" }}>
               <button onClick={() => setShowHistory(false)}
-                style={{ width: "34px", height: "34px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: "pointer", color: "#64748B", fontSize: "16px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+                style={{ width: "34px", height: "34px", borderRadius: "8px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: "pointer", color: "#64748B", fontSize: "21px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
               <div>
-                <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Report History</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0" }}>All reports exported</p>
+                <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Report History</h2>
+                <p style={{ fontSize: "20px", color: "#64748B", margin: "4px 0 0" }}>All reports exported</p>
               </div>
             </div>
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
@@ -393,16 +393,16 @@ export default function BOReports() {
               ) : historyRows.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 0" }}>
                   <History size={36} color="#CBD5E1" style={{ marginBottom: "12px" }} />
-                  <p style={{ fontSize: "14px", fontWeight: "600", color: "#94A3B8" }}>No exports yet</p>
-                  <p style={{ fontSize: "13px", color: "#CBD5E1", marginTop: "4px" }}>Download a CSV or PDF from the Reports page to see history here.</p>
+                  <p style={{ fontSize: "21px", fontWeight: "600", color: "#94A3B8" }}>No exports yet</p>
+                  <p style={{ fontSize: "20px", color: "#CBD5E1", marginTop: "4px" }}>Download a CSV or PDF from the Reports page to see history here.</p>
                 </div>
               ) : (
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "500px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "20px", minWidth: "500px" }}>
                     <thead>
                       <tr style={{ borderBottom: "2px solid #F1F5F9" }}>
                         {["Title", "Format", "Period", "Downloaded"].map(h => (
-                          <th key={h} style={{ padding: "10px 12px", textAlign: h === "Format" || h === "Downloaded" ? "center" : "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                          <th key={h} style={{ padding: "10px 12px", textAlign: h === "Format" || h === "Downloaded" ? "center" : "left", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -411,10 +411,10 @@ export default function BOReports() {
                         <tr key={r.report_id} className="bo-rpt-row" style={{ borderBottom: "1px solid #F8FAFC" }}>
                           <td style={{ padding: "12px", fontWeight: "600", color: "#1E293B" }}>{r.title || "Report"}</td>
                           <td style={{ padding: "12px", textAlign: "center" }}>
-                            <span style={{ fontSize: "11px", fontWeight: "700", padding: "2px 10px", borderRadius: "100px", background: r.format === "pdf" ? "#FEF2F2" : "#F0FDF4", color: r.format === "pdf" ? "#DC2626" : "#16A34A", textTransform: "uppercase" }}>{r.format}</span>
+                            <span style={{ fontSize: "18px", fontWeight: "700", padding: "2px 10px", borderRadius: "100px", background: r.format === "pdf" ? "#FEF2F2" : "#F0FDF4", color: r.format === "pdf" ? "#DC2626" : "#16A34A", textTransform: "uppercase" }}>{r.format}</span>
                           </td>
-                          <td style={{ padding: "12px", color: "#64748B", fontSize: "12px" }}>{r.period_start} – {r.period_end}</td>
-                          <td style={{ padding: "12px", textAlign: "center", color: "#94A3B8", fontSize: "12px" }}>{r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
+                          <td style={{ padding: "12px", color: "#64748B", fontSize: "19px" }}>{r.period_start} – {r.period_end}</td>
+                          <td style={{ padding: "12px", textAlign: "center", color: "#94A3B8", fontSize: "19px" }}>{r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -429,8 +429,8 @@ export default function BOReports() {
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "22px", flexWrap: "wrap", gap: "12px" }}>
               <div>
-                <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Reports</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0" }}>
+                <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Reports</h2>
+                <p style={{ fontSize: "20px", color: "#64748B", margin: "4px 0 0" }}>
                   {businessName ? `${businessName} — ` : ""}Consolidated across all branches
                 </p>
               </div>
@@ -438,21 +438,21 @@ export default function BOReports() {
                 <div style={{ display: "flex", background: "#F1F5F9", borderRadius: "10px", padding: "3px", gap: "2px" }}>
                   {PERIODS.map((p, i) => (
                     <button key={p.label} onClick={() => setPeriod(i)} className="bo-rpt-tab"
-                      style={{ padding: "6px 16px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "background 0.15s", background: period === i ? "#FFF" : "transparent", color: period === i ? "#0F172A" : "#64748B", boxShadow: period === i ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
+                      style={{ padding: "6px 16px", borderRadius: "8px", border: "none", fontSize: "20px", fontWeight: "600", cursor: "pointer", transition: "background 0.15s", background: period === i ? "#FFF" : "transparent", color: period === i ? "#0F172A" : "#64748B", boxShadow: period === i ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
                       {p.label}
                     </button>
                   ))}
                 </div>
                 <button onClick={downloadCSV} disabled={loading}
-                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "20px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
                   <Download size={14} strokeWidth={2} /> CSV
                 </button>
                 <button onClick={downloadPDF} disabled={loading}
-                  style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "none", background: "#0F172A", color: "#FFF", fontSize: "20px", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
                   <Download size={14} strokeWidth={2} /> PDF
                 </button>
                 <button onClick={openHistory}
-                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "13px", fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  style={{ padding: "8px 14px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", color: "#374151", fontSize: "20px", fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap" }}>
                   History
                 </button>
               </div>
@@ -469,14 +469,14 @@ export default function BOReports() {
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
                 <div>
-                  <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Daily Activity</h3>
-                  <p style={{ fontSize: "12px", color: "#94A3B8", margin: "3px 0 0" }}>Last {Math.min(days, 30)} days</p>
+                  <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Daily Activity</h3>
+                  <p style={{ fontSize: "19px", color: "#94A3B8", margin: "3px 0 0" }}>Last {Math.min(days, 30)} days</p>
                 </div>
                 <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
                   {chartSeries.map(s => (
                     <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <div style={{ width: "10px", height: "3px", borderRadius: "2px", background: s.color }} />
-                      <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>{s.label}</span>
+                      <span style={{ fontSize: "18px", fontWeight: "600", color: "#64748B" }}>{s.label}</span>
                     </div>
                   ))}
                 </div>
@@ -488,24 +488,24 @@ export default function BOReports() {
 
             {/* Branches Overview — dual progress bars */}
             <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#0F172A", margin: "0 0 4px" }}>Branches Overview</h3>
-              <p style={{ fontSize: "12px", color: "#94A3B8", margin: "0 0 18px" }}>Staffing and shift coverage per branch</p>
+              <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#0F172A", margin: "0 0 4px" }}>Branches Overview</h3>
+              <p style={{ fontSize: "19px", color: "#94A3B8", margin: "0 0 18px" }}>Staffing and shift coverage per branch</p>
               {loading ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
                   {Array.from({ length: 3 }).map((_, i) => <Shimmer key={i} h="60px" />)}
                 </div>
               ) : branchRows.length === 0 ? (
-                <p style={{ color: "#94A3B8", fontSize: "13px", textAlign: "center", padding: "24px 0" }}>No branches found.</p>
+                <p style={{ color: "#94A3B8", fontSize: "20px", textAlign: "center", padding: "24px 0" }}>No branches found.</p>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                   {branchRows.map((o, i) => (
                     <div key={o.name} style={{ animation: `fadeUp 0.3s ease ${i * 0.07}s both` }}>
-                      <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", margin: "0 0 10px" }}>{o.name}</p>
+                      <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", margin: "0 0 10px" }}>{o.name}</p>
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         <div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                            <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>Staff active</span>
-                            <span style={{ fontSize: "12px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{o.activeStaff}</strong> / {o.totalStaff}</span>
+                            <span style={{ fontSize: "18px", fontWeight: "600", color: "#64748B" }}>Staff active</span>
+                            <span style={{ fontSize: "19px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{o.activeStaff}</strong> / {o.totalStaff}</span>
                           </div>
                           <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
                             <div style={{ height: "100%", borderRadius: "100px", background: "#2563EB", width: `${o.totalStaff > 0 ? (o.activeStaff / o.totalStaff) * 100 : 0}%`, transition: "width 0.8s ease" }} />
@@ -513,8 +513,8 @@ export default function BOReports() {
                         </div>
                         <div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                            <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>Shifts published</span>
-                            <span style={{ fontSize: "12px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{o.published}</strong> / {o.shifts}</span>
+                            <span style={{ fontSize: "18px", fontWeight: "600", color: "#64748B" }}>Shifts published</span>
+                            <span style={{ fontSize: "19px", color: "#64748B" }}><strong style={{ color: "#0F172A", fontWeight: "700" }}>{o.published}</strong> / {o.shifts}</span>
                           </div>
                           <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "100px", overflow: "hidden" }}>
                             <div style={{ height: "100%", borderRadius: "100px", background: "#10B981", width: `${o.shifts > 0 ? (o.published / o.shifts) * 100 : 0}%`, transition: "width 0.8s ease" }} />

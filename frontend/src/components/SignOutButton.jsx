@@ -23,7 +23,7 @@ export default function SignOutButton({ style: extraStyle = {} }) {
         onClick={() => setConfirm(true)}
         style={{
           width: "100%", padding: "8px", borderRadius: "8px", border: "none",
-          fontSize: "13px", fontWeight: "600", cursor: "pointer",
+          fontSize: "20px", fontWeight: "600", cursor: "pointer",
           transition: "background 0.18s, color 0.18s",
           background: hovered ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.07)",
           color: hovered ? "#FCA5A5" : "rgba(255,255,255,0.55)",
@@ -46,15 +46,15 @@ export default function SignOutButton({ style: extraStyle = {} }) {
               boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
             }}>
             <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}><Hand size={36} color="#1E293B" /></div>
-            <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>Sign out?</h3>
-            <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "24px" }}>You'll need to log in again to access your account.</p>
+            <h3 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>Sign out?</h3>
+            <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "24px" }}>You'll need to log in again to access your account.</p>
             <div style={{ display: "flex", gap: "10px" }}>
               <button
                 onClick={() => setConfirm(false)}
                 style={{
                   flex: 1, padding: "10px", borderRadius: "10px",
                   border: "1.5px solid #E2E8F0", background: "#F8FAFC",
-                  fontSize: "14px", fontWeight: "600", color: "#64748B", cursor: "pointer",
+                  fontSize: "21px", fontWeight: "600", color: "#64748B", cursor: "pointer",
                 }}>
                 Cancel
               </button>
@@ -63,7 +63,7 @@ export default function SignOutButton({ style: extraStyle = {} }) {
                 style={{
                   flex: 1, padding: "10px", borderRadius: "10px",
                   border: "none", background: "#EF4444",
-                  fontSize: "14px", fontWeight: "600", color: "#FFF", cursor: "pointer",
+                  fontSize: "21px", fontWeight: "600", color: "#FFF", cursor: "pointer",
                 }}>
                 Sign out
               </button>

@@ -109,14 +109,14 @@ export default function Businesses() {
         <div style={{ marginBottom: "20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "8px" }}>
             <div>
-              <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", letterSpacing: "-0.3px" }}>Businesses</h2>
-              <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px" }}>
+              <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", letterSpacing: "-0.3px" }}>Businesses</h2>
+              <p style={{ fontSize: "20px", color: "#64748B", marginTop: "3px" }}>
                 {loading ? "Loading…" : `${businesses.length} business${businesses.length !== 1 ? "es" : ""} registered`}
               </p>
             </div>
             {hasActiveFilters && (
               <button onClick={clearFilters}
-                style={{ display: "flex", alignItems: "center", gap: "5px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "6px 12px", fontSize: "12px", fontWeight: "600", color: "#EF4444", cursor: "pointer" }}>
+                style={{ display: "flex", alignItems: "center", gap: "5px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "6px 12px", fontSize: "19px", fontWeight: "600", color: "#EF4444", cursor: "pointer" }}>
                 <X size={12} /> Clear filters
               </button>
             )}
@@ -131,7 +131,7 @@ export default function Businesses() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search by name or description…"
-              style={{ width: "100%", boxSizing: "border-box", paddingLeft: "36px", paddingRight: search ? "32px" : "14px", paddingTop: "10px", paddingBottom: "10px", border: "1.5px solid #E2E8F0", borderRadius: "11px", fontSize: "13px", color: "#1E293B", background: "#FFFFFF", outline: "none" }}
+              style={{ width: "100%", boxSizing: "border-box", paddingLeft: "36px", paddingRight: search ? "32px" : "14px", paddingTop: "10px", paddingBottom: "10px", border: "1.5px solid #E2E8F0", borderRadius: "11px", fontSize: "20px", color: "#1E293B", background: "#FFFFFF", outline: "none" }}
             />
             {search && (
               <button onClick={() => setSearch("")} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#94A3B8", display: "flex" }}>
@@ -162,7 +162,7 @@ export default function Businesses() {
             return (
               <button key={key} className="filter-chip" onClick={() => setPlanFilter(key)}
                 style={{
-                  padding: "6px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", cursor: "pointer",
+                  padding: "6px 14px", borderRadius: "100px", fontSize: "19px", fontWeight: "700", cursor: "pointer",
                   background: active ? (pm?.bg ?? "#0F172A") : "#F8FAFC",
                   color:      active ? (pm?.color ?? "#FFFFFF") : "#64748B",
                   border:     `1.5px solid ${active ? (pm?.border ?? "#0F172A") : "#E2E8F0"}`,
@@ -197,10 +197,10 @@ export default function Businesses() {
             <div style={{ width: "60px", height: "60px", borderRadius: "16px", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <Building2 size={28} color="#3B82F6" />
             </div>
-            <p style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>
+            <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>
               {search || planFilter !== "all" ? "No results found" : "No businesses yet"}
             </p>
-            <p style={{ fontSize: "13px", color: "#94A3B8" }}>
+            <p style={{ fontSize: "20px", color: "#94A3B8" }}>
               {search || planFilter !== "all"
                 ? "Try adjusting your search or filters."
                 : "Register a business to start creating branches for managers."}
@@ -219,17 +219,17 @@ export default function Businesses() {
                   style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${i * 0.03}s both`, cursor: "pointer", display: "flex", flexDirection: "column", gap: "14px" }}>
 
                   <div style={{ display: "flex", alignItems: "flex-start", gap: "13px" }}>
-                    <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: color, color: "#FFF", fontSize: "18px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: color, color: "#FFF", fontSize: "23px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {biz.name[0]?.toUpperCase()}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "7px", flexWrap: "wrap" }}>
-                        <p style={{ fontSize: "15px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>{biz.name}</p>
-                        <span style={{ padding: "2px 8px", borderRadius: "100px", fontSize: "10px", fontWeight: "700", background: pm.bg, color: pm.color, border: `1px solid ${pm.border}`, flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                        <p style={{ fontSize: "22px", fontWeight: "700", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>{biz.name}</p>
+                        <span style={{ padding: "2px 8px", borderRadius: "100px", fontSize: "17px", fontWeight: "700", background: pm.bg, color: pm.color, border: `1px solid ${pm.border}`, flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                           {pm.label}
                         </span>
                       </div>
-                      <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <p style={{ fontSize: "19px", color: "#94A3B8", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {biz.description || <span style={{ fontStyle: "italic" }}>No description</span>}
                       </p>
                     </div>
@@ -239,12 +239,12 @@ export default function Businesses() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "7px", padding: "8px 12px", background: branchCount > 0 ? "#EFF6FF" : "#F8FAFC", borderRadius: "10px", border: `1px solid ${branchCount > 0 ? "#BFDBFE" : "#E2E8F0"}`, flex: 1 }}>
                       <MapPin size={12} color={branchCount > 0 ? "#2563EB" : "#CBD5E1"} />
-                      <span style={{ fontSize: "12px", fontWeight: "700", color: branchCount > 0 ? "#2563EB" : "#94A3B8" }}>
+                      <span style={{ fontSize: "19px", fontWeight: "700", color: branchCount > 0 ? "#2563EB" : "#94A3B8" }}>
                         {branchCount} {branchCount === 1 ? "branch" : "branches"}
                       </span>
                     </div>
                     {biz.created_at && (
-                      <span style={{ fontSize: "11px", color: "#CBD5E1", marginLeft: "10px", flexShrink: 0, fontWeight: "500" }}>
+                      <span style={{ fontSize: "18px", color: "#CBD5E1", marginLeft: "10px", flexShrink: 0, fontWeight: "500" }}>
                         {new Date(biz.created_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}
                       </span>
                     )}
