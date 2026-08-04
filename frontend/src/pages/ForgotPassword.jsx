@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { api } from "../lib/api";
 import { AlertTriangle } from "lucide-react";
 
 export default function ForgotPassword() {
@@ -15,11 +15,10 @@ export default function ForgotPassword() {
     setError("");
 
     try {
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
-        { redirectTo: `${window.location.origin}/reset-password` }
-      );
-      if (resetErr) throw resetErr;
+      await api.post("/api/auth/forgot-password", {
+        email: email.trim().toLowerCase(),
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       setSent(true);
     } catch (err) {
       setError("Could not send reset email. Check the address and try again.");

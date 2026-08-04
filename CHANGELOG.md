@@ -3,6 +3,31 @@
 All notable changes to this project are documented in this file.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] - 2026-08-05
+
+### Fixed
+
+- **Transactional emails (password reset and invitations) were silently failing for
+  everyone.** Both used Resend with a `from` address on `krewby.com`, a domain that
+  was never verified in Resend — every send returned a 403 the code never checked
+  for, so the app always reported success while no email ever left Resend's
+  servers. Replaced with a Gmail SMTP-based mailer (`backend/src/utils/mailer.js`,
+  via `nodemailer`) as a working interim solution until a real domain is verified;
+  both `forgotPassword` and `sendInviteEmail` now go through it. Configured via
+  `GMAIL_USER`/`GMAIL_APP_PASSWORD` in `backend/.env` (gitignored, not committed).
+- Implemented the actual `forgot-password` backend endpoint — it previously
+  returned only Supabase-generated links via a client-side call with no backend
+  involvement; now the backend generates the recovery link via
+  `supabaseAdmin.auth.admin.generateLink` and emails it, always returning a
+  generic response regardless of whether the account exists (avoids leaking
+  which emails are registered).
+- Fixed `ResetPassword.jsx` only signing out of the Supabase session, not the
+  app's own separate localStorage-based session — after a successful reset it
+  would land on `/login`, which then silently redirected to whatever account was
+  still cached in `localStorage`, rather than showing the login form. `clearUser()`
+  now also clears the `token` key (it previously only cleared `user`, so the
+  app's regular sign-out button had the same latent gap).
+
 ## [Unreleased] - 2026-08-04
 
 ### Security

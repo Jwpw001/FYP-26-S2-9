@@ -19,7 +19,13 @@ const loginSchema = z.object({
     password: z.string().min(1, "Password is required")
 });
 
+const forgotPasswordSchema = z.object({
+    email: z.string().email("Invalid email format"),
+    redirectTo: z.string().url().optional(),
+});
+
 module.exports = {
     registerSchema,
     loginSchema,
+    forgotPasswordSchema,
 };

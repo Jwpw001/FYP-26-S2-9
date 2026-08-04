@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { clearUser } from "../utils/auth";
 import { AlertTriangle } from "lucide-react";
 
 export default function ResetPassword() {
@@ -41,6 +42,10 @@ export default function ResetPassword() {
       if (updateErr) throw updateErr;
       setDone(true);
       await supabase.auth.signOut();
+      // Clear the app's own cached session too — otherwise Login.jsx sees the old
+      // localStorage user/token, assumes you're still logged in as whoever that was,
+      // and redirects straight to their dashboard instead of showing the login form.
+      clearUser();
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
       setError(err.message || "Could not reset password. Please request a new link.");

@@ -2,6 +2,7 @@ const prisma = require("../config/prisma");
 const generateToken = require("../utils/generateToken");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUsers, getSystemAdminUserIds } = require("../utils/notify");
+const { sendMail } = require("../utils/mailer");
 
 const login = async (req, res) => {
     try {
@@ -57,6 +58,55 @@ const login = async (req, res) => {
             success: false,
             message: error.message
         });
+    }
+};
+
+// POST /api/auth/forgot-password
+// Supabase's own built-in mailer is rate-limited and not meant for production use, so the
+// recovery link is generated via the admin API (no email sent by Supabase) and delivered
+// through Resend instead — the same transactional-email path invitations already use.
+const forgotPassword = async (req, res) => {
+    const genericSuccess = () => res.json({
+        success: true,
+        message: "If an account exists for that email, a reset link has been sent.",
+    });
+
+    try {
+        const email = req.body.email?.trim().toLowerCase();
+        const redirectTo = req.body.redirectTo || `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password`;
+
+        // Always return the same generic response whether or not the account exists,
+        // so this endpoint can't be used to enumerate registered emails.
+        const user = await prisma.users.findUnique({ where: { email } });
+        if (!user) return genericSuccess();
+
+        const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+            type: "recovery",
+            email,
+            options: { redirectTo },
+        });
+        if (error || !data?.properties?.action_link) {
+            console.error("[forgotPassword] generateLink failed:", error?.message);
+            return genericSuccess();
+        }
+
+        const actionLink = data.properties.action_link;
+
+        await sendMail({
+            to: email,
+            subject: "Reset your Krewby password",
+            html: `
+                <p>Hi ${user.full_name || ""},</p>
+                <p>We received a request to reset your Krewby password. Click the link below to choose a new one:</p>
+                <p><a href="${actionLink}">Reset your password</a></p>
+                <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+            `,
+        });
+
+        return genericSuccess();
+    } catch (error) {
+        console.error("[forgotPassword] error:", error.message);
+        return genericSuccess();
     }
 };
 
@@ -375,6 +425,7 @@ module.exports = {
     register,
     registerBusiness,
     login,
+    forgotPassword,
     createStaffAccount,
     createManagerAccount,
 };
