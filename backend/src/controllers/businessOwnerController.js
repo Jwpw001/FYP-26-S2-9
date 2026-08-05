@@ -19,6 +19,17 @@ async function resolveBusinessId(user) {
   return biz || null;
 }
 
+// Verifies branch_id actually belongs to the caller's own business (owner or manager).
+// Several branch-scoped endpoints previously skipped this check entirely, letting any
+// authenticated business_owner/manager read or modify another business's branch data
+// just by guessing a branch_id.
+async function verifyBranchAccess(user, branch_id) {
+  const biz = await resolveBusinessId(user);
+  if (!biz) return false;
+  const branch = await prisma.branches.findUnique({ where: { branch_id }, select: { business_id: true } });
+  return !!branch && branch.business_id === biz.business_id;
+}
+
 // ── Branches ──────────────────────────────────────────────
 
 // GET /api/business/branches
@@ -328,6 +339,10 @@ const updateBranch = async (req, res) => {
 const getRoleTemplates = async (req, res) => {
   try {
     const branch_id = Number(req.params.branch_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
     const { data, error } = await supabaseAdmin
       .from("branch_role_templates")
       .select("*, skills(skill_id, name)")
@@ -346,8 +361,9 @@ const upsertRoleTemplates = async (req, res) => {
     const branch_id = Number(req.params.branch_id);
     const { role_templates } = req.body;
 
-    const { data: biz } = await supabaseAdmin.from("businesses").select("business_id").eq("owner_id", req.user.user_id).maybeSingle();
-    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
 
     await supabaseAdmin.from("branch_role_templates").delete().eq("branch_id", branch_id);
 
@@ -414,41 +430,39 @@ async function getOwnedStaffOrNull(req, staff_id) {
 }
 
 // GET /api/business/staff/:staff_id/kpi
+// Rebuilt against `timesheets` — this previously joined a Prisma relation called
+// `attendance` that no longer exists in the schema (removed along with the old
+// clock-in/out feature), so every call to this endpoint threw. There's no real
+// "present/absent/late" concept anymore; the closest equivalent is whether a shift
+// has an approved work report against it.
 const getStaffKpi = async (req, res) => {
   try {
     const staff_id = Number(req.params.staff_id);
     const staff = await getOwnedStaffOrNull(req, staff_id);
     if (!staff) return res.status(404).json({ success: false, message: "Staff member not found." });
 
-    const assignments = await prisma.task_assignments.findMany({
-      where: { staff_id },
-      include: {
-        attendance: true,
-        shifts: { select: { shift_date: true, start_time: true } },
-      },
-    });
+    const [assignments, timesheets] = await Promise.all([
+      prisma.task_assignments.findMany({ where: { staff_id }, select: { shift_id: true } }),
+      prisma.timesheets.findMany({ where: { staff_id }, select: { shift_id: true, status: true, hours_worked: true } }),
+    ]);
 
     const totalAssigned = assignments.length;
-    let present = 0, absent = 0, late = 0, totalMinutes = 0;
+    const timesheetByShift = new Map();
+    timesheets.forEach(t => { if (t.shift_id != null) timesheetByShift.set(t.shift_id, t); });
 
+    let approved = 0, rejected = 0, missing = 0, totalHours = 0;
     for (const a of assignments) {
-      const att = a.attendance[0];
-      if (!att) continue;
-      const status = (att.status || "").toLowerCase();
-      if (status === "present" || status === "attended") present++;
-      else if (status === "absent") absent++;
-      if (status === "late") late++;
-      if (att.clock_in && att.clock_out) {
-        totalMinutes += (new Date(att.clock_out) - new Date(att.clock_in)) / 60000;
-      }
+      const ts = a.shift_id != null ? timesheetByShift.get(a.shift_id) : null;
+      if (!ts) { missing++; continue; }
+      if (ts.status === "approved") { approved++; totalHours += Number(ts.hours_worked || 0); }
+      else if (ts.status === "rejected") rejected++;
     }
 
-    const attendanceRate = totalAssigned > 0 ? Math.round((present / totalAssigned) * 100) : null;
-    const totalHours = Math.round(totalMinutes / 6) / 10;
+    const attendanceRate = totalAssigned > 0 ? Math.round((approved / totalAssigned) * 100) : null;
 
     return res.json({
       success: true,
-      kpi: { totalAssigned, present, absent, late, attendanceRate, totalHours },
+      kpi: { totalAssigned, approved, rejected, missing, attendanceRate, totalHours: Math.round(totalHours * 10) / 10 },
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -582,6 +596,9 @@ const updateMyBusinessPlan = async (req, res) => {
 const getBranchSkills = async (req, res) => {
   try {
     const branch_id = Number(req.params.branch_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
     const { data: rows, error } = await supabaseAdmin
       .from("branch_skills")
       .select("id, skill_id, skills(skill_id, name, description)")
@@ -604,6 +621,10 @@ const createBranchSkill = async (req, res) => {
   try {
     const branch_id = Number(req.params.branch_id);
     const { skill_id, name, description } = req.body;
+
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
 
     let skid;
     if (skill_id) {
@@ -636,6 +657,17 @@ const updateBranchSkill = async (req, res) => {
     const skill_id = Number(req.params.skill_id);
     const { name, description } = req.body;
     if (!name) return res.status(400).json({ success: false, message: "Skill name is required." });
+
+    const biz = await resolveBusinessId(req.user);
+    if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
+
+    // Only a skill this business actually owns (not the shared catalog) can be edited here —
+    // editing a catalog skill would change it for every business using it.
+    const existingSkill = await prisma.skills.findUnique({ where: { skill_id }, select: { business_id: true } });
+    if (!existingSkill || existingSkill.business_id !== biz.business_id) {
+      return res.status(404).json({ success: false, message: "Skill not found." });
+    }
+
     const skill = await prisma.skills.update({ where: { skill_id }, data: { name, description: description || null } });
     return res.json({ success: true, skill });
   } catch (error) {
@@ -648,6 +680,11 @@ const deleteBranchSkill = async (req, res) => {
   try {
     const branch_id = Number(req.params.branch_id);
     const skill_id = Number(req.params.skill_id);
+
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
     const { error } = await supabaseAdmin.from("branch_skills").delete().eq("branch_id", branch_id).eq("skill_id", skill_id);
     if (error) throw new Error(error.message);
     return res.json({ success: true, message: "Skill removed from branch." });

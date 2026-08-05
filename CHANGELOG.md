@@ -3,7 +3,34 @@
 All notable changes to this project are documented in this file.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] - 2026-08-05 (2)
+## [Unreleased] - 2026-08-05 (4)
+
+### Security
+
+- **Fixed real cross-tenant IDOR bugs in `businessOwnerController.js`.** While adding
+  route-level role gating, found that `getBranchSkills`, `createBranchSkill`,
+  `updateBranchSkill`, `deleteBranchSkill`, and `getRoleTemplates` had **zero**
+  ownership verification at all — any authenticated business_owner/manager could
+  read or modify another business's branch skills or role templates just by
+  guessing a `branch_id`/`skill_id`. `upsertRoleTemplates` checked the caller had
+  *a* business but never checked the target branch belonged to it. Added a shared
+  `verifyBranchAccess` helper and applied it to all five; verified live against two
+  branches on different businesses (cross-tenant now 404s, same-tenant still works).
+- Added `allowRoles` gating to all ~35 `businessOwnerRoutes.js` endpoints — the
+  entire router previously had only `protect` (authenticated) with no role check,
+  relying solely on each controller's internal lookup returning empty for the
+  wrong role.
+
+### Fixed
+
+- **`getStaffKpi` was completely broken** — it joined a Prisma relation called
+  `attendance` that no longer exists in the schema (removed along with the old
+  clock-in/out feature), so every call threw. Confirmed it has zero callers
+  anywhere in the frontend (the staff-detail KPI view computes its own numbers
+  client-side), so rebuilt it against `timesheets` instead as a working,
+  schema-accurate utility endpoint rather than leaving it dead.
+
+## [Unreleased] - 2026-08-05 (3)
 
 ### Added
 
