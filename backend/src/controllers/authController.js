@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const generateToken = require("../utils/generateToken");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const supabaseAuth = require("../config/supabaseAuth");
 const bcrypt = require("bcryptjs");
 const { notifyUsers, getSystemAdminUserIds } = require("../utils/notify");
 
@@ -24,6 +25,14 @@ const login = async (req, res) => {
                 success: false,
                 message: "Your account has been deactivated. Please contact your administrator."
             });
+        }
+
+        const { error: authError } = await supabaseAuth.auth.signInWithPassword({
+            email,
+            password: req.body.password,
+        });
+        if (authError) {
+            return res.status(401).json({ success: false, message: "Invalid email or password." });
         }
 
         const token = generateToken({
@@ -241,17 +250,53 @@ const registerBusiness = async (req, res) => {
 };
 
 const forgotPassword = async (req, res) => {
-    return res.json({
-        success: true,
-        message: "Forgot password endpoint working"
-    });
+    try {
+        const email = req.body.email?.trim().toLowerCase();
+        if (!email) return res.status(400).json({ success: false, message: "Email is required." });
+
+        const { sendMail } = require("../utils/mailer");
+        const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+            type: "recovery",
+            email,
+            options: { redirectTo: `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password` },
+        });
+        if (error) {
+            console.error("[forgotPassword]", error.message);
+            // Don't reveal whether the email exists
+            return res.json({ success: true, message: "If that email exists, a reset link has been sent." });
+        }
+        const resetLink = data.properties?.action_link;
+        await sendMail({
+            to: email,
+            subject: "Reset your Krewby password",
+            html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;">
+                <h2 style="color:#0F172A;">Reset your password</h2>
+                <p>Click the link below to set a new password. This link expires in 1 hour.</p>
+                <a href="${resetLink}" style="display:inline-block;margin:16px 0;padding:12px 24px;background:#F59E0B;color:#1C1917;font-weight:700;border-radius:8px;text-decoration:none;">Reset Password</a>
+                <p style="color:#64748B;font-size:13px;">If you didn't request this, you can safely ignore this email.</p>
+            </div>`,
+        });
+        return res.json({ success: true, message: "If that email exists, a reset link has been sent." });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 const resetPassword = async (req, res) => {
-    return res.json({
-        success: true,
-        message: "Reset password endpoint working"
-    });
+    try {
+        const { access_token, password } = req.body;
+        if (!access_token || !password) {
+            return res.status(400).json({ success: false, message: "Token and new password are required." });
+        }
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(
+            (await supabaseAdmin.auth.getUser(access_token)).data?.user?.id,
+            { password }
+        );
+        if (error) return res.status(400).json({ success: false, message: error.message });
+        return res.json({ success: true, message: "Password updated successfully." });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 // Used by managers to create staff accounts (bypasses email domain restrictions)

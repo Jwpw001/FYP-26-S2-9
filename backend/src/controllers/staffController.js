@@ -30,7 +30,7 @@ const getStaff = async (req, res) => {
     // on a branch's roster is governed entirely by casual_branch_preferences, not by their
     // staff.branch_id "home" (which is just where they were originally created).
     const regularStaff = await prisma.staff.findMany({
-      where: { branch_id: branchId, staff_type: "regular" },
+      where: { branch_id: branchId, staff_type: "regular", is_active: true },
       include: {
         users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } },
         branches: true,
@@ -45,7 +45,7 @@ const getStaff = async (req, res) => {
 
     const casualStaff = preferredUserIds.length > 0
       ? await prisma.staff.findMany({
-          where: { user_id: { in: preferredUserIds }, staff_type: "casual" },
+          where: { user_id: { in: preferredUserIds }, staff_type: "casual", is_active: true },
           include: {
             users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } },
             branches: true,

@@ -238,7 +238,7 @@ const getMyTasks = async (req, res) => {
         shift_tasks: {
           include: { skills: { select: { skill_id: true, name: true } } },
         },
-        shifts: { select: { shift_id: true, branch_id: true, title: true, shift_date: true, start_time: true, end_time: true, status: true } },
+        shifts: { select: { shift_id: true, branch_id: true, title: true, shift_date: true, start_time: true, end_time: true, status: true, branches: { select: { name: true } } } },
       },
       orderBy: { shifts: { shift_date: "asc" } },
     });

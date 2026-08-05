@@ -3,9 +3,8 @@ const prisma = require("../config/prisma");
 const getNotifications = async (req, res) => {
     try {
         const notifications = await prisma.notifications.findMany({
-            orderBy: {
-                notification_id: "asc"
-            }
+            where: { recipient_id: req.user.user_id },
+            orderBy: { created_at: "desc" },
         });
 
         res.json({
@@ -30,7 +29,7 @@ const getNotificationById = async (req, res) => {
             }
         });
 
-        if (!notification) {
+        if (!notification || notification.recipient_id !== req.user.user_id) {
             return res.status(404).json({
                 success: false,
                 message: "Notification not found"
@@ -91,6 +90,11 @@ const updateNotification = async (req, res) => {
             is_read
         } = req.body;
 
+        const existing = await prisma.notifications.findUnique({ where: { notification_id: notificationId } });
+        if (!existing || existing.recipient_id !== req.user.user_id) {
+            return res.status(404).json({ success: false, message: "Notification not found" });
+        }
+
         const notification = await prisma.notifications.update({
             where: {
                 notification_id: notificationId
@@ -119,6 +123,11 @@ const updateNotification = async (req, res) => {
 const deleteNotification = async (req, res) => {
     try {
         const notificationId = Number(req.params.id);
+
+        const existing = await prisma.notifications.findUnique({ where: { notification_id: notificationId } });
+        if (!existing || existing.recipient_id !== req.user.user_id) {
+            return res.status(404).json({ success: false, message: "Notification not found" });
+        }
 
         await prisma.notifications.delete({
             where: {

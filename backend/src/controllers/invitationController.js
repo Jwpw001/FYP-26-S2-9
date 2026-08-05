@@ -3,9 +3,7 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 const crypto = require("crypto");
 const { getLimits } = require("../utils/planLimits");
 const dns = require("dns").promises;
-const { Resend } = require("resend");
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const { sendMail } = require("../utils/mailer");
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 const ROLE_HIERARCHY = {
@@ -44,12 +42,7 @@ function generateCode() {
 }
 
 async function sendInviteEmail({ to, inviterName, roleName, branchName, inviteLink, code }) {
-  if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.startsWith("re_placeholder")) {
-    console.log(`[INVITE EMAIL - DEV] To: ${to} | Link: ${inviteLink} | Code: ${code}`);
-    return;
-  }
-  await resend.emails.send({
-    from: "Krewby <noreply@krewby.com>",
+  await sendMail({
     to,
     subject: `You've been invited to join ${branchName || "a business"} on Krewby`,
     html: `

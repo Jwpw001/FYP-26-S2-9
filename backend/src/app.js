@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const errorHandler = require("./middleware/errorMiddleware");
 const authRoutes = require("./routes/authRoutes");
@@ -11,7 +13,6 @@ const availabilityRoutes = require("./routes/availabilityRoutes");
 const shiftRoutes = require("./routes/shiftRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
-const attendanceRoutes = require("./routes/attendanceRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const aiAssistantRoutes = require("./routes/aiAssistantRoutes");
 const invitationRoutes = require("./routes/invitationRoutes");
@@ -22,9 +23,40 @@ const timesheetRoutes = require("./routes/timesheetRoutes");
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+    process.env.FRONTEND_URL || "http://localhost:5173",
+    "http://localhost:5173",
+    "http://localhost:4173",
+];
+
+app.use(helmet());
+app.use(cors({
+    origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        cb(new Error("CORS: origin not allowed"));
+    },
+    credentials: true,
+}));
 app.use(express.json());
 app.use(morgan("dev"));
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { success: false, message: "Too many requests, please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const generalLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 200,
+    message: { success: false, message: "Too many requests, please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use(generalLimiter);
 
 app.get("/api/health", (req, res) => {
     res.status(200).json({
@@ -33,7 +65,7 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 
 app.use("/api/account", accountRoutes);
 app.use("/api/staff", staffRoutes);
@@ -41,7 +73,6 @@ app.use("/api/availability", availabilityRoutes);
 app.use("/api/shifts", shiftRoutes);
 app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/notifications", notificationRoutes);
-app.use("/api/attendance", attendanceRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/ai-assistant", aiAssistantRoutes);
 app.use("/api/invitations", invitationRoutes);

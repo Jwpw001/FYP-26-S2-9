@@ -2,7 +2,7 @@ const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUser } = require("../utils/notify");
 
-const ALLOWED_TOOLS = ["approve_leave", "reject_leave", "create_draft_shift", "assign_staff_to_task"];
+const ALLOWED_TOOLS = ["approve_leave", "reject_leave", "create_draft_shift", "add_task_to_shift", "publish_shift", "assign_staff_to_task", "set_staff_active"];
 
 async function getCallerBranchId(userId) {
   const staffRecord = await prisma.staff.findFirst({
@@ -129,7 +129,86 @@ async function execute(req, res) {
         },
       });
 
-      message = `Draft shift "${title}" created for ${shift_date} (${start_time}–${end_time}). Shift ID: ${shift.shift_id}. Head to the Shifts page to add tasks and publish it.`;
+      message = `Draft shift "${title}" created for ${shift_date} (${start_time}–${end_time}). Shift ID: ${shift.shift_id}. You can now add tasks to it or publish it — just ask me.`;
+    }
+
+    // ── Activate / deactivate staff ───────────────────────────────────────────
+    if (tool_name === "set_staff_active") {
+      const { staff_id, staff_name, is_active } = args;
+
+      const staffMember = await prisma.staff.findFirst({
+        where: { staff_id: Number(staff_id), branch_id: branchId },
+        select: { staff_id: true, user_id: true },
+      });
+      if (!staffMember) {
+        return res.status(403).json({ success: false, message: "Staff member not found in your branch." });
+      }
+
+      await prisma.staff.update({
+        where: { staff_id: Number(staff_id) },
+        data: { is_active },
+      });
+      await prisma.users.update({
+        where: { user_id: staffMember.user_id },
+        data: { is_active },
+      });
+
+      message = is_active
+        ? `${staff_name} has been reactivated. They can now log in and be assigned to shifts.`
+        : `${staff_name} has been deactivated. They can no longer log in or be assigned to new shifts.`;
+    }
+
+    // ── Add task to shift ──────────────────────────────────────────────────────
+    if (tool_name === "add_task_to_shift") {
+      const { shift_id, title, start_time, end_time, headcount, shift_title } = args;
+
+      const shift = await prisma.shifts.findUnique({
+        where: { shift_id: Number(shift_id) },
+        select: { branch_id: true, status: true },
+      });
+      if (!shift || shift.branch_id !== branchId) {
+        return res.status(403).json({ success: false, message: "Shift not found or access denied." });
+      }
+
+      const count = Math.max(1, Number(headcount) || 1);
+      let lastTaskId;
+      for (let i = 0; i < count; i++) {
+        const task = await prisma.shift_tasks.create({
+          data: {
+            shift_id: Number(shift_id),
+            title: title.trim(),
+            start_time: new Date(`1970-01-01T${start_time}:00Z`),
+            end_time:   new Date(`1970-01-01T${end_time}:00Z`),
+            status: "open",
+          },
+        });
+        lastTaskId = task.task_id;
+      }
+
+      message = `${count > 1 ? `${count} "${title}" tasks` : `Task "${title}"`} added to shift "${shift_title}" (Task ID: ${lastTaskId}). Would you like to assign a staff member to this task now?`;
+    }
+
+    // ── Publish shift ──────────────────────────────────────────────────────────
+    if (tool_name === "publish_shift") {
+      const { shift_id, shift_title } = args;
+
+      const shift = await prisma.shifts.findUnique({
+        where: { shift_id: Number(shift_id) },
+        select: { branch_id: true, status: true },
+      });
+      if (!shift || shift.branch_id !== branchId) {
+        return res.status(403).json({ success: false, message: "Shift not found or access denied." });
+      }
+      if (shift.status === "published") {
+        return res.status(400).json({ success: false, message: `Shift "${shift_title}" is already published.` });
+      }
+
+      await prisma.shifts.update({
+        where: { shift_id: Number(shift_id) },
+        data: { status: "published" },
+      });
+
+      message = `Shift "${shift_title}" has been published. Staff can now see and acknowledge their assignments.`;
     }
 
     // ── Assign staff to task ───────────────────────────────────────────────────
@@ -162,7 +241,7 @@ async function execute(req, res) {
       }
 
       await prisma.task_assignments.create({
-        data: { task_id: Number(task_id), staff_id: Number(staff_id) },
+        data: { task_id: Number(task_id), shift_id: task.shift_id, staff_id: Number(staff_id) },
       });
 
       message = `${staff_name} has been assigned to "${task_name}" in "${shift_title}".`;
