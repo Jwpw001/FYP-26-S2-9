@@ -134,9 +134,40 @@ export default function SwapRequests({ Layout = StaffLayout }) {
   const [swapModal, setSwapModal] = useState(null); // selected assignment object
   const [swapForm,  setSwapForm]  = useState({ request_type: "swap", reason: "" });
 
+  // Edit modal for pending swap requests
+  const [editModal,  setEditModal]  = useState(null); // swap_requests row
+  const [editForm,   setEditForm]   = useState({ request_type: "swap", reason: "" });
+  const [editSaving, setEditSaving] = useState(false);
+
   function showToast(msg, type = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  }
+
+  async function handleCancelSwap(swapId) {
+    if (!window.confirm("Cancel this swap/replacement request?")) return;
+    const { error: err } = await supabase
+      .from("swap_requests").update({ status: "cancelled" }).eq("swap_id", swapId);
+    if (err) { showToast("Failed to cancel request.", "error"); return; }
+    setRequests(prev => prev.map(r => r.swap_id === swapId ? { ...r, status: "cancelled" } : r));
+    showToast("Request cancelled.");
+  }
+
+  async function handleSaveEdit() {
+    if (!editModal) return;
+    setEditSaving(true);
+    const { error: err } = await supabase.from("swap_requests")
+      .update({ request_type: editForm.request_type, reason: editForm.reason.trim() || null })
+      .eq("swap_id", editModal.swap_id);
+    setEditSaving(false);
+    if (err) { showToast("Failed to save changes.", "error"); return; }
+    setRequests(prev => prev.map(r =>
+      r.swap_id === editModal.swap_id
+        ? { ...r, request_type: editForm.request_type, reason: editForm.reason.trim() || null }
+        : r
+    ));
+    setEditModal(null);
+    showToast("Request updated.");
   }
 
   useEffect(() => {
@@ -221,10 +252,10 @@ export default function SwapRequests({ Layout = StaffLayout }) {
       // The DB trigger blocks new requests if there's an approved one on the same date.
       // When a manager re-assigns the staff back to the shift, the old approved request
       // is now superseded — cancel it first so the insert can proceed.
-      const shiftDate = swapModal.shifts?.shift_date;
-      const superseded = shiftDate
-        ? requests.filter(r => r.status === "approved" && r._shifts?.shift_date === shiftDate)
-        : [];
+      // Only cancel the approved request for this exact assignment, not all approved swaps on the same day
+      const superseded = requests.filter(
+        r => r.status === "approved" && Number(r.requester_assign) === Number(swapModal.assignment_id)
+      );
       if (superseded.length > 0) {
         const ids = superseded.map(r => r.swap_id);
         await supabase.from("swap_requests").update({ status: "cancelled" }).in("swap_id", ids);
@@ -424,6 +455,18 @@ export default function SwapRequests({ Layout = StaffLayout }) {
                     </div>
                   )}
                   {r.reason && <p style={{ fontSize: "13px", color: "#64748B", fontStyle: "italic", marginTop: "12px" }}>"{r.reason}"</p>}
+                  {r.status === "pending" && (
+                    <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px solid #F1F5F9", display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                      <button onClick={() => { setEditModal(r); setEditForm({ request_type: r.request_type, reason: r.reason || "" }); }}
+                        style={{ padding: "5px 12px", borderRadius: "8px", border: "1px solid #BFDBFE", background: "#EFF6FF", color: "#1D4ED8", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                        Edit
+                      </button>
+                      <button onClick={() => handleCancelSwap(r.swap_id)}
+                        style={{ padding: "5px 12px", borderRadius: "8px", border: "1px solid #FECACA", background: "#FEF2F2", color: "#DC2626", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -501,6 +544,39 @@ export default function SwapRequests({ Layout = StaffLayout }) {
               <button onClick={handleSubmit} disabled={saving}
                 style={{ flex: 2, padding: "11px", background: saving ? "#93C5FD" : "#2563EB", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", color: "#FFF", cursor: saving ? "default" : "pointer", transition: "background 0.15s" }}>
                 {saving ? "Submitting…" : "Submit Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit swap modal */}
+      {editModal && (
+        <div onClick={e => e.target === e.currentTarget && setEditModal(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.15s ease both" }}>
+          <div style={{ background: "#FFF", borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "400px", boxShadow: "0 24px 60px rgba(0,0,0,0.2)", animation: "popIn 0.2s ease both" }}>
+            <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "20px" }}>Edit Request</h3>
+            <div style={{ marginBottom: "16px" }}>
+              <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Request Type</p>
+              <div style={{ display: "flex", gap: "10px" }}>
+                {["swap", "replacement"].map(t => (
+                  <button key={t} onClick={() => setEditForm(f => ({ ...f, request_type: t }))}
+                    style={{ flex: 1, padding: "9px", borderRadius: "9px", border: `1.5px solid ${editForm.request_type === t ? "#6366F1" : "#E2E8F0"}`, background: editForm.request_type === t ? "#EEF2FF" : "#F8FAFC", color: editForm.request_type === t ? "#4F46E5" : "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: "20px" }}>
+              <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Reason <span style={{ fontWeight: 400, textTransform: "none" }}>(optional)</span></p>
+              <textarea value={editForm.reason} onChange={e => setEditForm(f => ({ ...f, reason: e.target.value }))}
+                placeholder="Explain why you need this swap or replacement…"
+                style={{ width: "100%", minHeight: "80px", borderRadius: "10px", border: "1.5px solid #E2E8F0", padding: "10px 12px", fontSize: "13px", resize: "vertical", boxSizing: "border-box", outline: "none" }} />
+            </div>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button onClick={() => setEditModal(null)} style={{ flex: 1, padding: "11px", borderRadius: "10px", border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleSaveEdit} disabled={editSaving} style={{ flex: 2, padding: "11px", borderRadius: "10px", border: "none", background: editSaving ? "#A5B4FC" : "#6366F1", color: "#FFF", fontSize: "14px", fontWeight: "700", cursor: editSaving ? "default" : "pointer" }}>
+                {editSaving ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>

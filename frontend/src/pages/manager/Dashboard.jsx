@@ -78,6 +78,7 @@ export default function ManagerDashboard() {
   const [swapItems,      setSwapItems]       = useState([]);
   const [approvalTab,    setApprovalTab]     = useState("leave");
   const [toast,          setToast]           = useState(null);
+  const [actingId,       setActingId]        = useState(null);
 
   const today = new Date().toISOString().split("T")[0];
   const todayDow = (new Date().getDay() + 6) % 7;
@@ -181,11 +182,15 @@ export default function ManagerDashboard() {
         // Leave requests
         const staffIds = allStaff.map(s => s.staff_id);
         if (staffIds.length > 0) {
+          const userIds = allStaff.map(s => s.user_id).filter(Boolean);
           const [{ data: leaves }, { data: swaps }] = await Promise.all([
             supabase.from("availability").select("request_id, staff:staff_id(users:user_id(full_name)), start_date, end_date")
               .eq("status","pending").in("staff_id", staffIds).limit(5),
-            supabase.from("swap_requests").select("swap_id, requester:requester_id(users:user_id(full_name)), shift_date")
-              .eq("status","pending").in("requester_id", staffIds).limit(5),
+            userIds.length > 0
+              ? supabase.from("swap_requests")
+                  .select("swap_id, users:requester_id(full_name), task_assignments:requester_assign(shifts:shift_id(shift_date))")
+                  .eq("status","pending").in("requester_id", userIds).limit(5)
+              : { data: [] },
           ]);
           if (!cancelled) {
             setLeaveItems((leaves || []).map(l => ({
@@ -195,8 +200,10 @@ export default function ManagerDashboard() {
             })));
             setSwapItems((swaps || []).map(s => ({
               id: s.swap_id,
-              name: s.requester?.users?.full_name || "Staff",
-              range: s.shift_date ? `Shift on ${fmtDate(s.shift_date)}` : "Swap request",
+              name: s.users?.full_name || "Staff",
+              range: s.task_assignments?.shifts?.shift_date
+                ? `Shift on ${fmtDate(s.task_assignments.shifts.shift_date)}`
+                : "Swap request",
             })));
           }
         }
@@ -213,6 +220,51 @@ export default function ManagerDashboard() {
   function showToast(msg, type = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  }
+
+  async function handleApprove(item) {
+    if (actingId) return;
+    setActingId(item.id);
+    try {
+      if (approvalTab === "leave") {
+        await supabase.from("availability").update({
+          status: "approved",
+          reviewed_by: userId,
+          reviewed_at: new Date().toISOString(),
+        }).eq("request_id", item.id);
+        setLeaveItems(p => p.filter(x => x.id !== item.id));
+        showToast("Leave approved");
+      } else {
+        // Swap approval requires picking a covering staff member — go to the full page
+        goTo("/manager/availability");
+      }
+    } catch { showToast("Failed to approve", "error"); }
+    finally { setActingId(null); }
+  }
+
+  async function handleDecline(item) {
+    if (actingId) return;
+    setActingId(item.id);
+    try {
+      if (approvalTab === "leave") {
+        await supabase.from("availability").update({
+          status: "rejected",
+          reviewed_by: userId,
+          reviewed_at: new Date().toISOString(),
+        }).eq("request_id", item.id);
+        setLeaveItems(p => p.filter(x => x.id !== item.id));
+        showToast("Leave rejected", "error");
+      } else {
+        await supabase.from("swap_requests").update({
+          status: "rejected",
+          manager_id: userId,
+          manager_decided_at: new Date().toISOString(),
+        }).eq("swap_id", item.id);
+        setSwapItems(p => p.filter(x => x.id !== item.id));
+        showToast("Swap rejected", "error");
+      }
+    } catch { showToast("Failed to decline", "error"); }
+    finally { setActingId(null); }
   }
 
   const maxCount = Math.max(...weekCounts, 1);
@@ -372,18 +424,10 @@ export default function ManagerDashboard() {
                         <p style={{ fontSize: "12.5px", fontWeight: "600", color: "#1E293B", margin: 0 }}>{item.name}</p>
                         <p style={{ fontSize: "11px", color: "#94A3B8", margin: "1px 0 0" }}>{item.range}</p>
                       </div>
-                      <button onClick={() => {
-                        if (onLeave) setLeaveItems(p => p.filter(x => x.id !== item.id));
-                        else setSwapItems(p => p.filter(x => x.id !== item.id));
-                        showToast("Approved");
-                      }} style={{ width: "26px", height: "26px", borderRadius: "7px", border: "none", background: "#DCFCE7", color: "#16A34A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <button onClick={() => handleApprove(item)} disabled={actingId === item.id} style={{ width: "26px", height: "26px", borderRadius: "7px", border: "none", background: actingId === item.id ? "#BBF7D0" : "#DCFCE7", color: "#16A34A", cursor: actingId ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
                       </button>
-                      <button onClick={() => {
-                        if (onLeave) setLeaveItems(p => p.filter(x => x.id !== item.id));
-                        else setSwapItems(p => p.filter(x => x.id !== item.id));
-                        showToast("Declined", "error");
-                      }} style={{ width: "26px", height: "26px", borderRadius: "7px", border: "none", background: "#FEE2E2", color: "#DC2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <button onClick={() => handleDecline(item)} disabled={actingId === item.id} style={{ width: "26px", height: "26px", borderRadius: "7px", border: "none", background: actingId === item.id ? "#FECACA" : "#FEE2E2", color: "#DC2626", cursor: actingId ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
                       </button>
                     </div>

@@ -7,7 +7,8 @@ const {
     getAvailabilityById,
     createAvailability,
     updateAvailability,
-    deleteAvailability
+    deleteAvailability,
+    cancelOwnLeave,
 } = require("../controllers/availabilityController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -82,6 +83,19 @@ router.delete(
         ROLES.SYSTEM_ADMIN
     ),
     deleteAvailability
+);
+
+// Staff cancel their own pending leave (does not require manager role)
+router.delete(
+    "/:id/cancel",
+    verifyToken,
+    allowRoles(
+        ROLES.REGULAR_STAFF,
+        ROLES.BRANCH_CASUAL_STAFF,
+        ROLES.BRANCH_MANAGER,
+        ROLES.SYSTEM_ADMIN
+    ),
+    cancelOwnLeave
 );
 
 module.exports = router;

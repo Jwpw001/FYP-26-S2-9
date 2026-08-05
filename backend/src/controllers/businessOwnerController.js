@@ -81,14 +81,19 @@ const createBranch = async (req, res) => {
     };
     await supabaseAdmin.from("branch_settings").insert(settingsRow);
 
+    // Seed default allocation preferences so branch settings page always has a row to update
+    await supabaseAdmin.from("branch_allocation_preferences").insert({
+      branch_id: branch.branch_id,
+      weight_availability: 40, weight_skills: 30, weight_attendance: 15,
+      weight_performance: 10, weight_workload: 5,
+    });
+
     if (Array.isArray(role_templates) && role_templates.length > 0) {
       const filtered = role_templates.filter(r => r.role_name?.trim());
-      const allSkills = await prisma.skills.findMany({ select: { skill_id: true, name: true } });
-      const skillByName = Object.fromEntries(allSkills.map(s => [s.name.toLowerCase(), s.skill_id]));
       const rows = filtered.map(r => ({
         branch_id: branch.branch_id,
         role_name: r.role_name.trim(),
-        skill_id: skillByName[r.role_name.trim().toLowerCase()] || null,
+        skill_id: r.skill_id ? Number(r.skill_id) : null,
         headcount: Number(r.headcount) || 1,
       }));
       if (rows.length > 0) await supabaseAdmin.from("branch_role_templates").insert(rows);
@@ -350,12 +355,10 @@ const upsertRoleTemplates = async (req, res) => {
 
     if (Array.isArray(role_templates) && role_templates.length > 0) {
       const filtered = role_templates.filter(r => r.role_name?.trim());
-      const allSkills = await prisma.skills.findMany({ select: { skill_id: true, name: true } });
-      const skillByName = Object.fromEntries(allSkills.map(s => [s.name.toLowerCase(), s.skill_id]));
       const rows = filtered.map(r => ({
         branch_id: branch_id,
         role_name: r.role_name.trim(),
-        skill_id: skillByName[r.role_name.trim().toLowerCase()] || null,
+        skill_id: r.skill_id ? Number(r.skill_id) : null,
         headcount: Number(r.headcount) || 1,
       }));
       if (rows.length > 0) await supabaseAdmin.from("branch_role_templates").insert(rows);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { getUser } from "../utils/auth";
 import { ClipboardList, CheckCircle2, XCircle, Bell, CalendarDays, RefreshCw, Megaphone, FileText, Building2, ClipboardCheck, UserCheck, UserX, CalendarX, CalendarClock } from "lucide-react";
@@ -82,9 +83,44 @@ const TYPE_ICONS = {
   general:              Bell,
 };
 
+function getNotifRoute(type, relatedEntity, role) {
+  const isManager      = role === "manager";
+  const isRegular      = role === "regular_staff";
+  const isCasual       = role === "casual_staff";
+  const isOwner        = role === "business_owner";
+
+  if (relatedEntity === "availability" || type?.includes("leave") || type?.includes("off_day")) {
+    if (isManager) return "/manager/availability";
+    if (isRegular) return "/regular-staff/leave";
+    return null;
+  }
+  if (relatedEntity === "swap_requests" || type?.includes("swap")) {
+    if (isManager)  return "/manager/availability";
+    if (isRegular)  return "/regular-staff/swaps";
+    if (isCasual)   return "/casual-staff/swap-requests";
+    return null;
+  }
+  if (relatedEntity === "shifts" || type?.includes("shift") || type === "assignment" || type?.includes("assign")) {
+    if (isManager) return "/manager/shifts";
+    if (isRegular) return "/regular-staff/shifts";
+    if (isCasual)  return "/casual-staff/shifts";
+    return null;
+  }
+  if (relatedEntity === "reports" || type?.includes("report")) {
+    if (isManager) return "/manager/reports";
+    if (isOwner)   return "/business-owner/reports";
+    return null;
+  }
+  if (relatedEntity === "businesses" || type === "business_registered") {
+    return "/admin/businesses";
+  }
+  return null;
+}
+
 export default function NotificationsPage({ Layout }) {
-  const user = getUser();
-  const userId = user?.user_id;
+  const user     = getUser();
+  const userId   = user?.user_id;
+  const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading]             = useState(true);
@@ -113,12 +149,14 @@ export default function NotificationsPage({ Layout }) {
     return () => { cancelled = true; };
   }, [userId]);
 
-  async function markRead(notifId) {
+  async function markRead(notifId, type, relatedEntity) {
     setNotifications(prev => prev.map(n =>
       n.notification_id === notifId ? { ...n, is_read: true } : n
     ));
     await supabase.from("notifications")
       .update({ is_read: true }).eq("notification_id", notifId);
+    const route = getNotifRoute(type, relatedEntity, user?.role);
+    if (route) navigate(route);
   }
 
   async function markAllRead() {
@@ -203,7 +241,7 @@ export default function NotificationsPage({ Layout }) {
               <div
                 key={n.notification_id}
                 className="shared-notif-row"
-                onClick={() => markRead(n.notification_id)}
+                onClick={() => markRead(n.notification_id, n.type, n.related_entity)}
                 style={{
                   background: n.is_read ? "#FFFFFF" : "#EFF6FF",
                   border: `1px solid ${n.is_read ? "#E2E8F0" : "#BFDBFE"}`,
