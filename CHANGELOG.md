@@ -3,6 +3,22 @@
 All notable changes to this project are documented in this file.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] - 2026-08-05 (5)
+
+### Merged
+
+- Merged `main` (a parallel commit from a teammate, "Minor bugs fixed after
+  testing") into this branch. Brought in: a proper "cancel own pending leave"
+  endpoint, shift creation validating against branch operating days, a new
+  business-owner "Casual Pool" page, a fix for a broken join in the manager
+  dashboard's swap-request query, and default allocation-preferences seeding on
+  branch creation. Resolved 3 real conflicts (`ShiftsList.jsx`,
+  `LeaveRequests.jsx`, `SwapRequests.jsx` — this session's font-size pass
+  overlapped with teammate's new UI additions in the same spots) by keeping both
+  sides' changes. Note: `main` itself still has the login password-bypass bug
+  fixed on this branch earlier tonight — worth flagging to whoever controls what
+  gets deployed.
+
 ## [Unreleased] - 2026-08-05 (4)
 
 ### Security
