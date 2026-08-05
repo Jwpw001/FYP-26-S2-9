@@ -122,7 +122,7 @@ function ActionCard({ msg, onConfirm, onCancel }) {
 
   if (msg.status === "cancelled") {
     return (
-      <div style={{ marginBottom: 10, padding: "9px 13px", borderRadius: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", fontSize: 19.5, color: "#94A3B8" }}>
+      <div style={{ marginBottom: 10, padding: "9px 13px", borderRadius: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", fontSize: 12.5, color: "#94A3B8" }}>
         Action cancelled.
       </div>
     );
@@ -130,7 +130,7 @@ function ActionCard({ msg, onConfirm, onCancel }) {
 
   if (msg.status === "done") {
     return (
-      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#F0FDF4", border: "1px solid #86EFAC", fontSize: 20, color: "#16A34A", fontWeight: 600 }}>
+      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#F0FDF4", border: "1px solid #86EFAC", fontSize: 13, color: "#16A34A", fontWeight: 600 }}>
         ✓ {msg.result}
       </div>
     );
@@ -138,7 +138,7 @@ function ActionCard({ msg, onConfirm, onCancel }) {
 
   if (msg.status === "error") {
     return (
-      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#FEF2F2", border: "1px solid #FCA5A5", fontSize: 20, color: "#DC2626" }}>
+      <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: "12px", background: "#FEF2F2", border: "1px solid #FCA5A5", fontSize: 13, color: "#DC2626" }}>
         ✗ {msg.result}
       </div>
     );
@@ -156,26 +156,26 @@ function ActionCard({ msg, onConfirm, onCancel }) {
         <div style={{
           width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
           background: meta.color, display: "flex", alignItems: "center",
-          justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 800,
+          justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 800,
         }}>{meta.icon}</div>
-        <span style={{ fontSize: 18, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.05em" }}>
           {meta.label}
         </span>
       </div>
-      <p style={{ fontSize: 19.5, color: "#1E293B", whiteSpace: "pre-wrap", margin: "0 0 10px", lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12.5, color: "#1E293B", whiteSpace: "pre-wrap", margin: "0 0 10px", lineHeight: 1.5 }}>
         {describeAction(msg.name, msg.args)}
       </p>
       <div style={{ display: "flex", gap: 7 }}>
         <button
           onClick={onCancel}
-          style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", fontSize: 19, fontWeight: 600, cursor: "pointer" }}
+          style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
         >
           Cancel
         </button>
         <button
           onClick={async () => { setBusy(true); await onConfirm(); setBusy(false); }}
           disabled={busy}
-          style={{ flex: 1.4, padding: "7px 0", borderRadius: 8, border: "none", background: meta.color, color: "#fff", fontSize: 19, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}
+          style={{ flex: 1.4, padding: "7px 0", borderRadius: 8, border: "none", background: meta.color, color: "#fff", fontSize: 12, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1 }}
         >
           {busy ? "Working…" : "Confirm ✓"}
         </button>
@@ -205,12 +205,7 @@ function Message({ msg, onConfirm, onCancel }) {
   return (
     <div className="ai-msg" style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", marginBottom: 10 }}>
       {!isUser && (
-        <div style={{
-          width: 28, height: 28, borderRadius: "50%",
-          background: `linear-gradient(135deg, ${ACCENT}, #8B5CF6)`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20, fontWeight: 700, color: "#fff", flexShrink: 0, marginRight: 8, marginTop: 2,
-        }}>K</div>
+        <img src="/chatbot.png" alt="Krewby chatbot" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0, marginRight: 8, marginTop: 2 }} />
       )}
       <div style={{
         maxWidth: "78%",
@@ -218,7 +213,7 @@ function Message({ msg, onConfirm, onCancel }) {
         color: isUser ? "#fff" : "#1E293B",
         padding: "9px 13px",
         borderRadius: isUser ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-        fontSize: 20.5,
+        fontSize: 13.5,
         lineHeight: 1.55,
         whiteSpace: "pre-wrap",
         boxShadow: isUser ? "0 2px 8px rgba(99,102,241,0.25)" : "0 1px 4px rgba(0,0,0,0.06)",
@@ -237,7 +232,8 @@ export default function AIAssistantWidget() {
   const storageKey  = `krewby_ai_chat_${user?.user_id || "guest"}`;
   const briefedKey  = `krewby_ai_briefed_${user?.user_id || "guest"}`;
 
-  const [open,     setOpen]     = useState(false);
+  const [open,       setOpen]       = useState(false);
+  const [pageContext, setPageContext] = useState(null);
   const [messages, setMessages] = useState(() => {
     try {
       const raw = localStorage.getItem(storageKey);
@@ -256,6 +252,13 @@ export default function AIAssistantWidget() {
   const inputRef       = useRef(null);
   const autoBriefRef   = useRef(false);
   const recognitionRef = useRef(null);
+
+  // Listen for page-level context broadcast (e.g. ShiftDetail tells us which shift is open)
+  useEffect(() => {
+    function onPageContext(e) { setPageContext(e.detail || null); }
+    window.addEventListener("krewby-page-context", onPageContext);
+    return () => window.removeEventListener("krewby-page-context", onPageContext);
+  }, []);
 
   // Persist conversation to localStorage whenever messages change
   useEffect(() => {
@@ -320,6 +323,9 @@ export default function AIAssistantWidget() {
         updated[index] = { ...updated[index], status: data.success ? "done" : "error", result: data.message };
         return updated;
       });
+      if (data.success) {
+        window.dispatchEvent(new CustomEvent("krewby-ai-action"));
+      }
     } catch {
       setMessages((prev) => {
         const updated = [...prev];
@@ -343,7 +349,16 @@ export default function AIAssistantWidget() {
     setInput("");
 
     const userMsg = { role: "user", content: question };
-    const history = messages.filter((m) => m.role !== "system" && m.role !== "tool_call");
+    const history = messages
+      .filter((m) => m.role !== "system")
+      .flatMap((m) => {
+        if (m.role === "tool_call") {
+          return m.status === "done" && m.result
+            ? [{ role: "assistant", content: `[Action completed: ${m.result}]` }]
+            : [];
+        }
+        return [m];
+      });
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
@@ -359,7 +374,7 @@ export default function AIAssistantWidget() {
           "Content-Type": "application/json",
           ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
         },
-        body: JSON.stringify({ question, conversationHistory }),
+        body: JSON.stringify({ question, conversationHistory, pageContext }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -528,16 +543,11 @@ export default function AIAssistantWidget() {
             padding: "14px 16px",
             display: "flex", alignItems: "center", gap: 10,
           }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: "50%",
-              background: "rgba(255,255,255,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 21, fontWeight: 800, color: "#fff",
-            }}>K</div>
+            <img src="/chatbot.png" alt="Krewby chatbot" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ color: "#fff", fontWeight: 700, fontSize: 21 }}>AI Workforce Assistant</div>
-              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 18 }}>
-                Read-only · Powered by GPT-4o mini
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Krewby chatbot</div>
+              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>
+                {role === "manager" ? "Action-capable · Powered by GPT-4o mini" : "Read-only · Powered by GPT-4o mini"}
               </div>
             </div>
             <button
@@ -546,7 +556,7 @@ export default function AIAssistantWidget() {
               style={{
                 background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 8,
                 padding: "5px 8px", cursor: "pointer",
-                fontSize: 17, fontWeight: 700, color: "rgba(255,255,255,0.85)",
+                fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.85)",
                 letterSpacing: "0.03em",
               }}
             >
@@ -570,12 +580,7 @@ export default function AIAssistantWidget() {
             ))}
             {loading && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${ACCENT}, #8B5CF6)`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 20, fontWeight: 700, color: "#fff", flexShrink: 0,
-                }}>K</div>
+                <img src="/chatbot.png" alt="Krewby chatbot" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                 <div style={{ background: "#F1F5F9", borderRadius: "16px 16px 16px 4px", padding: "2px 4px" }}>
                   <TypingIndicator />
                 </div>
@@ -591,7 +596,7 @@ export default function AIAssistantWidget() {
                 <button key={s} onClick={() => send(s)} style={{
                   background: "#F1F5F9", border: "1px solid #E2E8F0",
                   borderRadius: 20, padding: "5px 11px",
-                  fontSize: 18.5, color: "#475569", cursor: "pointer",
+                  fontSize: 11.5, color: "#475569", cursor: "pointer",
                   transition: "background 0.15s, color 0.15s",
                 }}
                   onMouseEnter={(e) => {
@@ -629,7 +634,7 @@ export default function AIAssistantWidget() {
               style={{
                 flex: 1, resize: "none",
                 border: "1.5px solid #E2E8F0", borderRadius: 12,
-                padding: "9px 12px", fontSize: 20,
+                padding: "9px 12px", fontSize: 13,
                 fontFamily: "inherit", outline: "none",
                 background: "#F8FAFC", color: "#1E293B",
                 lineHeight: 1.4,
@@ -702,10 +707,10 @@ export default function AIAssistantWidget() {
           </div>
 
           <div style={{
-            textAlign: "center", fontSize: 17.5, color: "#94A3B8",
+            textAlign: "center", fontSize: 10.5, color: "#94A3B8",
             paddingBottom: 8, paddingTop: 2,
           }}>
-            Read-only assistant · Cannot perform system actions
+            {role === "manager" ? "Can approve leave · create shifts · assign staff" : "Read-only assistant · Cannot perform system actions"}
           </div>
         </div>
       )}

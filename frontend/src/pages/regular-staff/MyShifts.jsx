@@ -95,15 +95,15 @@ function DateBlock({ date, highlight = false }) {
     <div style={{ width:"50px", minWidth:"50px", height:"54px", borderRadius:"10px", flexShrink:0,
       background: highlight ? "#2563EB" : "#F1F5F9",
       display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-      <span style={{ fontSize:"16px", fontWeight:"700", letterSpacing:"0.08em",
+      <span style={{ fontSize:"9px", fontWeight:"700", letterSpacing:"0.08em",
         color: highlight ? "#BFDBFE" : "#94A3B8" }}>
         {d ? d.toLocaleDateString("en-SG", { month:"short" }).toUpperCase() : ""}
       </span>
-      <span style={{ fontSize:"24px", fontWeight:"800", lineHeight:1,
+      <span style={{ fontSize:"19px", fontWeight:"800", lineHeight:1,
         color: highlight ? "#FFF" : "#1E293B" }}>
         {d ? d.getDate() : "—"}
       </span>
-      <span style={{ fontSize:"16px", fontWeight:"600",
+      <span style={{ fontSize:"9px", fontWeight:"600",
         color: highlight ? "#BFDBFE" : "#CBD5E1" }}>
         {d ? d.toLocaleDateString("en-SG", { weekday:"short" }).toUpperCase() : ""}
       </span>
@@ -283,8 +283,8 @@ export default function MyTasks({ Layout = StaffLayout }) {
         {/* Page header */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"24px", flexWrap:"wrap", gap:"12px" }}>
           <div>
-            <h2 style={{ fontSize:"25px", fontWeight:"800", color:"#1E293B" }}>My Tasks</h2>
-            <p style={{ fontSize:"20px", color:"#64748B", marginTop:"2px" }}>
+            <h2 style={{ fontSize:"22px", fontWeight:"800", color:"#1E293B" }}>My Tasks</h2>
+            <p style={{ fontSize:"13px", color:"#64748B", marginTop:"2px" }}>
               {loading ? "Loading…" : `${scheduleShifts.length} upcoming · ${pendingCount > 0 ? `${pendingCount} pending review` : "0 pending"}`}
             </p>
           </div>
@@ -293,7 +293,7 @@ export default function MyTasks({ Layout = StaffLayout }) {
           <div style={{ display:"flex", gap:"3px", background:"#F1F5F9", padding:"3px", borderRadius:"10px" }}>
             {[["schedule","Schedule",Calendar],["reports","Reports",FileText]].map(([t, label, Icon]) => (
               <button key={t} onClick={() => setTab(t)}
-                style={{ display:"flex", alignItems:"center", gap:"6px", padding:"8px 18px", borderRadius:"8px", border:"none", cursor:"pointer", fontSize:"20px",
+                style={{ display:"flex", alignItems:"center", gap:"6px", padding:"8px 18px", borderRadius:"8px", border:"none", cursor:"pointer", fontSize:"13px",
                   fontWeight: tab===t ? "700" : "500",
                   background: tab===t ? "#FFF" : "transparent",
                   color:      tab===t ? "#1E293B" : "#64748B",
@@ -346,7 +346,7 @@ export default function MyTasks({ Layout = StaffLayout }) {
         <div style={{ position:"fixed", bottom:"28px", right:"28px", zIndex:9999,
           background: toast.ok ? "#22C55E" : "#EF4444",
           color:"#FFF", padding:"12px 20px", borderRadius:"10px",
-          fontSize:"21px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
+          fontSize:"14px", fontWeight:"600", boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
           animation:"toastIn 0.3s ease both" }}>
           {toast.msg}
         </div>
@@ -389,11 +389,11 @@ function ShiftWeekCalendar({ weekStart, shifts, onChipClick }) {
           <div key={i} style={{ borderRight: i < 6 ? "1px solid #F1F5F9" : "none", background: isToday ? "#EFF6FF" : "#FFF" }}>
             {/* Header */}
             <div style={{ padding:"10px 6px 8px", textAlign:"center", borderBottom:"1px solid #F1F5F9" }}>
-              <p style={{ fontSize:"16px", fontWeight:"700", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"5px" }}>
+              <p style={{ fontSize:"9px", fontWeight:"700", color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"5px" }}>
                 {DAY_LABELS[i]}
               </p>
               <div style={{ width:"28px", height:"28px", borderRadius:"50%", margin:"0 auto", background: isToday ? "#2563EB" : "transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <p style={{ fontSize:"20px", fontWeight: isToday ? "800" : "600", color: isToday ? "#FFF" : "#1E293B" }}>
+                <p style={{ fontSize:"13px", fontWeight: isToday ? "800" : "600", color: isToday ? "#FFF" : "#1E293B" }}>
                   {d.getDate()}
                 </p>
               </div>
@@ -408,11 +408,11 @@ function ShiftWeekCalendar({ weekStart, shifts, onChipClick }) {
                     padding:"4px 6px", cursor:"pointer", transition:"background 0.1s", overflow:"hidden" }}
                   onMouseEnter={e => e.currentTarget.style.background="#DDD6FE"}
                   onMouseLeave={e => e.currentTarget.style.background="#EDE9FE"}>
-                  <p style={{ fontSize:"17px", fontWeight:"700", color:"#4C1D95", whiteSpace:"nowrap",
+                  <p style={{ fontSize:"10px", fontWeight:"700", color:"#4C1D95", whiteSpace:"nowrap",
                     overflow:"hidden", textOverflow:"ellipsis", lineHeight:"1.3" }}>
                     {a.role_name || a.shift?.title || "Task"}
                   </p>
-                  <p style={{ fontSize:"16px", color:"#7C3AED", marginTop:"1px", opacity:0.85 }}>
+                  <p style={{ fontSize:"9px", color:"#7C3AED", marginTop:"1px", opacity:0.85 }}>
                     {fmtTime(a.shift?.start_time)}
                   </p>
                 </div>
@@ -476,7 +476,7 @@ function ScheduleTab({ shifts, loading, today, acknowledge }) {
           <button style={navBtn} onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate()-7); setWeekStart(d); }}>
             <ChevronLeft size={16}/>
           </button>
-          <span style={{ fontSize:"20px", fontWeight:"700", color:"#1E293B" }}>{fmtWeekRange(weekStart)}</span>
+          <span style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B" }}>{fmtWeekRange(weekStart)}</span>
           <button style={navBtn} onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate()+7); setWeekStart(d); }}>
             <ChevronRight size={16}/>
           </button>
@@ -487,15 +487,15 @@ function ScheduleTab({ shifts, loading, today, acknowledge }) {
       {/* ── Task list for the week ── */}
       <div>
         <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"14px" }}>
-          <span style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B" }}>Tasks this week</span>
-          <span style={{ fontSize:"19px", color:"#94A3B8" }}>· {weekShifts.length} task{weekShifts.length!==1?"s":""}</span>
+          <span style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>Tasks this week</span>
+          <span style={{ fontSize:"12px", color:"#94A3B8" }}>· {weekShifts.length} task{weekShifts.length!==1?"s":""}</span>
         </div>
 
         {weekShifts.length === 0 ? (
           <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"14px", padding:"40px", textAlign:"center" }}>
             <Calendar size={28} color="#CBD5E1" style={{ margin:"0 auto 10px" }}/>
-            <p style={{ fontSize:"21px", fontWeight:"600", color:"#64748B" }}>No tasks this week</p>
-            <p style={{ fontSize:"19px", color:"#94A3B8", marginTop:"4px" }}>Use the arrows to navigate to other weeks.</p>
+            <p style={{ fontSize:"14px", fontWeight:"600", color:"#64748B" }}>No tasks this week</p>
+            <p style={{ fontSize:"12px", color:"#94A3B8", marginTop:"4px" }}>Use the arrows to navigate to other weeks.</p>
           </div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:"20px" }}>
@@ -506,8 +506,8 @@ function ScheduleTab({ shifts, loading, today, acknowledge }) {
               return (
                 <div key={date} style={{ animation:`fadeUp 0.25s ease ${gi*0.05}s both` }}>
                   <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"10px" }}>
-                    <span style={{ fontSize:"20px", fontWeight:"700", color: isTodayGroup ? "#2563EB" : "#475569" }}>{dayLabel}</span>
-                    {isTodayGroup && <span style={{ padding:"2px 8px", borderRadius:"100px", fontSize:"17px", fontWeight:"700", background:"#DBEAFE", color:"#1D4ED8" }}>Today</span>}
+                    <span style={{ fontSize:"13px", fontWeight:"700", color: isTodayGroup ? "#2563EB" : "#475569" }}>{dayLabel}</span>
+                    {isTodayGroup && <span style={{ padding:"2px 8px", borderRadius:"100px", fontSize:"10px", fontWeight:"700", background:"#DBEAFE", color:"#1D4ED8" }}>Today</span>}
                     <div style={{ flex:1, height:"1px", background:"#F1F5F9" }}/>
                   </div>
                   <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
@@ -522,20 +522,27 @@ function ScheduleTab({ shifts, loading, today, acknowledge }) {
                             opacity: ended ? 0.6 : 1 }}>
                           <DateBlock date={s.shift_date} highlight={isTodayGroup}/>
                           <div style={{ flex:1, minWidth:0 }}>
-                            <p style={{ fontSize:"22px", fontWeight:"700", color:"#1E293B" }}>{a.role_name || s.title || "Task"}</p>
+                            <p style={{ fontSize:"15px", fontWeight:"700", color:"#1E293B" }}>{a.role_name || s.title || "Task"}</p>
                             {a.role_name && s.title && (
-                              <p style={{ fontSize:"18px", color:"#94A3B8", fontWeight:"500", marginTop:"1px" }}>{s.title}</p>
+                              <p style={{ fontSize:"11px", color:"#94A3B8", fontWeight:"500", marginTop:"1px" }}>{s.title}</p>
                             )}
-                            <div style={{ display:"flex", alignItems:"center", gap:"5px", marginTop:"4px" }}>
-                              <Clock size={11} color="#CBD5E1"/>
-                              <span style={{ fontSize:"19px", color:"#94A3B8" }}>
-                                {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
-                                {duration > 0 && <span> · {fmtHours(duration)}</span>}
-                              </span>
+                            <div style={{ display:"flex", alignItems:"center", gap:"10px", marginTop:"4px", flexWrap:"wrap" }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:"5px" }}>
+                                <Clock size={11} color="#CBD5E1"/>
+                                <span style={{ fontSize:"12px", color:"#94A3B8" }}>
+                                  {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
+                                  {duration > 0 && <span> · {fmtHours(duration)}</span>}
+                                </span>
+                              </div>
+                              {s.branches?.name && (
+                                <span style={{ fontSize:"11px", fontWeight:"600", color:"#2563EB", background:"#EFF6FF", padding:"2px 8px", borderRadius:"100px" }}>
+                                  {s.branches.name}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"8px", flexShrink:0 }}>
-                            <span style={{ padding:"3px 9px", borderRadius:"100px", fontSize:"17px", fontWeight:"700",
+                            <span style={{ padding:"3px 9px", borderRadius:"100px", fontSize:"10px", fontWeight:"700",
                               background: s.status==="published" ? "#DCFCE7" : "#F3F4F6",
                               color:      s.status==="published" ? "#166534" : "#6B7280" }}>
                               {s.status}
@@ -543,7 +550,7 @@ function ScheduleTab({ shifts, loading, today, acknowledge }) {
                             {!a.acknowledged && s.status==="published" && !ended && (
                               <button onClick={() => acknowledge(a)}
                                 style={{ display:"flex", alignItems:"center", gap:"5px", padding:"7px 14px", borderRadius:"8px",
-                                  background:"#F59E0B", color:"#FFF", border:"none", fontSize:"19px", fontWeight:"700", cursor:"pointer" }}>
+                                  background:"#F59E0B", color:"#FFF", border:"none", fontSize:"12px", fontWeight:"700", cursor:"pointer" }}>
                                 <CheckCircle size={13}/>
                                 Acknowledge
                               </button>
@@ -596,18 +603,23 @@ function ShiftTasksModal({ shift, tasks, loading, onClose }) {
         <div style={{ padding:"20px 24px 16px", borderBottom:"1px solid #F1F5F9", flexShrink:0 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"12px" }}>
             <div style={{ minWidth:0 }}>
-              <p style={{ fontSize:"23px", fontWeight:"800", color:"#1E293B", marginBottom:"4px" }}>
+              <p style={{ fontSize:"18px", fontWeight:"800", color:"#1E293B", marginBottom:"4px" }}>
                 {shift.title || "Shift"}
               </p>
               <div style={{ display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap" }}>
-                <span style={{ fontSize:"20px", color:"#64748B", display:"flex", alignItems:"center", gap:"4px" }}>
+                <span style={{ fontSize:"13px", color:"#64748B", display:"flex", alignItems:"center", gap:"4px" }}>
                   <Calendar size={12} color="#94A3B8" />
                   {fmtFullDate(shift.shift_date)}
                 </span>
-                <span style={{ fontSize:"20px", color:"#64748B", display:"flex", alignItems:"center", gap:"4px" }}>
+                <span style={{ fontSize:"13px", color:"#64748B", display:"flex", alignItems:"center", gap:"4px" }}>
                   <Clock size={12} color="#94A3B8" />
                   {fmtTime(shift.start_time)} – {fmtTime(shift.end_time)}
                 </span>
+                {shift.branches?.name && (
+                  <span style={{ fontSize:"11px", fontWeight:"700", color:"#2563EB", background:"#EFF6FF", padding:"2px 9px", borderRadius:"100px" }}>
+                    {shift.branches.name}
+                  </span>
+                )}
               </div>
             </div>
             <button onClick={onClose}
@@ -617,7 +629,7 @@ function ShiftTasksModal({ shift, tasks, loading, onClose }) {
               <X size={15} />
             </button>
           </div>
-          <p style={{ fontSize:"18px", fontWeight:"700", color:"#94A3B8", textTransform:"uppercase",
+          <p style={{ fontSize:"11px", fontWeight:"700", color:"#94A3B8", textTransform:"uppercase",
             letterSpacing:"0.07em", marginTop:"14px" }}>
             All Tasks · {loading ? "…" : tasks.length}
           </p>
@@ -632,7 +644,7 @@ function ShiftTasksModal({ shift, tasks, loading, onClose }) {
           ) : tasks.length === 0 ? (
             <div style={{ textAlign:"center", padding:"40px 0" }}>
               <Tag size={28} color="#CBD5E1" style={{ margin:"0 auto 10px" }} />
-              <p style={{ fontSize:"21px", fontWeight:"600", color:"#64748B" }}>No tasks found</p>
+              <p style={{ fontSize:"14px", fontWeight:"600", color:"#64748B" }}>No tasks found</p>
             </div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
@@ -653,7 +665,7 @@ function ShiftTasksModal({ shift, tasks, loading, onClose }) {
                       padding:"13px 16px", display:"flex", flexDirection:"column", gap:"8px" }}>
 
                     {/* Title */}
-                    <p style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B", lineHeight:"1.35" }}>
+                    <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", lineHeight:"1.35" }}>
                       {t.title}
                     </p>
 
@@ -662,19 +674,19 @@ function ShiftTasksModal({ shift, tasks, loading, onClose }) {
                       {/* Left: badges + time */}
                       <div style={{ display:"flex", alignItems:"center", gap:"5px", flexWrap:"wrap", minWidth:0 }}>
                         {t.skills?.name && (
-                          <span style={{ fontSize:"17px", fontWeight:"600", color:"#64748B",
+                          <span style={{ fontSize:"10px", fontWeight:"600", color:"#64748B",
                             background:"#F1F5F9", padding:"2px 8px", borderRadius:"100px", whiteSpace:"nowrap" }}>
                             {t.skills.name}
                           </span>
                         )}
                         {diff && (
-                          <span style={{ fontSize:"17px", fontWeight:"700", color:diff.color,
+                          <span style={{ fontSize:"10px", fontWeight:"700", color:diff.color,
                             background:diff.bg, padding:"2px 8px", borderRadius:"100px", textTransform:"capitalize", whiteSpace:"nowrap" }}>
                             {t.difficulty}
                           </span>
                         )}
                         {timeStr && (
-                          <span style={{ fontSize:"17px", color:"#94A3B8", display:"flex", alignItems:"center",
+                          <span style={{ fontSize:"10px", color:"#94A3B8", display:"flex", alignItems:"center",
                             gap:"3px", whiteSpace:"nowrap" }}>
                             <Clock size={10} color="#CBD5E1"/>
                             {timeStr}
@@ -687,15 +699,15 @@ function ShiftTasksModal({ shift, tasks, loading, onClose }) {
                         <div style={{ display:"flex", alignItems:"center", gap:"6px", flexShrink:0 }}>
                           <div style={{ width:"22px", height:"22px", borderRadius:"50%", background:"#EEF2FF",
                             display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                            <span style={{ fontSize:"15px", fontWeight:"800", color:"#4338CA" }}>{initials}</span>
+                            <span style={{ fontSize:"8px", fontWeight:"800", color:"#4338CA" }}>{initials}</span>
                           </div>
-                          <span style={{ fontSize:"19px", fontWeight:"600", color:"#334155", whiteSpace:"nowrap" }}>
+                          <span style={{ fontSize:"12px", fontWeight:"600", color:"#334155", whiteSpace:"nowrap" }}>
                             {assignees[0]}
                             {assignees.length > 1 && <span style={{ color:"#94A3B8", fontWeight:"500" }}> +{assignees.length-1}</span>}
                           </span>
                         </div>
                       ) : (
-                        <span style={{ fontSize:"18px", color:"#CBD5E1", fontWeight:"500",
+                        <span style={{ fontSize:"11px", color:"#CBD5E1", fontWeight:"500",
                           border:"1px dashed #E2E8F0", padding:"2px 10px", borderRadius:"100px", flexShrink:0 }}>
                           Unassigned
                         </span>
@@ -734,7 +746,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
             style={{ width:"30px", height:"30px", borderRadius:"8px", border:"1px solid #E2E8F0", background:"#FFF", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#64748B" }}>
             <ChevronLeft size={15} />
           </button>
-          <span style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B", minWidth:"130px", textAlign:"center" }}>
+          <span style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B", minWidth:"130px", textAlign:"center" }}>
             {monthLabel(month)}
           </span>
           <button onClick={() => setMonth(nextMonth(month))}
@@ -742,7 +754,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
             <ChevronRight size={15} />
           </button>
         </div>
-        <span style={{ fontSize:"19px", color:"#94A3B8" }}>{shifts.length} of {allDoneCount} tasks</span>
+        <span style={{ fontSize:"12px", color:"#94A3B8" }}>{shifts.length} of {allDoneCount} tasks</span>
       </div>
 
       {/* Status filter pills */}
@@ -754,7 +766,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
               style={{ padding:"6px 16px", borderRadius:"100px", border: active ? "none" : "1.5px solid #E2E8F0",
                 background: active ? (bg || "#1E293B") : "#FFF",
                 color:      active ? (color || "#FFF")  : "#64748B",
-                fontSize:"20px", fontWeight:"600", cursor:"pointer", transition:"all 0.15s" }}>
+                fontSize:"13px", fontWeight:"600", cursor:"pointer", transition:"all 0.15s" }}>
               {label}
             </button>
           );
@@ -782,13 +794,13 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
                 <div style={{ padding:"16px 20px", display:"flex", alignItems:"center", gap:"14px" }}>
                   <DateBlock date={s.shift_date} />
                   <div style={{ flex:1, minWidth:0 }}>
-                    <p style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B" }}>{a.role_name || s.title || "Task"}</p>
+                    <p style={{ fontSize:"14px", fontWeight:"700", color:"#1E293B" }}>{a.role_name || s.title || "Task"}</p>
                     {a.role_name && s.title && (
-                      <p style={{ fontSize:"18px", color:"#94A3B8", fontWeight:"500", marginTop:"1px" }}>{s.title}</p>
+                      <p style={{ fontSize:"11px", color:"#94A3B8", fontWeight:"500", marginTop:"1px" }}>{s.title}</p>
                     )}
                     <div style={{ display:"flex", alignItems:"center", gap:"5px", marginTop:"4px" }}>
                       <Clock size={11} color="#CBD5E1" />
-                      <span style={{ fontSize:"19px", color:"#94A3B8" }}>
+                      <span style={{ fontSize:"12px", color:"#94A3B8" }}>
                         {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
                         {duration > 0 && <span> · {fmtHours(duration)}</span>}
                       </span>
@@ -796,7 +808,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
                     {!a.acknowledged && (
                       <button onClick={() => acknowledge(a)}
                         style={{ display:"inline-flex", alignItems:"center", gap:"5px", marginTop:"8px", padding:"5px 12px", borderRadius:"7px",
-                          background:"#F59E0B", color:"#FFF", border:"none", fontSize:"18px", fontWeight:"700", cursor:"pointer" }}>
+                          background:"#F59E0B", color:"#FFF", border:"none", fontSize:"11px", fontWeight:"700", cursor:"pointer" }}>
                         <CheckCircle size={12}/>
                         Acknowledge
                       </button>
@@ -807,7 +819,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"8px", flexShrink:0 }}>
                     {ts ? (
                       /* Already submitted */
-                      <span style={{ padding:"4px 10px", borderRadius:"100px", fontSize:"18px", fontWeight:"700",
+                      <span style={{ padding:"4px 10px", borderRadius:"100px", fontSize:"11px", fontWeight:"700",
                         background: tsMeta?.bg, color: tsMeta?.color }}>
                         {tsMeta?.label}
                       </span>
@@ -816,7 +828,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
                       <button onClick={() => onOpenReport(a)}
                         style={{ display:"flex", alignItems:"center", gap:"6px", padding:"7px 16px", borderRadius:"9px",
                           border:"none", background:"#2563EB", color:"#FFF",
-                          fontSize:"19px", fontWeight:"700", cursor:"pointer", transition:"all 0.15s" }}>
+                          fontSize:"12px", fontWeight:"700", cursor:"pointer", transition:"all 0.15s" }}>
                         <FileText size={13} />
                         Submit Report
                       </button>
@@ -830,15 +842,15 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
                     display:"flex", alignItems:"flex-start", gap:"10px", flexWrap:"wrap" }}>
                     {tsMeta && <tsMeta.icon size={14} color={tsMeta.color} style={{ marginTop:"1px", flexShrink:0 }} />}
                     <div style={{ flex:1, minWidth:0 }}>
-                      <span style={{ fontSize:"20px", fontWeight:"700", color:"#1E293B" }}>{fmtHours(parseFloat(ts.hours_worked))} reported</span>
+                      <span style={{ fontSize:"13px", fontWeight:"700", color:"#1E293B" }}>{fmtHours(parseFloat(ts.hours_worked))} reported</span>
                       {ts.description && (
-                        <p style={{ fontSize:"19px", color:"#64748B", marginTop:"2px" }}>{ts.description}</p>
+                        <p style={{ fontSize:"12px", color:"#64748B", marginTop:"2px" }}>{ts.description}</p>
                       )}
                     </div>
                     {ts.status === "rejected" && (
                       <button onClick={() => onOpenReport(a)}
                         style={{ padding:"5px 14px", borderRadius:"7px", border:"1.5px solid #FECACA",
-                          background:"#FFF5F5", fontSize:"19px", fontWeight:"700", color:"#EF4444", cursor:"pointer", flexShrink:0 }}>
+                          background:"#FFF5F5", fontSize:"12px", fontWeight:"700", color:"#EF4444", cursor:"pointer", flexShrink:0 }}>
                         Resubmit
                       </button>
                     )}
@@ -872,16 +884,16 @@ function SubmitReportModal({ assignment: a, existing, form, onChange, submitting
         <div style={{ padding:"20px 24px 16px", borderBottom:"1px solid #F1F5F9", flexShrink:0 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"12px" }}>
             <div style={{ minWidth:0 }}>
-              <p style={{ fontSize:"21px", fontWeight:"800", color:"#1E293B", marginBottom:"4px" }}>
+              <p style={{ fontSize:"16px", fontWeight:"800", color:"#1E293B", marginBottom:"4px" }}>
                 {isResubmit ? "Resubmit Report" : "Submit Work Report"}
               </p>
-              <p style={{ fontSize:"20px", color:"#64748B" }}>{a.role_name || s?.title || "Task"}</p>
+              <p style={{ fontSize:"13px", color:"#64748B" }}>{a.role_name || s?.title || "Task"}</p>
               <div style={{ display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap", marginTop:"8px" }}>
-                <span style={{ fontSize:"19px", color:"#94A3B8", display:"flex", alignItems:"center", gap:"4px" }}>
+                <span style={{ fontSize:"12px", color:"#94A3B8", display:"flex", alignItems:"center", gap:"4px" }}>
                   <Calendar size={12} color="#94A3B8" />
                   {fmtFullDate(s?.shift_date)}
                 </span>
-                <span style={{ fontSize:"19px", color:"#94A3B8", display:"flex", alignItems:"center", gap:"4px" }}>
+                <span style={{ fontSize:"12px", color:"#94A3B8", display:"flex", alignItems:"center", gap:"4px" }}>
                   <Clock size={12} color="#94A3B8" />
                   {fmtTime(s?.start_time)} – {fmtTime(s?.end_time)}
                 </span>
@@ -899,25 +911,25 @@ function SubmitReportModal({ assignment: a, existing, form, onChange, submitting
         {/* Form */}
         <div style={{ padding:"20px 24px", overflowY:"auto", flex:1 }}>
           <div style={{ marginBottom:"16px" }}>
-            <label style={{ display:"block", fontSize:"18px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>HOURS WORKED</label>
+            <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>HOURS WORKED</label>
             <input type="number" min="0.5" max="24" step="0.5" placeholder="e.g. 6"
               value={form.hours}
               onChange={e => onChange({ hours: e.target.value })}
-              style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"21px",
+              style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px",
                 color:"#1E293B", outline:"none", background:"#FFF", width:"120px", boxSizing:"border-box" }} />
           </div>
 
           <div style={{ marginBottom:"16px" }}>
-            <label style={{ display:"block", fontSize:"18px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>WHAT DID YOU WORK ON?</label>
+            <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>WHAT DID YOU WORK ON?</label>
             <textarea rows={3} placeholder="Describe what you did…"
               value={form.desc}
               onChange={e => onChange({ desc: e.target.value })}
-              style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"21px",
+              style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px",
                 color:"#1E293B", outline:"none", background:"#FFF", width:"100%", boxSizing:"border-box", resize:"vertical", fontFamily:"inherit" }} />
           </div>
 
           <div>
-            <label style={{ display:"block", fontSize:"18px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>
+            <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>
               PROOF OF EVIDENCE <span style={{ fontWeight:"500", textTransform:"none", letterSpacing:"normal" }}>(optional)</span>
             </label>
             <input id={fileInputId} type="file" accept="image/*,.pdf,.doc,.docx" style={{ display:"none" }}
@@ -925,7 +937,7 @@ function SubmitReportModal({ assignment: a, existing, form, onChange, submitting
             {form.file ? (
               <div style={{ display:"flex", alignItems:"center", gap:"8px", padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", background:"#F8FAFC" }}>
                 <Paperclip size={14} color="#64748B" style={{ flexShrink:0 }} />
-                <span style={{ fontSize:"20px", color:"#1E293B", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{form.file.name}</span>
+                <span style={{ fontSize:"13px", color:"#1E293B", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{form.file.name}</span>
                 <button onClick={() => onChange({ file: null })}
                   style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8", display:"flex", flexShrink:0 }}>
                   <X size={14} />
@@ -934,7 +946,7 @@ function SubmitReportModal({ assignment: a, existing, form, onChange, submitting
             ) : (
               <label htmlFor={fileInputId}
                 style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", padding:"14px 12px",
-                  border:"1.5px dashed #D8D5CE", borderRadius:"9px", cursor:"pointer", color:"#64748B", fontSize:"20px", fontWeight:"600" }}>
+                  border:"1.5px dashed #D8D5CE", borderRadius:"9px", cursor:"pointer", color:"#64748B", fontSize:"13px", fontWeight:"600" }}>
                 <Paperclip size={14} />
                 Attach an image or file
               </label>
@@ -946,12 +958,12 @@ function SubmitReportModal({ assignment: a, existing, form, onChange, submitting
         <div style={{ padding:"16px 24px", borderTop:"1px solid #F1F5F9", display:"flex", gap:"10px", justifyContent:"flex-end", flexShrink:0 }}>
           <button onClick={onClose}
             style={{ padding:"9px 18px", borderRadius:"9px", background:"#F1F5F9", color:"#64748B",
-              border:"none", fontSize:"20px", fontWeight:"600", cursor:"pointer" }}>
+              border:"none", fontSize:"13px", fontWeight:"600", cursor:"pointer" }}>
             Cancel
           </button>
           <button onClick={onSubmit} disabled={submitting}
             style={{ padding:"9px 20px", borderRadius:"9px", background:"#2563EB", color:"#FFF", border:"none",
-              fontSize:"20px", fontWeight:"700", cursor: submitting ? "not-allowed":"pointer", opacity: submitting ? 0.7:1 }}>
+              fontSize:"13px", fontWeight:"700", cursor: submitting ? "not-allowed":"pointer", opacity: submitting ? 0.7:1 }}>
             {submitting ? "Submitting…" : "Submit"}
           </button>
         </div>
@@ -983,8 +995,8 @@ function EmptyState({ icon, title, sub }) {
   return (
     <div style={{ background:"#FFF", border:"1px solid #E2E8F0", borderRadius:"16px", padding:"64px 40px", textAlign:"center" }}>
       <div style={{ display:"flex", justifyContent:"center", marginBottom:"14px" }}>{icon}</div>
-      <p style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B", marginBottom:"6px" }}>{title}</p>
-      <p style={{ fontSize:"20px", color:"#94A3B8" }}>{sub}</p>
+      <p style={{ fontSize:"16px", fontWeight:"700", color:"#1E293B", marginBottom:"6px" }}>{title}</p>
+      <p style={{ fontSize:"13px", color:"#94A3B8" }}>{sub}</p>
     </div>
   );
 }

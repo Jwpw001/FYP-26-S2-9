@@ -145,6 +145,21 @@ export default function ShiftsList() {
     return () => { cancelled = true; };
   }, [userId]);
 
+  // Re-fetch shifts whenever the AI assistant takes an action (create shift, add task, publish, etc.)
+  useEffect(() => {
+    if (!branchInfo?.branch_id) return;
+    async function refresh() {
+      const { data } = await supabase
+        .from("shifts")
+        .select("shift_id, title, shift_date, start_time, end_time, status, branch_id, shift_tasks ( task_id, status )")
+        .eq("branch_id", branchInfo.branch_id)
+        .order("shift_date", { ascending: false });
+      if (data) setShifts(data);
+    }
+    window.addEventListener("krewby-ai-action", refresh);
+    return () => window.removeEventListener("krewby-ai-action", refresh);
+  }, [branchInfo]);
+
   function getWeekDates() {
     const dates = [];
     const now = new Date();

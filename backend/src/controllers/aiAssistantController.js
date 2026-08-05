@@ -5,7 +5,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function chat(req, res) {
   try {
-    const { question, conversationHistory } = req.body;
+    const { question, conversationHistory, pageContext } = req.body;
     const userId = req.user?.user_id;
     const role   = req.user?.role;
 
@@ -25,7 +25,7 @@ async function chat(req, res) {
       });
     }
 
-    const messages = await buildMessages(userId, role, question.trim(), conversationHistory || []);
+    const messages = await buildMessages(userId, role, question.trim(), conversationHistory || [], pageContext || null);
 
     // Stream via SSE
     res.setHeader("Content-Type", "text/event-stream");

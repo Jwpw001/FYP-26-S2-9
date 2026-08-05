@@ -1,27 +1,13 @@
 const prisma = require("../config/prisma");
 const generateToken = require("../utils/generateToken");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const supabaseAuth = require("../config/supabaseAuth");
+const bcrypt = require("bcryptjs");
 const { notifyUsers, getSystemAdminUserIds } = require("../utils/notify");
-const { sendMail } = require("../utils/mailer");
 
 const login = async (req, res) => {
     try {
         const email = req.body.email?.trim().toLowerCase();
-        const password = req.body.password;
-
-        if (!password) {
-            return res.status(400).json({ success: false, message: "Password is required." });
-        }
-
-        // Verify the password against Supabase Auth — this was previously skipped entirely,
-        // meaning any known email could log in as that user with any (or no) password.
-        const { error: authErr } = await supabaseAdmin.auth.signInWithPassword({ email, password });
-        if (authErr) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid email or password."
-            });
-        }
 
         const user = await prisma.users.findUnique({
             where: { email }
@@ -39,6 +25,14 @@ const login = async (req, res) => {
                 success: false,
                 message: "Your account has been deactivated. Please contact your administrator."
             });
+        }
+
+        const { error: authError } = await supabaseAuth.auth.signInWithPassword({
+            email,
+            password: req.body.password,
+        });
+        if (authError) {
+            return res.status(401).json({ success: false, message: "Invalid email or password." });
         }
 
         const token = generateToken({
@@ -65,55 +59,6 @@ const login = async (req, res) => {
             success: false,
             message: error.message
         });
-    }
-};
-
-// POST /api/auth/forgot-password
-// Supabase's own built-in mailer is rate-limited and not meant for production use, so the
-// recovery link is generated via the admin API (no email sent by Supabase) and delivered
-// through Resend instead — the same transactional-email path invitations already use.
-const forgotPassword = async (req, res) => {
-    const genericSuccess = () => res.json({
-        success: true,
-        message: "If an account exists for that email, a reset link has been sent.",
-    });
-
-    try {
-        const email = req.body.email?.trim().toLowerCase();
-        const redirectTo = req.body.redirectTo || `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password`;
-
-        // Always return the same generic response whether or not the account exists,
-        // so this endpoint can't be used to enumerate registered emails.
-        const user = await prisma.users.findUnique({ where: { email } });
-        if (!user) return genericSuccess();
-
-        const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-            type: "recovery",
-            email,
-            options: { redirectTo },
-        });
-        if (error || !data?.properties?.action_link) {
-            console.error("[forgotPassword] generateLink failed:", error?.message);
-            return genericSuccess();
-        }
-
-        const actionLink = data.properties.action_link;
-
-        await sendMail({
-            to: email,
-            subject: "Reset your Krewby password",
-            html: `
-                <p>Hi ${user.full_name || ""},</p>
-                <p>We received a request to reset your Krewby password. Click the link below to choose a new one:</p>
-                <p><a href="${actionLink}">Reset your password</a></p>
-                <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
-            `,
-        });
-
-        return genericSuccess();
-    } catch (error) {
-        console.error("[forgotPassword] error:", error.message);
-        return genericSuccess();
     }
 };
 
@@ -160,6 +105,12 @@ const register = async (req, res) => {
         const newUser = await prisma.users.create({
             data: { full_name, username, email, role: role || "pending", is_active: true },
         });
+
+        if (role === "krewby_casual_worker") {
+            await prisma.krewby_workers.create({
+                data: { user_id: newUser.user_id, is_available: true },
+            });
+        }
 
         const token = generateToken({ user_id: newUser.user_id, email: newUser.email, role: newUser.role });
 
@@ -298,6 +249,56 @@ const registerBusiness = async (req, res) => {
     }
 };
 
+const forgotPassword = async (req, res) => {
+    try {
+        const email = req.body.email?.trim().toLowerCase();
+        if (!email) return res.status(400).json({ success: false, message: "Email is required." });
+
+        const { sendMail } = require("../utils/mailer");
+        const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+            type: "recovery",
+            email,
+            options: { redirectTo: `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password` },
+        });
+        if (error) {
+            console.error("[forgotPassword]", error.message);
+            // Don't reveal whether the email exists
+            return res.json({ success: true, message: "If that email exists, a reset link has been sent." });
+        }
+        const resetLink = data.properties?.action_link;
+        await sendMail({
+            to: email,
+            subject: "Reset your Krewby password",
+            html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;">
+                <h2 style="color:#0F172A;">Reset your password</h2>
+                <p>Click the link below to set a new password. This link expires in 1 hour.</p>
+                <a href="${resetLink}" style="display:inline-block;margin:16px 0;padding:12px 24px;background:#F59E0B;color:#1C1917;font-weight:700;border-radius:8px;text-decoration:none;">Reset Password</a>
+                <p style="color:#64748B;font-size:13px;">If you didn't request this, you can safely ignore this email.</p>
+            </div>`,
+        });
+        return res.json({ success: true, message: "If that email exists, a reset link has been sent." });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { access_token, password } = req.body;
+        if (!access_token || !password) {
+            return res.status(400).json({ success: false, message: "Token and new password are required." });
+        }
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(
+            (await supabaseAdmin.auth.getUser(access_token)).data?.user?.id,
+            { password }
+        );
+        if (error) return res.status(400).json({ success: false, message: error.message });
+        return res.json({ success: true, message: "Password updated successfully." });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // Used by managers to create staff accounts (bypasses email domain restrictions)
 const createStaffAccount = async (req, res) => {
     try {
@@ -387,6 +388,97 @@ const createStaffAccount = async (req, res) => {
     }
 };
 
+// Used by coordinators to list all krewby workers with user info
+const getKrewbyWorkers = async (req, res) => {
+    try {
+        const workers = await prisma.krewby_workers.findMany({
+            orderBy: { krewby_worker_id: "asc" },
+            include: {
+                users: {
+                    select: { user_id: true, full_name: true, email: true }
+                }
+            }
+        });
+
+        const result = workers.map(w => ({
+            krewby_worker_id: w.krewby_worker_id,
+            user_id: w.user_id,
+            preferred_location: w.preferred_location,
+            rating: w.rating ? Number(w.rating) : null,
+            total_jobs: w.total_jobs,
+            is_active: w.is_active,
+            user: w.users || null,
+        }));
+
+        return res.json({ success: true, workers: result });
+    } catch (error) {
+        console.error("getKrewbyWorkers error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Used by coordinators to create krewby worker accounts
+const createWorkerAccount = async (req, res) => {
+    try {
+        const { full_name, username, email: rawEmail, password, preferred_location } = req.body;
+        const email = rawEmail?.trim().toLowerCase();
+
+        if (!email || !password || !full_name || !username) {
+            return res.status(400).json({ success: false, message: "Missing required fields." });
+        }
+
+        const existing = await prisma.users.findUnique({ where: { email } });
+        if (existing) {
+            return res.status(409).json({ success: false, message: "A user with this email already exists." });
+        }
+
+        // Create Supabase Auth account (allows login)
+        const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name },
+        });
+
+        if (authErr) {
+            return res.status(400).json({ success: false, message: authErr.message });
+        }
+
+        // Insert into users table
+        const newUser = await prisma.users.create({
+            data: { full_name, username, email, role: "krewby_casual_worker", is_active: true },
+        });
+
+        // Insert into krewby_workers table
+        const newWorker = await prisma.krewby_workers.create({
+            data: {
+                user_id: newUser.user_id,
+                preferred_location: preferred_location || null,
+                rating: 5.0,
+                total_jobs: 0,
+                is_active: true,
+            },
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Krewby worker account created successfully.",
+            worker: {
+                krewby_worker_id: newWorker.krewby_worker_id,
+                user_id: newUser.user_id,
+                preferred_location: newWorker.preferred_location,
+                rating: Number(newWorker.rating),
+                total_jobs: newWorker.total_jobs,
+                is_active: newWorker.is_active,
+                user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email },
+            },
+        });
+    } catch (error) {
+        console.error("createWorkerAccount error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // Used by system admin to create manager accounts
 const createManagerAccount = async (req, res) => {
     try {
@@ -428,11 +520,229 @@ const createManagerAccount = async (req, res) => {
     }
 };
 
+// GET /api/auth/worker-availability?week_start=YYYY-MM-DD
+const getWorkerAvailability = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+        const { week_start } = req.query;
+        if (!week_start) return res.status(400).json({ success: false, message: "week_start required" });
+
+        const worker = await prisma.krewby_workers.findFirst({ where: { user_id: userId } });
+        if (!worker) return res.status(404).json({ success: false, message: "Worker profile not found" });
+
+        const { data, error } = await supabaseAdmin
+            .from("krewby_worker_availability")
+            .select("day_of_week")
+            .eq("krewby_worker_id", worker.krewby_worker_id)
+            .eq("week_start_date", week_start);
+
+        if (error) throw new Error(error.message);
+
+        return res.json({ success: true, availability: (data || []).map(r => r.day_of_week) });
+    } catch (error) {
+        console.error("getWorkerAvailability error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST /api/auth/worker-availability
+// body: { week_start: "YYYY-MM-DD", days: [{ day_of_week: 0-6, available: bool }] }
+const saveWorkerAvailability = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+        const { week_start, days } = req.body;
+        if (!week_start || !Array.isArray(days)) {
+            return res.status(400).json({ success: false, message: "week_start and days are required" });
+        }
+
+        const worker = await prisma.krewby_workers.findFirst({ where: { user_id: userId } });
+        if (!worker) return res.status(404).json({ success: false, message: "Worker profile not found" });
+
+        // Delete existing rows for this worker + week
+        const { error: delError } = await supabaseAdmin
+            .from("krewby_worker_availability")
+            .delete()
+            .eq("krewby_worker_id", worker.krewby_worker_id)
+            .eq("week_start_date", week_start);
+
+        if (delError) throw new Error(delError.message);
+
+        // Insert only available days
+        const availableDays = days.filter(d => d.available);
+        if (availableDays.length > 0) {
+            const { error: insError } = await supabaseAdmin
+                .from("krewby_worker_availability")
+                .insert(availableDays.map(d => ({
+                    krewby_worker_id: worker.krewby_worker_id,
+                    week_start_date:  week_start,
+                    day_of_week:      d.day_of_week,
+                })));
+            if (insError) throw new Error(insError.message);
+        }
+
+        return res.json({ success: true, message: "Availability saved." });
+    } catch (error) {
+        console.error("saveWorkerAvailability error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// GET /api/auth/worker-availability-by-id?worker_id=N
+// Used by coordinator to view any worker's availability (uses admin client, bypasses RLS)
+const getWorkerAvailabilityById = async (req, res) => {
+    try {
+        const { worker_id } = req.query;
+        if (!worker_id) return res.status(400).json({ success: false, message: "worker_id required" });
+
+        const { data, error } = await supabaseAdmin
+            .from("krewby_worker_availability")
+            .select("week_start_date, day_of_week")
+            .eq("krewby_worker_id", worker_id)
+            .order("week_start_date", { ascending: false });
+
+        if (error) throw new Error(error.message);
+        return res.json({ success: true, availability: data || [] });
+    } catch (error) {
+        console.error("getWorkerAvailabilityById error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST /api/auth/apply-worker — public, stores application pending coordinator approval
+const applyWorker = async (req, res) => {
+    try {
+        const { full_name, username, email, password } = req.body;
+        if (!full_name || !username || !email || !password)
+            return res.status(400).json({ success: false, message: "All fields are required." });
+        if (username.trim().length < 2)
+            return res.status(400).json({ success: false, message: "Username must be at least 2 characters." });
+        if (password.length < 6)
+            return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
+
+        // Check duplicates in existing users
+        const existingUser = await prisma.users.findUnique({ where: { email } });
+        if (existingUser)
+            return res.status(409).json({ success: false, message: "An account with this email already exists." });
+
+        // Check duplicates in pending applications
+        const { data: existingApp } = await supabaseAdmin
+            .from("worker_applications")
+            .select("id")
+            .eq("email", email)
+            .maybeSingle();
+        if (existingApp)
+            return res.status(409).json({ success: false, message: "An application with this email is already pending review." });
+
+        const password_hash = await bcrypt.hash(password, 10);
+
+        const { error } = await supabaseAdmin.from("worker_applications").insert({
+            full_name: full_name.trim(),
+            username:  username.trim().toLowerCase(),
+            email:     email.trim().toLowerCase(),
+            password_hash,
+        });
+        if (error) throw new Error(error.message);
+
+        return res.status(201).json({ success: true, message: "Application submitted successfully." });
+    } catch (error) {
+        console.error("applyWorker error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// GET /api/coordinator/applications — coordinator only
+const getWorkerApplications = async (req, res) => {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from("worker_applications")
+            .select("id, full_name, username, email, status, applied_at, notes")
+            .order("applied_at", { ascending: false });
+        if (error) throw new Error(error.message);
+        return res.json({ success: true, applications: data || [] });
+    } catch (error) {
+        console.error("getWorkerApplications error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST /api/coordinator/applications/:id/approve — creates user + krewby_worker, deletes application
+const approveWorkerApplication = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data: app, error: fetchErr } = await supabaseAdmin
+            .from("worker_applications")
+            .select("*")
+            .eq("id", id)
+            .single();
+        if (fetchErr || !app) return res.status(404).json({ success: false, message: "Application not found." });
+
+        // Check if user already exists (edge case)
+        const existing = await prisma.users.findUnique({ where: { email: app.email } });
+        if (existing) {
+            // Clean up the application and return success
+            await supabaseAdmin.from("worker_applications").delete().eq("id", id);
+            return res.json({ success: true, message: "User already exists. Application removed." });
+        }
+
+        // Create Supabase auth user — generate a random temp password; user resets via Forgot Password
+        const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
+        const { error: authErr } = await supabaseAdmin.auth.admin.createUser({
+            email: app.email,
+            password: tempPassword,
+            email_confirm: true,
+            user_metadata: { full_name: app.full_name },
+        });
+        if (authErr) return res.status(400).json({ success: false, message: authErr.message });
+
+        // Create user record
+        const newUser = await prisma.users.create({
+            data: { full_name: app.full_name, username: app.username, email: app.email, role: "krewby_casual_worker", is_active: true },
+        });
+
+        // Create krewby_worker record
+        await prisma.krewby_workers.create({
+            data: { user_id: newUser.user_id, is_available: true, total_jobs: 0 },
+        });
+
+        // Delete the application
+        await supabaseAdmin.from("worker_applications").delete().eq("id", id);
+
+        return res.json({ success: true, message: `Account approved for ${app.email}. They can use Forgot Password to set their password and log in.` });
+    } catch (error) {
+        console.error("approveWorkerApplication error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST /api/coordinator/applications/:id/reject — deletes application
+const rejectWorkerApplication = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { error } = await supabaseAdmin.from("worker_applications").delete().eq("id", id);
+        if (error) throw new Error(error.message);
+        return res.json({ success: true, message: "Application rejected and removed." });
+    } catch (error) {
+        console.error("rejectWorkerApplication error:", error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     register,
     registerBusiness,
     login,
     forgotPassword,
+    resetPassword,
     createStaffAccount,
     createManagerAccount,
+    createWorkerAccount,
+    getKrewbyWorkers,
+    getWorkerAvailability,
+    saveWorkerAvailability,
+    getWorkerAvailabilityById,
+    applyWorker,
+    getWorkerApplications,
+    approveWorkerApplication,
+    rejectWorkerApplication,
 };

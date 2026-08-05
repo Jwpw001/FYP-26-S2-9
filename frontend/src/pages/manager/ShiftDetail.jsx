@@ -232,6 +232,39 @@ export default function ShiftDetail() {
     return () => { cancelled = true; };
   }, [id]);
 
+  // Broadcast current shift to the global AI widget so it knows which shift is being viewed
+  useEffect(() => {
+    if (!shift) return;
+    window.dispatchEvent(new CustomEvent("krewby-page-context", {
+      detail: {
+        type: "shift",
+        shift_id: shift.shift_id,
+        title: shift.title,
+        shift_date: shift.shift_date,
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        status: shift.status,
+        branch_id: shift.branch_id,
+      },
+    }));
+    return () => {
+      window.dispatchEvent(new CustomEvent("krewby-page-context", { detail: null }));
+    };
+  }, [shift?.shift_id]);
+
+  // Re-fetch whenever the AI assistant takes an action (add task, assign staff, etc.)
+  useEffect(() => {
+    async function refresh() {
+      const res = await api.get(`/api/shifts/${id}`).catch(() => null);
+      if (res?.success) {
+        setShift(res.shift);
+        setTasks(res.shift?.shift_tasks || []);
+      }
+    }
+    window.addEventListener("krewby-ai-action", refresh);
+    return () => window.removeEventListener("krewby-ai-action", refresh);
+  }, [id]);
+
   // ── Roster ─────────────────────────────────────────────────────────────────
   async function openRoster(taskId) {
     setHighlightTaskId(taskId || null);

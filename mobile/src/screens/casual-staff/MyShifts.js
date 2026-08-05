@@ -26,7 +26,8 @@ export default function CasualMyShifts() {
 
     const { data } = await supabase.from("task_assignments")
       .select(`assignment_id, status, acknowledged,
-        shifts ( shift_id, title, shift_date, start_time, end_time, status, branches ( name ) )`)
+        shifts ( shift_id, title, shift_date, start_time, end_time, status, branches ( name ) ),
+        attendance ( attendance_id, status, clock_in, clock_out )`)
       .eq("staff_id", staffId);
 
     const all = data || [];
@@ -42,6 +43,7 @@ export default function CasualMyShifts() {
   useEffect(() => { load(); }, [load]);
 
   function renderItem({ item }) {
+    const attend = item.attendance?.[0];
     return (
       <View style={s.card}>
         <View style={s.cardTop}>
@@ -57,6 +59,12 @@ export default function CasualMyShifts() {
           </View>
           <Badge label={item.shifts?.status} variant={item.shifts?.status} />
         </View>
+        {(attend?.clock_in || attend?.clock_out) && (
+          <View style={s.attendRow}>
+            {attend.clock_in  && <Text style={s.attendText}>🟢 In: {attend.clock_in?.slice(11,16)}</Text>}
+            {attend.clock_out && <Text style={s.attendText}>🔴 Out: {attend.clock_out?.slice(11,16)}</Text>}
+          </View>
+        )}
       </View>
     );
   }

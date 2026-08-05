@@ -4,7 +4,7 @@ import { PageTransitionProvider } from "./components/PageTransition";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword  from "./pages/ResetPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import GetStarted from "./pages/GetStarted";
 import RegisterBusiness from "./pages/RegisterBusiness";

@@ -370,7 +370,8 @@ const upsertRoleTemplates = async (req, res) => {
       return res.status(404).json({ success: false, message: "Branch not found." });
     }
 
-    await supabaseAdmin.from("branch_role_templates").delete().eq("branch_id", branch_id);
+    const { error: delError } = await supabaseAdmin.from("branch_role_templates").delete().eq("branch_id", branch_id);
+    if (delError) throw new Error(delError.message);
 
     if (Array.isArray(role_templates) && role_templates.length > 0) {
       const filtered = role_templates.filter(r => r.role_name?.trim());
@@ -380,7 +381,10 @@ const upsertRoleTemplates = async (req, res) => {
         skill_id: r.skill_id ? Number(r.skill_id) : null,
         headcount: Number(r.headcount) || 1,
       }));
-      if (rows.length > 0) await supabaseAdmin.from("branch_role_templates").insert(rows);
+      if (rows.length > 0) {
+        const { error: insError } = await supabaseAdmin.from("branch_role_templates").insert(rows);
+        if (insError) throw new Error(insError.message);
+      }
     }
 
     return res.json({ success: true });
@@ -504,8 +508,11 @@ const updateStaffDetail = async (req, res) => {
 
     const { full_name, staff_type, default_work_days, is_active, skill_ids } = req.body;
 
-    if (full_name && full_name.trim()) {
-      await prisma.users.update({ where: { user_id: staff.user_id }, data: { full_name: full_name.trim() } });
+    const userUpdates = {};
+    if (full_name && full_name.trim()) userUpdates.full_name = full_name.trim();
+    if (is_active !== undefined) userUpdates.is_active = is_active;
+    if (Object.keys(userUpdates).length > 0) {
+      await prisma.users.update({ where: { user_id: staff.user_id }, data: userUpdates });
     }
 
     const updated = await prisma.staff.update({

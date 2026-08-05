@@ -133,7 +133,7 @@ export default function ManagerDashboard() {
         setWeekCounts(counts);
 
         // Roster rows — staff assigned to today's published shifts
-        const allStaff = (branchStaffRes.staff || []).filter(s => s.is_active);
+        const allStaff = branchStaffRes.staff || [];
         if (todayShifts?.length > 0) {
           const todayShiftIds = todayShifts.map(s => s.shift_id);
           const { data: assigns } = await supabase
@@ -183,27 +183,35 @@ export default function ManagerDashboard() {
         const staffIds = allStaff.map(s => s.staff_id);
         if (staffIds.length > 0) {
           const userIds = allStaff.map(s => s.user_id).filter(Boolean);
+          // Build lookup: user_id → full_name from allStaff (avoids fragile PostgREST nested joins)
+          const userNameMap = {};
+          allStaff.forEach(s => { if (s.user_id) userNameMap[s.user_id] = s.users?.full_name || "Staff"; });
+
           const [{ data: leaves }, { data: swaps }] = await Promise.all([
-            supabase.from("availability").select("request_id, staff:staff_id(users:user_id(full_name)), start_date, end_date")
+            supabase.from("availability")
+              .select("request_id, staff_id, start_date, end_date")
               .eq("status","pending").in("staff_id", staffIds).limit(5),
             userIds.length > 0
               ? supabase.from("swap_requests")
-                  .select("swap_id, users:requester_id(full_name), task_assignments:requester_assign(shifts:shift_id(shift_date))")
+                  .select("swap_id, requester_id, status")
                   .eq("status","pending").in("requester_id", userIds).limit(5)
               : { data: [] },
           ]);
+
+          // Build staff_id → full_name map for leave
+          const staffNameMap = {};
+          allStaff.forEach(s => { staffNameMap[s.staff_id] = s.users?.full_name || "Staff"; });
+
           if (!cancelled) {
             setLeaveItems((leaves || []).map(l => ({
               id: l.request_id,
-              name: l.staff?.users?.full_name || "Staff",
+              name: staffNameMap[l.staff_id] || "Staff",
               range: fmtRange(l.start_date, l.end_date),
             })));
             setSwapItems((swaps || []).map(s => ({
               id: s.swap_id,
-              name: s.users?.full_name || "Staff",
-              range: s.task_assignments?.shifts?.shift_date
-                ? `Shift on ${fmtDate(s.task_assignments.shifts.shift_date)}`
-                : "Swap request",
+              name: userNameMap[s.requester_id] || "Staff",
+              range: "Swap request",
             })));
           }
         }

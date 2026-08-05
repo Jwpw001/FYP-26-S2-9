@@ -42,7 +42,7 @@ export default function LeaveRequests() {
     if (!sid) { setLoading(false); setRefreshing(false); return; }
 
     const query = supabase.from("availability")
-      .select("*").eq("staff_id", sid).order("request_id", { ascending: false });
+      .select("*").eq("staff_id", sid).order("start_date", { ascending: false });
     const { data } = await query;
     let arr = data || [];
     if (filter !== "all") arr = arr.filter(r => r.status === filter);

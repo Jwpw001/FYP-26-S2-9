@@ -28,6 +28,7 @@ const app = express();
 // specific preview URLs you want to allow without needing a redeploy just to add one.
 const allowedOrigins = [
     "http://localhost:5173",
+    "http://localhost:4173",
     "http://localhost:8081",
     ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map(s => s.trim()) : []),
 ].filter(Boolean);
@@ -46,6 +47,7 @@ app.use(cors({
         if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) return callback(null, true);
         return callback(new Error("Not allowed by CORS"));
     },
+    credentials: true,
 }));
 app.use(express.json());
 app.use(morgan("dev"));

@@ -441,7 +441,7 @@ export default function ProfileModal({ onClose }) {
                 <button
                   className="pm-edit-btn pm-fade-item"
                   onClick={() => setEditing(true)}
-                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "7px", padding: "11px", borderRadius: "10px", border: "none", background: "#2563EB", color: "#fff", fontSize: "20px", fontWeight: "700", cursor: "pointer", animationDelay: "0.16s" }}>
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "7px", padding: "11px", borderRadius: "10px", border: "none", background: "#2563EB", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: "pointer", animationDelay: "0.16s" }}>
                   <Pencil size={13} /> Edit Profile
                 </button>
               </div>
