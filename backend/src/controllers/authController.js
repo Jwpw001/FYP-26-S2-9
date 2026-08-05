@@ -19,6 +19,13 @@ const login = async (req, res) => {
             });
         }
 
+        if (!user.is_active) {
+            return res.status(403).json({
+                success: false,
+                message: "Your account has been deactivated. Please contact your administrator."
+            });
+        }
+
         const token = generateToken({
             user_id: user.user_id,
             email: user.email,
