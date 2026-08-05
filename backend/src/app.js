@@ -23,12 +23,13 @@ const timesheetRoutes = require("./routes/timesheetRoutes");
 
 const app = express();
 
-// Same-origin dev servers (Vite/Expo) plus whatever the deployed frontend's origin is —
-// set FRONTEND_URL in production so the API isn't reachable cross-origin from arbitrary sites.
+// Same-origin dev servers (Vite/Expo) plus whatever the deployed frontend's origin is.
+// FRONTEND_URL supports a comma-separated list, e.g. your production domain plus any
+// specific preview URLs you want to allow without needing a redeploy just to add one.
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:8081",
-    process.env.FRONTEND_URL,
+    ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map(s => s.trim()) : []),
 ].filter(Boolean);
 
 // Baseline security headers (X-Content-Type-Options, X-Frame-Options, HSTS, etc.) —
@@ -37,8 +38,12 @@ app.use(helmet());
 
 app.use(cors({
     origin(origin, callback) {
-        // Allow no-origin requests (curl, mobile apps, server-to-server) and any allow-listed origin.
+        // Allow no-origin requests (curl, mobile apps, server-to-server), any explicitly
+        // allow-listed origin, and any Vercel deployment of this project — Vercel preview
+        // URLs are unpredictable per-branch/per-PR, so FRONTEND_URL alone isn't enough to
+        // cover them without a redeploy every time a new preview URL shows up.
         if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) return callback(null, true);
         return callback(new Error("Not allowed by CORS"));
     },
 }));
