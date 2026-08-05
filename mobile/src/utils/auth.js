@@ -1,10 +1,10 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "../lib/secureStorage";
 
 const KEY = "krewby_user";
 
 export async function getUser() {
   try {
-    const raw = await AsyncStorage.getItem(KEY);
+    const raw = await secureStorage.getItem(KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -12,9 +12,9 @@ export async function getUser() {
 }
 
 export async function setUser(profile) {
-  await AsyncStorage.setItem(KEY, JSON.stringify(profile));
+  await secureStorage.setItem(KEY, JSON.stringify(profile));
 }
 
 export async function clearUser() {
-  await AsyncStorage.removeItem(KEY);
+  await secureStorage.removeItem(KEY);
 }

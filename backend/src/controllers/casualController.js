@@ -158,6 +158,7 @@ async function getMyBranches(req, res) {
       .from("branches")
       .select("branch_id, name, address")
       .eq("business_id", cw.business_id)
+      .is("deleted_at", null)
       .order("name");
 
     return res.json({ success: true, branches: branches || [], approval_status: cw.status });

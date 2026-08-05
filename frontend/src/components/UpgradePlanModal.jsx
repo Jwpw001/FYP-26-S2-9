@@ -2,8 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { X, CheckCircle2 } from "lucide-react";
 import { Pricing } from "./Pricing";
-import { supabase } from "../lib/supabaseClient";
-import { getUser } from "../utils/auth";
+import { api } from "../lib/api";
 
 const PLANS = [
   {
@@ -82,22 +81,18 @@ export function UpgradePlanModal({ currentPlan, onClose, onUpgraded }) {
   async function handleUpgrade() {
     if (selected === currentPlan) { onClose(); return; }
     setSaving(true);
-    const user = getUser();
-    // fetch business_id for this owner
-    const { data: biz } = await supabase
-      .from("businesses")
-      .select("business_id")
-      .eq("owner_id", user.user_id)
-      .maybeSingle();
-    if (biz) {
-      await supabase.from("businesses").update({ plan: selected }).eq("business_id", biz.business_id);
+    try {
+      await api.patch("/api/business/plan", { plan: selected });
+      setDone(true);
+      setTimeout(() => {
+        onUpgraded?.(selected);
+        onClose();
+      }, 1200);
+    } catch (err) {
+      console.error("Plan upgrade failed:", err);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setDone(true);
-    setTimeout(() => {
-      onUpgraded?.(selected);
-      onClose();
-    }, 1200);
   }
 
   const selectedPlan = PLANS.find(p => p.key === selected);
@@ -110,8 +105,8 @@ export function UpgradePlanModal({ currentPlan, onClose, onUpgraded }) {
         {/* Header */}
         <div style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 28px 20px", borderBottom: "1px solid #F1F5F9", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 }}>
           <div>
-            <h2 style={{ fontSize: "18px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Upgrade your plan</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", margin: "2px 0 0" }}>
+            <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#0F172A", margin: 0 }}>Upgrade your plan</h2>
+            <p style={{ fontSize: "20px", color: "#64748B", margin: "2px 0 0" }}>
               Current plan: <strong style={{ textTransform: "capitalize", color: "#0F172A" }}>{currentPlan}</strong>
             </p>
           </div>
@@ -128,16 +123,16 @@ export function UpgradePlanModal({ currentPlan, onClose, onUpgraded }) {
         {/* Footer CTA */}
         <div style={{ padding: "20px 28px 28px", background: "#fff", borderTop: "1px solid #F1F5F9", borderRadius: "0 0 24px 24px", position: "sticky", bottom: 0 }}>
           {done ? (
-            <div style={{ textAlign: "center", padding: "12px", fontSize: "15px", fontWeight: "700", color: "#10B981", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+            <div style={{ textAlign: "center", padding: "12px", fontSize: "22px", fontWeight: "700", color: "#10B981", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
               <CheckCircle2 size={18} color="#10B981" /> Plan updated to {selectedPlan?.label}!
             </div>
           ) : (
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <button onClick={onClose} style={{ padding: "12px 20px", borderRadius: "10px", border: "1.5px solid #E2E8F0", background: "#fff", fontSize: "14px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
+              <button onClick={onClose} style={{ padding: "12px 20px", borderRadius: "10px", border: "1.5px solid #E2E8F0", background: "#fff", fontSize: "21px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
                 Cancel
               </button>
               <button onClick={handleUpgrade} disabled={saving || selected === currentPlan}
-                style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "none", background: selected === currentPlan ? "#E2E8F0" : selectedPlan?.accent || "#2563EB", color: selected === currentPlan ? "#94A3B8" : "#fff", fontSize: "15px", fontWeight: "700", cursor: selected === currentPlan ? "not-allowed" : "pointer", transition: "background 0.2s" }}>
+                style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "none", background: selected === currentPlan ? "#E2E8F0" : selectedPlan?.accent || "#2563EB", color: selected === currentPlan ? "#94A3B8" : "#fff", fontSize: "22px", fontWeight: "700", cursor: selected === currentPlan ? "not-allowed" : "pointer", transition: "background 0.2s" }}>
                 {saving ? "Saving…" : selected === currentPlan ? "Already on this plan" : `Upgrade to ${selectedPlan?.label} →`}
               </button>
             </div>

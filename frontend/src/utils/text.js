@@ -1,14 +1,10 @@
-const ACRONYMS = new Set(["ID", "HR", "POS", "CEO", "CFO", "CTO", "HQ", "IT", "PR", "SG"]);
-
+// Normalizes free-text titles ("afternoon shift" -> "Afternoon Shift") to consistent
+// Title Case so lists/rosters don't show mismatched casing between entries.
+// Existing acronyms (e.g. "AML", "KYC") are left untouched instead of being mangled
+// into "Aml"/"Kyc" — only mixed/lower-case words get re-cased.
 export function toTitleCase(str) {
-  if (!str) return str;
-  return str
-    .trim()
-    .split(/\s+/)
-    .map((word) => {
-      const upper = word.toUpperCase();
-      if (ACRONYMS.has(upper)) return upper;
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    })
-    .join(" ");
+  return str.replace(/[A-Za-z']+/g, (word) => {
+    if (word.length > 1 && word === word.toUpperCase()) return word;
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
 }

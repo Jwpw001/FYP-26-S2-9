@@ -22,8 +22,8 @@ export default function StepBusinessSetup({ form, set, setField, error, onNext, 
     <>
       <button onClick={onBack} style={backBtn}>← Back</button>
 
-      <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" }}>Business setup</h2>
-      <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "28px" }}>Configure your operating schedule and work rules. You can change these later.</p>
+      <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" }}>Business setup</h2>
+      <p style={{ fontSize: "21px", color: "#64748B", marginBottom: "28px" }}>Configure your operating schedule and work rules. You can change these later.</p>
 
       {error && <div style={errorBox}>{error}</div>}
 
@@ -32,7 +32,7 @@ export default function StepBusinessSetup({ form, set, setField, error, onNext, 
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
         {DAYS.map((day, i) => (
           <button key={day} type="button" onClick={() => toggleDay(i)}
-            style={{ padding: "8px 16px", borderRadius: "100px", border: `1.5px solid ${form.operating_days[i] ? "#2563EB" : "#E2E8F0"}`, background: form.operating_days[i] ? "#EFF6FF" : "#fff", color: form.operating_days[i] ? "#2563EB" : "#94A3B8", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" }}>
+            style={{ padding: "8px 16px", borderRadius: "100px", border: `1.5px solid ${form.operating_days[i] ? "#2563EB" : "#E2E8F0"}`, background: form.operating_days[i] ? "#EFF6FF" : "#fff", color: form.operating_days[i] ? "#2563EB" : "#94A3B8", fontSize: "20px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" }}>
             {day}
           </button>
         ))}
@@ -71,8 +71,8 @@ export default function StepBusinessSetup({ form, set, setField, error, onNext, 
       {/* Overtime Toggle */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "12px", marginBottom: "24px" }}>
         <div>
-          <p style={{ fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>Allow overtime</p>
-          <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>Workers can be scheduled beyond standard hours</p>
+          <p style={{ fontSize: "21px", fontWeight: "600", color: "#1E293B" }}>Allow overtime</p>
+          <p style={{ fontSize: "19px", color: "#94A3B8", marginTop: "2px" }}>Workers can be scheduled beyond standard hours</p>
         </div>
         <button type="button" onClick={() => setField("allow_overtime", !form.allow_overtime)}
           style={{ width: "44px", height: "24px", borderRadius: "12px", border: "none", background: form.allow_overtime ? "#2563EB" : "#D1D5DB", cursor: "pointer", position: "relative", transition: "background 0.2s" }}>
@@ -89,8 +89,8 @@ export default function StepBusinessSetup({ form, set, setField, error, onNext, 
         {form.holidays.map((h, i) => (
           <div key={h.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: i < form.holidays.length - 1 ? "1px solid #F1F5F9" : "none" }}>
             <div>
-              <p style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
-              <p style={{ fontSize: "12px", color: "#94A3B8" }}>{h.date}</p>
+              <p style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
+              <p style={{ fontSize: "19px", color: "#94A3B8" }}>{h.date}</p>
             </div>
             <button type="button" onClick={() => toggleHoliday(i)}
               style={{ width: "36px", height: "20px", borderRadius: "10px", border: "none", background: h.enabled ? "#22C55E" : "#D1D5DB", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
@@ -103,11 +103,11 @@ export default function StepBusinessSetup({ form, set, setField, error, onNext, 
       {/* Buttons */}
       <div style={{ display: "flex", gap: "12px" }}>
         <button type="button" onClick={onSkip}
-          style={{ flex: 1, padding: "14px", background: "#fff", color: "#64748B", border: "1.5px solid #E2E8F0", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer" }}>
+          style={{ flex: 1, padding: "14px", background: "#fff", color: "#64748B", border: "1.5px solid #E2E8F0", borderRadius: "12px", fontSize: "22px", fontWeight: "600", cursor: "pointer" }}>
           Skip for now
         </button>
         <button type="button" onClick={onNext}
-          style={{ flex: 1, padding: "14px", background: "#2563EB", color: "#fff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700", cursor: "pointer" }}>
+          style={{ flex: 1, padding: "14px", background: "#2563EB", color: "#fff", border: "none", borderRadius: "12px", fontSize: "22px", fontWeight: "700", cursor: "pointer" }}>
           Next →
         </button>
       </div>
@@ -125,8 +125,8 @@ function NumberField({ label, value, onChange, min, max }) {
   );
 }
 
-const backBtn = { display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" };
-const errorBox = { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "13px", color: "#DC2626" };
-const sectionLabel = { fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px", marginTop: "4px", display: "flex", alignItems: "center" };
-const fieldLabel = { display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "6px" };
-const inputStyle = { width: "100%", padding: "11px 14px", borderRadius: "10px", border: "1.5px solid #E2E8F0", fontSize: "14px", color: "#0F172A", outline: "none", boxSizing: "border-box", background: "#fff" };
+const backBtn = { display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "20px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" };
+const errorBox = { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "20px", color: "#DC2626" };
+const sectionLabel = { fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px", marginTop: "4px", display: "flex", alignItems: "center" };
+const fieldLabel = { display: "block", fontSize: "20px", fontWeight: "600", color: "#374151", marginBottom: "6px" };
+const inputStyle = { width: "100%", padding: "11px 14px", borderRadius: "10px", border: "1.5px solid #E2E8F0", fontSize: "21px", color: "#0F172A", outline: "none", boxSizing: "border-box", background: "#fff" };

@@ -739,7 +739,7 @@ export default function AvailabilityLeave() {
                 border: "none",
                 borderBottom: mainTab === tab.key ? "2px solid #2563EB" : "2px solid transparent",
                 marginBottom: "-2px",
-                fontSize: "14px",
+                fontSize: "21px",
                 fontWeight: mainTab === tab.key ? "700" : "500",
                 color: mainTab === tab.key ? "#2563EB" : "#64748B",
                 cursor: "pointer",
@@ -751,7 +751,7 @@ export default function AvailabilityLeave() {
             >
               {tab.label}
               {tab.badge > 0 && (
-                <span style={{ background: "#EF4444", color: "#FFF", fontSize: "10px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>
+                <span style={{ background: "#EF4444", color: "#FFF", fontSize: "17px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>
                   {tab.badge}
                 </span>
               )}
@@ -764,8 +764,8 @@ export default function AvailabilityLeave() {
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
               <div>
-                <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Leave Requests</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+                <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#1E293B" }}>Leave Requests</h2>
+                <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
                   {pendingLeave > 0 ? `${pendingLeave} pending approval` : "No pending requests"}
                 </p>
               </div>
@@ -818,8 +818,8 @@ export default function AvailabilityLeave() {
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
               <div>
-                <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Swap & Replacement Requests</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+                <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#1E293B" }}>Swap & Replacement Requests</h2>
+                <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
                   {pendingSwap > 0 ? `${pendingSwap} pending review` : "No pending requests"}
                 </p>
               </div>
@@ -869,8 +869,8 @@ export default function AvailabilityLeave() {
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
               <div>
-                <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Casual Staff Availability</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>Weekly availability submissions from casual staff.</p>
+                <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#1E293B" }}>Casual Staff Availability</h2>
+                <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>Weekly availability submissions from casual staff.</p>
               </div>
               <ViewToggle view={casualView} onChange={setCasualView} />
             </div>
@@ -916,8 +916,8 @@ export default function AvailabilityLeave() {
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
               <div>
-                <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1E293B" }}>Off Day Requests</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+                <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#1E293B" }}>Off Day Requests</h2>
+                <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
                   {pendingOffDay > 0 ? `${pendingOffDay} pending approval` : "No pending requests"}
                 </p>
               </div>
@@ -967,20 +967,20 @@ export default function AvailabilityLeave() {
                       <UserAvatar name={name} avatar_url={r.staff?.users?.avatar_url} size={42} />
                       {/* Info */}
                       <div style={{ flex: 1, minWidth: "160px" }}>
-                        <p style={{ fontWeight: "700", fontSize: "14px", color: "#0F172A" }}>{name}</p>
-                        <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{email}</p>
+                        <p style={{ fontWeight: "700", fontSize: "21px", color: "#0F172A" }}>{name}</p>
+                        <p style={{ fontSize: "19px", color: "#64748B", marginTop: "1px" }}>{email}</p>
                       </div>
                       {/* Requested date */}
                       <div style={{ background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: "10px", padding: "10px 16px", textAlign: "center", flexShrink: 0 }}>
-                        <p style={{ fontSize: "11px", fontWeight: "700", color: "#0369A1", textTransform: "uppercase", letterSpacing: "0.05em" }}>Requested Off</p>
-                        <p style={{ fontSize: "15px", fontWeight: "800", color: "#0C4A6E", marginTop: "2px" }}>{dayName}</p>
-                        <p style={{ fontSize: "11px", color: "#0369A1", marginTop: "1px" }}>{dateFmt}</p>
+                        <p style={{ fontSize: "18px", fontWeight: "700", color: "#0369A1", textTransform: "uppercase", letterSpacing: "0.05em" }}>Requested Off</p>
+                        <p style={{ fontSize: "22px", fontWeight: "800", color: "#0C4A6E", marginTop: "2px" }}>{dayName}</p>
+                        <p style={{ fontSize: "18px", color: "#0369A1", marginTop: "1px" }}>{dateFmt}</p>
                       </div>
                       {/* Reason */}
                       {r.reason && (
                         <div style={{ background: "#FAFAFA", border: "1px solid #F1F5F9", borderRadius: "8px", padding: "8px 12px", maxWidth: "220px", flexShrink: 0 }}>
-                          <p style={{ fontSize: "10px", fontWeight: "600", color: "#94A3B8", marginBottom: "2px", textTransform: "uppercase" }}>Reason</p>
-                          <p style={{ fontSize: "12px", color: "#475569" }}>{r.reason}</p>
+                          <p style={{ fontSize: "17px", fontWeight: "600", color: "#94A3B8", marginBottom: "2px", textTransform: "uppercase" }}>Reason</p>
+                          <p style={{ fontSize: "19px", color: "#475569" }}>{r.reason}</p>
                         </div>
                       )}
                       {/* Status / Actions */}
@@ -989,18 +989,18 @@ export default function AvailabilityLeave() {
                           <button
                             disabled={processing === r.id}
                             onClick={() => handleOffDay(r.id, "approved")}
-                            style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: "#16A34A", color: "#FFF", fontSize: "13px", fontWeight: "600", cursor: "pointer", opacity: processing === r.id ? 0.6 : 1 }}>
+                            style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: "#16A34A", color: "#FFF", fontSize: "20px", fontWeight: "600", cursor: "pointer", opacity: processing === r.id ? 0.6 : 1 }}>
                             Approve
                           </button>
                           <button
                             disabled={processing === r.id}
                             onClick={() => handleOffDay(r.id, "rejected")}
-                            style={{ padding: "8px 16px", borderRadius: "8px", border: "1.5px solid #FCA5A5", background: "#FFF", color: "#DC2626", fontSize: "13px", fontWeight: "600", cursor: "pointer", opacity: processing === r.id ? 0.6 : 1 }}>
+                            style={{ padding: "8px 16px", borderRadius: "8px", border: "1.5px solid #FCA5A5", background: "#FFF", color: "#DC2626", fontSize: "20px", fontWeight: "600", cursor: "pointer", opacity: processing === r.id ? 0.6 : 1 }}>
                             Reject
                           </button>
                         </div>
                       ) : (
-                        <span style={{ padding: "5px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", ...statusStyle(r.status), flexShrink: 0 }}>
+                        <span style={{ padding: "5px 12px", borderRadius: "100px", fontSize: "19px", fontWeight: "700", ...statusStyle(r.status), flexShrink: 0 }}>
                           {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                         </span>
                       )}
@@ -1059,12 +1059,12 @@ export default function AvailabilityLeave() {
                 {/* Header */}
                 <div style={{ padding: "24px 24px 0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
-                    <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B" }}>Choose Cover Staff</h3>
+                    <h3 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Choose Cover Staff</h3>
                     <button onClick={() => setSwapApproveModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", display: "flex", padding: "2px" }}>
                       <X size={18} />
                     </button>
                   </div>
-                  <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "14px" }}>
+                  <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "14px" }}>
                     Select who will take over the shift from <strong>{sw.requesterUser?.full_name || "the requester"}</strong>.
                   </p>
 
@@ -1072,8 +1072,8 @@ export default function AvailabilityLeave() {
                     <div style={{ background: "#F0F7FF", border: "1px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px", marginBottom: "14px", display: "flex", gap: "10px", alignItems: "center" }}>
                       <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#2563EB", flexShrink: 0 }} />
                       <div>
-                        <p style={{ fontSize: "11px", fontWeight: "600", color: "#1D4ED8", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "2px" }}>Shift to Cover</p>
-                        <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>
+                        <p style={{ fontSize: "18px", fontWeight: "600", color: "#1D4ED8", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "2px" }}>Shift to Cover</p>
+                        <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B" }}>
                           {sw.requesterShift.title || "Shift"} · {fmtDate(sw.requesterShift.shift_date)}
                         </p>
                       </div>
@@ -1089,8 +1089,8 @@ export default function AvailabilityLeave() {
                         { label: "Total",     val: roster.length, color: "#475569", bg: "#F8FAFC" },
                       ].map(stat => (
                         <div key={stat.label} style={{ flex: 1, background: stat.bg, borderRadius: "8px", padding: "6px 8px", textAlign: "center" }}>
-                          <p style={{ fontSize: "15px", fontWeight: "800", color: stat.color, lineHeight: 1 }}>{stat.val}</p>
-                          <p style={{ fontSize: "9px", fontWeight: "600", color: stat.color, opacity: .7, marginTop: "2px", textTransform: "uppercase", letterSpacing: ".04em" }}>{stat.label}</p>
+                          <p style={{ fontSize: "22px", fontWeight: "800", color: stat.color, lineHeight: 1 }}>{stat.val}</p>
+                          <p style={{ fontSize: "16px", fontWeight: "600", color: stat.color, opacity: .7, marginTop: "2px", textTransform: "uppercase", letterSpacing: ".04em" }}>{stat.label}</p>
                         </div>
                       ))}
                     </div>
@@ -1103,7 +1103,7 @@ export default function AvailabilityLeave() {
                       placeholder="Search by name…"
                       value={coverRosterSearch}
                       onChange={e => setCoverRosterSearch(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px 8px 30px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "13px", color: "#1E293B", background: "#F8FAFC", boxSizing: "border-box", outline: "none" }}
+                      style={{ width: "100%", padding: "8px 10px 8px 30px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "20px", color: "#1E293B", background: "#F8FAFC", boxSizing: "border-box", outline: "none" }}
                     />
                     {coverRosterSearch && (
                       <button onClick={() => setCoverRosterSearch("")} style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: "2px", display: "flex" }}>
@@ -1120,7 +1120,7 @@ export default function AvailabilityLeave() {
                         { v: "available", l: `Available (${availCount})` },
                       ].map(f => (
                         <button key={f.v} onClick={() => setCoverRosterFilter(f.v)}
-                          style={{ fontSize: "11px", fontWeight: "600", padding: "4px 10px", borderRadius: "100px", border: "none", cursor: "pointer", background: coverRosterFilter === f.v ? "#0F172A" : "#F1F5F9", color: coverRosterFilter === f.v ? "#FFF" : "#64748B", transition: "background 0.15s" }}>
+                          style={{ fontSize: "18px", fontWeight: "600", padding: "4px 10px", borderRadius: "100px", border: "none", cursor: "pointer", background: coverRosterFilter === f.v ? "#0F172A" : "#F1F5F9", color: coverRosterFilter === f.v ? "#FFF" : "#64748B", transition: "background 0.15s" }}>
                           {f.l}
                         </button>
                       ))}
@@ -1149,7 +1149,7 @@ export default function AvailabilityLeave() {
                       {[1,2,3,4].map(i => <Shimmer key={i} h="68px" r="10px" />)}
                     </div>
                   ) : filteredRoster.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "32px 0", color: "#94A3B8", fontSize: "13px" }}>
+                    <div style={{ textAlign: "center", padding: "32px 0", color: "#94A3B8", fontSize: "20px" }}>
                       {roster.length === 0 ? "No staff found for this shift." : "No staff match this filter."}
                     </div>
                   ) : filteredRoster.map((s, idx) => {
@@ -1174,31 +1174,31 @@ export default function AvailabilityLeave() {
                         onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; }}
                       >
                         {/* Avatar */}
-                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", flexShrink: 0, background: isSelected ? "#2563EB" : isBest ? "#6366F1" : unavailable ? "#94A3B8" : avatarColor(s.full_name), color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "700" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", flexShrink: 0, background: isSelected ? "#2563EB" : isBest ? "#6366F1" : unavailable ? "#94A3B8" : avatarColor(s.full_name), color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", fontWeight: "700" }}>
                           {s.full_name?.[0]?.toUpperCase()}
                         </div>
 
                         <div style={{ flex: 1, minWidth: 0 }}>
                           {/* Row 1: Name + badge */}
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                            <p style={{ fontSize: "13px", fontWeight: "700", color: "#0F172A" }}>{s.full_name}</p>
-                            {isSelected && <span style={{ fontSize: "9px", fontWeight: "800", color: "#1D4ED8", background: "#DBEAFE", padding: "2px 6px", borderRadius: "100px" }}>Selected</span>}
-                            {isBest && !isSelected && <span style={{ fontSize: "9px", fontWeight: "800", color: "#6366F1", background: "#EDE9FE", padding: "2px 6px", borderRadius: "100px" }}>★ Best Match</span>}
+                            <p style={{ fontSize: "20px", fontWeight: "700", color: "#0F172A" }}>{s.full_name}</p>
+                            {isSelected && <span style={{ fontSize: "16px", fontWeight: "800", color: "#1D4ED8", background: "#DBEAFE", padding: "2px 6px", borderRadius: "100px" }}>Selected</span>}
+                            {isBest && !isSelected && <span style={{ fontSize: "16px", fontWeight: "800", color: "#6366F1", background: "#EDE9FE", padding: "2px 6px", borderRadius: "100px" }}>★ Best Match</span>}
                           </div>
 
                           {/* Row 2: Type · Hours · Exp */}
                           <div style={{ display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap", marginTop: "3px" }}>
-                            <span style={{ fontSize: "10px", fontWeight: "600", padding: "1px 6px", borderRadius: "100px", background: s.staff_type === "casual" ? "#FFF7ED" : "#F1F5F9", color: s.staff_type === "casual" ? "#C2410C" : "#475569" }}>
+                            <span style={{ fontSize: "17px", fontWeight: "600", padding: "1px 6px", borderRadius: "100px", background: s.staff_type === "casual" ? "#FFF7ED" : "#F1F5F9", color: s.staff_type === "casual" ? "#C2410C" : "#475569" }}>
                               {s.staff_type === "casual" ? "Casual" : "Regular"}
                             </span>
-                            <span style={{ fontSize: "10px", color: "#94A3B8" }}>·</span>
-                            <span style={{ fontSize: "10px", fontWeight: "600", color: overHours ? "#DC2626" : "#64748B" }}>
+                            <span style={{ fontSize: "17px", color: "#94A3B8" }}>·</span>
+                            <span style={{ fontSize: "17px", fontWeight: "600", color: overHours ? "#DC2626" : "#64748B" }}>
                               {s.hours_this_week || 0}h/wk{overHours ? " ⚠" : ""}
                             </span>
                             {s.exp_level && (
                               <>
-                                <span style={{ fontSize: "10px", color: "#94A3B8" }}>·</span>
-                                <span style={{ fontSize: "9px", fontWeight: "600", color: "#6D28D9", background: "#EDE9FE", padding: "1px 6px", borderRadius: "100px" }}>
+                                <span style={{ fontSize: "17px", color: "#94A3B8" }}>·</span>
+                                <span style={{ fontSize: "16px", fontWeight: "600", color: "#6D28D9", background: "#EDE9FE", padding: "1px 6px", borderRadius: "100px" }}>
                                   {s.exp_level.charAt(0).toUpperCase() + s.exp_level.slice(1)}
                                 </span>
                               </>
@@ -1208,11 +1208,11 @@ export default function AvailabilityLeave() {
                           {/* Row 3: Status alerts */}
                           {(unavailable || s.already_assigned) && (
                             <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px" }}>
-                              {s.is_on_leave      && <span style={{ fontSize: "9px", fontWeight: "700", color: "#991B1B", background: "#FEE2E2", padding: "1px 6px", borderRadius: "100px", border: "1px solid #FECACA" }}>On Leave</span>}
-                              {s.is_double_booked && <span style={{ fontSize: "9px", fontWeight: "700", color: "#991B1B", background: "#FEE2E2", padding: "1px 6px", borderRadius: "100px", border: "1px solid #FECACA" }}>Double-booked</span>}
+                              {s.is_on_leave      && <span style={{ fontSize: "16px", fontWeight: "700", color: "#991B1B", background: "#FEE2E2", padding: "1px 6px", borderRadius: "100px", border: "1px solid #FECACA" }}>On Leave</span>}
+                              {s.is_double_booked && <span style={{ fontSize: "16px", fontWeight: "700", color: "#991B1B", background: "#FEE2E2", padding: "1px 6px", borderRadius: "100px", border: "1px solid #FECACA" }}>Double-booked</span>}
                               {s.already_assigned && (
                                 <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                  <span style={{ fontSize: "9px", fontWeight: "700", color: "#64748B", background: "#F1F5F9", padding: "1px 6px", borderRadius: "100px", border: "1px solid #E2E8F0" }}>Already Assigned</span>
+                                  <span style={{ fontSize: "16px", fontWeight: "700", color: "#64748B", background: "#F1F5F9", padding: "1px 6px", borderRadius: "100px", border: "1px solid #E2E8F0" }}>Already Assigned</span>
                                   <button
                                     onClick={async e => {
                                       e.stopPropagation();
@@ -1221,7 +1221,7 @@ export default function AvailabilityLeave() {
                                       await supabase.from("task_assignments").delete().eq("shift_id", sid).eq("staff_id", s.staff_id);
                                       setSwapApproveModal(prev => prev ? { ...prev, roster: prev.roster.map(r => r.staff_id === s.staff_id ? { ...r, already_assigned: false } : r) } : null);
                                     }}
-                                    style={{ fontSize: "9px", fontWeight: "700", color: "#EF4444", background: "#FEF2F2", padding: "1px 6px", borderRadius: "100px", border: "1px solid #FECACA", cursor: "pointer" }}>
+                                    style={{ fontSize: "16px", fontWeight: "700", color: "#EF4444", background: "#FEF2F2", padding: "1px 6px", borderRadius: "100px", border: "1px solid #FECACA", cursor: "pointer" }}>
                                     Remove
                                   </button>
                                 </span>
@@ -1233,7 +1233,7 @@ export default function AvailabilityLeave() {
                           {s.skills?.length > 0 && (
                             <div style={{ display: "flex", gap: "3px", flexWrap: "wrap", marginTop: "5px" }}>
                               {s.skills.map(sk => (
-                                <span key={sk.skill_id} style={{ fontSize: "9px", fontWeight: "500", padding: "2px 6px", borderRadius: "100px", background: "#F1F5F9", color: "#64748B" }}>{sk.name}</span>
+                                <span key={sk.skill_id} style={{ fontSize: "16px", fontWeight: "500", padding: "2px 6px", borderRadius: "100px", background: "#F1F5F9", color: "#64748B" }}>{sk.name}</span>
                               ))}
                             </div>
                           )}
@@ -1245,18 +1245,18 @@ export default function AvailabilityLeave() {
 
                 {/* Footer */}
                 <div style={{ padding: "14px 24px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#FAFAFA", borderRadius: "0 0 18px 18px" }}>
-                  <p style={{ fontSize: "11px", color: "#94A3B8" }}>
+                  <p style={{ fontSize: "18px", color: "#94A3B8" }}>
                     {pickedStaffId
                       ? `Selected: ${roster.find(s => String(s.staff_id) === pickedStaffId)?.full_name || "—"}`
                       : "No staff selected"}
                   </p>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button onClick={() => setSwapApproveModal(null)} disabled={approving}
-                      style={{ padding: "9px 18px", background: "#F1F5F9", border: "none", borderRadius: "9px", fontSize: "13px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
+                      style={{ padding: "9px 18px", background: "#F1F5F9", border: "none", borderRadius: "9px", fontSize: "20px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
                       Cancel
                     </button>
                     <button onClick={confirmSwapApproval} disabled={approving || !pickedStaffId}
-                      style={{ padding: "9px 20px", background: pickedStaffId ? "#22C55E" : "#A7F3D0", border: "none", borderRadius: "9px", fontSize: "13px", fontWeight: "700", color: "#FFF", cursor: pickedStaffId ? "pointer" : "default", transition: "background 0.15s" }}>
+                      style={{ padding: "9px 20px", background: pickedStaffId ? "#22C55E" : "#A7F3D0", border: "none", borderRadius: "9px", fontSize: "20px", fontWeight: "700", color: "#FFF", cursor: pickedStaffId ? "pointer" : "default", transition: "background 0.15s" }}>
                       {approving ? "Approving…" : "Confirm Approval"}
                     </button>
                   </div>
@@ -1274,7 +1274,7 @@ export default function AvailabilityLeave() {
           position: "fixed", bottom: "28px", right: "28px", zIndex: 26000,
           background: toast.type === "success" ? "#22C55E" : "#EF4444",
           color: "#fff", padding: "12px 20px", borderRadius: "10px",
-          fontSize: "14px", fontWeight: "600",
+          fontSize: "21px", fontWeight: "600",
           boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
           animation: "toastIn 0.3s ease both",
         }}>
@@ -1371,11 +1371,11 @@ function DetailModal({ modal, processing, onClose, onLeaveAction, onSwapAction, 
       <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "18px", padding: "26px", width: "100%", maxWidth: "440px", boxShadow: "0 24px 60px rgba(0,0,0,0.2)", animation: "popIn 0.2s ease both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
-            <p style={{ fontSize: "16px", fontWeight: "800", color: "#1E293B" }}>{title}</p>
-            {name && <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>{name}{email ? ` · ${email}` : ""}</p>}
+            <p style={{ fontSize: "21px", fontWeight: "800", color: "#1E293B" }}>{title}</p>
+            {name && <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>{name}{email ? ` · ${email}` : ""}</p>}
           </div>
           {status && (
-            <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", ...statusStyle(status) }}>
+            <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "19px", fontWeight: "600", ...statusStyle(status) }}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </span>
           )}
@@ -1384,18 +1384,18 @@ function DetailModal({ modal, processing, onClose, onLeaveAction, onSwapAction, 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "14px 0", borderTop: "1px solid #F1F5F9", borderBottom: "1px solid #F1F5F9", marginBottom: "16px" }}>
           {meta.map(m => (
             <div key={m.label} style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
-              <span style={{ fontSize: "12px", fontWeight: "600", color: "#94A3B8" }}>{m.label}</span>
-              <span style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B", textAlign: "right" }}>{m.value}</span>
+              <span style={{ fontSize: "19px", fontWeight: "600", color: "#94A3B8" }}>{m.label}</span>
+              <span style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B", textAlign: "right" }}>{m.value}</span>
             </div>
           ))}
         </div>
 
         {reason && (
-          <p style={{ fontSize: "13px", color: "#64748B", fontStyle: "italic", marginBottom: "18px" }}>"{reason}"</p>
+          <p style={{ fontSize: "20px", color: "#64748B", fontStyle: "italic", marginBottom: "18px" }}>"{reason}"</p>
         )}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-          <button onClick={onClose} style={{ padding: "9px 18px", background: "#F1F5F9", border: "none", borderRadius: "9px", fontSize: "13px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
+          <button onClick={onClose} style={{ padding: "9px 18px", background: "#F1F5F9", border: "none", borderRadius: "9px", fontSize: "20px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
             Close
           </button>
           {actions}
@@ -1406,8 +1406,8 @@ function DetailModal({ modal, processing, onClose, onLeaveAction, onSwapAction, 
   );
 }
 
-const rejectBtnStyle = { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "9px", padding: "9px 18px", fontSize: "13px", fontWeight: "600", color: "#991B1B", cursor: "pointer" };
-const approveBtnStyle = { background: "#22C55E", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "13px", fontWeight: "700", color: "#FFFFFF", cursor: "pointer" };
+const rejectBtnStyle = { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "9px", padding: "9px 18px", fontSize: "20px", fontWeight: "600", color: "#991B1B", cursor: "pointer" };
+const approveBtnStyle = { background: "#22C55E", border: "none", borderRadius: "9px", padding: "9px 18px", fontSize: "20px", fontWeight: "700", color: "#FFFFFF", cursor: "pointer" };
 
 function ViewToggle({ view, onChange }) {
   return (
@@ -1417,7 +1417,7 @@ function ViewToggle({ view, onChange }) {
           style={{
             display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px",
             background: view === key ? "#FFFFFF" : "transparent", border: "none", borderRadius: "7px",
-            fontSize: "13px", fontWeight: view === key ? "700" : "500", color: view === key ? "#1E293B" : "#64748B",
+            fontSize: "20px", fontWeight: view === key ? "700" : "500", color: view === key ? "#1E293B" : "#64748B",
             cursor: "pointer", boxShadow: view === key ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s",
           }}>
           <Icon size={13} /> {label}
@@ -1433,7 +1433,7 @@ function FilterTab({ label, active, badge, onClick }) {
       onClick={onClick}
       style={{
         padding: "7px 16px", background: active ? "#FFFFFF" : "transparent",
-        border: "none", borderRadius: "7px", fontSize: "13px",
+        border: "none", borderRadius: "7px", fontSize: "20px",
         fontWeight: active ? "600" : "500", color: active ? "#1E293B" : "#64748B",
         cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
         boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
@@ -1441,7 +1441,7 @@ function FilterTab({ label, active, badge, onClick }) {
       }}>
       {label}
       {badge !== null && badge !== undefined && (
-        <span style={{ background: "#EF4444", color: "#FFFFFF", fontSize: "10px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>
+        <span style={{ background: "#EF4444", color: "#FFFFFF", fontSize: "17px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>
           {badge}
         </span>
       )}
@@ -1478,7 +1478,7 @@ function EmptyState({ label }) {
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px", textAlign: "center" }}>
       <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}><ClipboardList size={32} color="#94A3B8" /></div>
-      <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>{label}</p>
+      <p style={{ fontSize: "21px", fontWeight: "600", color: "#64748B" }}>{label}</p>
     </div>
   );
 }
@@ -1494,11 +1494,11 @@ function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, o
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <UserAvatar name={name} avatar_url={getStaffAvatar(req)} size={40} />
           <div>
-            <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{name}</p>
-            <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{getStaffEmail(req)}</p>
+            <p style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B" }}>{name}</p>
+            <p style={{ fontSize: "19px", color: "#64748B", marginTop: "1px" }}>{getStaffEmail(req)}</p>
           </div>
         </div>
-        <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", ...statusStyle(req.status) }}>
+        <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "19px", fontWeight: "600", ...statusStyle(req.status) }}>
           {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
         </span>
       </div>
@@ -1510,7 +1510,7 @@ function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, o
       </div>
 
       {req.reason && (
-        <p style={{ fontSize: "13px", color: "#64748B", fontStyle: "italic", marginBottom: "14px" }}>
+        <p style={{ fontSize: "20px", color: "#64748B", fontStyle: "italic", marginBottom: "14px" }}>
           "{req.reason}"
         </p>
       )}
@@ -1525,7 +1525,7 @@ function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, o
             style={{
               background: hoverReject ? "#FEE2E2" : "#FEF2F2",
               border: "1px solid #FECACA", borderRadius: "9px",
-              padding: "8px 18px", fontSize: "13px", fontWeight: "600",
+              padding: "8px 18px", fontSize: "20px", fontWeight: "600",
               color: "#991B1B", cursor: "pointer",
               opacity: processing === req.request_id ? 0.6 : 1,
               transition: "all 0.15s",
@@ -1540,7 +1540,7 @@ function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, o
             style={{
               background: hoverApprove ? "#16A34A" : "#22C55E",
               border: "none", borderRadius: "9px",
-              padding: "8px 18px", fontSize: "13px", fontWeight: "700",
+              padding: "8px 18px", fontSize: "20px", fontWeight: "700",
               color: "#FFFFFF", cursor: "pointer",
               opacity: processing === req.request_id ? 0.6 : 1,
               transition: "background 0.15s",
@@ -1570,13 +1570,13 @@ function SwapCard({ sw, processing, onAction }) {
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <UserAvatar name={requesterName} avatar_url={sw.requesterUser?.avatar_url} size={40} />
           <div>
-            <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{requesterName}</p>
-            <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{sw.requesterUser?.email || ""}</p>
+            <p style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B" }}>{requesterName}</p>
+            <p style={{ fontSize: "19px", color: "#64748B", marginTop: "1px" }}>{sw.requesterUser?.email || ""}</p>
           </div>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", ...typeColor }}>{typeLabel}</span>
-          <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", ...statusStyle(sw.status) }}>
+          <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "18px", fontWeight: "600", ...typeColor }}>{typeLabel}</span>
+          <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "19px", fontWeight: "600", ...statusStyle(sw.status) }}>
             {sw.status.charAt(0).toUpperCase() + sw.status.slice(1)}
           </span>
         </div>
@@ -1593,7 +1593,7 @@ function SwapCard({ sw, processing, onAction }) {
       </div>
 
       {sw.reason && (
-        <p style={{ fontSize: "13px", color: "#64748B", fontStyle: "italic", marginBottom: "14px" }}>
+        <p style={{ fontSize: "20px", color: "#64748B", fontStyle: "italic", marginBottom: "14px" }}>
           "{sw.reason}"
         </p>
       )}
@@ -1608,7 +1608,7 @@ function SwapCard({ sw, processing, onAction }) {
             style={{
               background: hoverReject ? "#FEE2E2" : "#FEF2F2",
               border: "1px solid #FECACA", borderRadius: "9px",
-              padding: "8px 18px", fontSize: "13px", fontWeight: "600",
+              padding: "8px 18px", fontSize: "20px", fontWeight: "600",
               color: "#991B1B", cursor: "pointer",
               opacity: processing === sw.swap_id ? 0.6 : 1,
               transition: "all 0.15s",
@@ -1623,7 +1623,7 @@ function SwapCard({ sw, processing, onAction }) {
             style={{
               background: hoverApprove ? "#16A34A" : "#22C55E",
               border: "none", borderRadius: "9px",
-              padding: "8px 18px", fontSize: "13px", fontWeight: "700",
+              padding: "8px 18px", fontSize: "20px", fontWeight: "700",
               color: "#FFFFFF", cursor: "pointer",
               opacity: processing === sw.swap_id ? 0.6 : 1,
               transition: "background 0.15s",
@@ -1639,8 +1639,8 @@ function SwapCard({ sw, processing, onAction }) {
 function InfoItem({ label, value }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-      <span style={{ fontSize: "11px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
-      <span style={{ fontSize: "13px", fontWeight: "500", color: "#1E293B" }}>{value}</span>
+      <span style={{ fontSize: "18px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
+      <span style={{ fontSize: "20px", fontWeight: "500", color: "#1E293B" }}>{value}</span>
     </div>
   );
 }
@@ -1679,21 +1679,21 @@ function CasualAvailCard({ entry }) {
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <UserAvatar name={name} avatar_url={entry.staffInfo?.users?.avatar_url} size={40} />
           <div>
-            <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>{name}</p>
-            <p style={{ fontSize: "12px", color: "#64748B", marginTop: "1px" }}>{entry.staffInfo?.users?.email || ""}</p>
+            <p style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B" }}>{name}</p>
+            <p style={{ fontSize: "19px", color: "#64748B", marginTop: "1px" }}>{entry.staffInfo?.users?.email || ""}</p>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B" }}>Week of</p>
-          <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>{fmtWeekRange(entry.week_start_date)}</p>
+          <p style={{ fontSize: "19px", fontWeight: "600", color: "#64748B" }}>Week of</p>
+          <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B" }}>{fmtWeekRange(entry.week_start_date)}</p>
         </div>
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
         {sortedDays.map(row => (
           <div key={row.availability_id || row.day_of_week} style={{ background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: "8px", padding: "6px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
-            <span style={{ fontSize: "11px", fontWeight: "700", color: "#15803D" }}>{DAY_NAMES[row.day_of_week]}</span>
-            <span style={{ fontSize: "12px", color: "#166534" }}>{fmtTime(row.available_from?.slice(0,5))} – {fmtTime(row.available_to?.slice(0,5))}</span>
+            <span style={{ fontSize: "18px", fontWeight: "700", color: "#15803D" }}>{DAY_NAMES[row.day_of_week]}</span>
+            <span style={{ fontSize: "19px", color: "#166534" }}>{fmtTime(row.available_from?.slice(0,5))} – {fmtTime(row.available_to?.slice(0,5))}</span>
           </div>
         ))}
       </div>

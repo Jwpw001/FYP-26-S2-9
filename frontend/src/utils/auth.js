@@ -12,6 +12,8 @@ export function setUser(profile) {
 }
 
 export function clearUser() {
+  // Login stores both keys ("user" and a separate "token"); clearing only "user" left a
+  // stale token behind, which api.js's getToken() would still pick up after "signing out".
   localStorage.removeItem("user");
   localStorage.removeItem("token");
 }

@@ -3,8 +3,12 @@ const prisma = require("../config/prisma");
 const getNotifications = async (req, res) => {
     try {
         const notifications = await prisma.notifications.findMany({
-            where: { recipient_id: req.user.user_id },
-            orderBy: { created_at: "desc" },
+            where: {
+                recipient_id: req.dbUser.user_id
+            },
+            orderBy: {
+                notification_id: "asc"
+            }
         });
 
         res.json({
@@ -29,7 +33,7 @@ const getNotificationById = async (req, res) => {
             }
         });
 
-        if (!notification || notification.recipient_id !== req.user.user_id) {
+        if (!notification || notification.recipient_id !== req.dbUser.user_id) {
             return res.status(404).json({
                 success: false,
                 message: "Notification not found"
@@ -51,18 +55,33 @@ const getNotificationById = async (req, res) => {
 const createNotification = async (req, res) => {
     try {
         const {
-            user_id,
+            recipient_id,
             title,
             message,
-            type
+            type,
+            related_entity,
+            related_id
         } = req.body;
+
+        const recipient = await prisma.users.findUnique({
+            where: { user_id: recipient_id }
+        });
+
+        if (!recipient) {
+            return res.status(404).json({
+                success: false,
+                message: "Recipient not found"
+            });
+        }
 
         const notification = await prisma.notifications.create({
             data: {
-                user_id,
+                recipient_id,
                 title,
                 message,
-                type
+                type,
+                related_entity: related_entity || null,
+                related_id: related_id ?? null
             }
         });
 
@@ -83,17 +102,23 @@ const updateNotification = async (req, res) => {
     try {
         const notificationId = Number(req.params.id);
 
+        const existing = await prisma.notifications.findUnique({
+            where: { notification_id: notificationId }
+        });
+
+        if (!existing || existing.recipient_id !== req.dbUser.user_id) {
+            return res.status(404).json({
+                success: false,
+                message: "Notification not found"
+            });
+        }
+
         const {
             title,
             message,
             type,
             is_read
         } = req.body;
-
-        const existing = await prisma.notifications.findUnique({ where: { notification_id: notificationId } });
-        if (!existing || existing.recipient_id !== req.user.user_id) {
-            return res.status(404).json({ success: false, message: "Notification not found" });
-        }
 
         const notification = await prisma.notifications.update({
             where: {
@@ -124,9 +149,15 @@ const deleteNotification = async (req, res) => {
     try {
         const notificationId = Number(req.params.id);
 
-        const existing = await prisma.notifications.findUnique({ where: { notification_id: notificationId } });
-        if (!existing || existing.recipient_id !== req.user.user_id) {
-            return res.status(404).json({ success: false, message: "Notification not found" });
+        const existing = await prisma.notifications.findUnique({
+            where: { notification_id: notificationId }
+        });
+
+        if (!existing || existing.recipient_id !== req.dbUser.user_id) {
+            return res.status(404).json({
+                success: false,
+                message: "Notification not found"
+            });
         }
 
         await prisma.notifications.delete({

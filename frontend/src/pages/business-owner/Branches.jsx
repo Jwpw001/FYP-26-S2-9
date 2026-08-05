@@ -135,7 +135,7 @@ export default function BOBranches() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "28px", flexWrap: "wrap", gap: "12px" }}>
           <div>
             <h2 style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", letterSpacing: "-0.02em", margin: 0 }}>Branches</h2>
-            <p style={{ fontSize: "14px", color: "#64748B", marginTop: "6px" }}>
+            <p style={{ fontSize: "21px", color: "#64748B", marginTop: "6px" }}>
               {loading ? "Loading…" : `${branches.length} branch${branches.length !== 1 ? "es" : ""} across your business`}
             </p>
           </div>
@@ -173,7 +173,7 @@ export default function BOBranches() {
                   <MapPin size={20} color="#0284C7" />
                 </div>
                 <div>
-                  <div style={{ ...s.statNum, fontSize: "16px" }}>{busiestBranch.name}</div>
+                  <div style={{ ...s.statNum, fontSize: "21px" }}>{busiestBranch.name}</div>
                   <div style={s.statLabel}>Busiest branch</div>
                 </div>
               </div>
@@ -189,13 +189,13 @@ export default function BOBranches() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search branches by name or address…"
-              style={{ width: "100%", padding: "12px 16px 12px 44px", borderRadius: "999px", border: "1px solid #E2E8F0", fontSize: "14px", outline: "none", background: "#fff", color: "#1E293B", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "12px 16px 12px 44px", borderRadius: "999px", border: "1px solid #E2E8F0", fontSize: "21px", outline: "none", background: "#fff", color: "#1E293B", boxSizing: "border-box" }}
             />
           </div>
           <select
             value={sortKey}
             onChange={e => setSortKey(e.target.value)}
-            style={{ padding: "12px 18px", borderRadius: "999px", border: "1px solid #E2E8F0", fontSize: "14px", color: "#475569", background: "#fff", outline: "none", cursor: "pointer" }}
+            style={{ padding: "12px 18px", borderRadius: "999px", border: "1px solid #E2E8F0", fontSize: "21px", color: "#475569", background: "#fff", outline: "none", cursor: "pointer" }}
           >
             <option value="name">Sort: Name (A–Z)</option>
             {hasStaffData && <option value="staff">Sort: Most staff</option>}
@@ -217,14 +217,14 @@ export default function BOBranches() {
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
                         <div style={{
                           width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: "13px", fontWeight: "700",
+                          fontSize: "20px", fontWeight: "700",
                           background: done ? "#F59E0B" : active ? "#1E293B" : "#F1F5F9",
                           color: done ? "#1C1917" : active ? "#FFFFFF" : "#94A3B8",
                           transition: "all 0.2s",
                         }}>
                           {done ? <Check size={14} /> : num}
                         </div>
-                        <span style={{ fontSize: "11px", fontWeight: active ? "700" : "500", color: active ? "#1E293B" : "#94A3B8", whiteSpace: "nowrap" }}>{label}</span>
+                        <span style={{ fontSize: "18px", fontWeight: active ? "700" : "500", color: active ? "#1E293B" : "#94A3B8", whiteSpace: "nowrap" }}>{label}</span>
                       </div>
                       {i < STEPS.length - 1 && (
                         <div style={{ flex: 1, height: "2px", background: done ? "#F59E0B" : "#E2E8F0", margin: "0 8px", marginBottom: "18px", transition: "background 0.2s" }} />
@@ -263,7 +263,7 @@ export default function BOBranches() {
                       return (
                         <button key={day} type="button"
                           onClick={() => setForm(p => { const d = [...p.operating_days]; d[i] = d[i] ? 0 : 1; return { ...p, operating_days: d }; })}
-                          style={{ padding: "7px 14px", borderRadius: "100px", border: `1.5px solid ${on ? "#F59E0B" : "#E2E8F0"}`, background: on ? "#FEF3C7" : "#F8FAFC", color: on ? "#92400E" : "#94A3B8", fontSize: "12px", fontWeight: "700", cursor: "pointer", transition: "all 0.15s" }}>
+                          style={{ padding: "7px 14px", borderRadius: "100px", border: `1.5px solid ${on ? "#F59E0B" : "#E2E8F0"}`, background: on ? "#FEF3C7" : "#F8FAFC", color: on ? "#92400E" : "#94A3B8", fontSize: "19px", fontWeight: "700", cursor: "pointer", transition: "all 0.15s" }}>
                           {day}
                         </button>
                       );
@@ -300,8 +300,8 @@ export default function BOBranches() {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", marginBottom: "20px" }}>
                     <div>
-                      <p style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>Allow overtime</p>
-                      <p style={{ fontSize: "11px", color: "#94A3B8" }}>Workers can be scheduled beyond standard hours</p>
+                      <p style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>Allow overtime</p>
+                      <p style={{ fontSize: "18px", color: "#94A3B8" }}>Workers can be scheduled beyond standard hours</p>
                     </div>
                     <button type="button" onClick={() => setForm(p => ({ ...p, allow_overtime: !p.allow_overtime }))}
                       style={{ width: "40px", height: "22px", borderRadius: "11px", border: "none", background: form.allow_overtime ? "#F59E0B" : "#D1D5DB", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
@@ -312,14 +312,14 @@ export default function BOBranches() {
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <Calendar size={13} color="#64748B" />
                     <p style={s.sectionLabel}>Public holidays</p>
-                    <span style={{ fontSize: "10px", fontWeight: "700", padding: "2px 7px", borderRadius: "100px", background: "#EEF2FF", color: "#4F46E5", border: "1px solid #C7D2FE", marginLeft: "4px" }}>SG 2026</span>
+                    <span style={{ fontSize: "17px", fontWeight: "700", padding: "2px 7px", borderRadius: "100px", background: "#EEF2FF", color: "#4F46E5", border: "1px solid #C7D2FE", marginLeft: "4px" }}>SG 2026</span>
                   </div>
                   <div style={{ background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "12px", maxHeight: "180px", overflowY: "auto" }}>
                     {form.holidays.map((h, i) => (
                       <div key={h.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 13px", borderBottom: i < form.holidays.length - 1 ? "1px solid #F1F5F9" : "none" }}>
                         <div>
-                          <p style={{ fontSize: "12px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
-                          <p style={{ fontSize: "10px", color: "#94A3B8" }}>{h.date}</p>
+                          <p style={{ fontSize: "19px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
+                          <p style={{ fontSize: "17px", color: "#94A3B8" }}>{h.date}</p>
                         </div>
                         <button type="button"
                           onClick={() => setForm(p => { const hols = [...p.holidays]; hols[i] = { ...hols[i], enabled: !hols[i].enabled }; return { ...p, holidays: hols }; })}
@@ -332,7 +332,7 @@ export default function BOBranches() {
                 </div>
               )}
 
-              {error && <p style={{ color: "#EF4444", fontSize: "13px", marginTop: "14px" }}>{error}</p>}
+              {error && <p style={{ color: "#EF4444", fontSize: "20px", marginTop: "14px" }}>{error}</p>}
 
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px" }}>
                 <button onClick={step === 1 ? closeWizard : () => setStep(s => s - 1)} style={s.btnSecondary}>
@@ -367,13 +367,13 @@ export default function BOBranches() {
         ) : branches.length === 0 ? (
           <div style={s.empty}>
             <Building2 size={40} color="#CBD5E1" />
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No branches yet</p>
-            <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>Create your first branch to get started.</p>
+            <p style={{ fontSize: "21px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No branches yet</p>
+            <p style={{ fontSize: "20px", color: "#94A3B8", marginTop: "4px" }}>Create your first branch to get started.</p>
           </div>
         ) : filtered.length === 0 ? (
           <div style={s.empty}>
             <Search size={36} color="#CBD5E1" />
-            <p style={{ fontSize: "15px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No branches match your search.</p>
+            <p style={{ fontSize: "22px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No branches match your search.</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
@@ -452,23 +452,23 @@ const s = {
     display: "inline-flex", alignItems: "center", gap: "8px",
     background: "linear-gradient(135deg, #F59E0B, #D97706)",
     color: "#1C1917", border: "none", padding: "13px 22px",
-    borderRadius: "999px", fontSize: "14px", fontWeight: "700",
+    borderRadius: "999px", fontSize: "21px", fontWeight: "700",
     cursor: "pointer", boxShadow: "0 6px 16px rgba(217,119,6,0.4)",
     transition: "transform 0.15s",
   },
   btnSecondary: {
     background: "#F1F5F9", color: "#475569", border: "none",
-    borderRadius: "999px", padding: "13px 22px", fontSize: "14px",
+    borderRadius: "999px", padding: "13px 22px", fontSize: "21px",
     fontWeight: "600", cursor: "pointer",
   },
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center" },
   modal: { background: "#FFFFFF", borderRadius: "20px", padding: "32px", width: "560px", maxWidth: "95vw", boxShadow: "0 24px 64px rgba(0,0,0,0.18)", maxHeight: "90vh", overflowY: "auto" },
-  stepTitle: { fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" },
-  stepSub: { fontSize: "13px", color: "#64748B", marginBottom: "20px" },
-  sectionLabel: { fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "10px" },
+  stepTitle: { fontSize: "22px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" },
+  stepSub: { fontSize: "20px", color: "#64748B", marginBottom: "20px" },
+  sectionLabel: { fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "10px" },
   fieldGroup: { marginBottom: "14px" },
-  label: { display: "flex", alignItems: "center", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" },
-  input: { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", outline: "none", boxSizing: "border-box", color: "#1E293B", background: "#FFFFFF" },
+  label: { display: "flex", alignItems: "center", fontSize: "19px", fontWeight: "600", color: "#374151", marginBottom: "6px" },
+  input: { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "21px", outline: "none", boxSizing: "border-box", color: "#1E293B", background: "#FFFFFF" },
   statCard: {
     flex: 1, minWidth: "160px",
     background: "#fff", border: "1px solid #E2E8F0", borderRadius: "18px",
@@ -478,8 +478,8 @@ const s = {
     width: "44px", height: "44px", flexShrink: 0,
     borderRadius: "13px", display: "flex", alignItems: "center", justifyContent: "center",
   },
-  statNum: { fontSize: "22px", fontWeight: "800", color: "#1E293B", letterSpacing: "-0.01em" },
-  statLabel: { fontSize: "13px", color: "#64748B", marginTop: "1px" },
+  statNum: { fontSize: "25px", fontWeight: "800", color: "#1E293B", letterSpacing: "-0.01em" },
+  statLabel: { fontSize: "20px", color: "#64748B", marginTop: "1px" },
   card: {
     background: "#fff", border: "1px solid #E2E8F0", borderRadius: "24px",
     padding: "28px", flex: "1 1 340px", maxWidth: "560px",
@@ -490,13 +490,13 @@ const s = {
     background: "linear-gradient(135deg, #FEF3C7, #FDE68A)",
     display: "flex", alignItems: "center", justifyContent: "center",
   },
-  cardName: { fontSize: "19px", fontWeight: "700", color: "#1E293B", letterSpacing: "-0.01em", marginBottom: "8px" },
-  cardLine: { display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#64748B", marginBottom: "5px" },
+  cardName: { fontSize: "24px", fontWeight: "700", color: "#1E293B", letterSpacing: "-0.01em", marginBottom: "8px" },
+  cardLine: { display: "flex", alignItems: "center", gap: "6px", fontSize: "21px", color: "#64748B", marginBottom: "5px" },
   staffBadge: {
     display: "flex", alignItems: "center", gap: "5px",
     background: "#FFFBEB", color: "#D97706",
     borderRadius: "999px", padding: "5px 11px",
-    fontSize: "12px", fontWeight: "700",
+    fontSize: "19px", fontWeight: "700",
   },
   btnEdit: {
     width: "32px", height: "32px", borderRadius: "999px", border: "none",

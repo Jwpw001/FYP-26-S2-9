@@ -83,7 +83,7 @@ export default function RegisterBusiness() {
           <h1 style={{ fontSize: "32px", fontWeight: "800", lineHeight: 1.25, letterSpacing: "-0.02em", marginBottom: "16px" }}>
             Set up your business on Krewby
           </h1>
-          <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.8)", lineHeight: 1.7, maxWidth: "380px" }}>
+          <p style={{ fontSize: "22px", color: "rgba(255,255,255,0.8)", lineHeight: 1.7, maxWidth: "380px" }}>
             Create your Business Owner account, then add branches, invite managers, and start building schedules across your whole operation.
           </p>
 
@@ -97,19 +97,19 @@ export default function RegisterBusiness() {
                   <div style={{ width: "28px", height: "28px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: done ? "#fff" : active ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.1)", border: active ? "2px solid #fff" : "2px solid transparent", transition: "all 0.2s" }}>
                     {done
                       ? <Check size={14} color="#1E40AF" strokeWidth={3} />
-                      : <span style={{ fontSize: "13px", fontWeight: "700", color: active ? "#fff" : "rgba(255,255,255,0.5)" }}>{n}</span>
+                      : <span style={{ fontSize: "20px", fontWeight: "700", color: active ? "#fff" : "rgba(255,255,255,0.5)" }}>{n}</span>
                     }
                   </div>
-                  <span style={{ fontSize: "14px", fontWeight: active ? "700" : "500", color: active ? "#fff" : done ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.4)", transition: "color 0.2s" }}>{label}</span>
+                  <span style={{ fontSize: "21px", fontWeight: active ? "700" : "500", color: active ? "#fff" : done ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.4)", transition: "color 0.2s" }}>{label}</span>
                 </div>
               );
             })}
           </div>
         </div>
 
-        <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.55)" }}>
+        <p style={{ fontSize: "19px", color: "rgba(255,255,255,0.55)" }}>
           Already registered?{" "}
-          <button onClick={() => goTo("/login")} style={{ background: "none", border: "none", color: "#fff", fontWeight: "700", cursor: "pointer", fontSize: "12px", textDecoration: "underline" }}>Log in</button>
+          <button onClick={() => goTo("/login")} style={{ background: "none", border: "none", color: "#fff", fontWeight: "700", cursor: "pointer", fontSize: "19px", textDecoration: "underline" }}>Log in</button>
         </p>
       </div>
 

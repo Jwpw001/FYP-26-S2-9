@@ -70,7 +70,7 @@ export default function CasualBranches() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "16px" }}>
           <div>
             <h2 style={{ fontSize: "28px", fontWeight: "800", color: "#1E293B", letterSpacing: "-0.02em", margin: 0 }}>Preferred Branches</h2>
-            <p style={{ fontSize: "14px", color: "#64748B", marginTop: "6px", maxWidth: "480px" }}>
+            <p style={{ fontSize: "21px", color: "#64748B", marginTop: "6px", maxWidth: "480px" }}>
               Select the branches you're available to work at. Managers will use this to assign you shifts.
             </p>
           </div>
@@ -83,7 +83,7 @@ export default function CasualBranches() {
                 ? "linear-gradient(135deg, #22C55E, #16A34A)"
                 : "linear-gradient(135deg, #3B82F6, #2563EB)",
               color: "#fff", border: "none", padding: "13px 24px",
-              borderRadius: "999px", fontSize: "14px", fontWeight: "700",
+              borderRadius: "999px", fontSize: "21px", fontWeight: "700",
               cursor: saving ? "not-allowed" : "pointer",
               opacity: saving ? 0.7 : 1,
               boxShadow: saved
@@ -100,7 +100,7 @@ export default function CasualBranches() {
         {isPending && (
           <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "12px", padding: "14px 16px", marginBottom: "20px" }}>
             <Clock size={18} color="#D97706" />
-            <p style={{ fontSize: "13px", color: "#92400E" }}>
+            <p style={{ fontSize: "20px", color: "#92400E" }}>
               Your account is pending approval. You can still set your branch preferences now.
             </p>
           </div>
@@ -113,7 +113,7 @@ export default function CasualBranches() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search branches…"
-            style={{ width: "100%", padding: "11px 16px 11px 44px", borderRadius: "999px", border: "1px solid #E2E8F0", fontSize: "14px", outline: "none", background: "#fff", color: "#1E293B", boxSizing: "border-box" }}
+            style={{ width: "100%", padding: "11px 16px 11px 44px", borderRadius: "999px", border: "1px solid #E2E8F0", fontSize: "21px", outline: "none", background: "#fff", color: "#1E293B", boxSizing: "border-box" }}
           />
         </div>
 
@@ -127,7 +127,7 @@ export default function CasualBranches() {
         ) : branches.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#94A3B8" }}>
             <Building2 size={40} style={{ margin: "0 auto 12px" }} />
-            <p style={{ fontSize: "15px", fontWeight: "600" }}>No branches available yet.</p>
+            <p style={{ fontSize: "22px", fontWeight: "600" }}>No branches available yet.</p>
           </div>
         ) : (
           <>
@@ -161,17 +161,17 @@ export default function CasualBranches() {
 
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: "17px", fontWeight: "700", color: isSelected ? "#1D4ED8" : "#1E293B", letterSpacing: "-0.01em" }}>
+                      <p style={{ fontSize: "22px", fontWeight: "700", color: isSelected ? "#1D4ED8" : "#1E293B", letterSpacing: "-0.01em" }}>
                         {branch.name}
                       </p>
                       <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "5px", flexWrap: "wrap" }}>
                         {branch.address && (
-                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", color: "#64748B" }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "21px", color: "#64748B" }}>
                             <MapPin size={12} /> {branch.address}
                           </span>
                         )}
                         {(branch.open_time || branch.close_time) && (
-                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", color: "#64748B" }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "21px", color: "#64748B" }}>
                             <Clock size={12} /> {fmtTime(branch.open_time)} – {fmtTime(branch.close_time)}
                           </span>
                         )}
@@ -201,7 +201,7 @@ export default function CasualBranches() {
             </div>
 
             {/* Summary */}
-            <p style={{ fontSize: "13px", color: "#64748B" }}>
+            <p style={{ fontSize: "20px", color: "#64748B" }}>
               {selected.size === 0
                 ? "No branches selected"
                 : `${selected.size} of ${branches.length} branch${branches.length > 1 ? "es" : ""} selected`}

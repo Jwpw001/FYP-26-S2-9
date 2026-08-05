@@ -101,10 +101,10 @@ export default function AdminLayout({ children, title }) {
             </svg>
             {unread > 0 && (
               <span style={{
-                position: "absolute", top: "4px", right: "4px",
+                position: "absolute", top: "2px", right: "2px",
                 background: "#EF4444", color: "#FFF",
                 fontSize: "10px", fontWeight: "700",
-                width: "16px", height: "16px", borderRadius: "50%",
+                width: "20px", height: "20px", borderRadius: "50%",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 lineHeight: 1,
               }}>
@@ -132,13 +132,13 @@ const s = {
   logoRow: { display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" },
   logoBox: {
     width: "34px", height: "34px", borderRadius: "9px",
-    background: "#3B82F6", color: "#FFFFFF", fontSize: "16px",
+    background: "#3B82F6", color: "#FFFFFF", fontSize: "21px",
     fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
   },
-  logoText: { fontSize: "17px", fontWeight: "800", color: "#FFFFFF", letterSpacing: "-0.01em" },
+  logoText: { fontSize: "22px", fontWeight: "800", color: "#FFFFFF", letterSpacing: "-0.01em" },
   adminBadge: {
     display: "inline-block", background: "rgba(59,130,246,0.15)",
-    color: "#60A5FA", fontSize: "10px", fontWeight: "600",
+    color: "#60A5FA", fontSize: "17px", fontWeight: "600",
     padding: "3px 8px", borderRadius: "100px", letterSpacing: "0.06em",
     textTransform: "uppercase", border: "1px solid rgba(59,130,246,0.25)",
     whiteSpace: "nowrap",
@@ -147,7 +147,7 @@ const s = {
   navItem: {
     display: "flex", alignItems: "center", gap: "10px",
     padding: "9px 12px", borderRadius: "8px",
-    fontSize: "13.5px", fontWeight: "500",
+    fontSize: "20.5px", fontWeight: "500",
     color: "rgba(255,255,255,0.55)", textDecoration: "none",
     transition: "background 0.12s ease, color 0.12s ease",
   },
@@ -157,17 +157,17 @@ const s = {
   userRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" },
   avatar: {
     width: "34px", height: "34px", borderRadius: "50%",
-    background: "#3B82F6", color: "#FFFFFF", fontSize: "14px",
+    background: "#3B82F6", color: "#FFFFFF", fontSize: "21px",
     fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
   },
-  userName: { fontSize: "13px", fontWeight: "600", color: "#F1F5F9", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  userRole: { fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "1px" },
+  userName: { fontSize: "20px", fontWeight: "600", color: "#F1F5F9", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  userRole: { fontSize: "18px", color: "rgba(255,255,255,0.35)", marginTop: "1px" },
   main: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0, marginLeft: "64px" },
   topbar: {
     height: "58px", background: "#FFFFFF", borderBottom: "1px solid #E2E8F0",
     display: "flex", alignItems: "center", padding: "0 24px", gap: "14px",
     position: "sticky", top: 0, zIndex: 100,
   },
-  pageTitle: { fontSize: "16px", fontWeight: "700", color: "#0F172A" },
+  pageTitle: { fontSize: "21px", fontWeight: "700", color: "#0F172A" },
   content: { flex: 1, padding: "28px", boxSizing: "border-box" },
 };

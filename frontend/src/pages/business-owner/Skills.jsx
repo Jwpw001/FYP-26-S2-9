@@ -25,9 +25,9 @@ function StatCard({ icon, label, value, sub }) {
         {icon}
       </div>
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", lineHeight: 1.1 }}>{value}</p>
-        <p style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", marginTop: "2px" }}>{label}</p>
-        {sub && <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px" }}>{sub}</p>}
+        <p style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", lineHeight: 1.1 }}>{value}</p>
+        <p style={{ fontSize: "19px", fontWeight: "600", color: "#64748B", marginTop: "2px" }}>{label}</p>
+        {sub && <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "1px" }}>{sub}</p>}
       </div>
     </div>
   );
@@ -51,20 +51,20 @@ function BranchCard({ branch, q, onEdit }) {
             <Building2 size={17} color="#3B82F6" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{branch.name}</p>
-            <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px" }}>
+            <p style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{branch.name}</p>
+            <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "1px" }}>
               {skills.length} skill{skills.length !== 1 ? "s" : ""} assigned
             </p>
           </div>
         </button>
         <button
           onClick={() => onEdit(branch)}
-          style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "700", color: "#3B82F6", background: "#EFF6FF", border: "1px solid #BFDBFE", padding: "5px 12px", borderRadius: "100px", flexShrink: 0, cursor: "pointer" }}>
+          style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "18px", fontWeight: "700", color: "#3B82F6", background: "#EFF6FF", border: "1px solid #BFDBFE", padding: "5px 12px", borderRadius: "100px", flexShrink: 0, cursor: "pointer" }}>
           <Pencil size={11} strokeWidth={2.5} /> Edit
         </button>
         <button
           onClick={() => setOpen(o => !o)}
-          style={{ fontSize: "11px", fontWeight: "700", color: skills.length > 0 ? "#3B82F6" : "#94A3B8", background: skills.length > 0 ? "#EFF6FF" : "#F8FAFC", border: `1px solid ${skills.length > 0 ? "#BFDBFE" : "#E2E8F0"}`, padding: "5px 12px", borderRadius: "100px", flexShrink: 0, cursor: "pointer" }}>
+          style={{ fontSize: "18px", fontWeight: "700", color: skills.length > 0 ? "#3B82F6" : "#94A3B8", background: skills.length > 0 ? "#EFF6FF" : "#F8FAFC", border: `1px solid ${skills.length > 0 ? "#BFDBFE" : "#E2E8F0"}`, padding: "5px 12px", borderRadius: "100px", flexShrink: 0, cursor: "pointer" }}>
           {open ? "Hide" : "Show"}
         </button>
       </div>
@@ -75,7 +75,7 @@ function BranchCard({ branch, q, onEdit }) {
           {visibleSkills.length === 0 ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0", gap: "8px" }}>
               <Tag size={20} color="#CBD5E1" />
-              <p style={{ fontSize: "12px", color: "#CBD5E1", fontStyle: "italic" }}>
+              <p style={{ fontSize: "19px", color: "#CBD5E1", fontStyle: "italic" }}>
                 {q ? "No matching skills." : "No skills assigned yet."}
               </p>
             </div>
@@ -86,7 +86,7 @@ function BranchCard({ branch, q, onEdit }) {
                 return (
                   <div key={skill.skill_id}
                     title={skill.description || undefined}
-                    style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "5px 13px", borderRadius: "100px", background: p.bg, border: `1px solid ${p.border}`, fontSize: "12px", fontWeight: "700", color: p.text, cursor: skill.description ? "help" : "default" }}>
+                    style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "5px 13px", borderRadius: "100px", background: p.bg, border: `1px solid ${p.border}`, fontSize: "19px", fontWeight: "700", color: p.text, cursor: skill.description ? "help" : "default" }}>
                     <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: p.dot, display: "inline-block", flexShrink: 0 }} />
                     {skill.name}
                   </div>
@@ -179,8 +179,8 @@ function EditSkillsModal({ branch, onClose }) {
               <Tag size={17} color="#2563EB" />
             </div>
             <div>
-              <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Edit Skill Tags</h3>
-              <p style={{ fontSize: "12px", color: "#94A3B8" }}>{branch.name}</p>
+              <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B" }}>Edit Skill Tags</h3>
+              <p style={{ fontSize: "19px", color: "#94A3B8" }}>{branch.name}</p>
             </div>
           </div>
           <button onClick={() => onClose(changed)} style={{ width: "32px", height: "32px", borderRadius: "8px", border: "1px solid #E2E8F0", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748B" }}>
@@ -203,7 +203,7 @@ function EditSkillsModal({ branch, onClose }) {
                     }
                   }}
                   placeholder="Type a skill name and press Enter…"
-                  style={{ flex: 1, padding: "9px 13px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "13px", color: "#1E293B", outline: "none", fontFamily: "inherit", background: "#fff" }} />
+                  style={{ flex: 1, padding: "9px 13px", borderRadius: "9px", border: "1.5px solid #E2E8F0", fontSize: "20px", color: "#1E293B", outline: "none", fontFamily: "inherit", background: "#fff" }} />
                 <button
                   onClick={() => {
                     if (!newSkill.trim()) return;
@@ -211,7 +211,7 @@ function EditSkillsModal({ branch, onClose }) {
                     setPendingName(newSkill.trim()); setNewSkill(""); setError("");
                   }}
                   disabled={!newSkill.trim()}
-                  style={{ padding: "9px 16px", borderRadius: "9px", border: "none", background: newSkill.trim() ? "#3B82F6" : "#F1F5F9", color: newSkill.trim() ? "#fff" : "#94A3B8", fontSize: "13px", fontWeight: "700", cursor: newSkill.trim() ? "pointer" : "not-allowed", whiteSpace: "nowrap", flexShrink: 0 }}>
+                  style={{ padding: "9px 16px", borderRadius: "9px", border: "none", background: newSkill.trim() ? "#3B82F6" : "#F1F5F9", color: newSkill.trim() ? "#fff" : "#94A3B8", fontSize: "20px", fontWeight: "700", cursor: newSkill.trim() ? "pointer" : "not-allowed", whiteSpace: "nowrap", flexShrink: 0 }}>
                   Next →
                 </button>
               </div>
@@ -220,12 +220,12 @@ function EditSkillsModal({ branch, onClose }) {
             {pendingName && (
               <div style={{ marginBottom: "14px", flexShrink: 0, background: "#EFF6FF", border: "1.5px solid #BFDBFE", borderRadius: "12px", padding: "14px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#3B82F6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "800", color: "#fff", flexShrink: 0 }}>
+                  <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#3B82F6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", fontWeight: "800", color: "#fff", flexShrink: 0 }}>
                     {pendingName[0]?.toUpperCase()}
                   </div>
                   <div>
-                    <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E40AF" }}>{pendingName}</p>
-                    <p style={{ fontSize: "11px", color: "#60A5FA" }}>Add a short description (optional)</p>
+                    <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E40AF" }}>{pendingName}</p>
+                    <p style={{ fontSize: "18px", color: "#60A5FA" }}>Add a short description (optional)</p>
                   </div>
                 </div>
                 <textarea
@@ -233,18 +233,18 @@ function EditSkillsModal({ branch, onClose }) {
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addCustomSkill(pendingName, newDesc); setPendingName(""); setNewDesc(""); } }}
                   placeholder="e.g. Prepares espresso-based drinks to standard…"
                   rows={2}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #BFDBFE", fontSize: "12px", color: "#1E293B", outline: "none", fontFamily: "inherit", background: "#fff", resize: "none", boxSizing: "border-box", lineHeight: 1.5 }} />
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: "9px", border: "1.5px solid #BFDBFE", fontSize: "19px", color: "#1E293B", outline: "none", fontFamily: "inherit", background: "#fff", resize: "none", boxSizing: "border-box", lineHeight: 1.5 }} />
                 <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
                   <button onClick={() => { setPendingName(""); setNewDesc(""); }}
-                    style={{ padding: "7px 14px", borderRadius: "8px", border: "1px solid #BFDBFE", background: "#fff", fontSize: "12px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
+                    style={{ padding: "7px 14px", borderRadius: "8px", border: "1px solid #BFDBFE", background: "#fff", fontSize: "19px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
                     Cancel
                   </button>
                   <button onClick={() => { addCustomSkill(pendingName, newDesc); setPendingName(""); setNewDesc(""); }} disabled={adding}
-                    style={{ flex: 1, padding: "7px 14px", borderRadius: "8px", border: "none", background: "#3B82F6", color: "#fff", fontSize: "12px", fontWeight: "700", cursor: "pointer" }}>
+                    style={{ flex: 1, padding: "7px 14px", borderRadius: "8px", border: "none", background: "#3B82F6", color: "#fff", fontSize: "19px", fontWeight: "700", cursor: "pointer" }}>
                     {adding ? "Saving…" : "Save Skill →"}
                   </button>
                   <button onClick={() => { addCustomSkill(pendingName, ""); setPendingName(""); setNewDesc(""); }} disabled={adding}
-                    style={{ padding: "7px 14px", borderRadius: "8px", border: "1px solid #BFDBFE", background: "#fff", fontSize: "12px", fontWeight: "600", color: "#60A5FA", cursor: "pointer" }}>
+                    style={{ padding: "7px 14px", borderRadius: "8px", border: "1px solid #BFDBFE", background: "#fff", fontSize: "19px", fontWeight: "600", color: "#60A5FA", cursor: "pointer" }}>
                     Skip
                   </button>
                 </div>
@@ -252,7 +252,7 @@ function EditSkillsModal({ branch, onClose }) {
             )}
 
             {(error || success) && (
-              <p style={{ fontSize: "12px", color: error ? "#DC2626" : "#059669", marginBottom: "12px", flexShrink: 0, display: "flex", alignItems: "center", gap: "4px" }}>
+              <p style={{ fontSize: "19px", color: error ? "#DC2626" : "#059669", marginBottom: "12px", flexShrink: 0, display: "flex", alignItems: "center", gap: "4px" }}>
                 {error || <><CheckCircle2 size={13} color="#059669" /> {success}</>}
               </p>
             )}
@@ -267,19 +267,19 @@ function EditSkillsModal({ branch, onClose }) {
               ) : skills.length === 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 0", gap: "8px", textAlign: "center" }}>
                   <Sparkles size={20} color="#CBD5E1" />
-                  <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>No skills added yet</p>
-                  <p style={{ fontSize: "12px", color: "#94A3B8" }}>Pick from the suggestions on the right, or type a custom one above.</p>
+                  <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B" }}>No skills added yet</p>
+                  <p style={{ fontSize: "19px", color: "#94A3B8" }}>Pick from the suggestions on the right, or type a custom one above.</p>
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: "10px" }}>
                   {skills.map(sk => (
                     <div key={sk.skill_id}
                       style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "14px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "relative" }}>
-                      <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: "#3B82F6", color: "#fff", fontSize: "13px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "8px" }}>
+                      <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: "#3B82F6", color: "#fff", fontSize: "20px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "8px" }}>
                         {sk.name[0]?.toUpperCase()}
                       </div>
-                      <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B", marginBottom: "4px", lineHeight: 1.3 }}>{sk.name}</p>
-                      <p style={{ fontSize: "11px", color: "#64748B", lineHeight: 1.5, minHeight: "26px" }}>{sk.description || "—"}</p>
+                      <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B", marginBottom: "4px", lineHeight: 1.3 }}>{sk.name}</p>
+                      <p style={{ fontSize: "18px", color: "#64748B", lineHeight: 1.5, minHeight: "26px" }}>{sk.description || "—"}</p>
                       <button onClick={() => removeSkill(sk.skill_id)} disabled={deleting === sk.skill_id}
                         style={{ position: "absolute", top: "10px", right: "10px", width: "22px", height: "22px", borderRadius: "6px", border: "none", background: "transparent", color: "#CBD5E1", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: deleting === sk.skill_id ? 0.4 : 1 }}
                         onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#EF4444"; }}
@@ -296,13 +296,13 @@ function EditSkillsModal({ branch, onClose }) {
           {/* Right: suggestions */}
           <div style={{ display: "flex", flexDirection: "column", background: "#FAFBFE", overflow: "hidden" }}>
             <div style={{ padding: "20px 18px 12px", flexShrink: 0, borderBottom: "1px solid #F1F5F9" }}>
-              <h4 style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B", marginBottom: "3px" }}>Suggested Skills</h4>
-              <p style={{ fontSize: "11px", color: "#94A3B8" }}>Click to add to this branch</p>
+              <h4 style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B", marginBottom: "3px" }}>Suggested Skills</h4>
+              <p style={{ fontSize: "18px", color: "#94A3B8" }}>Click to add to this branch</p>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
               {suggestions.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "30px 12px" }}>
-                  <p style={{ fontSize: "12px", color: "#94A3B8" }}>No more suggestions — all added, or type a custom skill.</p>
+                  <p style={{ fontSize: "19px", color: "#94A3B8" }}>No more suggestions — all added, or type a custom skill.</p>
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -310,12 +310,12 @@ function EditSkillsModal({ branch, onClose }) {
                     <div key={s.skill_id} onClick={() => addFromSuggestion(s.skill_id)}
                       style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "12px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "8px" }}>
-                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "#F1F5F9", color: "#64748B", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "#F1F5F9", color: "#64748B", fontSize: "19px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           {s.name[0]?.toUpperCase()}
                         </div>
-                        <p style={{ fontSize: "12px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</p>
+                        <p style={{ fontSize: "19px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</p>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", fontSize: "11px", fontWeight: "600", color: "#3B82F6" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", fontSize: "18px", fontWeight: "600", color: "#3B82F6" }}>
                         <Plus size={11} strokeWidth={2.5} color="#3B82F6" /> Add
                       </div>
                     </div>
@@ -365,8 +365,8 @@ export default function BOSkills() {
 
         {/* Page header */}
         <div style={{ marginBottom: "24px" }}>
-          <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A" }}>Skill Tags</h2>
-          <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px" }}>
+          <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A" }}>Skill Tags</h2>
+          <p style={{ fontSize: "20px", color: "#64748B", marginTop: "3px" }}>
             Skills assigned to each branch across your business
           </p>
         </div>
@@ -403,10 +403,10 @@ export default function BOSkills() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search branches or skills…"
-              style={{ border: "none", outline: "none", fontSize: "13px", color: "#1E293B", background: "transparent", flex: 1, fontFamily: "inherit" }}
+              style={{ border: "none", outline: "none", fontSize: "20px", color: "#1E293B", background: "transparent", flex: 1, fontFamily: "inherit" }}
             />
             {search && (
-              <button onClick={() => setSearch("")} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", fontSize: "17px", lineHeight: 1, padding: 0 }}>×</button>
+              <button onClick={() => setSearch("")} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", fontSize: "22px", lineHeight: 1, padding: 0 }}>×</button>
             )}
           </div>
         )}
@@ -423,10 +423,10 @@ export default function BOSkills() {
             <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               <Tag size={24} color="#CBD5E1" />
             </div>
-            <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>
+            <p style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>
               {search ? "No results found" : "No skill data yet"}
             </p>
-            <p style={{ fontSize: "13px", color: "#94A3B8", maxWidth: "320px", margin: "0 auto", lineHeight: 1.6 }}>
+            <p style={{ fontSize: "20px", color: "#94A3B8", maxWidth: "320px", margin: "0 auto", lineHeight: 1.6 }}>
               {search
                 ? "Try a different keyword or clear the search."
                 : "Skills will appear here once they're assigned to your branches via the Branches settings."}

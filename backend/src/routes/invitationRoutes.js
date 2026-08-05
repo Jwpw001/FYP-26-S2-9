@@ -7,7 +7,7 @@ router.post("/send", protect, sendInvitation);
 router.get("/", protect, listInvitations);
 router.get("/check-code/:code", getInvitationByCode);
 router.get("/:token", getInvitation);
-router.post("/:token/accept", acceptInvitation);
+router.post("/:token/accept", protect.optional, acceptInvitation);
 router.delete("/:id/cancel", protect, cancelInvitation);
 router.post("/:id/resend", protect, resendInvitation);
 

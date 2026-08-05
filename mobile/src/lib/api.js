@@ -1,10 +1,10 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "./secureStorage";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 async function getToken() {
   try {
-    const raw = await AsyncStorage.getItem("krewby_user");
+    const raw = await secureStorage.getItem("krewby_user");
     if (!raw) return null;
     const user = JSON.parse(raw);
     return user?.token || null;

@@ -89,7 +89,7 @@ function LeaveMonthCalendar({ year, month, rangeStart, rangeEnd, hoverDate, onDa
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: "5px" }}>
         {WEEK_HEADERS.map(h => (
-          <div key={h} style={{ textAlign: "center", fontSize: "10px", fontWeight: "700", color: "#94A3B8", padding: "3px 0", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
+          <div key={h} style={{ textAlign: "center", fontSize: "17px", fontWeight: "700", color: "#94A3B8", padding: "3px 0", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
         ))}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "3px" }}>
@@ -121,7 +121,7 @@ function LeaveMonthCalendar({ year, month, rangeStart, rangeEnd, hoverDate, onDa
               onMouseEnter={() => clickable && onDayHover && onDayHover(dateStr)}
               onMouseLeave={() => onDayLeave && onDayLeave()}
               style={{ minHeight: "58px", background: cellBg, border: `1.5px solid ${borderCol}`, borderRadius: "8px", cursor: clickable ? "pointer" : "default", opacity: !inMonth ? 0.35 : 1, transition: "border-color 0.1s, background 0.1s", padding: "5px 3px", boxSizing: "border-box" }}>
-              <p style={{ fontSize: "13px", fontWeight: fw, color: textColor, textAlign: "center", marginBottom: "4px" }}>
+              <p style={{ fontSize: "20px", fontWeight: fw, color: textColor, textAlign: "center", marginBottom: "4px" }}>
                 {new Date(dateStr + "T00:00:00").getDate()}
               </p>
               {shiftHit && inMonth && (
@@ -148,7 +148,7 @@ function OffDayMonthCalendar({ year, month, selectedDate, onDayClick, offDayRequ
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: "5px" }}>
         {WEEK_HEADERS.map(h => (
-          <div key={h} style={{ textAlign: "center", fontSize: "10px", fontWeight: "700", color: "#94A3B8", padding: "3px 0", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
+          <div key={h} style={{ textAlign: "center", fontSize: "17px", fontWeight: "700", color: "#94A3B8", padding: "3px 0", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
         ))}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "3px" }}>
@@ -182,7 +182,7 @@ function OffDayMonthCalendar({ year, month, selectedDate, onDayClick, offDayRequ
               }}
               title={offHit ? `Off day ${offHit.status}` : undefined}
               style={{ minHeight: "58px", background: cellBg, border: `1.5px solid ${borderCol}`, borderRadius: "8px", cursor: clickable ? "pointer" : hasActive ? "not-allowed" : "default", opacity: !inMonth ? 0.35 : 1, transition: "border-color 0.1s, background 0.1s", padding: "5px 3px", boxSizing: "border-box" }}>
-              <p style={{ fontSize: "13px", fontWeight: fw, color: textColor, textAlign: "center", marginBottom: "4px" }}>
+              <p style={{ fontSize: "20px", fontWeight: fw, color: textColor, textAlign: "center", marginBottom: "4px" }}>
                 {new Date(dateStr + "T00:00:00").getDate()}
               </p>
               {shiftHit && inMonth && (
@@ -204,7 +204,7 @@ function LegendDot({ color, label }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
       <div style={{ width: "10px", height: "10px", borderRadius: "3px", background: color }} />
-      <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B" }}>{label}</span>
+      <span style={{ fontSize: "18px", fontWeight: "600", color: "#64748B" }}>{label}</span>
     </div>
   );
 }
@@ -404,9 +404,9 @@ export default function LeaveRequests() {
             ...(workingDays >= 6 ? [{ key: "offday", label: "Off Day Requests", badge: pendingOffDay }] : []),
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              style={{ padding: "10px 20px", background: "none", border: "none", borderBottom: activeTab === tab.key ? "2px solid #2563EB" : "2px solid transparent", marginBottom: "-2px", fontSize: "14px", fontWeight: activeTab === tab.key ? "700" : "500", color: activeTab === tab.key ? "#2563EB" : "#64748B", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", transition: "all 0.15s" }}>
+              style={{ padding: "10px 20px", background: "none", border: "none", borderBottom: activeTab === tab.key ? "2px solid #2563EB" : "2px solid transparent", marginBottom: "-2px", fontSize: "21px", fontWeight: activeTab === tab.key ? "700" : "500", color: activeTab === tab.key ? "#2563EB" : "#64748B", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", transition: "all 0.15s" }}>
               {tab.label}
-              {tab.badge > 0 && <span style={{ background: "#F59E0B", color: "#FFF", fontSize: "10px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>{tab.badge}</span>}
+              {tab.badge > 0 && <span style={{ background: "#F59E0B", color: "#FFF", fontSize: "17px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>{tab.badge}</span>}
             </button>
           ))}
         </div>
@@ -415,8 +415,8 @@ export default function LeaveRequests() {
         {activeTab === "leave" && (
           <div>
             <div style={{ marginBottom: "20px" }}>
-              <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Leave Requests</h2>
-              <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+              <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Leave Requests</h2>
+              <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
                 {pendingCount > 0 ? `${pendingCount} pending approval` : "No pending requests"} · tap two dates on the calendar to set your leave period
               </p>
             </div>
@@ -428,7 +428,7 @@ export default function LeaveRequests() {
                 <button onClick={() => setLeaveMonth(m => prevMonthOf(m.year, m.month))} style={navBtn}>
                   <ChevronLeft size={16} />
                 </button>
-                <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{monthLabel(leaveMonth.year, leaveMonth.month)}</span>
+                <span style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B" }}>{monthLabel(leaveMonth.year, leaveMonth.month)}</span>
                 <button onClick={() => setLeaveMonth(m => nextMonthOf(m.year, m.month))} style={navBtn}>
                   <ChevronRight size={16} />
                 </button>
@@ -461,20 +461,20 @@ export default function LeaveRequests() {
                     {/* Range summary */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
                       <div>
-                        <p style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>
+                        <p style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B" }}>
                           {fmtDate(rangeStart)} → {fmtDate(rangeEnd)}
                         </p>
-                        <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>
+                        <p style={{ fontSize: "19px", color: "#64748B", marginTop: "2px" }}>
                           {getDays(rangeStart, rangeEnd)} day{getDays(rangeStart, rangeEnd) !== 1 ? "s" : ""}
                         </p>
                       </div>
                       <button onClick={() => { setRangeStart(null); setRangeEnd(null); setError(""); }}
-                        style={{ background: "#F1F5F9", border: "none", borderRadius: "8px", padding: "6px 12px", fontSize: "12px", fontWeight: "600", color: "#64748B", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
+                        style={{ background: "#F1F5F9", border: "none", borderRadius: "8px", padding: "6px 12px", fontSize: "19px", fontWeight: "600", color: "#64748B", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
                         <X size={12} /> Clear
                       </button>
                     </div>
 
-                    {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "9px", fontSize: "13px", marginBottom: "14px" }}>{error}</div>}
+                    {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "9px", fontSize: "20px", marginBottom: "14px" }}>{error}</div>}
 
                     {/* Leave type pill buttons */}
                     <div style={{ marginBottom: "14px" }}>
@@ -485,7 +485,7 @@ export default function LeaveRequests() {
                           const active = leaveForm.leave_type === t;
                           return (
                             <button key={t} onClick={() => setLeaveForm(p => ({ ...p, leave_type: t }))}
-                              style={{ flex: 1, padding: "9px 6px", border: `2px solid ${active ? tc.bar : "#E2E8F0"}`, background: active ? tc.bg : "#FFF", borderRadius: "10px", fontSize: "13px", fontWeight: "700", color: active ? tc.color : "#94A3B8", cursor: "pointer", transition: "all 0.15s" }}>
+                              style={{ flex: 1, padding: "9px 6px", border: `2px solid ${active ? tc.bar : "#E2E8F0"}`, background: active ? tc.bg : "#FFF", borderRadius: "10px", fontSize: "20px", fontWeight: "700", color: active ? tc.color : "#94A3B8", cursor: "pointer", transition: "all 0.15s" }}>
                               {t.charAt(0).toUpperCase() + t.slice(1)}
                             </button>
                           );
@@ -502,7 +502,7 @@ export default function LeaveRequests() {
                     </div>
 
                     <button onClick={handleLeaveSubmit} disabled={saving}
-                      style={{ width: "100%", padding: "12px", background: saving ? "#93C5FD" : "#2563EB", color: "#FFF", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", cursor: saving ? "default" : "pointer", transition: "background 0.15s" }}>
+                      style={{ width: "100%", padding: "12px", background: saving ? "#93C5FD" : "#2563EB", color: "#FFF", border: "none", borderRadius: "10px", fontSize: "21px", fontWeight: "700", cursor: saving ? "default" : "pointer", transition: "background 0.15s" }}>
                       {saving ? "Submitting…" : `Submit ${leaveForm.leave_type.charAt(0).toUpperCase() + leaveForm.leave_type.slice(1)} Leave`}
                     </button>
                   </>
@@ -510,7 +510,7 @@ export default function LeaveRequests() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#2563EB", animation: "popIn 0.4s ease infinite alternate" }} />
-                      <p style={{ fontSize: "14px", fontWeight: "600", color: "#1D4ED8" }}>
+                      <p style={{ fontSize: "21px", fontWeight: "600", color: "#1D4ED8" }}>
                         From <strong>{fmtDate(rangeStart)}</strong> — now tap the end date
                       </p>
                     </div>
@@ -527,7 +527,7 @@ export default function LeaveRequests() {
             <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", marginBottom: "16px", width: "fit-content" }}>
               {FILTER_TABS.map(t => (
                 <button key={t.value} onClick={() => setFilter(t.value)}
-                  style={{ padding: "7px 16px", background: filter === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: filter === t.value ? "600" : "500", color: filter === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filter === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
+                  style={{ padding: "7px 16px", background: filter === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "20px", fontWeight: filter === t.value ? "600" : "500", color: filter === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filter === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
                   {t.label}
                 </button>
               ))}
@@ -548,8 +548,8 @@ export default function LeaveRequests() {
             ) : filtered.length === 0 ? (
               <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "48px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                 <div style={{ marginBottom: "12px" }}><TreePalm size={36} color="#CBD5E1" /></div>
-                <p style={{ fontSize: "15px", fontWeight: "600", color: "#94A3B8" }}>No {filter === "all" ? "" : filter + " "}leave requests</p>
-                <p style={{ fontSize: "13px", color: "#CBD5E1", marginTop: "4px" }}>Tap dates on the calendar above to request leave.</p>
+                <p style={{ fontSize: "22px", fontWeight: "600", color: "#94A3B8" }}>No {filter === "all" ? "" : filter + " "}leave requests</p>
+                <p style={{ fontSize: "20px", color: "#CBD5E1", marginTop: "4px" }}>Tap dates on the calendar above to request leave.</p>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -559,10 +559,10 @@ export default function LeaveRequests() {
                     <div key={r.request_id}
                       style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both` }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-                        <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
+                        <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "19px", fontWeight: "700", background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
                           {r.leave_type.charAt(0).toUpperCase() + r.leave_type.slice(1)} Leave
                         </span>
-                        <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", ...leaveBadge(r.status) }}>
+                        <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "19px", fontWeight: "600", ...leaveBadge(r.status) }}>
                           {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                         </span>
                       </div>
@@ -571,11 +571,11 @@ export default function LeaveRequests() {
                         <InfoItem label="To"       value={fmtDate(r.end_date)} />
                         <InfoItem label="Duration" value={`${getDays(r.start_date, r.end_date)} day(s)`} />
                       </div>
-                      {r.reason && <p style={{ fontSize: "13px", color: "#64748B", fontStyle: "italic", marginTop: "10px" }}>"{r.reason}"</p>}
+                      {r.reason && <p style={{ fontSize: "20px", color: "#64748B", fontStyle: "italic", marginTop: "10px" }}>"{r.reason}"</p>}
                       {r.status === "pending" && (
                         <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "flex-end" }}>
                           <button onClick={() => handleCancelLeave(r.request_id)}
-                            style={{ padding: "6px 14px", borderRadius: "8px", border: "1px solid #FECACA", background: "#FEF2F2", color: "#DC2626", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                            style={{ padding: "6px 14px", borderRadius: "8px", border: "1px solid #FECACA", background: "#FEF2F2", color: "#DC2626", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}>
                             Cancel Request
                           </button>
                         </div>
@@ -592,8 +592,8 @@ export default function LeaveRequests() {
         {activeTab === "offday" && (
           <div>
             <div style={{ marginBottom: "20px" }}>
-              <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Off Day Requests</h2>
-              <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+              <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Off Day Requests</h2>
+              <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
                 {pendingOffDay > 0 ? `${pendingOffDay} pending approval` : "No pending requests"} · tap a day to request it off
               </p>
             </div>
@@ -605,7 +605,7 @@ export default function LeaveRequests() {
                 <button onClick={() => setOffMonth(m => prevMonthOf(m.year, m.month))} style={navBtn}>
                   <ChevronLeft size={16} />
                 </button>
-                <span style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B" }}>{monthLabel(offMonth.year, offMonth.month)}</span>
+                <span style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B" }}>{monthLabel(offMonth.year, offMonth.month)}</span>
                 <button onClick={() => setOffMonth(m => nextMonthOf(m.year, m.month))} style={navBtn}>
                   <ChevronRight size={16} />
                 </button>
@@ -635,10 +635,10 @@ export default function LeaveRequests() {
               <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderTop: "none", borderBottomLeftRadius: "16px", borderBottomRightRadius: "16px", padding: "18px 20px", marginBottom: "20px", animation: "popIn 0.2s ease both" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                   <div>
-                    <p style={{ fontSize: "15px", fontWeight: "700", color: "#4C1D95" }}>
+                    <p style={{ fontSize: "22px", fontWeight: "700", color: "#4C1D95" }}>
                       {new Date(selectedOffDate + "T00:00:00").toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
                     </p>
-                    <p style={{ fontSize: "12px", color: "#7C3AED", marginTop: "2px" }}>Requesting this day off</p>
+                    <p style={{ fontSize: "19px", color: "#7C3AED", marginTop: "2px" }}>Requesting this day off</p>
                   </div>
                   <button onClick={() => { setSelectedOffDate(null); setOffDayReason(""); setOffDayError(""); }}
                     style={{ background: "#EDE9FE", border: "none", borderRadius: "8px", padding: "6px", cursor: "pointer", display: "flex" }}>
@@ -646,7 +646,7 @@ export default function LeaveRequests() {
                   </button>
                 </div>
 
-                {offDayError && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "9px", fontSize: "13px", marginBottom: "14px" }}>{offDayError}</div>}
+                {offDayError && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "9px", fontSize: "20px", marginBottom: "14px" }}>{offDayError}</div>}
 
                 <div style={{ marginBottom: "16px" }}>
                   <p style={{ ...lbl, color: "#5B21B6" }}>Reason <span style={{ fontWeight: "400", color: "#C4B5FD" }}>(optional)</span></p>
@@ -657,11 +657,11 @@ export default function LeaveRequests() {
 
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button onClick={() => { setSelectedOffDate(null); setOffDayReason(""); setOffDayError(""); }}
-                    style={{ flex: 1, padding: "11px", background: "#EDE9FE", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "600", color: "#6D28D9", cursor: "pointer" }}>
+                    style={{ flex: 1, padding: "11px", background: "#EDE9FE", border: "none", borderRadius: "10px", fontSize: "21px", fontWeight: "600", color: "#6D28D9", cursor: "pointer" }}>
                     Cancel
                   </button>
                   <button onClick={handleOffDaySubmit} disabled={offDaySaving}
-                    style={{ flex: 2, padding: "11px", background: offDaySaving ? "#C4B5FD" : "#7C3AED", color: "#FFF", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", cursor: offDaySaving ? "default" : "pointer", transition: "background 0.15s" }}>
+                    style={{ flex: 2, padding: "11px", background: offDaySaving ? "#C4B5FD" : "#7C3AED", color: "#FFF", border: "none", borderRadius: "10px", fontSize: "21px", fontWeight: "700", cursor: offDaySaving ? "default" : "pointer", transition: "background 0.15s" }}>
                     {offDaySaving ? "Submitting…" : "Submit Off Day Request"}
                   </button>
                 </div>
@@ -676,8 +676,8 @@ export default function LeaveRequests() {
             ) : offDayRequests.length === 0 ? (
               <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "48px", textAlign: "center" }}>
                 <TreePalm size={32} color="#CBD5E1" style={{ margin: "0 auto 10px" }} />
-                <p style={{ fontSize: "15px", fontWeight: "600", color: "#94A3B8" }}>No off day requests yet</p>
-                <p style={{ fontSize: "13px", color: "#CBD5E1", marginTop: "4px" }}>Tap a day on the calendar above to request it off.</p>
+                <p style={{ fontSize: "22px", fontWeight: "600", color: "#94A3B8" }}>No off day requests yet</p>
+                <p style={{ fontSize: "20px", color: "#CBD5E1", marginTop: "4px" }}>Tap a day on the calendar above to request it off.</p>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -689,17 +689,17 @@ export default function LeaveRequests() {
                   return (
                     <div key={r.id} style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", animation: `fadeSlideUp 0.3s ease ${i * 0.05}s both` }}>
                       <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: "10px", padding: "10px 16px", textAlign: "center", flexShrink: 0 }}>
-                        <p style={{ fontSize: "10px", fontWeight: "700", color: "#6D28D9", textTransform: "uppercase", letterSpacing: "0.05em" }}>Off Day</p>
-                        <p style={{ fontSize: "16px", fontWeight: "800", color: "#4C1D95", marginTop: "2px" }}>{dayName}</p>
-                        <p style={{ fontSize: "11px", color: "#6D28D9", marginTop: "1px" }}>{dateFmt}</p>
+                        <p style={{ fontSize: "17px", fontWeight: "700", color: "#6D28D9", textTransform: "uppercase", letterSpacing: "0.05em" }}>Off Day</p>
+                        <p style={{ fontSize: "21px", fontWeight: "800", color: "#4C1D95", marginTop: "2px" }}>{dayName}</p>
+                        <p style={{ fontSize: "18px", color: "#6D28D9", marginTop: "1px" }}>{dateFmt}</p>
                       </div>
                       <div style={{ flex: 1, minWidth: "120px" }}>
                         {r.reason
-                          ? <p style={{ fontSize: "13px", color: "#475569", fontStyle: "italic" }}>"{r.reason}"</p>
-                          : <p style={{ fontSize: "13px", color: "#CBD5E1" }}>No reason provided</p>}
-                        <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "4px" }}>Submitted {new Date(r.created_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}</p>
+                          ? <p style={{ fontSize: "20px", color: "#475569", fontStyle: "italic" }}>"{r.reason}"</p>
+                          : <p style={{ fontSize: "20px", color: "#CBD5E1" }}>No reason provided</p>}
+                        <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "4px" }}>Submitted {new Date(r.created_at).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}</p>
                       </div>
-                      <span style={{ padding: "5px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: "700", ...badge, flexShrink: 0 }}>
+                      <span style={{ padding: "5px 14px", borderRadius: "100px", fontSize: "19px", fontWeight: "700", ...badge, flexShrink: 0 }}>
                         {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                       </span>
                     </div>
@@ -713,7 +713,7 @@ export default function LeaveRequests() {
       </div>
 
       {toast && (
-        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both" }}>
+        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "success" ? "#22C55E" : "#EF4444", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontSize: "21px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "toastIn 0.3s ease both" }}>
           {toast.msg}
         </div>
       )}
@@ -724,12 +724,12 @@ export default function LeaveRequests() {
 function InfoItem({ label, value }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-      <span style={{ fontSize: "11px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
-      <span style={{ fontSize: "14px", fontWeight: "500", color: "#1E293B" }}>{value}</span>
+      <span style={{ fontSize: "18px", fontWeight: "600", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
+      <span style={{ fontSize: "21px", fontWeight: "500", color: "#1E293B" }}>{value}</span>
     </div>
   );
 }
 
-const lbl    = { display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "6px" };
-const inp    = { display: "block", width: "100%", padding: "10px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", background: "#FFF", color: "#1E293B", boxSizing: "border-box" };
+const lbl    = { display: "block", fontSize: "19px", fontWeight: "600", color: "#64748B", marginBottom: "6px" };
+const inp    = { display: "block", width: "100%", padding: "10px 13px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "21px", background: "#FFF", color: "#1E293B", boxSizing: "border-box" };
 const navBtn = { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center", color: "#475569" };

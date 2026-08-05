@@ -66,9 +66,9 @@ export function Pricing({ plans, onSelect, selectedKey }) {
     <div>
       {/* Toggle */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "28px" }}>
-        <span style={{ fontSize: "14px", fontWeight: "600", color: isMonthly ? "#0F172A" : "#94A3B8" }}>Monthly</span>
+        <span style={{ fontSize: "21px", fontWeight: "600", color: isMonthly ? "#0F172A" : "#94A3B8" }}>Monthly</span>
         <Switch checked={!isMonthly} onChange={handleToggle} switchRef={switchRef} />
-        <span style={{ fontSize: "14px", fontWeight: "600", color: !isMonthly ? "#0F172A" : "#94A3B8" }}>
+        <span style={{ fontSize: "21px", fontWeight: "600", color: !isMonthly ? "#0F172A" : "#94A3B8" }}>
           Annual <span style={{ color: "#2563EB" }}>(Save 20%)</span>
         </span>
       </div>
@@ -104,14 +104,14 @@ export function Pricing({ plans, onSelect, selectedKey }) {
             >
               {/* Popular badge */}
               {isPopular && (
-                <div style={{ position: "absolute", top: "0", right: "0", background: plan.accent, color: "#fff", fontSize: "11px", fontWeight: "700", padding: "5px 12px", borderRadius: "0 16px 0 12px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <div style={{ position: "absolute", top: "0", right: "0", background: plan.accent, color: "#fff", fontSize: "18px", fontWeight: "700", padding: "5px 12px", borderRadius: "0 16px 0 12px", display: "flex", alignItems: "center", gap: "4px" }}>
                   <Star size={11} fill="#fff" /> Popular
                 </div>
               )}
 
               {/* Radio indicator */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: active ? plan.accent : "#94A3B8" }}>{plan.name}</span>
+                <span style={{ fontSize: "18px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: active ? plan.accent : "#94A3B8" }}>{plan.name}</span>
                 <div style={{ width: "18px", height: "18px", borderRadius: "50%", border: `2px solid ${active ? plan.accent : "#CBD5E1"}`, background: active ? plan.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
                   {active && <Check size={10} color="#fff" strokeWidth={3.5} />}
                 </div>
@@ -119,7 +119,7 @@ export function Pricing({ plans, onSelect, selectedKey }) {
 
               {/* Price */}
               <div style={{ marginBottom: "4px", display: "flex", alignItems: "flex-end", gap: "2px" }}>
-                <span style={{ fontSize: "13px", fontWeight: "700", color: active ? plan.accent : "#64748B", marginBottom: "6px" }}>S$</span>
+                <span style={{ fontSize: "20px", fontWeight: "700", color: active ? plan.accent : "#64748B", marginBottom: "6px" }}>S$</span>
                 <span style={{ fontSize: "38px", fontWeight: "800", letterSpacing: "-0.04em", color: active ? plan.accent : "#0F172A", lineHeight: 1 }}>
                   <NumberFlow
                     value={numPrice}
@@ -127,11 +127,11 @@ export function Pricing({ plans, onSelect, selectedKey }) {
                     willChange
                   />
                 </span>
-                <span style={{ fontSize: "12px", color: "#94A3B8", fontWeight: "500", marginBottom: "6px", marginLeft: "3px" }}>{plan.period}</span>
+                <span style={{ fontSize: "19px", color: "#94A3B8", fontWeight: "500", marginBottom: "6px", marginLeft: "3px" }}>{plan.period}</span>
               </div>
-              <p style={{ fontSize: "11px", color: "#94A3B8", marginBottom: "6px" }}>{isMonthly ? "billed monthly" : "billed annually"}</p>
+              <p style={{ fontSize: "18px", color: "#94A3B8", marginBottom: "6px" }}>{isMonthly ? "billed monthly" : "billed annually"}</p>
 
-              <p style={{ fontSize: "12px", color: active ? plan.accent : "#64748B", fontWeight: "500", marginBottom: "16px" }}>{plan.tagline}</p>
+              <p style={{ fontSize: "19px", color: active ? plan.accent : "#64748B", fontWeight: "500", marginBottom: "16px" }}>{plan.tagline}</p>
 
               {/* Divider */}
               <div style={{ height: "1px", background: active ? `${plan.accent}28` : "#F1F5F9", marginBottom: "14px" }} />
@@ -143,7 +143,7 @@ export function Pricing({ plans, onSelect, selectedKey }) {
                     <div style={{ width: "15px", height: "15px", borderRadius: "50%", background: active ? plan.accent : "#E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}>
                       <Check size={8} color={active ? "#fff" : "#94A3B8"} strokeWidth={3} />
                     </div>
-                    <span style={{ fontSize: "12px", color: active ? "#1E293B" : "#64748B", lineHeight: 1.45 }}>{f}</span>
+                    <span style={{ fontSize: "19px", color: active ? "#1E293B" : "#64748B", lineHeight: 1.45 }}>{f}</span>
                   </div>
                 ))}
               </div>
@@ -157,14 +157,14 @@ export function Pricing({ plans, onSelect, selectedKey }) {
                   background: active ? plan.accent : isPopular ? plan.accent + "14" : "#F1F5F9",
                   color: active ? "#fff" : isPopular ? plan.accent : "#64748B",
                   border: `1.5px solid ${active ? plan.accent : isPopular ? plan.accent + "44" : "#E2E8F0"}`,
-                  borderRadius: "10px", fontSize: "13px", fontWeight: "700", cursor: "pointer",
+                  borderRadius: "10px", fontSize: "20px", fontWeight: "700", cursor: "pointer",
                   transition: "all 0.18s",
                 }}
               >
                 {plan.buttonText}
               </button>
 
-              <p style={{ fontSize: "11px", color: "#94A3B8", textAlign: "center", marginTop: "10px", lineHeight: 1.5 }}>{plan.description}</p>
+              <p style={{ fontSize: "18px", color: "#94A3B8", textAlign: "center", marginTop: "10px", lineHeight: 1.5 }}>{plan.description}</p>
             </motion.div>
           );
         })}

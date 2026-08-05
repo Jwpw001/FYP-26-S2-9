@@ -159,10 +159,10 @@ function SkillsPanel({ onBack }) {
           <div style={{ width: 28, height: 28, borderRadius: "8px", background: "linear-gradient(135deg,#6366F1,#8B5CF6)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(99,102,241,0.3)" }}>
             <Sparkles size={13} color="#fff" />
           </div>
-          <span style={{ fontSize: "15px", fontWeight: "800", color: "#1E1B4B", letterSpacing: "-0.2px" }}>My Skills</span>
+          <span style={{ fontSize: "22px", fontWeight: "800", color: "#1E1B4B", letterSpacing: "-0.2px" }}>My Skills</span>
         </div>
         {!loading && skills.length > 0 && (
-          <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: "700", color: "#6366F1", background: "#EEF2FF", border: "1px solid #C7D2FE", padding: "2px 8px", borderRadius: "99px" }}>{skills.length} assigned</span>
+          <span style={{ marginLeft: "auto", fontSize: "18px", fontWeight: "700", color: "#6366F1", background: "#EEF2FF", border: "1px solid #C7D2FE", padding: "2px 8px", borderRadius: "99px" }}>{skills.length} assigned</span>
         )}
       </div>
       <div style={{ padding: "16px 20px 22px", overflowY: "auto", maxHeight: "380px" }}>
@@ -175,8 +175,8 @@ function SkillsPanel({ onBack }) {
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#F8FAFC", border: "2px dashed #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               <Star size={22} color="#CBD5E1" />
             </div>
-            <p style={{ fontSize: "14px", fontWeight: "700", color: "#94A3B8", marginBottom: "5px" }}>No skills yet</p>
-            <p style={{ fontSize: "12px", color: "#CBD5E1", lineHeight: 1.5, maxWidth: "200px", margin: "0 auto" }}>Your manager will assign skills to your profile.</p>
+            <p style={{ fontSize: "21px", fontWeight: "700", color: "#94A3B8", marginBottom: "5px" }}>No skills yet</p>
+            <p style={{ fontSize: "19px", color: "#CBD5E1", lineHeight: 1.5, maxWidth: "200px", margin: "0 auto" }}>Your manager will assign skills to your profile.</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -189,13 +189,13 @@ function SkillsPanel({ onBack }) {
                     <Award size={15} color={cfg.bar} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: "13px", fontWeight: "700", color: "#0F172A", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</p>
+                    <p style={{ fontSize: "20px", fontWeight: "700", color: "#0F172A", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</p>
                     {s.years_of_experience != null && (
-                      <p style={{ fontSize: "11px", color: "#94A3B8", fontWeight: "500" }}>{s.years_of_experience} yr{s.years_of_experience !== 1 ? "s" : ""} experience</p>
+                      <p style={{ fontSize: "18px", color: "#94A3B8", fontWeight: "500" }}>{s.years_of_experience} yr{s.years_of_experience !== 1 ? "s" : ""} experience</p>
                     )}
                   </div>
                   {s.experience_level && (
-                    <span style={{ fontSize: "10px", fontWeight: "700", color: cfg.badgeText, background: cfg.badge, padding: "3px 9px", borderRadius: "99px", textTransform: "capitalize", whiteSpace: "nowrap", flexShrink: 0 }}>{cfg.label}</span>
+                    <span style={{ fontSize: "17px", fontWeight: "700", color: cfg.badgeText, background: cfg.badge, padding: "3px 9px", borderRadius: "99px", textTransform: "capitalize", whiteSpace: "nowrap", flexShrink: 0 }}>{cfg.label}</span>
                   )}
                 </div>
               );
@@ -265,7 +265,7 @@ export default function ProfileModal({ onClose }) {
 
   const name      = account?.full_name || cached?.full_name || "";
   const avatarSrc = account?.avatar_url || "/avatars/default.png";
-  const isStaff   = ["regular_staff", "casual_staff", "krewby_casual_worker"].includes(account?.role);
+  const isStaff   = ["regular_staff", "casual_staff"].includes(account?.role);
 
   return (
     <div
@@ -313,9 +313,9 @@ export default function ProfileModal({ onClose }) {
                 </div>
 
                 {!editing && !showAvatarPicker && (
-                  <p style={{ fontSize: "17px", fontWeight: "800", color: "#fff", letterSpacing: "-0.3px", textShadow: "0 1px 4px rgba(0,0,0,0.2)", marginTop: "2px" }}>{name}</p>
+                  <p style={{ fontSize: "22px", fontWeight: "800", color: "#fff", letterSpacing: "-0.3px", textShadow: "0 1px 4px rgba(0,0,0,0.2)", marginTop: "2px" }}>{name}</p>
                 )}
-                <span style={{ fontSize: "10px", fontWeight: "800", letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(255,255,255,0.9)", background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.35)", padding: "3px 11px", borderRadius: "99px", backdropFilter: "blur(4px)" }}>
+                <span style={{ fontSize: "17px", fontWeight: "800", letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(255,255,255,0.9)", background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.35)", padding: "3px 11px", borderRadius: "99px", backdropFilter: "blur(4px)" }}>
                   {roleLabel(account?.role)}
                 </span>
               </div>
@@ -324,8 +324,8 @@ export default function ProfileModal({ onClose }) {
             {/* ── Avatar Picker ── */}
             {showAvatarPicker && (
               <div style={{ padding: "18px 22px 16px", borderBottom: "1px solid #F1F5F9" }}>
-                <p style={{ fontSize: "11px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "14px" }}>Choose your avatar</p>
-                {avatarError && <p style={{ fontSize: "12px", color: "#DC2626", fontWeight: "600", marginBottom: "10px" }}>{avatarError}</p>}
+                <p style={{ fontSize: "18px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "14px" }}>Choose your avatar</p>
+                {avatarError && <p style={{ fontSize: "19px", color: "#DC2626", fontWeight: "600", marginBottom: "10px" }}>{avatarError}</p>}
                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "12px", marginBottom: "16px" }}>
                   {AVATARS.map(src => (
                     <button
@@ -342,14 +342,14 @@ export default function ProfileModal({ onClose }) {
                   <button
                     className="pm-btn"
                     onClick={() => { setShowAvatarPicker(false); setPendingAvatar(null); }}
-                    style={{ flex: 1, padding: "9px", borderRadius: "10px", border: "1.5px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
+                    style={{ flex: 1, padding: "9px", borderRadius: "10px", border: "1.5px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", fontSize: "20px", fontWeight: "600", cursor: "pointer" }}>
                     Cancel
                   </button>
                   <button
                     className="pm-save-btn"
                     onClick={handleAvatarSave}
                     disabled={savingAvatar || pendingAvatar === account?.avatar_url}
-                    style={{ flex: 1, padding: "9px", borderRadius: "10px", border: "none", background: savingAvatar ? "#93C5FD" : "#2563EB", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: savingAvatar ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", opacity: pendingAvatar === account?.avatar_url ? 0.5 : 1 }}>
+                    style={{ flex: 1, padding: "9px", borderRadius: "10px", border: "none", background: savingAvatar ? "#93C5FD" : "#2563EB", color: "#fff", fontSize: "20px", fontWeight: "700", cursor: savingAvatar ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", opacity: pendingAvatar === account?.avatar_url ? 0.5 : 1 }}>
                     {savingAvatar ? (
                       <><span style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", display: "inline-block", animation: "pm-spin 0.7s linear infinite" }} /> Saving…</>
                     ) : "Save Avatar"}
@@ -368,37 +368,37 @@ export default function ProfileModal({ onClose }) {
             ) : editing ? (
               <div style={{ padding: "22px 22px 20px", display: "flex", flexDirection: "column", gap: "13px" }}>
                 <div>
-                  <p style={{ fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "5px" }}>Full Name</p>
+                  <p style={{ fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "5px" }}>Full Name</p>
                   <input
                     value={form.full_name}
                     onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
                     className="pm-input"
-                    style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", color: "#1E293B", outline: "none", boxSizing: "border-box", fontFamily: "inherit", transition: "border-color 0.15s, box-shadow 0.15s" }}
+                    style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "20px", color: "#1E293B", outline: "none", boxSizing: "border-box", fontFamily: "inherit", transition: "border-color 0.15s, box-shadow 0.15s" }}
                   />
                 </div>
                 <div>
-                  <p style={{ fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "5px" }}>Email</p>
+                  <p style={{ fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "5px" }}>Email</p>
                   <input
                     type="email"
                     value={form.email}
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     className="pm-input"
-                    style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", color: "#1E293B", outline: "none", boxSizing: "border-box", fontFamily: "inherit", transition: "border-color 0.15s, box-shadow 0.15s" }}
+                    style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "20px", color: "#1E293B", outline: "none", boxSizing: "border-box", fontFamily: "inherit", transition: "border-color 0.15s, box-shadow 0.15s" }}
                   />
                 </div>
-                {error && <p style={{ fontSize: "12px", color: "#DC2626", fontWeight: "600", margin: 0 }}>{error}</p>}
+                {error && <p style={{ fontSize: "19px", color: "#DC2626", fontWeight: "600", margin: 0 }}>{error}</p>}
                 <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
                   <button
                     className="pm-btn"
                     onClick={() => { setEditing(false); setForm({ full_name: account.full_name, email: account.email }); setError(""); }}
-                    style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "1.5px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
+                    style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "1.5px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", fontSize: "20px", fontWeight: "600", cursor: "pointer" }}>
                     Cancel
                   </button>
                   <button
                     className="pm-save-btn"
                     onClick={handleSave}
                     disabled={saving}
-                    style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", background: saving ? "#93C5FD" : "#2563EB", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                    style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", background: saving ? "#93C5FD" : "#2563EB", color: "#fff", fontSize: "20px", fontWeight: "700", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                     {saving ? (
                       <><span style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", display: "inline-block", animation: "pm-spin 0.7s linear infinite" }} /> Saving…</>
                     ) : "Save Changes"}
@@ -415,8 +415,8 @@ export default function ProfileModal({ onClose }) {
                     <div key={i} className="pm-fade-item" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "11px 12px", borderRadius: "10px", background: i % 2 === 0 ? "#FAFBFE" : "transparent", animationDelay: `${i * 0.06}s` }}>
                       <div style={{ width: 30, height: 30, borderRadius: "8px", background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{row.icon}</div>
                       <div>
-                        <p style={{ fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "2px" }}>{row.label}</p>
-                        <p style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>{row.value || "—"}</p>
+                        <p style={{ fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "2px" }}>{row.label}</p>
+                        <p style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>{row.value || "—"}</p>
                       </div>
                     </div>
                   ))}
@@ -431,13 +431,19 @@ export default function ProfileModal({ onClose }) {
                       <Sparkles size={13} color="#fff" />
                     </div>
                     <div style={{ flex: 1, textAlign: "left" }}>
-                      <p style={{ fontSize: "13px", fontWeight: "700", color: "#4F46E5", marginBottom: "1px" }}>My Skills</p>
-                      <p style={{ fontSize: "11px", color: "#A5B4FC", fontWeight: "500" }}>View your assigned skill set</p>
+                      <p style={{ fontSize: "20px", fontWeight: "700", color: "#4F46E5", marginBottom: "1px" }}>My Skills</p>
+                      <p style={{ fontSize: "18px", color: "#A5B4FC", fontWeight: "500" }}>View your assigned skill set</p>
                     </div>
-                    <span style={{ fontSize: "18px", color: "#C7D2FE", lineHeight: 1 }}>›</span>
+                    <span style={{ fontSize: "23px", color: "#C7D2FE", lineHeight: 1 }}>›</span>
                   </button>
                 )}
 
+                <button
+                  className="pm-edit-btn pm-fade-item"
+                  onClick={() => setEditing(true)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "7px", padding: "11px", borderRadius: "10px", border: "none", background: "#2563EB", color: "#fff", fontSize: "13px", fontWeight: "700", cursor: "pointer", animationDelay: "0.16s" }}>
+                  <Pencil size={13} /> Edit Profile
+                </button>
               </div>
             )}
           </div>

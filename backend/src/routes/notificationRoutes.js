@@ -27,8 +27,7 @@ router.get(
         ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
-        ROLES.BRANCH_CASUAL_STAFF,
-        ROLES.KREWBY_CASUAL_WORKER
+        ROLES.BRANCH_CASUAL_STAFF
     ),
     getNotifications
 );
@@ -40,8 +39,7 @@ router.get(
         ROLES.BRANCH_MANAGER,
         ROLES.SYSTEM_ADMIN,
         ROLES.REGULAR_STAFF,
-        ROLES.BRANCH_CASUAL_STAFF,
-        ROLES.KREWBY_CASUAL_WORKER
+        ROLES.BRANCH_CASUAL_STAFF
     ),
     getNotificationById
 );

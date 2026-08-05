@@ -248,13 +248,13 @@ export default function CasualAvailability() {
         {/* ── Header ────────────────────────────────────────────────── */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Weekly Availability</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px" }}>
+            <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Weekly Availability</h2>
+            <p style={{ fontSize: "20px", color: "#64748B", marginTop: "3px" }}>
               Click a day card to set your hours, then submit for your manager to review.
             </p>
           </div>
           <button onClick={submit} disabled={saving}
-            style={{ display: "flex", alignItems: "center", gap: "8px", background: saved ? "#22C55E" : setCount === 0 ? "#94A3B8" : "#2563EB", color: "#FFF", border: "none", borderRadius: "10px", padding: "10px 22px", fontSize: "14px", fontWeight: "700", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, transition: "background 0.2s", flexShrink: 0 }}>
+            style={{ display: "flex", alignItems: "center", gap: "8px", background: saved ? "#22C55E" : setCount === 0 ? "#94A3B8" : "#2563EB", color: "#FFF", border: "none", borderRadius: "10px", padding: "10px 22px", fontSize: "21px", fontWeight: "700", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, transition: "background 0.2s", flexShrink: 0 }}>
             {saved ? <><Check size={15} strokeWidth={3} /> Submitted!</> : saving ? "Submitting…" : setCount === 0 ? "Set days first ↑" : "Submit Availability"}
           </button>
         </div>
@@ -266,7 +266,7 @@ export default function CasualAvailability() {
             style={{ width: "34px", height: "34px", borderRadius: "9px", border: "1.5px solid #E2E8F0", background: "#FFF", cursor: weekStartStr <= toDateStr(getWeekStart(new Date())) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: weekStartStr <= toDateStr(getWeekStart(new Date())) ? 0.4 : 1 }}>
             <ChevronLeft size={16} color="#64748B" />
           </button>
-          <div style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", minWidth: "260px", textAlign: "center" }}>
+          <div style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", minWidth: "260px", textAlign: "center" }}>
             Week of {fmtWeekLabel(weekStart)}
           </div>
           <button onClick={() => { setWeekStart(w => addWeeks(w, 1)); setSaved(false); }}
@@ -296,11 +296,11 @@ export default function CasualAvailability() {
                     minHeight: "130px", transition: "all 0.15s",
                   }}>
                   {/* Day name */}
-                  <span style={{ fontSize: "13px", fontWeight: "800", color: s ? "#1E40AF" : "#64748B" }}>
+                  <span style={{ fontSize: "20px", fontWeight: "800", color: s ? "#1E40AF" : "#64748B" }}>
                     {day.short}
                   </span>
                   {/* Date */}
-                  <span style={{ fontSize: "11px", color: s ? "#60A5FA" : "#CBD5E1" }}>
+                  <span style={{ fontSize: "18px", color: s ? "#60A5FA" : "#CBD5E1" }}>
                     {date.toLocaleDateString("en-SG", { month: "short", day: "numeric" })}
                   </span>
                   {/* Content */}
@@ -308,21 +308,21 @@ export default function CasualAvailability() {
                     {s ? (
                       <>
                         <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22C55E" }} />
-                        <span style={{ fontSize: "10px", fontWeight: "700", color: "#1D4ED8", wordBreak: "break-all" }}>
+                        <span style={{ fontSize: "17px", fontWeight: "700", color: "#1D4ED8", wordBreak: "break-all" }}>
                           {s.from}
                         </span>
-                        <span style={{ fontSize: "10px", color: "#60A5FA" }}>–</span>
-                        <span style={{ fontSize: "10px", fontWeight: "700", color: "#1D4ED8", wordBreak: "break-all" }}>
+                        <span style={{ fontSize: "17px", color: "#60A5FA" }}>–</span>
+                        <span style={{ fontSize: "17px", fontWeight: "700", color: "#1D4ED8", wordBreak: "break-all" }}>
                           {s.to}
                         </span>
-                        <span style={{ fontSize: "9px", fontWeight: "600", color: "#2563EB", background: "#DBEAFE", borderRadius: "4px", padding: "1px 5px", marginTop: "2px" }}>
+                        <span style={{ fontSize: "16px", fontWeight: "600", color: "#2563EB", background: "#DBEAFE", borderRadius: "4px", padding: "1px 5px", marginTop: "2px" }}>
                           {calcHours(s.from, s.to)}h
                         </span>
                       </>
                     ) : (
                       <>
                         <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#E2E8F0" }} />
-                        <span style={{ fontSize: "10px", color: "#CBD5E1" }}>Tap to set</span>
+                        <span style={{ fontSize: "17px", color: "#CBD5E1" }}>Tap to set</span>
                       </>
                     )}
                   </div>
@@ -335,7 +335,7 @@ export default function CasualAvailability() {
         {/* ── Summary bar ───────────────────────────────────────────── */}
         <div style={{ background: setCount > 0 ? "#EFF6FF" : "#F8FAFC", border: `1px solid ${setCount > 0 ? "#BFDBFE" : "#E2E8F0"}`, borderRadius: "12px", padding: "12px 20px", marginBottom: "32px", display: "flex", alignItems: "center", gap: "10px" }}>
           <Clock size={15} color={setCount > 0 ? "#2563EB" : "#94A3B8"} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: "13px", fontWeight: "600", color: setCount > 0 ? "#1E40AF" : "#94A3B8" }}>
+          <span style={{ fontSize: "20px", fontWeight: "600", color: setCount > 0 ? "#1E40AF" : "#94A3B8" }}>
             {setCount === 0
               ? "No days selected — click any card above to set your hours."
               : `${setCount} day${setCount !== 1 ? "s" : ""} set for this week · click a card to edit · hit Submit when ready`}
@@ -354,8 +354,8 @@ export default function CasualAvailability() {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
             <Calendar size={16} color="#64748B" />
-            <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Availability Log</h3>
-            <span style={{ fontSize: "12px", color: "#94A3B8", marginLeft: "4px" }}>— every submission goes to your manager</span>
+            <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B" }}>Availability Log</h3>
+            <span style={{ fontSize: "19px", color: "#94A3B8", marginLeft: "4px" }}>— every submission goes to your manager</span>
           </div>
 
           {loadingHistory ? (
@@ -365,7 +365,7 @@ export default function CasualAvailability() {
           ) : history.length === 0 ? (
             <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "36px", textAlign: "center" }}>
               <Calendar size={28} color="#CBD5E1" style={{ margin: "0 auto 8px" }} />
-              <p style={{ fontSize: "13px", color: "#94A3B8" }}>No submissions yet — set your hours above and hit Submit.</p>
+              <p style={{ fontSize: "20px", color: "#94A3B8" }}>No submissions yet — set your hours above and hit Submit.</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -376,20 +376,20 @@ export default function CasualAvailability() {
                   <div key={weekStr}
                     style={{ background: isCurrent ? "#F0F9FF" : "#FFF", border: `1.5px solid ${isCurrent ? "#BAE6FD" : "#E2E8F0"}`, borderRadius: "12px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px", animation: `pageIn 0.3s ease ${idx * 0.04}s both` }}>
                     <div style={{ minWidth: "220px" }}>
-                      <span style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>
+                      <span style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B" }}>
                         {fmtWeekLabel(weekStr)}
                       </span>
                     </div>
                     <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", flex: 1 }}>
                       {sorted.map(d => (
                         <span key={d.day_of_week}
-                          style={{ fontSize: "11px", fontWeight: "600", color: "#1E40AF", background: "#DBEAFE", borderRadius: "6px", padding: "3px 8px", whiteSpace: "nowrap" }}>
+                          style={{ fontSize: "18px", fontWeight: "600", color: "#1E40AF", background: "#DBEAFE", borderRadius: "6px", padding: "3px 8px", whiteSpace: "nowrap" }}>
                           {DAY_SHORT[d.day_of_week]} {d.available_from?.slice(0, 5)}–{d.available_to?.slice(0, 5)}
                         </span>
                       ))}
                     </div>
                     {isCurrent && (
-                      <span style={{ fontSize: "11px", fontWeight: "700", color: "#0369A1", background: "#E0F2FE", borderRadius: "6px", padding: "3px 9px", flexShrink: 0 }}>
+                      <span style={{ fontSize: "18px", fontWeight: "700", color: "#0369A1", background: "#E0F2FE", borderRadius: "6px", padding: "3px 9px", flexShrink: 0 }}>
                         Viewing
                       </span>
                     )}
@@ -412,8 +412,8 @@ export default function CasualAvailability() {
             {/* Modal header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "22px" }}>
               <div>
-                <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#1E293B" }}>{modal.label}</h3>
-                <p style={{ fontSize: "13px", color: "#64748B", marginTop: "3px" }}>
+                <h3 style={{ fontSize: "23px", fontWeight: "800", color: "#1E293B" }}>{modal.label}</h3>
+                <p style={{ fontSize: "20px", color: "#64748B", marginTop: "3px" }}>
                   {modal.date.toLocaleDateString("en-SG", { month: "long", day: "numeric", year: "numeric" })}
                 </p>
               </div>
@@ -426,11 +426,11 @@ export default function CasualAvailability() {
             {/* Available / Not available toggle */}
             <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
               <button onClick={() => setModalAvail(true)}
-                style={{ flex: 1, padding: "10px", borderRadius: "10px", border: `2px solid ${modalAvailable ? "#2563EB" : "#E2E8F0"}`, background: modalAvailable ? "#EFF6FF" : "#FFF", fontSize: "13px", fontWeight: "700", color: modalAvailable ? "#1E40AF" : "#94A3B8", cursor: "pointer", transition: "all 0.15s" }}>
+                style={{ flex: 1, padding: "10px", borderRadius: "10px", border: `2px solid ${modalAvailable ? "#2563EB" : "#E2E8F0"}`, background: modalAvailable ? "#EFF6FF" : "#FFF", fontSize: "20px", fontWeight: "700", color: modalAvailable ? "#1E40AF" : "#94A3B8", cursor: "pointer", transition: "all 0.15s" }}>
                 Available
               </button>
               <button onClick={() => setModalAvail(false)}
-                style={{ flex: 1, padding: "10px", borderRadius: "10px", border: `2px solid ${!modalAvailable ? "#EF4444" : "#E2E8F0"}`, background: !modalAvailable ? "#FEF2F2" : "#FFF", fontSize: "13px", fontWeight: "700", color: !modalAvailable ? "#B91C1C" : "#94A3B8", cursor: "pointer", transition: "all 0.15s" }}>
+                style={{ flex: 1, padding: "10px", borderRadius: "10px", border: `2px solid ${!modalAvailable ? "#EF4444" : "#E2E8F0"}`, background: !modalAvailable ? "#FEF2F2" : "#FFF", fontSize: "20px", fontWeight: "700", color: !modalAvailable ? "#B91C1C" : "#94A3B8", cursor: "pointer", transition: "all 0.15s" }}>
                 Not Available
               </button>
             </div>
@@ -441,12 +441,12 @@ export default function CasualAvailability() {
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "14px 16px", background: "#F8FAFC", borderRadius: "12px", marginBottom: "10px" }}>
                   <Clock size={15} color="#2563EB" style={{ flexShrink: 0 }} />
                   <input type="time" value={modalFrom} onChange={e => setModalFrom(e.target.value)}
-                    style={{ border: "1.5px solid #BFDBFE", borderRadius: "8px", padding: "7px 10px", fontSize: "14px", color: "#1E293B", background: "#FFF", outline: "none", flex: 1 }} />
-                  <span style={{ fontSize: "12px", color: "#94A3B8", flexShrink: 0 }}>to</span>
+                    style={{ border: "1.5px solid #BFDBFE", borderRadius: "8px", padding: "7px 10px", fontSize: "21px", color: "#1E293B", background: "#FFF", outline: "none", flex: 1 }} />
+                  <span style={{ fontSize: "19px", color: "#94A3B8", flexShrink: 0 }}>to</span>
                   <input type="time" value={modalTo} onChange={e => setModalTo(e.target.value)}
-                    style={{ border: "1.5px solid #BFDBFE", borderRadius: "8px", padding: "7px 10px", fontSize: "14px", color: "#1E293B", background: "#FFF", outline: "none", flex: 1 }} />
+                    style={{ border: "1.5px solid #BFDBFE", borderRadius: "8px", padding: "7px 10px", fontSize: "21px", color: "#1E293B", background: "#FFF", outline: "none", flex: 1 }} />
                 </div>
-                <p style={{ fontSize: "12px", fontWeight: "600", color: "#2563EB", textAlign: "center", marginBottom: "20px" }}>
+                <p style={{ fontSize: "19px", fontWeight: "600", color: "#2563EB", textAlign: "center", marginBottom: "20px" }}>
                   {calcHours(modalFrom, modalTo)} hours available
                 </p>
               </>
@@ -457,11 +457,11 @@ export default function CasualAvailability() {
             {/* Actions */}
             <div style={{ display: "flex", gap: "8px" }}>
               <button onClick={() => setModal(null)}
-                style={{ flex: 1, padding: "11px", background: "#F1F5F9", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
+                style={{ flex: 1, padding: "11px", background: "#F1F5F9", border: "none", borderRadius: "10px", fontSize: "21px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
                 Cancel
               </button>
               <button onClick={confirmModal}
-                style={{ flex: 2, padding: "11px", background: modalAvailable ? "#2563EB" : "#EF4444", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", color: "#FFF", cursor: "pointer" }}>
+                style={{ flex: 2, padding: "11px", background: modalAvailable ? "#2563EB" : "#EF4444", border: "none", borderRadius: "10px", fontSize: "21px", fontWeight: "700", color: "#FFF", cursor: "pointer" }}>
                 {modalAvailable ? "Set Available" : "Mark Not Available"}
               </button>
             </div>
@@ -475,27 +475,27 @@ export default function CasualAvailability() {
           onClick={e => e.target === e.currentTarget && setOverwriteConfirm(null)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.15s ease both" }}>
           <div style={{ background: "#FFF", borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "400px", boxShadow: "0 24px 60px rgba(0,0,0,0.2)", animation: "popIn 0.2s ease both" }}>
-            <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>Already submitted for this week</h3>
-            <p style={{ fontSize: "13px", color: "#64748B", lineHeight: 1.6, marginBottom: "16px" }}>
+            <h3 style={{ fontSize: "23px", fontWeight: "800", color: "#1E293B", marginBottom: "8px" }}>Already submitted for this week</h3>
+            <p style={{ fontSize: "20px", color: "#64748B", lineHeight: 1.6, marginBottom: "16px" }}>
               You already submitted availability for <strong>Week of {fmtWeekLabel(weekStart)}</strong>:
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
               {[...overwriteConfirm.existingDays].sort((a, b) => a.day_of_week - b.day_of_week).map(d => (
-                <span key={d.day_of_week} style={{ fontSize: "11px", fontWeight: "600", color: "#1E40AF", background: "#DBEAFE", borderRadius: "6px", padding: "3px 8px", whiteSpace: "nowrap" }}>
+                <span key={d.day_of_week} style={{ fontSize: "18px", fontWeight: "600", color: "#1E40AF", background: "#DBEAFE", borderRadius: "6px", padding: "3px 8px", whiteSpace: "nowrap" }}>
                   {DAY_SHORT[d.day_of_week]} {d.available_from?.slice(0, 5)}–{d.available_to?.slice(0, 5)}
                 </span>
               ))}
             </div>
-            <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "22px" }}>
+            <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "22px" }}>
               Submitting now will overwrite that with what you've set above. Continue?
             </p>
             <div style={{ display: "flex", gap: "8px" }}>
               <button onClick={() => setOverwriteConfirm(null)}
-                style={{ flex: 1, padding: "11px", background: "#F1F5F9", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
+                style={{ flex: 1, padding: "11px", background: "#F1F5F9", border: "none", borderRadius: "10px", fontSize: "21px", fontWeight: "600", color: "#475569", cursor: "pointer" }}>
                 Cancel
               </button>
               <button onClick={doSubmit}
-                style={{ flex: 1, padding: "11px", background: "#2563EB", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", color: "#FFF", cursor: "pointer" }}>
+                style={{ flex: 1, padding: "11px", background: "#2563EB", border: "none", borderRadius: "10px", fontSize: "21px", fontWeight: "700", color: "#FFF", cursor: "pointer" }}>
                 Overwrite & Submit
               </button>
             </div>
@@ -505,7 +505,7 @@ export default function CasualAvailability() {
 
       {/* ── Toast ─────────────────────────────────────────────────── */}
       {toast && (
-        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.ok ? "#22C55E" : "#EF4444", color: "#FFF", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "pageIn 0.3s ease both" }}>
+        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.ok ? "#22C55E" : "#EF4444", color: "#FFF", padding: "12px 20px", borderRadius: "10px", fontSize: "21px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "pageIn 0.3s ease both" }}>
           {toast.msg}
         </div>
       )}

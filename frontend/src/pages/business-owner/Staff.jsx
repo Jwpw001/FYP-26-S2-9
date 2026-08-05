@@ -61,11 +61,11 @@ function PersonRow({ person, isLast, showConnector, goTo }) {
         <UserAvatar name={person.name} avatar_url={person.avatar_url} size={36} />
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.name}</p>
-          <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.email}</p>
+          <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.name}</p>
+          <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.email}</p>
         </div>
         {/* Badge */}
-        <span style={{ padding: "2px 9px", borderRadius: "100px", fontSize: "10px", fontWeight: "700", background: badge.background, color: badge.color, whiteSpace: "nowrap", flexShrink: 0 }}>
+        <span style={{ padding: "2px 9px", borderRadius: "100px", fontSize: "17px", fontWeight: "700", background: badge.background, color: badge.color, whiteSpace: "nowrap", flexShrink: 0 }}>
           {badge.label}
         </span>
         {/* Status dot */}
@@ -90,13 +90,13 @@ function BranchBlock({ branch, goTo }) {
           <Building2 size={18} />
         </div>
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A" }}>{branch.name}</p>
-          <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px" }}>
+          <p style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A" }}>{branch.name}</p>
+          <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "1px" }}>
             {branch.managers.length} manager{branch.managers.length !== 1 ? "s" : ""} · {branch.regular.length} regular staff
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ fontSize: "11px", fontWeight: "600", color: "#64748B", background: "#F1F5F9", padding: "2px 9px", borderRadius: "100px" }}>{totalCount} people</span>
+          <span style={{ fontSize: "18px", fontWeight: "600", color: "#64748B", background: "#F1F5F9", padding: "2px 9px", borderRadius: "100px" }}>{totalCount} people</span>
           {open ? <ChevronDown size={16} color="#94A3B8" /> : <ChevronRight size={16} color="#94A3B8" />}
         </div>
       </div>
@@ -107,7 +107,7 @@ function BranchBlock({ branch, goTo }) {
           {/* Managers section */}
           {branch.managers.length > 0 && (
             <div style={{ marginBottom: branch.regular.length > 0 ? "8px" : "0" }}>
-              <p style={{ fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.07em", padding: "4px 8px 6px 48px" }}>Managers</p>
+              <p style={{ fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.07em", padding: "4px 8px 6px 48px" }}>Managers</p>
               {branch.managers.map((m, i) => (
                 <PersonRow key={m.key} person={m} isLast={i === branch.managers.length - 1} showConnector goTo={goTo} />
               ))}
@@ -122,7 +122,7 @@ function BranchBlock({ branch, goTo }) {
           {/* Regular staff section */}
           {branch.regular.length > 0 && (
             <div>
-              <p style={{ fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.07em", padding: "4px 8px 6px 48px" }}>Regular Staff</p>
+              <p style={{ fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.07em", padding: "4px 8px 6px 48px" }}>Regular Staff</p>
               {branch.regular.map((r, i) => (
                 <PersonRow key={r.key} person={r} isLast={i === branch.regular.length - 1} showConnector goTo={goTo} />
               ))}
@@ -130,7 +130,7 @@ function BranchBlock({ branch, goTo }) {
           )}
 
           {totalCount === 0 && (
-            <p style={{ textAlign: "center", color: "#94A3B8", fontSize: "13px", padding: "20px" }}>No staff in this branch</p>
+            <p style={{ textAlign: "center", color: "#94A3B8", fontSize: "20px", padding: "20px" }}>No staff in this branch</p>
           )}
         </div>
       )}
@@ -149,11 +149,11 @@ function CasualBlock({ casuals, goTo }) {
           <Briefcase size={18} />
         </div>
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: "14px", fontWeight: "800", color: "#0F172A" }}>Casual Pool</p>
-          <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "1px" }}>Business-wide · available across all branches</p>
+          <p style={{ fontSize: "21px", fontWeight: "800", color: "#0F172A" }}>Casual Pool</p>
+          <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "1px" }}>Business-wide · available across all branches</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ fontSize: "11px", fontWeight: "600", color: "#9333EA", background: "#F3E8FF", padding: "2px 9px", borderRadius: "100px" }}>{casuals.length} casual{casuals.length !== 1 ? "s" : ""}</span>
+          <span style={{ fontSize: "18px", fontWeight: "600", color: "#9333EA", background: "#F3E8FF", padding: "2px 9px", borderRadius: "100px" }}>{casuals.length} casual{casuals.length !== 1 ? "s" : ""}</span>
           {open ? <ChevronDown size={16} color="#94A3B8" /> : <ChevronRight size={16} color="#94A3B8" />}
         </div>
       </div>
@@ -193,7 +193,7 @@ function OrgView({ people, goTo }) {
       {branches.length === 0 && casuals.length === 0 && (
         <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center" }}>
           <Users size={40} color="#CBD5E1" />
-          <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No staff found</p>
+          <p style={{ fontSize: "21px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No staff found</p>
         </div>
       )}
       {branches.map(branch => <BranchBlock key={branch.id} branch={branch} goTo={goTo} />)}
@@ -283,19 +283,19 @@ export default function BOStaff() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>All Staff</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+            <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>All Staff</h2>
+            <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
               {loading ? "Loading…" : `${activeCount} active · ${inactiveCount} inactive · ${people.length} total across all branches`}
             </p>
           </div>
           {/* View toggle */}
           <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px" }}>
             <button onClick={() => setView("list")}
-              style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: view === "list" ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: view === "list" ? "600" : "500", color: view === "list" ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: view === "list" ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
+              style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: view === "list" ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "20px", fontWeight: view === "list" ? "600" : "500", color: view === "list" ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: view === "list" ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
               <LayoutList size={14} /> List
             </button>
             <button onClick={() => setView("org")}
-              style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: view === "org" ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: view === "org" ? "600" : "500", color: view === "org" ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: view === "org" ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
+              style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: view === "org" ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "20px", fontWeight: view === "org" ? "600" : "500", color: view === "org" ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: view === "org" ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
               <Network size={14} /> Org
             </button>
           </div>
@@ -307,7 +307,7 @@ export default function BOStaff() {
             <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", marginBottom: "12px", width: "fit-content", flexWrap: "wrap" }}>
               {TYPE_TABS.map(t => (
                 <button key={t.value} onClick={() => setFilterType(t.value)}
-                  style={{ padding: "7px 16px", background: filterType === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: filterType === t.value ? "600" : "500", color: filterType === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filterType === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
+                  style={{ padding: "7px 16px", background: filterType === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "20px", fontWeight: filterType === t.value ? "600" : "500", color: filterType === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filterType === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
                   {t.label}
                 </button>
               ))}
@@ -315,7 +315,7 @@ export default function BOStaff() {
             <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", marginBottom: "16px", width: "fit-content" }}>
               {STATUS_TABS.map(t => (
                 <button key={t.value} onClick={() => setFilterStatus(t.value)}
-                  style={{ padding: "7px 16px", background: filterStatus === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: filterStatus === t.value ? "600" : "500", color: filterStatus === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filterStatus === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
+                  style={{ padding: "7px 16px", background: filterStatus === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "20px", fontWeight: filterStatus === t.value ? "600" : "500", color: filterStatus === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filterStatus === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
                   {t.label}
                 </button>
               ))}
@@ -325,7 +325,7 @@ export default function BOStaff() {
                 <Search size={15} color="#94A3B8" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
                 <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search by name or email…"
-                  style={{ width: "100%", padding: "9px 13px 9px 36px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#FFF", color: "#1E293B", outline: "none", boxSizing: "border-box" }} />
+                  style={{ width: "100%", padding: "9px 13px 9px 36px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "20px", background: "#FFF", color: "#1E293B", outline: "none", boxSizing: "border-box" }} />
               </div>
               <SearchableSelect
                 options={branches.map(([id, name]) => ({ value: String(id), label: name }))}
@@ -360,7 +360,7 @@ export default function BOStaff() {
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center" }}>
             <Users size={40} color="#CBD5E1" />
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No staff found</p>
+            <p style={{ fontSize: "21px", fontWeight: "600", color: "#64748B", marginTop: "12px" }}>No staff found</p>
           </div>
         ) : (
           /* ── List view ── */
@@ -375,20 +375,20 @@ export default function BOStaff() {
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
                       <UserAvatar name={p.name} avatar_url={p.avatar_url} size={44} />
                       <div style={{ minWidth: 0 }}>
-                        <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
-                        <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.email}</p>
+                        <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                        <p style={{ fontSize: "19px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.email}</p>
                       </div>
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px" }}>
-                      <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: badge.background, color: badge.color }}>
+                      <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "18px", fontWeight: "600", background: badge.background, color: badge.color }}>
                         {badge.label}
                       </span>
-                      <span style={{ display: "flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: "#F1F5F9", color: "#475569" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "100px", fontSize: "18px", fontWeight: "600", background: "#F1F5F9", color: "#475569" }}>
                         <Building2 size={11} /> {p.branch_name}
                       </span>
                     </div>
                     <div style={{ paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "600", color: p.is_active ? "#16A34A" : "#94A3B8" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "20px", fontWeight: "600", color: p.is_active ? "#16A34A" : "#94A3B8" }}>
                         <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: p.is_active ? "#22C55E" : "#D1D5DB", display: "inline-block" }} />
                         {p.is_active ? "Active" : "Inactive"}
                       </span>
@@ -397,7 +397,7 @@ export default function BOStaff() {
                 );
               })}
             </div>
-            <p style={{ textAlign: "center", fontSize: "13px", color: "#94A3B8", marginTop: "20px" }}>
+            <p style={{ textAlign: "center", fontSize: "20px", color: "#94A3B8", marginTop: "20px" }}>
               Showing {filtered.length} of {people.length} people
             </p>
           </>

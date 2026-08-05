@@ -211,7 +211,7 @@ export default function Login() {
                     width: "100%", padding: "14px 16px",
                     background: "#F8FAFC",
                     border: "1.5px solid #E2E8F0", borderRadius: "12px",
-                    fontSize: "22px", fontWeight: "800", textAlign: "center",
+                    fontSize: "25px", fontWeight: "800", textAlign: "center",
                     letterSpacing: "0.15em", outline: "none", boxSizing: "border-box",
                     color: "#0F172A", fontFamily: "monospace",
                   }}
@@ -228,7 +228,7 @@ export default function Login() {
                     width: "100%", padding: "13px", borderRadius: "10px", border: "none",
                     background: inviteCode.length < 9 ? "#F1F5F9" : "#3B82F6",
                     color: inviteCode.length < 9 ? "#94A3B8" : "#fff",
-                    fontSize: "14px", fontWeight: "700",
+                    fontSize: "21px", fontWeight: "700",
                     cursor: inviteCode.length < 9 ? "not-allowed" : "pointer",
                     marginTop: "16px", transition: "all 0.15s",
                   }}
@@ -238,12 +238,12 @@ export default function Login() {
               </form>
 
               <div style={{ textAlign: "center", marginTop: "20px", paddingTop: "16px", borderTop: "1px solid #F1F5F9" }}>
-                <p style={{ fontSize: "13px", color: "#94A3B8", lineHeight: 1.6 }}>
+                <p style={{ fontSize: "20px", color: "#94A3B8", lineHeight: 1.6 }}>
                   Don't have a code? Ask your manager to send an invitation from their dashboard.
                 </p>
                 <button
                   onClick={() => { setPendingUser(null); setInviteCode(""); setCodeError(""); }}
-                  style={{ background: "none", border: "none", color: "#3B82F6", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginTop: "10px" }}
+                  style={{ background: "none", border: "none", color: "#3B82F6", fontSize: "20px", fontWeight: "600", cursor: "pointer", marginTop: "10px" }}
                 >
                   ← Back to login
                 </button>
@@ -298,14 +298,14 @@ export default function Login() {
 
           <div style={s.divider} />
 
-          <p style={{ textAlign: "center", fontSize: "13px", color: "#94A3B8" }}>
+          <p style={{ textAlign: "center", fontSize: "20px", color: "#94A3B8" }}>
             Don't have an account?{" "}
             <Link to="/get-started" style={{ color: "#3B82F6", fontWeight: "600", textDecoration: "none" }}>
               Sign up
             </Link>
           </p>
           <p style={{ textAlign: "center", marginTop: "10px" }}>
-            <Link to="/" style={{ fontSize: "12px", color: "#CBD5E1", textDecoration: "none" }}>← Back to home</Link>
+            <Link to="/" style={{ fontSize: "19px", color: "#CBD5E1", textDecoration: "none" }}>← Back to home</Link>
           </p>
         </form>
       )}
@@ -329,7 +329,7 @@ function SubmitBtn({ loading }) {
         marginTop: "24px",
         background: loading ? "#93C5FD" : hovered ? "#2563EB" : "#3B82F6",
         color: "#fff", border: "none", borderRadius: "11px",
-        fontSize: "14px", fontWeight: "700", cursor: loading ? "not-allowed" : "pointer",
+        fontSize: "21px", fontWeight: "700", cursor: loading ? "not-allowed" : "pointer",
         boxSizing: "border-box", letterSpacing: "0.01em",
         transform: !loading && (pressed ? "scale(0.97)" : hovered ? "scale(1.01)" : "scale(1)"),
         boxShadow: !loading && hovered && !pressed ? "0 8px 24px rgba(59,130,246,0.25)" : "none",
@@ -392,20 +392,20 @@ const s = {
     display: "flex", alignItems: "center",
     textDecoration: "none", marginBottom: "32px",
   },
-  cardTitle: { fontSize: "23px", fontWeight: "700", color: "#0F172A", marginBottom: "6px", letterSpacing: "-0.02em" },
-  cardSub:   { fontSize: "14px", color: "#94A3B8", marginBottom: "4px", lineHeight: 1.5 },
+  cardTitle: { fontSize: "26px", fontWeight: "700", color: "#0F172A", marginBottom: "6px", letterSpacing: "-0.02em" },
+  cardSub:   { fontSize: "21px", color: "#94A3B8", marginBottom: "4px", lineHeight: 1.5 },
   errorBox: {
     display: "flex", alignItems: "flex-start", gap: "8px",
     background: "#FEF2F2", border: "1px solid #FECACA",
     color: "#DC2626", padding: "11px 13px", borderRadius: "10px",
-    fontSize: "13px", lineHeight: 1.5, marginTop: "16px",
+    fontSize: "20px", lineHeight: 1.5, marginTop: "16px",
   },
-  label:     { display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "6px" },
+  label:     { display: "block", fontSize: "20px", fontWeight: "600", color: "#374151", marginBottom: "6px" },
   input: {
     display: "block", width: "100%", padding: "11px 13px",
     borderWidth: "1.5px", borderStyle: "solid", borderColor: "#E2E8F0",
     borderRadius: "10px",
-    fontSize: "14px", background: "#F8FAFC", color: "#0F172A",
+    fontSize: "21px", background: "#F8FAFC", color: "#0F172A",
     boxSizing: "border-box", outline: "none",
     transition: "border-color 0.15s, box-shadow 0.15s",
     fontFamily: "inherit",
@@ -419,6 +419,6 @@ const s = {
     color: "#CBD5E1", display: "flex", alignItems: "center", padding: "2px",
   },
   forgotRow:  { display: "flex", justifyContent: "flex-end", marginTop: "10px" },
-  forgotLink: { fontSize: "12px", fontWeight: "600", color: "#3B82F6", textDecoration: "none" },
+  forgotLink: { fontSize: "19px", fontWeight: "600", color: "#3B82F6", textDecoration: "none" },
   divider:    { borderTop: "1px solid #F1F5F9", margin: "22px 0 18px" },
 };

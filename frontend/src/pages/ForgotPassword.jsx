@@ -17,7 +17,7 @@ export default function ForgotPassword() {
     try {
       await api.post("/api/auth/forgot-password", {
         email: email.trim().toLowerCase(),
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       setSent(true);
     } catch (err) {
@@ -125,26 +125,26 @@ const styles = {
     borderRadius: "9px",
     background: "#1C1B18",
     color: "#FFFFFF",
-    fontSize: "16px",
+    fontSize: "21px",
     fontWeight: "700",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
   logoText: {
-    fontSize: "16px",
+    fontSize: "21px",
     fontWeight: "800",
     color: "#1C1B18",
   },
   title: {
-    fontSize: "22px",
+    fontSize: "25px",
     fontWeight: "800",
     color: "#1C1B18",
     marginBottom: "6px",
     letterSpacing: "-0.01em",
   },
   sub: {
-    fontSize: "14px",
+    fontSize: "21px",
     color: "#7A7870",
     lineHeight: "1.5",
     marginBottom: "24px",
@@ -155,12 +155,12 @@ const styles = {
     color: "#991B1B",
     padding: "10px 12px",
     borderRadius: "10px",
-    fontSize: "13px",
+    fontSize: "20px",
     marginBottom: "14px",
   },
   label: {
     display: "block",
-    fontSize: "13px",
+    fontSize: "20px",
     fontWeight: "600",
     color: "#3D3B35",
     marginBottom: "6px",
@@ -171,7 +171,7 @@ const styles = {
     padding: "11px 13px",
     border: "1.5px solid #D8D5CE",
     borderRadius: "10px",
-    fontSize: "14px",
+    fontSize: "21px",
     background: "#FFFFFF",
     color: "#1C1B18",
     boxSizing: "border-box",
@@ -186,7 +186,7 @@ const styles = {
     color: "#FFFFFF",
     border: "none",
     borderRadius: "11px",
-    fontSize: "14px",
+    fontSize: "21px",
     fontWeight: "700",
     cursor: "pointer",
     boxSizing: "border-box",
@@ -200,7 +200,7 @@ const styles = {
     textAlign: "center",
   },
   backLink: {
-    fontSize: "13px",
+    fontSize: "20px",
     fontWeight: "600",
     color: "#7A7870",
     textDecoration: "none",
@@ -210,13 +210,13 @@ const styles = {
     paddingTop: "8px",
   },
   successTitle: {
-    fontSize: "18px",
+    fontSize: "23px",
     fontWeight: "700",
     color: "#1C1B18",
     marginBottom: "10px",
   },
   successDesc: {
-    fontSize: "14px",
+    fontSize: "21px",
     color: "#7A7870",
     lineHeight: "1.6",
     marginBottom: "24px",

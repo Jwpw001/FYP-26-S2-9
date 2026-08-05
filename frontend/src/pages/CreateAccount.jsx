@@ -7,7 +7,7 @@ function Field({ label, id, type = "text", value, onChange, placeholder, half })
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ marginBottom: "18px", ...(half ? { flex: 1 } : {}) }}>
-      <label htmlFor={id} style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
+      <label htmlFor={id} style={{ display: "block", fontSize: "20px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
         {label}<span style={{ color: "#EF4444", marginLeft: "3px" }}>*</span>
       </label>
       <input
@@ -25,7 +25,7 @@ function Field({ label, id, type = "text", value, onChange, placeholder, half })
           borderRadius: "10px",
           border: `1.5px solid ${focused ? "#059669" : "#E2E8F0"}`,
           boxShadow: focused ? "0 0 0 3px rgba(5,150,105,0.1)" : "none",
-          fontSize: "14px",
+          fontSize: "21px",
           color: "#0F172A",
           outline: "none",
           boxSizing: "border-box",
@@ -95,7 +95,7 @@ export default function CreateAccount() {
           <h1 style={{ fontSize: "32px", fontWeight: "800", lineHeight: 1.25, letterSpacing: "-0.02em", marginBottom: "16px" }}>
             Create your Krewby account
           </h1>
-          <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.8)", lineHeight: 1.7, maxWidth: "380px" }}>
+          <p style={{ fontSize: "22px", color: "rgba(255,255,255,0.8)", lineHeight: 1.7, maxWidth: "380px" }}>
             Sign up and your manager or system administrator will assign your role and branch once you're set up.
           </p>
 
@@ -108,49 +108,49 @@ export default function CreateAccount() {
               <div key={title} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
                 <div style={{ lineHeight: 1 }}><Icon size={22} color="#fff" /></div>
                 <div>
-                  <p style={{ fontSize: "14px", fontWeight: "700", color: "#fff", marginBottom: "2px" }}>{title}</p>
-                  <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>{desc}</p>
+                  <p style={{ fontSize: "21px", fontWeight: "700", color: "#fff", marginBottom: "2px" }}>{title}</p>
+                  <p style={{ fontSize: "20px", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>{desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.55)" }}>
+        <p style={{ fontSize: "19px", color: "rgba(255,255,255,0.55)" }}>
           Already have an account?{" "}
-          <button onClick={() => goTo("/login")} style={{ background: "none", border: "none", color: "#fff", fontWeight: "700", cursor: "pointer", fontSize: "12px", textDecoration: "underline" }}>Log in</button>
+          <button onClick={() => goTo("/login")} style={{ background: "none", border: "none", color: "#fff", fontWeight: "700", cursor: "pointer", fontSize: "19px", textDecoration: "underline" }}>Log in</button>
         </p>
       </div>
 
       {/* Right panel — form */}
       <div style={{ flex: 1, background: "#F8FAFC", overflowY: "auto", height: "100vh" }}>
         <div style={{ maxWidth: "640px", margin: "0 auto", padding: "56px 40px 80px" }}>
-          <button onClick={() => goTo("/get-started")} style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" }}>
+          <button onClick={() => goTo("/get-started")} style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "20px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" }}>
             ← Back to options
           </button>
 
           {done ? (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <div style={{ marginBottom: "16px", display: "flex", justifyContent: "center" }}><CheckCircle2 size={48} color="#059669" /></div>
-              <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "10px" }}>Account created!</h2>
-              <p style={{ fontSize: "14px", color: "#64748B", lineHeight: 1.7, marginBottom: "28px", maxWidth: "420px", margin: "0 auto 28px" }}>
+              <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", marginBottom: "10px" }}>Account created!</h2>
+              <p style={{ fontSize: "21px", color: "#64748B", lineHeight: 1.7, marginBottom: "28px", maxWidth: "420px", margin: "0 auto 28px" }}>
                 Your account has been set up. Your manager or administrator will assign your role.
                 Once assigned, you'll be able to log in and access your dashboard.
               </p>
               <button
                 onClick={() => goTo("/login")}
-                style={{ padding: "13px 32px", background: "#059669", color: "#fff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700", cursor: "pointer" }}
+                style={{ padding: "13px 32px", background: "#059669", color: "#fff", border: "none", borderRadius: "12px", fontSize: "22px", fontWeight: "700", cursor: "pointer" }}
               >
                 Go to login →
               </button>
             </div>
           ) : (
             <>
-              <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" }}>Create your account</h2>
-              <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "28px" }}>Fill in your details below to get started.</p>
+              <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" }}>Create your account</h2>
+              <p style={{ fontSize: "21px", color: "#64748B", marginBottom: "28px" }}>Fill in your details below to get started.</p>
 
               {error && (
-                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "13px", color: "#DC2626" }}>
+                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "20px", color: "#DC2626" }}>
                   {error}
                 </div>
               )}
@@ -164,7 +164,7 @@ export default function CreateAccount() {
 
                 <Row>
                   <div style={{ flex: 1, marginBottom: "18px" }}>
-                    <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
+                    <label style={{ display: "block", fontSize: "20px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
                       Password<span style={{ color: "#EF4444", marginLeft: "3px" }}>*</span>
                     </label>
                     <div style={{ position: "relative" }}>
@@ -174,9 +174,9 @@ export default function CreateAccount() {
                         onChange={setField("password")}
                         placeholder="At least 6 characters"
                         required
-                        style={{ width: "100%", padding: "11px 40px 11px 14px", borderRadius: "10px", border: "1.5px solid #E2E8F0", fontSize: "14px", color: "#0F172A", outline: "none", boxSizing: "border-box", background: "#fff" }}
+                        style={{ width: "100%", padding: "11px 40px 11px 14px", borderRadius: "10px", border: "1.5px solid #E2E8F0", fontSize: "21px", color: "#0F172A", outline: "none", boxSizing: "border-box", background: "#fff" }}
                       />
-                      <button type="button" onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94A3B8", fontSize: "13px" }}>
+                      <button type="button" onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94A3B8", fontSize: "20px" }}>
                         {showPw ? "Hide" : "Show"}
                       </button>
                     </div>
@@ -187,12 +187,12 @@ export default function CreateAccount() {
                 <button
                   type="submit"
                   disabled={loading}
-                  style={{ width: "100%", padding: "14px", background: loading ? "#6EE7B7" : "#059669", color: "#fff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700", cursor: loading ? "not-allowed" : "pointer", marginTop: "8px", transition: "background 0.15s" }}
+                  style={{ width: "100%", padding: "14px", background: loading ? "#6EE7B7" : "#059669", color: "#fff", border: "none", borderRadius: "12px", fontSize: "22px", fontWeight: "700", cursor: loading ? "not-allowed" : "pointer", marginTop: "8px", transition: "background 0.15s" }}
                 >
                   {loading ? "Creating account…" : "Create account →"}
                 </button>
 
-                <p style={{ textAlign: "center", fontSize: "12px", color: "#94A3B8", marginTop: "16px", lineHeight: 1.6 }}>
+                <p style={{ textAlign: "center", fontSize: "19px", color: "#94A3B8", marginTop: "16px", lineHeight: 1.6 }}>
                   Your role will be assigned by your manager or system administrator after sign-up.
                 </p>
               </form>

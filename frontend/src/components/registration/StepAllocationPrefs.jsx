@@ -100,8 +100,8 @@ export default function StepAllocationPrefs({ form, setField, error, onSubmit, o
     <>
       <button onClick={onBack} style={backBtn}>← Back</button>
 
-      <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" }}>Smart allocation</h2>
-      <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "24px" }}>Configure how Krewby's AI ranks workers for shift recommendations.</p>
+      <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" }}>Smart allocation</h2>
+      <p style={{ fontSize: "21px", color: "#64748B", marginBottom: "24px" }}>Configure how Krewby's AI ranks workers for shift recommendations.</p>
 
       {error && <div style={errorBox}>{error}</div>}
 
@@ -114,9 +114,9 @@ export default function StepAllocationPrefs({ form, setField, error, onSubmit, o
             <DonutChart weights={donutData} />
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
               <span style={{ fontSize: "32px", fontWeight: "800", color: isValid ? "#0F172A" : "#DC2626", lineHeight: 1, transition: "color 0.3s" }}>{total}</span>
-              <span style={{ fontSize: "12px", color: "#94A3B8", fontWeight: "600", marginTop: "2px" }}>out of 100%</span>
+              <span style={{ fontSize: "19px", color: "#94A3B8", fontWeight: "600", marginTop: "2px" }}>out of 100%</span>
               {isValid && (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "11px", fontWeight: "700", color: "#16A34A", marginTop: "6px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "18px", fontWeight: "700", color: "#16A34A", marginTop: "6px" }}>
                   <Check size={11} strokeWidth={3} /> Balanced
                 </span>
               )}
@@ -138,7 +138,7 @@ export default function StepAllocationPrefs({ form, setField, error, onSubmit, o
                 </div>
 
                 {/* Label */}
-                <span style={{ flex: 1, fontSize: "14px", fontWeight: "600", color: "#1E293B" }}>{w.label}</span>
+                <span style={{ flex: 1, fontSize: "21px", fontWeight: "600", color: "#1E293B" }}>{w.label}</span>
 
                 {/* Controls */}
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -148,7 +148,7 @@ export default function StepAllocationPrefs({ form, setField, error, onSubmit, o
                   </button>
 
                   <div style={{ width: "52px", textAlign: "center", background: w.color + "10", borderRadius: "8px", padding: "4px 0" }}>
-                    <span style={{ fontSize: "16px", fontWeight: "800", color: w.color }}>{val}%</span>
+                    <span style={{ fontSize: "21px", fontWeight: "800", color: w.color }}>{val}%</span>
                   </div>
 
                   <button type="button" className="alloc-btn" onClick={() => adjust(w.key, 5)} disabled={val >= 100}
@@ -164,7 +164,7 @@ export default function StepAllocationPrefs({ form, setField, error, onSubmit, o
         {/* Reset */}
         <div style={{ textAlign: "center", marginTop: "16px" }}>
           <button type="button" onClick={resetDefaults}
-            style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", fontWeight: "600", color: "#94A3B8", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "6px", transition: "color 0.15s" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "19px", fontWeight: "600", color: "#94A3B8", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "6px", transition: "color 0.15s" }}
             onMouseEnter={e => e.currentTarget.style.color = "#475569"}
             onMouseLeave={e => e.currentTarget.style.color = "#94A3B8"}>
             <RotateCcw size={12} /> Reset to defaults
@@ -175,11 +175,11 @@ export default function StepAllocationPrefs({ form, setField, error, onSubmit, o
       {/* Buttons */}
       <div style={{ display: "flex", gap: "12px" }}>
         <button type="button" onClick={onSkip}
-          style={{ flex: 1, padding: "14px", background: "#fff", color: "#64748B", border: "1.5px solid #E2E8F0", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" }}>
+          style={{ flex: 1, padding: "14px", background: "#fff", color: "#64748B", border: "1.5px solid #E2E8F0", borderRadius: "12px", fontSize: "22px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" }}>
           Skip for now
         </button>
         <button type="button" onClick={onSubmit} disabled={loading}
-          style={{ flex: 1, padding: "14px", background: loading ? "#93C5FD" : "#2563EB", color: "#fff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: "700", cursor: loading ? "not-allowed" : "pointer", transition: "all 0.15s", boxShadow: loading ? "none" : "0 2px 8px rgba(37,99,235,0.3)" }}>
+          style={{ flex: 1, padding: "14px", background: loading ? "#93C5FD" : "#2563EB", color: "#fff", border: "none", borderRadius: "12px", fontSize: "22px", fontWeight: "700", cursor: loading ? "not-allowed" : "pointer", transition: "all 0.15s", boxShadow: loading ? "none" : "0 2px 8px rgba(37,99,235,0.3)" }}>
           {loading ? "Creating account…" : "Create my business →"}
         </button>
       </div>
@@ -187,5 +187,5 @@ export default function StepAllocationPrefs({ form, setField, error, onSubmit, o
   );
 }
 
-const backBtn = { display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "13px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" };
-const errorBox = { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "13px", color: "#DC2626" };
+const backBtn = { display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#64748B", fontSize: "20px", fontWeight: "600", cursor: "pointer", marginBottom: "28px" };
+const errorBox = { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", fontSize: "20px", color: "#DC2626" };

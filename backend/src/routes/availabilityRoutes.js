@@ -28,8 +28,7 @@ router.get(
         ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.BRANCH_CASUAL_STAFF,
-        ROLES.SYSTEM_ADMIN,
-        ROLES.KREWBY_CASUAL_WORKER
+        ROLES.SYSTEM_ADMIN
     ),
     getAvailability
 );
@@ -41,8 +40,7 @@ router.get(
         ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.BRANCH_CASUAL_STAFF,
-        ROLES.SYSTEM_ADMIN,
-        ROLES.KREWBY_CASUAL_WORKER
+        ROLES.SYSTEM_ADMIN
     ),
     getAvailabilityById
 );
@@ -54,8 +52,7 @@ router.post(
         ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.BRANCH_CASUAL_STAFF,
-        ROLES.SYSTEM_ADMIN,
-        ROLES.KREWBY_CASUAL_WORKER
+        ROLES.SYSTEM_ADMIN
     ),
     validate(createAvailabilitySchema),
     createAvailability
@@ -68,8 +65,7 @@ router.patch(
         ROLES.BRANCH_MANAGER,
         ROLES.REGULAR_STAFF,
         ROLES.BRANCH_CASUAL_STAFF,
-        ROLES.SYSTEM_ADMIN,
-        ROLES.KREWBY_CASUAL_WORKER
+        ROLES.SYSTEM_ADMIN
     ),
     validate(updateAvailabilitySchema),
     updateAvailability

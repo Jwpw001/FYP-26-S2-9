@@ -1,6 +1,7 @@
 const prisma        = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
+const { logAudit } = require("../utils/auditLog");
 
 // Prisma returns date/time columns as JS Date objects, which Express serializes to full ISO
 // strings (e.g. "1970-01-01T09:00:00.000Z" for a `time` column, "2026-07-18T00:00:00.000Z" for
@@ -31,6 +32,66 @@ async function getCallerBranchId(userId) {
   if (s?.branch_id) return s.branch_id;
   const { data: mgr } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1).maybeSingle();
   return mgr?.branch_id || null;
+}
+
+function toMinsFromISO(t) {
+  if (!t) return null;
+  const hhmm = new Date(t).toISOString().slice(11, 16);
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+// Returns an error message if assigning `staffId` to `shiftId` would violate the branch's
+// max daily hours or max consecutive working days — null if the assignment is fine.
+async function checkLaborRules(staffId, shiftId, branchId) {
+  const shift = await prisma.shifts.findUnique({
+    where: { shift_id: shiftId },
+    select: { shift_date: true, start_time: true, end_time: true },
+  });
+  if (!shift) return null;
+
+  const { data: settings } = await supabaseAdmin
+    .from("branch_settings")
+    .select("max_work_hours_day, max_consecutive_days, allow_overtime")
+    .eq("branch_id", branchId)
+    .maybeSingle();
+  if (!settings) return null;
+
+  const maxHours  = settings.max_work_hours_day || 12;
+  const maxConsec = settings.max_consecutive_days || 6;
+  const allowOT   = settings.allow_overtime ?? false;
+  const shiftDateStr = new Date(shift.shift_date).toISOString().slice(0, 10);
+
+  const otherAssignments = await prisma.task_assignments.findMany({
+    where: { staff_id: staffId, shift_id: { not: shiftId } },
+    include: { shifts: { select: { shift_date: true, start_time: true, end_time: true } } },
+  });
+
+  if (!allowOT) {
+    const sameDayHours = otherAssignments
+      .filter(a => a.shifts && new Date(a.shifts.shift_date).toISOString().slice(0, 10) === shiftDateStr)
+      .reduce((sum, a) => sum + Math.max(0, (toMinsFromISO(a.shifts.end_time) - toMinsFromISO(a.shifts.start_time)) / 60), 0);
+    const thisShiftHours = Math.max(0, (toMinsFromISO(shift.end_time) - toMinsFromISO(shift.start_time)) / 60);
+    const totalHours = sameDayHours + thisShiftHours;
+    if (totalHours > maxHours) {
+      return `This would put the staff member at ${totalHours.toFixed(1)}h on ${shiftDateStr}, over the branch's ${maxHours}h/day limit (overtime isn't enabled for this branch).`;
+    }
+  }
+
+  const oneDay = 86400000;
+  const datesSet = new Set(
+    otherAssignments.filter(a => a.shifts).map(a => new Date(a.shifts.shift_date).toISOString().slice(0, 10))
+  );
+  datesSet.add(shiftDateStr);
+  const targetMs = new Date(`${shiftDateStr}T00:00:00Z`).getTime();
+  let run = 1;
+  for (let d = targetMs - oneDay; datesSet.has(new Date(d).toISOString().slice(0, 10)); d -= oneDay) run++;
+  for (let d = targetMs + oneDay; datesSet.has(new Date(d).toISOString().slice(0, 10)); d += oneDay) run++;
+  if (run > maxConsec) {
+    return `This would put the staff member on ${run} consecutive working days, over the branch's ${maxConsec}-day limit.`;
+  }
+
+  return null;
 }
 
 // ── Tasks ──────────────────────────────────────────────────────────────────────
@@ -65,8 +126,13 @@ const createTask = async (req, res) => {
 
     if (!title?.trim()) return res.status(400).json({ success: false, message: "Task title is required." });
 
-    const shift = await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { shift_id: true } });
+    const shift = await prisma.shifts.findUnique({ where: { shift_id: shiftId }, select: { shift_id: true, branch_id: true } });
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found." });
+
+    const callerBranchId = await getCallerBranchId(req.user.user_id);
+    if (callerBranchId && shift.branch_id !== callerBranchId) {
+      return res.status(403).json({ success: false, message: "You don't have access to this shift." });
+    }
 
     const { difficulty } = req.body;
     const task = await prisma.shift_tasks.create({
@@ -93,8 +159,13 @@ const updateTask = async (req, res) => {
     const taskId = Number(req.params.taskId);
     const { title, description, skill_id, difficulty, start_time, end_time, status } = req.body;
 
-    const existing = await prisma.shift_tasks.findUnique({ where: { task_id: taskId } });
+    const existing = await prisma.shift_tasks.findUnique({ where: { task_id: taskId }, include: { shifts: { select: { branch_id: true } } } });
     if (!existing) return res.status(404).json({ success: false, message: "Task not found." });
+
+    const callerBranchId = await getCallerBranchId(req.user.user_id);
+    if (callerBranchId && existing.shifts.branch_id !== callerBranchId) {
+      return res.status(403).json({ success: false, message: "You don't have access to this task." });
+    }
 
     const task = await prisma.shift_tasks.update({
       where: { task_id: taskId },
@@ -118,8 +189,13 @@ const updateTask = async (req, res) => {
 const deleteTask = async (req, res) => {
   try {
     const taskId = Number(req.params.taskId);
-    const existing = await prisma.shift_tasks.findUnique({ where: { task_id: taskId } });
+    const existing = await prisma.shift_tasks.findUnique({ where: { task_id: taskId }, include: { shifts: { select: { branch_id: true } } } });
     if (!existing) return res.status(404).json({ success: false, message: "Task not found." });
+
+    const callerBranchId = await getCallerBranchId(req.user.user_id);
+    if (callerBranchId && existing.shifts.branch_id !== callerBranchId) {
+      return res.status(403).json({ success: false, message: "You don't have access to this task." });
+    }
 
     await prisma.shift_tasks.delete({ where: { task_id: taskId } });
     res.json({ success: true, message: "Task deleted." });
@@ -137,12 +213,26 @@ const assignStaff = async (req, res) => {
 
     if (!staff_id) return res.status(400).json({ success: false, message: "staff_id is required." });
 
-    const task = await prisma.shift_tasks.findUnique({ where: { task_id: taskId }, select: { shift_id: true, status: true } });
+    const task = await prisma.shift_tasks.findUnique({
+      where: { task_id: taskId },
+      select: { shift_id: true, status: true, shifts: { select: { branch_id: true } } },
+    });
     if (!task) return res.status(404).json({ success: false, message: "Task not found." });
+
+    const callerBranchId = await getCallerBranchId(req.user.user_id);
+    if (callerBranchId && task.shifts.branch_id !== callerBranchId) {
+      return res.status(403).json({ success: false, message: "You don't have access to this task." });
+    }
 
     // One task = one person: reject if already assigned
     const existing = await prisma.task_assignments.findFirst({ where: { task_id: taskId } });
     if (existing) return res.status(409).json({ success: false, message: "Task already has an assignee. Remove the current assignee first." });
+
+    // ── Labor-rule checks — the AI weekly scheduler already respects these branch_settings
+    // (max_work_hours_day, max_consecutive_days, allow_overtime); manual assignment previously
+    // didn't check them at all, so a manager could silently schedule past either limit.
+    const laborCheckFailure = await checkLaborRules(Number(staff_id), task.shift_id, task.shifts.branch_id);
+    if (laborCheckFailure) return res.status(409).json({ success: false, message: laborCheckFailure });
 
     const assignment = await prisma.task_assignments.create({
       data: {
@@ -173,6 +263,11 @@ const assignStaff = async (req, res) => {
       });
     } catch { /* notification failure shouldn't block assignment */ }
 
+    await logAudit({
+      actorId: req.user.user_id, action: "staff_assigned", entity: "task_assignments", entityId: assignment.assignment_id,
+      before: null, after: { task_id: taskId, staff_id: Number(staff_id) },
+    });
+
     res.status(201).json({ success: true, assignment });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -188,9 +283,15 @@ const unassignStaff = async (req, res) => {
       include: {
         staff: { include: { users: { select: { user_id: true } } } },
         shift_tasks: { select: { title: true } },
+        shifts: { select: { branch_id: true } },
       },
     });
     if (!assignment) return res.status(404).json({ success: false, message: "No assignment found for this task." });
+
+    const callerBranchId = await getCallerBranchId(req.user.user_id);
+    if (callerBranchId && assignment.shifts.branch_id !== callerBranchId) {
+      return res.status(403).json({ success: false, message: "You don't have access to this task." });
+    }
 
     await prisma.task_assignments.delete({ where: { assignment_id: assignment.assignment_id } });
     await prisma.shift_tasks.update({ where: { task_id: taskId }, data: { status: "open" } });
@@ -207,6 +308,11 @@ const unassignStaff = async (req, res) => {
         relatedId: assignment.shift_id,
       });
     } catch { /* notification failure shouldn't block unassignment */ }
+
+    await logAudit({
+      actorId: req.user.user_id, action: "staff_unassigned", entity: "task_assignments", entityId: assignment.assignment_id,
+      before: { task_id: taskId, staff_id: assignment.staff_id }, after: null,
+    });
 
     res.json({ success: true, message: "Staff unassigned from task." });
   } catch (error) {
@@ -265,6 +371,11 @@ const getStaffRoster = async (req, res) => {
       select: { shift_date: true, branch_id: true, start_time: true, end_time: true },
     });
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found" });
+
+    const callerBranchId = await getCallerBranchId(req.user.user_id);
+    if (callerBranchId && shift.branch_id !== callerBranchId) {
+      return res.status(403).json({ success: false, message: "You don't have access to this shift." });
+    }
 
     const shiftDateStr = shift.shift_date.toISOString().slice(0, 10);
     const shiftDate    = new Date(shiftDateStr + "T00:00:00Z");
@@ -597,4 +708,4 @@ Respond ONLY with this JSON (no other text):
   }
 };
 
-module.exports = { getShiftTasks, createTask, updateTask, deleteTask, assignStaff, unassignStaff, getMyTasks, getStaffRoster, validateAssignment };
+module.exports = { getShiftTasks, createTask, updateTask, deleteTask, assignStaff, unassignStaff, getMyTasks, getStaffRoster, validateAssignment, checkLaborRules };

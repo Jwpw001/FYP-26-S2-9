@@ -11,6 +11,9 @@
     },
     "android": {
       "package": "com.krewby.mobile"
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

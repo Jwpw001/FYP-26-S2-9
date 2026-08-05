@@ -11,8 +11,7 @@ const updateAccountSchema = z.object({
         "system_admin",
         "manager",
         "regular_staff",
-        "casual_staff",
-        "krewby_casual_worker"
+        "casual_staff"
     ]).optional(),
 
     avatar_url: z.enum([

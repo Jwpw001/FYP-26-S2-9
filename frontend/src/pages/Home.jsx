@@ -36,12 +36,12 @@ function FaqItem({ q, a }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ border: `1px solid ${open ? C.brandBdr : C.border}`, borderRadius: 12, background: C.surface, overflow: "hidden", transition: "border-color .2s" }}>
-      <button style={{ width: "100%", background: "none", border: "none", padding: "20px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, fontWeight: 600, color: C.ink, textAlign: "left", gap: 16, cursor: "pointer" }}
+      <button style={{ width: "100%", background: "none", border: "none", padding: "20px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 21, fontWeight: 600, color: C.ink, textAlign: "left", gap: 16, cursor: "pointer" }}
         onClick={() => setOpen(o => !o)}>
         <span>{q}</span>
-        <span style={{ color: C.brand, fontSize: 20, lineHeight: 1, flexShrink: 0, transition: "transform .2s", transform: open ? "rotate(45deg)" : "rotate(0deg)" }}>+</span>
+        <span style={{ color: C.brand, fontSize: 23, lineHeight: 1, flexShrink: 0, transition: "transform .2s", transform: open ? "rotate(45deg)" : "rotate(0deg)" }}>+</span>
       </button>
-      {open && <p style={{ fontSize: 13.5, color: C.ink2, lineHeight: 1.7, padding: "0 22px 20px", margin: 0 }}>{a}</p>}
+      {open && <p style={{ fontSize: 20.5, color: C.ink2, lineHeight: 1.7, padding: "0 22px 20px", margin: 0 }}>{a}</p>}
     </div>
   );
 }
@@ -188,14 +188,14 @@ export default function Home() {
     <main style={{ minHeight: "100vh", background: C.bg, color: C.ink, fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", animation: "fadeIn .4s ease both" }}>
 
       {/* ── ANNOUNCE BAR ─────────────────────────────────── */}
-      <div style={{ background: C.brandDim, borderBottom: `1px solid ${C.brandBdr}`, padding: "8px 24px", textAlign: "center", fontSize: 12.5, fontWeight: 600, color: C.brand, letterSpacing: ".01em" }}>
+      <div style={{ background: C.brandDim, borderBottom: `1px solid ${C.brandBdr}`, padding: "8px 24px", textAlign: "center", fontSize: 19.5, fontWeight: 600, color: C.brand, letterSpacing: ".01em" }}>
         New: Skill-based auto matching for every shift →
       </div>
 
       {/* ── NAV ──────────────────────────────────────────── */}
       <div style={{ height: 66 }} />
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 200, height: 66, display: "flex", alignItems: "center", padding: "0 64px", background: "rgba(247,250,253,0.92)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${C.border}`, boxSizing: "border-box" }}>
-        <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 800, fontSize: 17, letterSpacing: "-.022em", color: C.ink, textDecoration: "none" }}>
+        <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 800, fontSize: 22, letterSpacing: "-.022em", color: C.ink, textDecoration: "none" }}>
           <img src="/logo_noText.png" alt="Krewby" style={{ width: 30, height: 30, objectFit: "contain", borderRadius: 7 }} />
           Krewby
         </a>
@@ -205,11 +205,11 @@ export default function Home() {
         />
         <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
           {!user && (
-            <button style={{ fontSize: 13.5, fontWeight: 600, color: C.ink2, padding: "8px 12px", background: "none", border: "none", cursor: "pointer" }} onClick={() => goTo("/get-started")}>
+            <button style={{ fontSize: 20.5, fontWeight: 600, color: C.ink2, padding: "8px 12px", background: "none", border: "none", cursor: "pointer" }} onClick={() => goTo("/get-started")}>
               Sign up
             </button>
           )}
-          <button style={{ background: C.ink, color: "#fff", border: "none", padding: "10px 18px", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+          <button style={{ background: C.ink, color: "#fff", border: "none", padding: "10px 18px", borderRadius: 9, fontSize: 21, fontWeight: 700, cursor: "pointer" }}
             onClick={() => user ? go() : goTo("/login")}>
             {user ? "Go to dashboard" : "Log in"}
           </button>
@@ -218,18 +218,18 @@ export default function Home() {
 
       {/* ── HERO ─────────────────────────────────────────── */}
       <section style={{ background: C.surface, padding: "84px 64px 0", textAlign: "center", overflow: "hidden" }}>
-        <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: C.brand, background: C.brandDim, border: `1px solid ${C.brandBdr}`, padding: "5px 14px", borderRadius: 100, marginBottom: 24 }}>
+        <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: C.brand, background: C.brandDim, border: `1px solid ${C.brandBdr}`, padding: "5px 14px", borderRadius: 100, marginBottom: 24 }}>
           Workforce Management Platform
         </div>
         <h1 style={{ fontSize: "clamp(34px,5.5vw,58px)", fontWeight: 800, letterSpacing: "-.035em", lineHeight: 1.03, color: C.ink, maxWidth: 800, margin: "0 auto 20px" }}>
           One dashboard.<br />
           <em style={{ fontStyle: "normal", color: C.brand }}>Your entire workforce.</em>
         </h1>
-        <p style={{ fontSize: 17, lineHeight: 1.7, color: C.ink2, maxWidth: 500, margin: "0 auto 36px" }}>
+        <p style={{ fontSize: 22, lineHeight: 1.7, color: C.ink2, maxWidth: 500, margin: "0 auto 36px" }}>
           See every shift, every branch, and every worker's status in real time — no more piecing it together from group chats.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 60 }}>
-          <button style={{ background: C.brand, color: "#fff", border: "none", padding: "14px 28px", borderRadius: 9, fontSize: 15, fontWeight: 700, cursor: "pointer" }}
+          <button style={{ background: C.brand, color: "#fff", border: "none", padding: "14px 28px", borderRadius: 9, fontSize: 22, fontWeight: 700, cursor: "pointer" }}
             onClick={() => go()}>
             Get started free
           </button>
@@ -242,7 +242,7 @@ export default function Home() {
             <div style={{ display: "flex", gap: 6 }}>
               {["#FF5F56","#FFBD2E","#27C93F"].map(c => <span key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c, display: "inline-block" }} />)}
             </div>
-            <div style={{ marginLeft: 8, background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 5, padding: "3px 14px", fontSize: 11, color: "rgba(255,255,255,.4)", fontFamily: "ui-monospace,monospace" }}>
+            <div style={{ marginLeft: 8, background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 5, padding: "3px 14px", fontSize: 18, color: "rgba(255,255,255,.4)", fontFamily: "ui-monospace,monospace" }}>
               app.krewby.com/manager/dashboard
             </div>
           </div>
@@ -270,7 +270,7 @@ export default function Home() {
             <div style={{ display: "flex", flexDirection: "column" }}>
               {/* Topbar */}
               <div style={{ height: 48, background: "#fff", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", padding: "0 20px", gap: 10 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>Dashboard</span>
+                <span style={{ fontSize: 21, fontWeight: 700, color: "#1E293B" }}>Dashboard</span>
                 <div style={{ flex: 1 }} />
                 <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#EFF6FF", border: "1px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <PvIcon name="bell" />
@@ -280,18 +280,18 @@ export default function Home() {
               <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
                 {/* Greeting */}
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "#1E293B", letterSpacing: "-.02em" }}>Good morning, Manager</div>
-                  <div style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>Here's what's happening at your branch today.</div>
+                  <div style={{ fontSize: 21, fontWeight: 800, color: "#1E293B", letterSpacing: "-.02em" }}>Good morning, Manager</div>
+                  <div style={{ fontSize: 18, color: "#64748B", marginTop: 2 }}>Here's what's happening at your branch today.</div>
                 </div>
                 {/* Today's Roster card */}
                 <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 14, padding: "14px 16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#1E293B" }}>Today's Roster</span>
-                    <span style={{ fontSize: 9.5, color: "#94A3B8", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 5, padding: "2px 7px", fontWeight: 500 }}>8AM – 10PM</span>
+                    <span style={{ fontSize: 19, fontWeight: 700, color: "#1E293B" }}>Today's Roster</span>
+                    <span style={{ fontSize: 16.5, color: "#94A3B8", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 5, padding: "2px 7px", fontWeight: 500 }}>8AM – 10PM</span>
                   </div>
                   {/* Time labels */}
                   <div style={{ paddingLeft: 90, marginBottom: 6 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#94A3B8", fontWeight: 600 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#94A3B8", fontWeight: 600 }}>
                       {["8am","12pm","4pm","8pm","10pm"].map(t => <span key={t}>{t}</span>)}
                     </div>
                   </div>
@@ -303,11 +303,11 @@ export default function Home() {
                   ].map((row, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderTop: "1px solid #F1F5F9" }}>
                       <div style={{ width: 82, flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: row.avatarBg, color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{row.initial}</div>
-                        <span style={{ fontSize: 10.5, fontWeight: 600, color: "#1E293B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.name}</span>
+                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: row.avatarBg, color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{row.initial}</div>
+                        <span style={{ fontSize: 17.5, fontWeight: 600, color: "#1E293B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.name}</span>
                       </div>
                       <div style={{ flex: 1, position: "relative", height: 22, background: "#FAFBFC", borderRadius: 5 }}>
-                        <div style={{ position: "absolute", top: 2, height: 18, left: `${row.left}%`, width: `${row.width}%`, background: row.clr.bg, color: row.clr.color, border: `1px solid ${row.clr.border}`, borderRadius: 5, display: "flex", alignItems: "center", padding: "0 7px", fontSize: 9.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden" }}>
+                        <div style={{ position: "absolute", top: 2, height: 18, left: `${row.left}%`, width: `${row.width}%`, background: row.clr.bg, color: row.clr.color, border: `1px solid ${row.clr.border}`, borderRadius: 5, display: "flex", alignItems: "center", padding: "0 7px", fontSize: 16.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden" }}>
                           {row.label}
                         </div>
                       </div>
@@ -318,10 +318,10 @@ export default function Home() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {/* Weekly workload */}
                   <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 14, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#1E293B", marginBottom: 8 }}>Weekly Workload</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: "#1E293B", marginBottom: 8 }}>Weekly Workload</div>
                     {[["Mon",80,true],["Tue",55,false],["Wed",65,false],["Thu",40,false],["Fri",70,false]].map(([day,pct,today]) => (
                       <div key={day} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-                        <span style={{ width: 24, fontSize: 9.5, fontWeight: 600, color: today ? "#0D9488" : "#94A3B8", flexShrink: 0 }}>{day}</span>
+                        <span style={{ width: 24, fontSize: 16.5, fontWeight: 600, color: today ? "#0D9488" : "#94A3B8", flexShrink: 0 }}>{day}</span>
                         <div style={{ flex: 1, height: 8, background: "#F1F5F9", borderRadius: 4, overflow: "hidden" }}>
                           <div style={{ height: "100%", width: `${pct}%`, background: today ? "#0D9488" : "#5EEAD4", borderRadius: 4 }} />
                         </div>
@@ -330,15 +330,15 @@ export default function Home() {
                   </div>
                   {/* Pending approvals */}
                   <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 14, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#1E293B", marginBottom: 8 }}>Pending Requests</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: "#1E293B", marginBottom: 8 }}>Pending Requests</div>
                     {[
                       { name: "A. Tan",   type: "Leave",  badge: { bg:"#FEF3C7", color:"#92400E" } },
                       { name: "B. Lim",   type: "Swap",   badge: { bg:"#EDE9FE", color:"#6B21A8" } },
                       { name: "C. Ng",    type: "Leave",  badge: { bg:"#FEF3C7", color:"#92400E" } },
                     ].map((r, i) => (
                       <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid #F1F5F9" : "none" }}>
-                        <span style={{ fontSize: 10.5, fontWeight: 600, color: "#1E293B" }}>{r.name}</span>
-                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 100, background: r.badge.bg, color: r.badge.color }}>{r.type}</span>
+                        <span style={{ fontSize: 17.5, fontWeight: 600, color: "#1E293B" }}>{r.name}</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, padding: "2px 7px", borderRadius: 100, background: r.badge.bg, color: r.badge.color }}>{r.type}</span>
                       </div>
                     ))}
                   </div>
@@ -351,10 +351,10 @@ export default function Home() {
 
       {/* ── LOGOS ────────────────────────────────────────── */}
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "52px 64px" }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: C.ink3, textAlign: "center", margin: "0 0 22px" }}>Trusted by operations teams at</p>
+        <p style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: C.ink3, textAlign: "center", margin: "0 0 22px" }}>Trusted by operations teams at</p>
         <div style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap" }}>
           {["[ logo ]","[ logo ]","[ logo ]","[ logo ]","[ logo ]"].map((l,i) => (
-            <span key={i} style={{ fontFamily: "ui-monospace,monospace", fontSize: 11.5, color: C.ink3, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 22px" }}>{l}</span>
+            <span key={i} style={{ fontFamily: "ui-monospace,monospace", fontSize: 18.5, color: C.ink3, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 22px" }}>{l}</span>
           ))}
         </div>
       </div>
@@ -365,7 +365,7 @@ export default function Home() {
           {[["100+","Shifts managed"],["5","User role types"],["Real-time","Attendance sync"],["1-click","Branch management"]].map(([n,l],i,arr) => (
             <div key={l} style={{ textAlign: "center", padding: "0 44px", borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
               <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.03em", color: C.ink, fontVariantNumeric: "tabular-nums" }}>{n}</div>
-              <div style={{ fontSize: 11, color: C.ink3, marginTop: 3 }}>{l}</div>
+              <div style={{ fontSize: 18, color: C.ink3, marginTop: 3 }}>{l}</div>
             </div>
           ))}
         </div>
@@ -377,7 +377,7 @@ export default function Home() {
           {[0,1].map(pass => (
             <div key={pass} style={{ display: "inline-flex", gap: 28, paddingRight: 28 }}>
               {["Smart Scheduling","Skill Matching","Live Roster","Multi-Branch","Attendance Tracking","Reports & Exports","Swap Requests","Real-Time Alerts"].map(label => (
-                <span key={label} style={{ fontSize: 12.5, color: C.ink3, background: C.bg, border: `1px solid ${C.border}`, padding: "5px 15px", borderRadius: 100, whiteSpace: "nowrap" }}>{label}</span>
+                <span key={label} style={{ fontSize: 19.5, color: C.ink3, background: C.bg, border: `1px solid ${C.border}`, padding: "5px 15px", borderRadius: 100, whiteSpace: "nowrap" }}>{label}</span>
               ))}
             </div>
           ))}
@@ -388,7 +388,7 @@ export default function Home() {
       <section style={{ padding: "100px 64px" }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 56 }}>
-            <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>The Problem</div>
+            <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>The Problem</div>
             <h2 style={{ fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 800, letterSpacing: "-.03em", margin: "0 0 12px" }}>Workforce scheduling is broken</h2>
             <p style={{ maxWidth: 540, margin: "0 auto" }}>Most businesses still run on WhatsApp groups, paper rosters, and spreadsheets — and it shows.</p>
           </div>
@@ -396,9 +396,9 @@ export default function Home() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22, maxWidth: 940, margin: "0 auto" }}>
           <Reveal>
             <div style={{ borderRadius: 16, padding: 32, background: C.surface2, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.ink2, marginBottom: 22 }}>Without Krewby</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.ink2, marginBottom: 22 }}>Without Krewby</div>
               {["Last-minute changes sent over WhatsApp","No visibility into who is actually working","Attendance tracked with pen and paper","Short-staffed shifts with no backup plan","Managers spending hours building rosters","No audit trail when issues arise"].map(item => (
-                <div key={item} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "flex-start", fontSize: 13.5, lineHeight: 1.55, color: C.ink2 }}>
+                <div key={item} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "flex-start", fontSize: 20.5, lineHeight: 1.55, color: C.ink2 }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.border, marginTop: 5, flexShrink: 0, display: "inline-block" }} />{item}
                 </div>
               ))}
@@ -406,9 +406,9 @@ export default function Home() {
           </Reveal>
           <Reveal delay={100}>
             <div style={{ borderRadius: 16, padding: 32, background: C.brand, border: `1px solid ${C.brand}` }}>
-              <div style={{ display: "inline-block", background: "rgba(255,255,255,.18)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 100, marginBottom: 20 }}>With Krewby</div>
+              <div style={{ display: "inline-block", background: "rgba(255,255,255,.18)", color: "#fff", fontSize: 18, fontWeight: 700, padding: "4px 12px", borderRadius: 100, marginBottom: 20 }}>With Krewby</div>
               {["Instant shift notifications sent to every worker","Live roster visible to everyone on any device","Digital attendance marked per shift, per person","Skill-based worker matching for every role","Build and publish rosters in minutes","Full audit trail for every shift and change"].map(item => (
-                <div key={item} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "flex-start", fontSize: 13.5, lineHeight: 1.55, color: "rgba(255,255,255,.92)" }}>
+                <div key={item} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "flex-start", fontSize: 20.5, lineHeight: 1.55, color: "rgba(255,255,255,.92)" }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,.55)", marginTop: 5, flexShrink: 0, display: "inline-block" }} />{item}
                 </div>
               ))}
@@ -421,7 +421,7 @@ export default function Home() {
       <section id="features" style={{ padding: "100px 64px", background: C.surface2, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 56 }}>
-            <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>Product</div>
+            <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>Product</div>
             <h2 style={{ fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 800, letterSpacing: "-.03em", margin: 0 }}>See how Krewby runs day to day</h2>
           </div>
         </Reveal>
@@ -439,7 +439,7 @@ export default function Home() {
       <section id="roles" style={{ padding: "100px 64px", borderTop: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>Who It's For</div>
+            <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>Who It's For</div>
             <h2 style={{ fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 800, letterSpacing: "-.03em", margin: 0 }}>Built for every role in your operation</h2>
           </div>
         </Reveal>
@@ -448,12 +448,12 @@ export default function Home() {
             <Reveal key={r.name} delay={i * 70}>
               <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", background: C.surface }}>
                 <div style={{ padding: "20px 22px", background: r.bg }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: r.color }}>{r.name}</div>
+                  <div style={{ fontSize: 21, fontWeight: 800, color: r.color }}>{r.name}</div>
                 </div>
-                <div style={{ fontSize: 12.5, color: C.ink2, lineHeight: 1.6, padding: "14px 22px 0" }}>{r.desc}</div>
+                <div style={{ fontSize: 19.5, color: C.ink2, lineHeight: 1.6, padding: "14px 22px 0" }}>{r.desc}</div>
                 <ul style={{ listStyle: "none", padding: "14px 22px 24px", margin: 0, display: "flex", flexDirection: "column", gap: 9 }}>
                   {r.bullets.map(b => (
-                    <li key={b} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, color: C.ink2, lineHeight: 1.4 }}>
+                    <li key={b} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 19, color: C.ink2, lineHeight: 1.4 }}>
                       <span style={{ width: 5, height: 5, borderRadius: "50%", background: r.color, flexShrink: 0, marginTop: 4, display: "inline-block" }} />{b}
                     </li>
                   ))}
@@ -468,7 +468,7 @@ export default function Home() {
       <section id="how" style={{ padding: "100px 64px", background: C.surface2, borderTop: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>How It Works</div>
+            <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>How It Works</div>
             <h2 style={{ fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 800, letterSpacing: "-.03em", margin: 0 }}>Up and running in minutes</h2>
           </div>
         </Reveal>
@@ -476,9 +476,9 @@ export default function Home() {
           {STEPS.map((step, i) => (
             <Reveal key={step.title} delay={i * 80}>
               <div style={{ position: "relative", paddingBottom: i < STEPS.length - 1 ? 36 : 0 }}>
-                <div style={{ position: "absolute", left: -38, top: 0, width: 20, height: 20, borderRadius: "50%", background: C.brand, color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>{i + 1}</div>
-                <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.01em", marginBottom: 6 }}>{step.title}</h3>
-                <p style={{ fontSize: 13.5 }}>{step.desc}</p>
+                <div style={{ position: "absolute", left: -38, top: 0, width: 20, height: 20, borderRadius: "50%", background: C.brand, color: "#fff", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>{i + 1}</div>
+                <h3 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-.01em", marginBottom: 6 }}>{step.title}</h3>
+                <p style={{ fontSize: 20.5 }}>{step.desc}</p>
               </div>
             </Reveal>
           ))}
@@ -489,7 +489,7 @@ export default function Home() {
       <section id="pricing" style={{ padding: "100px 64px", borderTop: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>Pricing</div>
+            <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>Pricing</div>
             <h2 style={{ fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 800, letterSpacing: "-.03em", margin: 0 }}>Simple, per-branch pricing</h2>
           </div>
         </Reveal>
@@ -497,28 +497,28 @@ export default function Home() {
           {PRICING.map((plan) => (
             <div key={plan.name} style={{ position: "relative", border: `2px solid ${plan.popular ? plan.accent : C.border}`, borderRadius: 18, background: plan.popular ? plan.accentLight : C.surface, padding: "28px 24px", boxShadow: plan.popular ? `0 0 0 4px ${plan.accent}18, 0 8px 24px ${plan.accent}14` : "0 1px 4px rgba(0,0,0,.04)" }}>
               {plan.popular && (
-                <div style={{ position: "absolute", top: 0, right: 0, background: plan.accent, color: "#fff", fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: "0 16px 0 12px", letterSpacing: ".04em" }}>⭐ Popular</div>
+                <div style={{ position: "absolute", top: 0, right: 0, background: plan.accent, color: "#fff", fontSize: 17, fontWeight: 700, padding: "5px 13px", borderRadius: "0 16px 0 12px", letterSpacing: ".04em" }}>⭐ Popular</div>
               )}
-              <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em", color: plan.accent, marginBottom: 14 }}>{plan.name}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em", color: plan.accent, marginBottom: 14 }}>{plan.name}</div>
               <div style={{ display: "flex", alignItems: "flex-end", gap: 2, marginBottom: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: plan.popular ? plan.accent : "#64748B", marginBottom: 6 }}></span>
+                <span style={{ fontSize: 20, fontWeight: 700, color: plan.popular ? plan.accent : "#64748B", marginBottom: 6 }}></span>
                 <span style={{ fontSize: 36, fontWeight: 800, letterSpacing: "-.04em", color: plan.popular ? plan.accent : C.ink, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{plan.price}</span>
-                <span style={{ fontSize: 12, color: C.ink3, fontWeight: 500, marginBottom: 5, marginLeft: 3 }}>{plan.unit}</span>
+                <span style={{ fontSize: 19, color: C.ink3, fontWeight: 500, marginBottom: 5, marginLeft: 3 }}>{plan.unit}</span>
               </div>
-              <p style={{ fontSize: 12, color: C.ink3, margin: "0 0 6px" }}>billed monthly</p>
-              <p style={{ fontSize: 12.5, color: plan.popular ? plan.accent : "#64748B", fontWeight: 500, margin: "0 0 18px" }}>{plan.desc}</p>
+              <p style={{ fontSize: 19, color: C.ink3, margin: "0 0 6px" }}>billed monthly</p>
+              <p style={{ fontSize: 19.5, color: plan.popular ? plan.accent : "#64748B", fontWeight: 500, margin: "0 0 18px" }}>{plan.desc}</p>
               <div style={{ height: 1, background: plan.popular ? `${plan.accent}28` : "#F1F5F9", marginBottom: 16 }} />
               <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                 {plan.features.map(f => (
-                  <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: plan.popular ? "#1E293B" : "#64748B" }}>
+                  <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 20, color: plan.popular ? "#1E293B" : "#64748B" }}>
                     <div style={{ width: 15, height: 15, borderRadius: "50%", background: plan.popular ? plan.accent : "#E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                      <span style={{ fontSize: 8, color: plan.popular ? "#fff" : "#94A3B8", fontWeight: 700 }}>✓</span>
+                      <span style={{ fontSize: 15, color: plan.popular ? "#fff" : "#94A3B8", fontWeight: 700 }}>✓</span>
                     </div>
                     {f}
                   </div>
                 ))}
               </div>
-              <button style={{ marginTop: 22, width: "100%", padding: "11px", background: plan.popular ? plan.accent : "#F1F5F9", color: plan.popular ? "#fff" : "#64748B", border: `1.5px solid ${plan.popular ? plan.accent : "#E2E8F0"}`, borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+              <button style={{ marginTop: 22, width: "100%", padding: "11px", background: plan.popular ? plan.accent : "#F1F5F9", color: plan.popular ? "#fff" : "#64748B", border: `1.5px solid ${plan.popular ? plan.accent : "#E2E8F0"}`, borderRadius: 10, fontSize: 20, fontWeight: 700, cursor: "pointer" }}
                 onClick={() => go()}>
                 {plan.name === "Free" ? "Get started free" : `Upgrade to ${plan.name}`}
               </button>
@@ -529,16 +529,16 @@ export default function Home() {
 
       {/* ── TESTIMONIAL ──────────────────────────────────── */}
       <section style={{ padding: "100px 64px", background: C.surface2, borderTop: `1px solid ${C.border}`, textAlign: "center" }}>
-        <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 28 }}>Customer Story</div>
+        <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 28 }}>Customer Story</div>
         <Reveal>
           <p style={{ fontSize: "clamp(17px,2.5vw,23px)", fontWeight: 500, lineHeight: 1.55, maxWidth: 720, margin: "0 auto 28px", color: C.ink, letterSpacing: "-.01em" }}>
             &ldquo;Managing 4 branches with different worker pools was a nightmare. Krewby gave us one place to see everything.&rdquo;
           </p>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: "50%", background: C.green, color: "#fff", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>M</div>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: C.green, color: "#fff", fontWeight: 700, fontSize: 21, display: "flex", alignItems: "center", justifyContent: "center" }}>M</div>
             <div style={{ textAlign: "left" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>Marcus T.</div>
-              <div style={{ fontSize: 12, color: C.ink3 }}>Operations Director, Horizon Group</div>
+              <div style={{ fontSize: 21, fontWeight: 700, color: C.ink }}>Marcus T.</div>
+              <div style={{ fontSize: 19, color: C.ink3 }}>Operations Director, Horizon Group</div>
             </div>
           </div>
         </Reveal>
@@ -548,7 +548,7 @@ export default function Home() {
       <section id="faq" style={{ padding: "100px 64px", borderTop: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>FAQ</div>
+            <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>FAQ</div>
             <h2 style={{ fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 800, letterSpacing: "-.03em", margin: 0 }}>Common questions</h2>
           </div>
         </Reveal>
@@ -565,8 +565,8 @@ export default function Home() {
       <section style={{ padding: "96px 64px", background: C.brand, textAlign: "center" }}>
         <Reveal>
           <h2 style={{ fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 800, letterSpacing: "-.03em", color: "#fff", margin: "0 0 14px" }}>See your whole workforce in one view.</h2>
-          <p style={{ fontSize: 16, color: "rgba(255,255,255,.75)", maxWidth: 460, margin: "0 auto 32px" }}>Join businesses already using Krewby to plan smarter, track better, and stress less.</p>
-          <button style={{ background: "#fff", color: C.brand, fontSize: 15, fontWeight: 700, padding: "14px 28px", borderRadius: 10, border: "none", cursor: "pointer" }} onClick={() => go()}>
+          <p style={{ fontSize: 21, color: "rgba(255,255,255,.75)", maxWidth: 460, margin: "0 auto 32px" }}>Join businesses already using Krewby to plan smarter, track better, and stress less.</p>
+          <button style={{ background: "#fff", color: C.brand, fontSize: 22, fontWeight: 700, padding: "14px 28px", borderRadius: 10, border: "none", cursor: "pointer" }} onClick={() => go()}>
             Get started for free
           </button>
         </Reveal>
@@ -578,10 +578,10 @@ export default function Home() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
               <img src="/logo_noText.png" alt="Krewby" style={{ width: 28, height: 28, objectFit: "contain", borderRadius: 6 }} />
-              <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-.02em", color: C.ink }}>Krewby</span>
+              <span style={{ fontWeight: 800, fontSize: 22, letterSpacing: "-.02em", color: C.ink }}>Krewby</span>
             </div>
-            <p style={{ fontSize: 13, color: C.ink3, lineHeight: 1.6, maxWidth: 230 }}>Workforce management built for the speed and scale of modern business operations.</p>
-            <p style={{ fontSize: 12, color: C.ink3, marginTop: 20 }}>© {new Date().getFullYear()} Krewby · CSIT321 FYP-26-S2-9</p>
+            <p style={{ fontSize: 20, color: C.ink3, lineHeight: 1.6, maxWidth: 230 }}>Workforce management built for the speed and scale of modern business operations.</p>
+            <p style={{ fontSize: 19, color: C.ink3, marginTop: 20 }}>© {new Date().getFullYear()} Krewby · CSIT321 FYP-26-S2-9</p>
           </div>
           {[
             { title: "Product",   links: [["Features","features"],["How it works","how"],["Who it's for","roles"],["FAQ","faq"]] },
@@ -589,10 +589,10 @@ export default function Home() {
             { title: "Platform",  links: [["Log in","/login"],["System Admin","/login"],["Manager Portal","/login"],["Worker Portal","/login"]] },
           ].map(col => (
             <div key={col.title}>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: C.ink3, margin: "0 0 16px" }}>{col.title}</p>
+              <p style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: C.ink3, margin: "0 0 16px" }}>{col.title}</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {col.links.map(([label, target]) => (
-                  <a key={label} href="#" style={{ fontSize: 13, color: C.ink2, textDecoration: "none" }}
+                  <a key={label} href="#" style={{ fontSize: 20, color: C.ink2, textDecoration: "none" }}
                     onClick={e => { e.preventDefault(); if (target?.startsWith("/")) goTo(target); else if (target) scroll(target); }}>
                     {label}
                   </a>
@@ -614,11 +614,11 @@ function FeatureCard({ f }) {
   return (
     <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 12, padding: 22, transform: hov ? "translateY(-3px)" : "none", boxShadow: hov ? "0 10px 28px rgba(15,23,42,.09)" : "none", transition: "transform .2s,box-shadow .2s" }}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-      <div style={{ width: 34, height: 34, borderRadius: 8, background: f.bg, color: f.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, marginBottom: 13 }}>
+      <div style={{ width: 34, height: 34, borderRadius: 8, background: f.bg, color: f.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 21, marginBottom: 13 }}>
         {f.title[0]}
       </div>
-      <h4 style={{ fontSize: 13.5, fontWeight: 700, letterSpacing: "-.005em", margin: "0 0 7px", color: C.ink }}>{f.title}</h4>
-      <p style={{ fontSize: 12.5, lineHeight: 1.55, margin: 0 }}>{f.desc}</p>
+      <h4 style={{ fontSize: 20.5, fontWeight: 700, letterSpacing: "-.005em", margin: "0 0 7px", color: C.ink }}>{f.title}</h4>
+      <p style={{ fontSize: 19.5, lineHeight: 1.55, margin: 0 }}>{f.desc}</p>
     </div>
   );
 }

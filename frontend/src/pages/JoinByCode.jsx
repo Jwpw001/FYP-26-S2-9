@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getUser, setUser } from "../utils/auth";
+import { api } from "../lib/api";
 import { CheckCircle2 } from "lucide-react";
 
 const DASHBOARD = {
@@ -38,9 +39,7 @@ export default function JoinByCode() {
     e.preventDefault();
     setLooking(true); setLookupError("");
     try {
-      const res = await fetch(`/api/invitations/check-code/${code.replace("-", "")}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Code not found");
+      const data = await api.get(`/api/invitations/check-code/${code.replace("-", "")}`);
       setInvite(data.invitation);
       setStep("confirm");
     } catch (err) {
@@ -53,13 +52,7 @@ export default function JoinByCode() {
   async function acceptAsExisting() {
     setSubmitting(true); setFormError("");
     try {
-      const res = await fetch(`/api/invitations/${invite.token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ existing_user_id: loggedInUser.user_id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to accept");
+      const data = await api.post(`/api/invitations/${invite.token}/accept`, { existing_user_id: loggedInUser.user_id });
       setUser(data.user);
       localStorage.setItem("token", data.token);
       setStep("done");
@@ -76,13 +69,7 @@ export default function JoinByCode() {
     if (form.password.length < 6) { setFormError("Password must be at least 6 characters"); return; }
     setSubmitting(true); setFormError("");
     try {
-      const res = await fetch(`/api/invitations/${invite.token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: form.full_name, username: form.username, password: form.password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to create account");
+      const data = await api.post(`/api/invitations/${invite.token}/accept`, { full_name: form.full_name, username: form.username, password: form.password });
       setUser(data.user);
       localStorage.setItem("token", data.token);
       setStep("done");
@@ -120,14 +107,14 @@ export default function JoinByCode() {
                 placeholder="XXXX-XXXX"
                 maxLength={9}
                 required
-                style={{ width: "100%", padding: "14px 16px", border: "2px solid #E2E8F0", borderRadius: "12px", fontSize: "22px", fontWeight: "800", textAlign: "center", letterSpacing: "0.15em", outline: "none", boxSizing: "border-box", marginBottom: "14px", color: "#0F172A" }}
+                style={{ width: "100%", padding: "14px 16px", border: "2px solid #E2E8F0", borderRadius: "12px", fontSize: "25px", fontWeight: "800", textAlign: "center", letterSpacing: "0.15em", outline: "none", boxSizing: "border-box", marginBottom: "14px", color: "#0F172A" }}
               />
               {lookupError && <p style={s.errorBox}>{lookupError}</p>}
               <button type="submit" disabled={looking || code.length < 9} style={{ ...s.btnPrimary, opacity: code.length < 9 ? 0.5 : 1 }}>
                 {looking ? "Checking…" : "Continue"}
               </button>
             </form>
-            <p style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: "#94A3B8" }}>
+            <p style={{ textAlign: "center", marginTop: "20px", fontSize: "20px", color: "#94A3B8" }}>
               Have an invite link? <Link to="/login" style={{ color: "#F59E0B", fontWeight: "600", textDecoration: "none" }}>Log in</Link>
             </p>
           </>
@@ -135,11 +122,11 @@ export default function JoinByCode() {
         ) : step === "confirm" ? (
           <>
             <div style={s.inviteBadge}>
-              <p style={{ fontSize: "13px", color: "#166534", fontWeight: "600" }}>
+              <p style={{ fontSize: "20px", color: "#166534", fontWeight: "600" }}>
                 Invitation: <strong>{roleLabel(invite?.role)}</strong>
               </p>
-              {invite?.branch_name && <p style={{ fontSize: "12px", color: "#4ADE80", marginTop: "3px" }}>Branch: {invite.branch_name}</p>}
-              <p style={{ fontSize: "12px", color: "#16A34A", marginTop: "3px" }}>For: {invite?.email}</p>
+              {invite?.branch_name && <p style={{ fontSize: "19px", color: "#4ADE80", marginTop: "3px" }}>Branch: {invite.branch_name}</p>}
+              <p style={{ fontSize: "19px", color: "#16A34A", marginTop: "3px" }}>For: {invite?.email}</p>
             </div>
 
             {formError && <p style={s.errorBox}>{formError}</p>}
@@ -147,7 +134,7 @@ export default function JoinByCode() {
             {loggedInUser ? (
               <>
                 <h2 style={s.title}>Accept Invitation</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>
+                <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "20px" }}>
                   Logged in as <strong>{loggedInUser.full_name || loggedInUser.email}</strong>
                 </p>
                 <button onClick={acceptAsExisting} disabled={submitting} style={s.btnPrimary}>
@@ -157,9 +144,9 @@ export default function JoinByCode() {
             ) : (
               <>
                 <h2 style={s.title}>Join this branch</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>How would you like to continue?</p>
+                <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "20px" }}>How would you like to continue?</p>
                 <button onClick={() => setStep("signup")} style={s.btnPrimary}>Create New Account</button>
-                <div style={{ textAlign: "center", margin: "12px 0", fontSize: "12px", color: "#94A3B8" }}>— or —</div>
+                <div style={{ textAlign: "center", margin: "12px 0", fontSize: "19px", color: "#94A3B8" }}>— or —</div>
                 <Link to={`/login?redirect=/invite/${invite?.token}`}
                   style={{ ...s.btnPrimary, background: "#F1F5F9", color: "#0F172A", display: "block", textAlign: "center", textDecoration: "none" }}>
                   Log In with Existing Account
@@ -167,7 +154,7 @@ export default function JoinByCode() {
               </>
             )}
             <button onClick={() => { setStep("enter"); setInvite(null); setFormError(""); }}
-              style={{ display: "block", width: "100%", marginTop: "12px", background: "none", border: "none", color: "#94A3B8", fontSize: "13px", cursor: "pointer" }}>
+              style={{ display: "block", width: "100%", marginTop: "12px", background: "none", border: "none", color: "#94A3B8", fontSize: "20px", cursor: "pointer" }}>
               ← Enter a different code
             </button>
           </>
@@ -175,7 +162,7 @@ export default function JoinByCode() {
         ) : step === "signup" ? (
           <>
             <h2 style={s.title}>Create Your Account</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "4px" }}>Email: <strong>{invite?.email}</strong></p>
+            <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "4px" }}>Email: <strong>{invite?.email}</strong></p>
             <form onSubmit={handleSignup} style={{ marginTop: "16px" }}>
               <Field label="Full Name *" type="text" value={form.full_name}
                 onChange={v => setForm(p => ({ ...p, full_name: v }))} placeholder="Your full name" />
@@ -204,9 +191,9 @@ export default function JoinByCode() {
 function Field({ label, type, value, onChange, placeholder }) {
   return (
     <div style={{ marginBottom: "14px" }}>
-      <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>{label}</label>
+      <label style={{ display: "block", fontSize: "19px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required
-        style={{ width: "100%", padding: "10px 12px", border: "1px solid #E2E8F0", borderRadius: "10px", fontSize: "14px", outline: "none", boxSizing: "border-box" }} />
+        style={{ width: "100%", padding: "10px 12px", border: "1px solid #E2E8F0", borderRadius: "10px", fontSize: "21px", outline: "none", boxSizing: "border-box" }} />
     </div>
   );
 }
@@ -215,12 +202,12 @@ const s = {
   page: { minHeight: "100vh", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" },
   card: { background: "#FFF", borderRadius: "18px", padding: "40px", width: "100%", maxWidth: "440px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" },
   logoRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px", justifyContent: "center" },
-  logo: { width: "36px", height: "36px", background: "#F59E0B", borderRadius: "10px", color: "#1C1917", fontWeight: "800", fontSize: "18px", display: "flex", alignItems: "center", justifyContent: "center" },
-  logoText: { fontSize: "18px", fontWeight: "800", color: "#0F172A" },
+  logo: { width: "36px", height: "36px", background: "#F59E0B", borderRadius: "10px", color: "#1C1917", fontWeight: "800", fontSize: "23px", display: "flex", alignItems: "center", justifyContent: "center" },
+  logoText: { fontSize: "23px", fontWeight: "800", color: "#0F172A" },
   inviteBadge: { background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px" },
-  title: { fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" },
-  muted: { color: "#94A3B8", textAlign: "center", fontSize: "13px" },
-  errorBox: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "10px 14px", color: "#DC2626", fontSize: "13px", marginBottom: "14px" },
+  title: { fontSize: "25px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" },
+  muted: { color: "#94A3B8", textAlign: "center", fontSize: "20px" },
+  errorBox: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "10px 14px", color: "#DC2626", fontSize: "20px", marginBottom: "14px" },
   successIcon: { width: "56px", height: "56px", background: "#D1FAE5", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", color: "#059669", margin: "0 auto 16px" },
-  btnPrimary: { display: "block", width: "100%", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: "700", cursor: "pointer", textAlign: "center", textDecoration: "none", marginTop: "6px", boxSizing: "border-box" },
+  btnPrimary: { display: "block", width: "100%", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "10px", padding: "12px", fontSize: "21px", fontWeight: "700", cursor: "pointer", textAlign: "center", textDecoration: "none", marginTop: "6px", boxSizing: "border-box" },
 };

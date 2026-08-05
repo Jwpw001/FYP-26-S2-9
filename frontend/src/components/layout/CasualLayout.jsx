@@ -101,7 +101,7 @@ export default function CasualLayout({ children, title }) {
               <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
             {unread > 0 && (
-              <span style={{ position: "absolute", top: "4px", right: "4px", background: "#EF4444", color: "#FFF", fontSize: "10px", fontWeight: "700", width: "16px", height: "16px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+              <span style={{ position: "absolute", top: "2px", right: "2px", background: "#EF4444", color: "#FFF", fontSize: "10px", fontWeight: "700", width: "20px", height: "20px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
@@ -121,19 +121,19 @@ const s = {
   sidebar: { height: "100vh", background: "#0F172A", display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, zIndex: 300, transition: "width 0.25s ease", overflow: "hidden", flexShrink: 0 },
   sidebarTop: { padding: "24px 20px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)" },
   logoRow: { display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" },
-  logoBox: { width: "34px", height: "34px", borderRadius: "9px", background: "#3B82F6", color: "#FFF", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  logoText: { fontSize: "17px", fontWeight: "800", color: "#FFF", letterSpacing: "-0.01em" },
+  logoBox: { width: "34px", height: "34px", borderRadius: "9px", background: "#3B82F6", color: "#FFF", fontSize: "21px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  logoText: { fontSize: "22px", fontWeight: "800", color: "#FFF", letterSpacing: "-0.01em" },
   nav:     { flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "2px", overflowY: "auto" },
-  navItem: { display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "9px", fontSize: "14px", fontWeight: "500", color: "rgba(255,255,255,0.6)", textDecoration: "none", transition: "background 0.15s, color 0.15s" },
+  navItem: { display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "9px", fontSize: "21px", fontWeight: "500", color: "rgba(255,255,255,0.6)", textDecoration: "none", transition: "background 0.15s, color 0.15s" },
   navItemActive: { background: "rgba(59,130,246,0.15)", color: "#93C5FD" },
-  navIcon: { fontSize: "16px", width: "20px", textAlign: "center", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" },
+  navIcon: { fontSize: "21px", width: "20px", textAlign: "center", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" },
   sidebarBottom: { padding: "16px", borderTop: "1px solid rgba(255,255,255,0.08)" },
   userRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" },
-  avatar:  { width: "34px", height: "34px", borderRadius: "50%", background: "#3B82F6", color: "#FFF", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  userName: { fontSize: "13px", fontWeight: "600", color: "#FFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  userRole: { fontSize: "11px", color: "rgba(255,255,255,0.45)", marginTop: "1px" },
+  avatar:  { width: "34px", height: "34px", borderRadius: "50%", background: "#3B82F6", color: "#FFF", fontSize: "21px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  userName: { fontSize: "20px", fontWeight: "600", color: "#FFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  userRole: { fontSize: "18px", color: "rgba(255,255,255,0.45)", marginTop: "1px" },
   main:    { flex: 1, display: "flex", flexDirection: "column", minWidth: 0, marginLeft: "64px" },
   topbar:  { height: "60px", background: "#FFF", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", padding: "0 28px", gap: "16px", position: "sticky", top: 0, zIndex: 100 },
-  pageTitle: { fontSize: "17px", fontWeight: "700", color: "#1E293B" },
+  pageTitle: { fontSize: "22px", fontWeight: "700", color: "#1E293B" },
   content: { flex: 1, padding: "28px", boxSizing: "border-box" },
 };

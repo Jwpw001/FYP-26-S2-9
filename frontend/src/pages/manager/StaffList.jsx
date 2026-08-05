@@ -125,13 +125,13 @@ export default function StaffList() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Staff Members</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+            <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Staff Members</h2>
+            <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
               {loading ? "Loading…" : `${activeCount} active · ${inactiveCount} inactive · ${staff.length} total`}
             </p>
           </div>
           <button onClick={() => goTo("/manager/staff/new")}
-            style={{ padding: "10px 18px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", border: "none", background: "#2563EB", color: "#FFF", cursor: "pointer" }}>
+            style={{ padding: "10px 18px", borderRadius: "10px", fontSize: "21px", fontWeight: "600", border: "none", background: "#2563EB", color: "#FFF", cursor: "pointer" }}>
             + Add Staff
           </button>
         </div>
@@ -141,7 +141,7 @@ export default function StaffList() {
           <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
             {TABS.map(t => (
               <button key={t.value} onClick={() => setFilterType(t.value)}
-                style={{ padding: "7px 16px", background: filterType === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "13px", fontWeight: filterType === t.value ? "600" : "500", color: filterType === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filterType === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
+                style={{ padding: "7px 16px", background: filterType === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "20px", fontWeight: filterType === t.value ? "600" : "500", color: filterType === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filterType === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
                 {t.label}
               </button>
             ))}
@@ -154,7 +154,7 @@ export default function StaffList() {
             ].map(t => (
               <button key={t.value} onClick={() => setFilterStatus(t.value)}
                 style={{
-                  padding: "7px 14px", border: "none", borderRadius: "7px", fontSize: "13px", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
+                  padding: "7px 14px", border: "none", borderRadius: "7px", fontSize: "20px", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
                   background: filterStatus === t.value ? (t.value === "active" ? "#DCFCE7" : t.value === "inactive" ? "#FEE2E2" : "#FFF") : "transparent",
                   color: filterStatus === t.value ? (t.value === "active" ? "#16A34A" : t.value === "inactive" ? "#DC2626" : "#1E293B") : "#64748B",
                   fontWeight: filterStatus === t.value ? "600" : "500",
@@ -175,7 +175,7 @@ export default function StaffList() {
             </svg>
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by name or email…"
-              style={{ width: "100%", padding: "9px 13px 9px 36px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#FFF", color: "#1E293B", outline: "none", boxSizing: "border-box" }} />
+              style={{ width: "100%", padding: "9px 13px 9px 36px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "20px", background: "#FFF", color: "#1E293B", outline: "none", boxSizing: "border-box" }} />
           </div>
           <SearchableSelect
             options={skills.map(sk => ({ value: String(sk.skill_id), label: sk.name }))}
@@ -212,7 +212,7 @@ export default function StaffList() {
         ) : filtered.length === 0 ? (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "60px", textAlign: "center" }}>
             <div style={{ marginBottom: "10px" }}><Users size={32} color="#64748B" /></div>
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>No staff found</p>
+            <p style={{ fontSize: "21px", fontWeight: "600", color: "#64748B" }}>No staff found</p>
           </div>
         ) : filterType === "all" ? (
           <>
@@ -222,10 +222,10 @@ export default function StaffList() {
               return (
                 <div key={type} style={{ marginBottom: "28px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-                    <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "700", background: type === "regular" ? "#DBEAFE" : "#F3E8FF", color: type === "regular" ? "#1E40AF" : "#6B21A8" }}>
+                    <span style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "18px", fontWeight: "700", background: type === "regular" ? "#DBEAFE" : "#F3E8FF", color: type === "regular" ? "#1E40AF" : "#6B21A8" }}>
                       {type === "regular" ? "Regular" : "Casual"}
                     </span>
-                    <span style={{ fontSize: "13px", fontWeight: "600", color: "#64748B" }}>({group.length})</span>
+                    <span style={{ fontSize: "20px", fontWeight: "600", color: "#64748B" }}>({group.length})</span>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
                     {group.map((m, i) => (
@@ -235,7 +235,7 @@ export default function StaffList() {
                 </div>
               );
             })}
-            <p style={{ textAlign: "center", fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>
+            <p style={{ textAlign: "center", fontSize: "20px", color: "#94A3B8", marginTop: "4px" }}>
               Showing {filtered.length} of {staff.length} staff members
             </p>
           </>
@@ -246,7 +246,7 @@ export default function StaffList() {
                 <StaffCard key={m.staff_id} member={m} index={i} onNav={() => goTo(`/manager/staff/${m.staff_id}`)} />
               ))}
             </div>
-            <p style={{ textAlign: "center", fontSize: "13px", color: "#94A3B8", marginTop: "20px" }}>
+            <p style={{ textAlign: "center", fontSize: "20px", color: "#94A3B8", marginTop: "20px" }}>
               Showing {filtered.length} of {staff.length} staff members
             </p>
           </>
@@ -270,10 +270,10 @@ function StaffCard({ member: m, index, onNav }) {
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
         <UserAvatar name={name} avatar_url={m.users?.avatar_url} size={44} />
         <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
-          <p style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
+          <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+          <p style={{ fontSize: "19px", color: "#64748B", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
         </div>
-        <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "10px", fontWeight: "700", flexShrink: 0, background: m.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: m.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
+        <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "17px", fontWeight: "700", flexShrink: 0, background: m.staff_type === "regular" ? "#DBEAFE" : "#F3E8FF", color: m.staff_type === "regular" ? "#1E40AF" : "#6B21A8" }}>
           {m.staff_type === "regular" ? "Regular" : "Casual"}
         </span>
       </div>
@@ -281,14 +281,14 @@ function StaffCard({ member: m, index, onNav }) {
       {/* Skill tags */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px", minHeight: "24px" }}>
         {m.skillTags?.length === 0 ? (
-          <span style={{ fontSize: "12px", color: "#CBD5E1" }}>No skills assigned</span>
+          <span style={{ fontSize: "19px", color: "#CBD5E1" }}>No skills assigned</span>
         ) : (
           <>
             {m.skillTags.slice(0, 3).map(t => (
-              <span key={t.id} style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: "500", background: "#F1F5F9", color: "#475569" }}>{t.name}</span>
+              <span key={t.id} style={{ padding: "3px 10px", borderRadius: "100px", fontSize: "18px", fontWeight: "500", background: "#F1F5F9", color: "#475569" }}>{t.name}</span>
             ))}
             {m.skillTags.length > 3 && (
-              <span style={{ padding: "3px 8px", borderRadius: "100px", fontSize: "11px", background: "#E2E8F0", color: "#64748B" }}>+{m.skillTags.length - 3}</span>
+              <span style={{ padding: "3px 8px", borderRadius: "100px", fontSize: "18px", background: "#E2E8F0", color: "#64748B" }}>+{m.skillTags.length - 3}</span>
             )}
           </>
         )}
@@ -296,7 +296,7 @@ function StaffCard({ member: m, index, onNav }) {
 
       {/* Footer: status */}
       <div style={{ paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "600", color: m.is_active ? "#16A34A" : "#94A3B8" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "20px", fontWeight: "600", color: m.is_active ? "#16A34A" : "#94A3B8" }}>
           <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: m.is_active ? "#22C55E" : "#D1D5DB", display: "inline-block" }} />
           {m.is_active ? "Active" : "Inactive"}
         </span>

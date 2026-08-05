@@ -9,7 +9,7 @@ import { api } from "../lib/api";
 import { setUser } from "../utils/auth";
 import { useAuth } from "../context/AuthContext";
 
-const SUPPORTED_ROLES = ["regular_staff", "outlet_casual_staff", "krewby_worker"];
+const SUPPORTED_ROLES = ["regular_staff", "outlet_casual_staff"];
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -111,7 +111,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             <Text style={s.note}>
-              Staff · Casual Staff · Krewby Workers only
+              Staff · Casual Staff only
             </Text>
           </View>
 

@@ -108,14 +108,14 @@ function SkillSetsSection({ staffId }) {
     <div style={{ marginTop: "28px", borderTop: "1px solid #F1F5F9", paddingTop: "20px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <div>
-          <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B" }}>Skill Sets</h3>
-          <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "2px" }}>
+          <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B" }}>Skill Sets</h3>
+          <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "2px" }}>
             {assigned.length} SKILL{assigned.length !== 1 ? "S" : ""} ASSIGNED
           </p>
         </div>
         {!adding && (
           <button onClick={() => setAdding(true)}
-            style={{ display: "flex", alignItems: "center", gap: "5px", padding: "7px 13px", borderRadius: "8px", background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
+            style={{ display: "flex", alignItems: "center", gap: "5px", padding: "7px 13px", borderRadius: "8px", background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", fontSize: "20px", fontWeight: "600", cursor: "pointer" }}>
             + Add Skill Set
           </button>
         )}
@@ -127,7 +127,7 @@ function SkillSetsSection({ staffId }) {
         <>
           {assigned.length === 0 && !adding && (
             <div style={{ border: "1.5px dashed #E2E8F0", borderRadius: "12px", padding: "32px", textAlign: "center" }}>
-              <p style={{ fontSize: "13px", color: "#94A3B8" }}>No skills assigned yet. Click "Add Skill Set" to get started.</p>
+              <p style={{ fontSize: "20px", color: "#94A3B8" }}>No skills assigned yet. Click "Add Skill Set" to get started.</p>
             </div>
           )}
 
@@ -139,27 +139,27 @@ function SkillSetsSection({ staffId }) {
                 return (
                   <div key={sk.skill_id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px", border: "1px solid #F1F5F9", borderRadius: "10px", background: "#FAFAFA" }}>
                     <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 11px", borderRadius: "100px", background: p.bg, border: `1px solid ${p.border}`, fontSize: "12px", fontWeight: "700", color: p.text }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 11px", borderRadius: "100px", background: p.bg, border: `1px solid ${p.border}`, fontSize: "19px", fontWeight: "700", color: p.text }}>
                         <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: p.dot, display: "inline-block" }} />
                         {sk.name}
                       </span>
                       {sk.experience_level && (
-                        <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "11px", fontWeight: "600", background: lm.bg || "#F1F5F9", color: lm.color || "#64748B", border: `1px solid ${lm.border || "#E2E8F0"}` }}>
+                        <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "18px", fontWeight: "600", background: lm.bg || "#F1F5F9", color: lm.color || "#64748B", border: `1px solid ${lm.border || "#E2E8F0"}` }}>
                           {lm.label || sk.experience_level}
                         </span>
                       )}
                       {sk.years_of_experience != null && (
-                        <span style={{ fontSize: "12px", color: "#94A3B8", fontWeight: "500" }}>{sk.years_of_experience}yr{sk.years_of_experience !== 1 ? "s" : ""}</span>
+                        <span style={{ fontSize: "19px", color: "#94A3B8", fontWeight: "500" }}>{sk.years_of_experience}yr{sk.years_of_experience !== 1 ? "s" : ""}</span>
                       )}
                     </div>
                     {confirmDel === sk.skill_id ? (
                       <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                        <span style={{ fontSize: "11px", color: "#DC2626" }}>Remove?</span>
-                        <button onClick={() => handleDelete(sk.skill_id)} style={{ padding: "3px 10px", borderRadius: "6px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Yes</button>
-                        <button onClick={() => setConfirmDel(null)} style={{ padding: "3px 10px", borderRadius: "6px", background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#64748B", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>No</button>
+                        <span style={{ fontSize: "18px", color: "#DC2626" }}>Remove?</span>
+                        <button onClick={() => handleDelete(sk.skill_id)} style={{ padding: "3px 10px", borderRadius: "6px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: "18px", fontWeight: "700", cursor: "pointer" }}>Yes</button>
+                        <button onClick={() => setConfirmDel(null)} style={{ padding: "3px 10px", borderRadius: "6px", background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#64748B", fontSize: "18px", fontWeight: "600", cursor: "pointer" }}>No</button>
                       </div>
                     ) : (
-                      <button onClick={() => setConfirmDel(sk.skill_id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#CBD5E1", fontSize: "18px", lineHeight: 1, padding: "2px 4px" }}>×</button>
+                      <button onClick={() => setConfirmDel(sk.skill_id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#CBD5E1", fontSize: "23px", lineHeight: 1, padding: "2px 4px" }}>×</button>
                     )}
                   </div>
                 );
@@ -169,12 +169,12 @@ function SkillSetsSection({ staffId }) {
 
           {adding && (
             <div style={{ border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "18px", background: "#FAFAFA" }}>
-              <p style={{ fontSize: "11px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "14px" }}>New Skill Set</p>
+              <p style={{ fontSize: "18px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "14px" }}>New Skill Set</p>
 
               <div style={{ marginBottom: "14px" }}>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>1 · Skill</label>
+                <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>1 · Skill</label>
                 {available.length === 0 ? (
-                  <p style={{ fontSize: "12px", color: "#94A3B8" }}>
+                  <p style={{ fontSize: "19px", color: "#94A3B8" }}>
                     {library.length === 0 ? "No skills in library yet — add some via Skill Settings." : "All library skills are already assigned."}
                   </p>
                 ) : (
@@ -188,14 +188,14 @@ function SkillSetsSection({ staffId }) {
               </div>
 
               <div style={{ marginBottom: "14px" }}>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>2 · Experience Level</label>
+                <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>2 · Experience Level</label>
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                   {LEVELS.map(lvl => {
                     const lm  = LEVEL_META[lvl];
                     const sel = form.experience_level === lvl;
                     return (
                       <button key={lvl} type="button" onClick={() => setForm(p => ({ ...p, experience_level: lvl }))}
-                        style={{ padding: "6px 13px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", cursor: "pointer",
+                        style={{ padding: "6px 13px", borderRadius: "100px", fontSize: "19px", fontWeight: "600", cursor: "pointer",
                           background: sel ? lm.bg : "#F1F5F9", color: sel ? lm.color : "#64748B",
                           border: sel ? `1.5px solid ${lm.border}` : "1.5px solid #E2E8F0" }}>
                         {lm.label}
@@ -206,20 +206,20 @@ function SkillSetsSection({ staffId }) {
               </div>
 
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>3 · Years of Experience</label>
+                <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>3 · Years of Experience</label>
                 <input type="number" min="0" max="50" value={form.years_of_experience}
                   onChange={e => setForm(p => ({ ...p, years_of_experience: e.target.value }))}
                   placeholder="e.g. 3"
-                  style={{ width: "120px", padding: "8px 10px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "13px", color: "#1E293B", background: "#FFF", boxSizing: "border-box" }} />
+                  style={{ width: "120px", padding: "8px 10px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "20px", color: "#1E293B", background: "#FFF", boxSizing: "border-box" }} />
               </div>
 
               <div style={{ display: "flex", gap: "8px" }}>
                 <button onClick={handleAdd} disabled={saving || !form.skill_id}
-                  style={{ padding: "8px 18px", borderRadius: "8px", background: "#2563EB", color: "#FFF", border: "none", fontSize: "13px", fontWeight: "700", cursor: saving || !form.skill_id ? "not-allowed" : "pointer", opacity: saving || !form.skill_id ? 0.6 : 1 }}>
+                  style={{ padding: "8px 18px", borderRadius: "8px", background: "#2563EB", color: "#FFF", border: "none", fontSize: "20px", fontWeight: "700", cursor: saving || !form.skill_id ? "not-allowed" : "pointer", opacity: saving || !form.skill_id ? 0.6 : 1 }}>
                   {saving ? "Saving…" : "Save"}
                 </button>
                 <button onClick={() => { setAdding(false); setForm({ skill_id: "", experience_level: "junior", years_of_experience: "" }); }}
-                  style={{ padding: "8px 14px", borderRadius: "8px", background: "#F1F5F9", color: "#64748B", border: "1px solid #E2E8F0", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}>
+                  style={{ padding: "8px 14px", borderRadius: "8px", background: "#F1F5F9", color: "#64748B", border: "1px solid #E2E8F0", fontSize: "20px", fontWeight: "600", cursor: "pointer" }}>
                   Cancel
                 </button>
               </div>
@@ -409,7 +409,7 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
             <div style={{ display: "flex", background: "#F1F5F9", borderRadius: "8px", padding: "3px", gap: "2px" }}>
               {KPI_PERIODS.map((p, i) => (
                 <button key={p.label} onClick={() => setPeriod(i)}
-                  style={{ padding: "5px 14px", borderRadius: "6px", border: "none", fontSize: "12px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s",
+                  style={{ padding: "5px 14px", borderRadius: "6px", border: "none", fontSize: "19px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s",
                     background: period === i ? "#FFF" : "transparent",
                     color: period === i ? "#1E293B" : "#64748B",
                     boxShadow: period === i ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
@@ -436,14 +436,14 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: scoreBg, border: `1px solid ${scoreColor}30`, borderRadius: "12px", padding: "16px 20px", marginBottom: "20px" }}>
                 <div>
-                  <p style={{ fontSize: "13px", fontWeight: "700", color: scoreColor, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <p style={{ fontSize: "20px", fontWeight: "700", color: scoreColor, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {kpi.score >= 80 ? "Excellent" : kpi.score >= 55 ? "Average" : "Needs Improvement"}
                   </p>
-                  <p style={{ fontSize: "11px", color: "#94A3B8", marginTop: "3px" }}>{kpi.periodStart} → {kpi.periodEnd}</p>
+                  <p style={{ fontSize: "18px", color: "#94A3B8", marginTop: "3px" }}>{kpi.periodStart} → {kpi.periodEnd}</p>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <span style={{ fontSize: "36px", fontWeight: "800", color: scoreColor, lineHeight: 1 }}>{kpi.score}</span>
-                  <span style={{ fontSize: "14px", fontWeight: "600", color: "#94A3B8" }}>/100</span>
+                  <span style={{ fontSize: "21px", fontWeight: "600", color: "#94A3B8" }}>/100</span>
                 </div>
               </div>
 
@@ -455,9 +455,9 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
                   { label: "Leave Requests",  value: kpi.leaveCount,             unit: "",  color: "#D97706", bg: "#FFFBEB" },
                 ].map(m => (
                   <div key={m.label} style={{ background: m.bg, border: `1px solid ${m.color}20`, borderRadius: "10px", padding: "14px 16px" }}>
-                    <p style={{ fontSize: "10px", fontWeight: "700", color: m.color, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px", opacity: 0.8 }}>{m.label}</p>
+                    <p style={{ fontSize: "17px", fontWeight: "700", color: m.color, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px", opacity: 0.8 }}>{m.label}</p>
                     <p style={{ fontSize: "26px", fontWeight: "800", color: "#0F172A", lineHeight: 1 }}>
-                      {m.value}<span style={{ fontSize: "13px", fontWeight: "600", color: "#94A3B8", marginLeft: "2px" }}>{m.unit}</span>
+                      {m.value}<span style={{ fontSize: "20px", fontWeight: "600", color: "#94A3B8", marginLeft: "2px" }}>{m.unit}</span>
                     </p>
                   </div>
                 ))}
@@ -465,29 +465,29 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
 
               {kpi.tsTotal > 0 && (
                 <div style={{ marginBottom: "20px" }}>
-                  <p style={{ fontSize: "12px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Timesheet Status</p>
+                  <p style={{ fontSize: "19px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Timesheet Status</p>
                   <div style={{ display: "flex", height: "10px", borderRadius: "100px", overflow: "hidden", background: "#F1F5F9", marginBottom: "8px" }}>
                     {kpi.tsApproved > 0 && <div style={{ flex: kpi.tsApproved, background: "#22C55E" }} />}
                     {kpi.tsPending  > 0 && <div style={{ flex: kpi.tsPending,  background: "#F59E0B" }} />}
                     {kpi.tsRejected > 0 && <div style={{ flex: kpi.tsRejected, background: "#EF4444" }} />}
                   </div>
                   <div style={{ display: "flex", gap: "16px" }}>
-                    {kpi.tsApproved > 0 && <span style={{ fontSize: "12px", color: "#16A34A", fontWeight: "600" }}>✓ {kpi.tsApproved} approved</span>}
-                    {kpi.tsPending  > 0 && <span style={{ fontSize: "12px", color: "#D97706", fontWeight: "600" }}>⏳ {kpi.tsPending} pending</span>}
-                    {kpi.tsRejected > 0 && <span style={{ fontSize: "12px", color: "#DC2626", fontWeight: "600" }}>✗ {kpi.tsRejected} rejected</span>}
+                    {kpi.tsApproved > 0 && <span style={{ fontSize: "19px", color: "#16A34A", fontWeight: "600" }}>✓ {kpi.tsApproved} approved</span>}
+                    {kpi.tsPending  > 0 && <span style={{ fontSize: "19px", color: "#D97706", fontWeight: "600" }}>⏳ {kpi.tsPending} pending</span>}
+                    {kpi.tsRejected > 0 && <span style={{ fontSize: "19px", color: "#DC2626", fontWeight: "600" }}>✗ {kpi.tsRejected} rejected</span>}
                   </div>
                 </div>
               )}
 
               {kpi.timesheetList.length > 0 && (
                 <div style={{ marginBottom: "20px" }}>
-                  <p style={{ fontSize: "12px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Timesheet History</p>
+                  <p style={{ fontSize: "19px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Timesheet History</p>
                   <div style={{ border: "1px solid #F1F5F9", borderRadius: "10px", overflow: "hidden" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "19px" }}>
                       <thead>
                         <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #F1F5F9" }}>
                           {["Date","Hours","Status","Description"].map(h => (
-                            <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                            <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -497,7 +497,7 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
                             <td style={{ padding: "9px 12px", color: "#374151" }}>{fmtDate(t.log_date)}</td>
                             <td style={{ padding: "9px 12px", fontWeight: "700", color: "#0F172A" }}>{parseFloat(t.hours_worked || 0).toFixed(1)}h</td>
                             <td style={{ padding: "9px 12px" }}>
-                              <span style={{ fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px",
+                              <span style={{ fontSize: "17px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px",
                                 background: t.status==="approved" ? "#F0FDF4" : t.status==="pending" ? "#FFFBEB" : "#FEF2F2",
                                 color:      t.status==="approved" ? "#16A34A" : t.status==="pending" ? "#D97706" : "#DC2626" }}>
                                 {t.status}
@@ -514,13 +514,13 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
 
               {kpi.leaveList.length > 0 && (
                 <div>
-                  <p style={{ fontSize: "12px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Leave Requests</p>
+                  <p style={{ fontSize: "19px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>Leave Requests</p>
                   <div style={{ border: "1px solid #F1F5F9", borderRadius: "10px", overflow: "hidden" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "19px" }}>
                       <thead>
                         <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #F1F5F9" }}>
                           {["Start","End","Status","Reason"].map(h => (
-                            <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontSize: "10px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                            <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -530,7 +530,7 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
                             <td style={{ padding: "9px 12px", color: "#374151" }}>{fmtDate(l.start_date)}</td>
                             <td style={{ padding: "9px 12px", color: "#374151" }}>{fmtDate(l.end_date)}</td>
                             <td style={{ padding: "9px 12px" }}>
-                              <span style={{ fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px",
+                              <span style={{ fontSize: "17px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px",
                                 background: l.status==="approved" ? "#F0FDF4" : l.status==="pending" ? "#FFFBEB" : "#FEF2F2",
                                 color:      l.status==="approved" ? "#16A34A" : l.status==="pending" ? "#D97706" : "#DC2626" }}>
                                 {l.status}
@@ -546,16 +546,16 @@ function KpiModal({ staffId, staffName, staffType, onClose }) {
               )}
 
               {kpi.shifts === 0 && kpi.tsTotal === 0 && kpi.leaveCount === 0 && (
-                <p style={{ textAlign: "center", color: "#94A3B8", fontSize: "13px", padding: "20px 0" }}>No activity recorded for this period.</p>
+                <p style={{ textAlign: "center", color: "#94A3B8", fontSize: "20px", padding: "20px 0" }}>No activity recorded for this period.</p>
               )}
             </div>
           )}
         </div>
 
         <div style={ms.footer}>
-          <p style={{ fontSize: "11px", color: "#94A3B8" }}>Score = Shifts (25) + Hours (25) + Timesheets (35) + Leave (15)</p>
+          <p style={{ fontSize: "18px", color: "#94A3B8" }}>Score = Shifts (25) + Hours (25) + Timesheets (35) + Leave (15)</p>
           <button onClick={downloadPDF} disabled={loading || !kpi}
-            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "9px 18px", borderRadius: "9px", background: "#2563EB", color: "#FFF", border: "none", fontSize: "13px", fontWeight: "700", cursor: loading || !kpi ? "not-allowed" : "pointer", opacity: loading || !kpi ? 0.5 : 1 }}>
+            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "9px 18px", borderRadius: "9px", background: "#2563EB", color: "#FFF", border: "none", fontSize: "20px", fontWeight: "700", cursor: loading || !kpi ? "not-allowed" : "pointer", opacity: loading || !kpi ? 0.5 : 1 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download PDF
           </button>
@@ -569,8 +569,8 @@ const ms = {
   overlay: { position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" },
   modal:   { background: "#FFF", borderRadius: "18px", width: "100%", maxWidth: "760px", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 80px rgba(0,0,0,0.2)" },
   header:  { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid #F1F5F9", flexShrink: 0 },
-  title:   { fontSize: "17px", fontWeight: "800", color: "#0F172A" },
-  sub:     { fontSize: "12px", color: "#94A3B8", marginTop: "2px" },
+  title:   { fontSize: "22px", fontWeight: "800", color: "#0F172A" },
+  sub:     { fontSize: "19px", color: "#94A3B8", marginTop: "2px" },
   body:    { flex: 1, overflowY: "auto", padding: "20px 24px" },
   footer:  { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 24px", borderTop: "1px solid #F1F5F9", flexShrink: 0 },
 };
@@ -686,7 +686,7 @@ export default function BOStaffDetail() {
   if (loading) {
     return (
       <BusinessOwnerLayout title="Staff Profile">
-        <div style={{ textAlign: "center", padding: "60px", color: "#64748B", fontSize: "14px" }}>
+        <div style={{ textAlign: "center", padding: "60px", color: "#64748B", fontSize: "21px" }}>
           Loading profile…
         </div>
       </BusinessOwnerLayout>
@@ -825,7 +825,7 @@ export default function BOStaffDetail() {
                       return (
                         <button key={day} type="button" disabled={!allowed} onClick={() => toggleDay(idx)}
                           style={{
-                            padding: "7px 11px", borderRadius: "8px", fontSize: "12px",
+                            padding: "7px 11px", borderRadius: "8px", fontSize: "19px",
                             fontWeight: "700", transition: "all 0.12s",
                             cursor: allowed ? "pointer" : "not-allowed",
                             opacity: allowed ? 1 : 0.35,
@@ -845,7 +845,7 @@ export default function BOStaffDetail() {
                         && (!operatingDays || operatingDays[idx] === "1");
                       return (
                         <span key={day} style={{
-                          padding: "5px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: "700",
+                          padding: "5px 10px", borderRadius: "8px", fontSize: "19px", fontWeight: "700",
                           background: active ? "#DBEAFE" : "#F1F5F9",
                           color: active ? "#1E40AF" : "#94A3B8",
                           border: `1.5px solid ${active ? "#BFDBFE" : "#E2E8F0"}`,
@@ -903,42 +903,42 @@ export default function BOStaffDetail() {
 }
 
 const s = {
-  back: { background: "none", border: "none", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer", marginBottom: "20px", padding: 0 },
+  back: { background: "none", border: "none", fontSize: "20px", fontWeight: "600", color: "#64748B", cursor: "pointer", marginBottom: "20px", padding: 0 },
   layout: { display: "grid", gridTemplateColumns: "280px 1fr", gap: "20px", alignItems: "start" },
 
   profileCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "24px", textAlign: "center" },
   avatarLg: { width: "72px", height: "72px", borderRadius: "50%", color: "#FFFFFF", fontSize: "26px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" },
-  profileName: { fontSize: "17px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" },
-  profileEmail: { fontSize: "13px", color: "#64748B", marginBottom: "12px" },
-  typeBadge: { display: "inline-block", padding: "3px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: "600", marginBottom: "16px" },
-  metaRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderTop: "1px solid #F1F5F9", fontSize: "13px" },
+  profileName: { fontSize: "22px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" },
+  profileEmail: { fontSize: "20px", color: "#64748B", marginBottom: "12px" },
+  typeBadge: { display: "inline-block", padding: "3px 10px", borderRadius: "100px", fontSize: "19px", fontWeight: "600", marginBottom: "16px" },
+  metaRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderTop: "1px solid #F1F5F9", fontSize: "20px" },
   metaLabel: { color: "#64748B", fontWeight: "500" },
   metaVal: { color: "#1E293B", fontWeight: "600" },
-  statusBadge: { padding: "2px 8px", borderRadius: "100px", fontSize: "11px", fontWeight: "600" },
+  statusBadge: { padding: "2px 8px", borderRadius: "100px", fontSize: "18px", fontWeight: "600" },
   cardActions: { marginTop: "16px", display: "flex", flexDirection: "column", gap: "4px" },
-  actionBtn: { width: "100%", padding: "9px", borderRadius: "9px", fontSize: "13px", fontWeight: "600", cursor: "pointer" },
+  actionBtn: { width: "100%", padding: "9px", borderRadius: "9px", fontSize: "20px", fontWeight: "600", cursor: "pointer" },
 
   formCard: { background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "24px" },
   formHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" },
-  formTitle: { fontSize: "15px", fontWeight: "700", color: "#1E293B" },
-  editBtn: { background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
-  cancelBtn: { background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
-  saveBtn: { background: "#F59E0B", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "13px", fontWeight: "700", color: "#1C1917", cursor: "pointer" },
+  formTitle: { fontSize: "22px", fontWeight: "700", color: "#1E293B" },
+  editBtn: { background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "20px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
+  cancelBtn: { background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "7px 14px", fontSize: "20px", fontWeight: "600", color: "#1E293B", cursor: "pointer" },
+  saveBtn: { background: "#F59E0B", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "20px", fontWeight: "700", color: "#1C1917", cursor: "pointer" },
 
-  error: { background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 12px", borderRadius: "9px", fontSize: "13px", marginBottom: "16px" },
-  successMsg: { background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#166534", padding: "10px 12px", borderRadius: "9px", fontSize: "13px", marginBottom: "16px" },
+  error: { background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 12px", borderRadius: "9px", fontSize: "20px", marginBottom: "16px" },
+  successMsg: { background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#166534", padding: "10px 12px", borderRadius: "9px", fontSize: "20px", marginBottom: "16px" },
 
   fields: { display: "flex", flexDirection: "column", gap: "16px", marginBottom: "24px" },
   field: {},
-  label: { display: "block", fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "6px" },
-  value: { fontSize: "14px", color: "#1E293B", fontWeight: "500" },
-  input: { display: "block", width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "14px", color: "#1E293B", background: "#FFFFFF", boxSizing: "border-box" },
-  hint: { fontSize: "11px", color: "#94A3B8", marginTop: "4px" },
+  label: { display: "block", fontSize: "19px", fontWeight: "600", color: "#64748B", marginBottom: "6px" },
+  value: { fontSize: "21px", color: "#1E293B", fontWeight: "500" },
+  input: { display: "block", width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "21px", color: "#1E293B", background: "#FFFFFF", boxSizing: "border-box" },
+  hint: { fontSize: "18px", color: "#94A3B8", marginTop: "4px" },
 
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center" },
   modal: { background: "#FFFFFF", borderRadius: "16px", padding: "32px 28px", width: "360px", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" },
   modalIcon: { fontSize: "36px", marginBottom: "12px" },
-  modalTitle: { fontSize: "18px", fontWeight: "800", color: "#1E293B", marginBottom: "10px" },
-  modalBody: { fontSize: "14px", color: "#64748B", lineHeight: 1.6, marginBottom: "24px" },
+  modalTitle: { fontSize: "23px", fontWeight: "800", color: "#1E293B", marginBottom: "10px" },
+  modalBody: { fontSize: "21px", color: "#64748B", lineHeight: 1.6, marginBottom: "24px" },
   modalActions: { display: "flex", gap: "10px", justifyContent: "center" },
 };

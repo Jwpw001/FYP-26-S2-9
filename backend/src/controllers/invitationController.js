@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const { getLimits } = require("../utils/planLimits");
 const dns = require("dns").promises;
 const { sendMail } = require("../utils/mailer");
+
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 const ROLE_HIERARCHY = {
@@ -12,7 +13,6 @@ const ROLE_HIERARCHY = {
   manager:      3,
   regular_staff:       2,
   casual_staff: 2,
-  krewby_casual_worker:1,
 };
 
 const ROLE_LABELS = {
@@ -242,13 +242,20 @@ const acceptInvitation = async (req, res) => {
 
     // Case 1: existing logged-in user linking to the invitation
     if (existing_user_id) {
+      // The caller must be authenticated as the exact account being linked — otherwise
+      // anyone holding a valid invite token could pass an arbitrary existing_user_id and
+      // get that account promoted (e.g. to manager) without ever proving they own it.
+      if (!req.user || Number(req.user.user_id) !== Number(existing_user_id)) {
+        return res.status(401).json({ success: false, message: "You must be logged in as the account you're linking to accept this invitation." });
+      }
+
       const user = await prisma.users.findUnique({ where: { user_id: Number(existing_user_id) } });
       if (!user) return res.status(404).json({ success: false, message: "User not found." });
 
       // Create staff record if needed
       if (invite.branch_id && ["regular_staff", "casual_staff"].includes(invite.role)) {
-        // Update role from pending (or lower role) to the invited role
-        if (user.role === "pending" || user.role === "krewby_casual_worker") {
+        // Update role from pending to the invited role
+        if (user.role === "pending") {
           await prisma.users.update({ where: { user_id: user.user_id }, data: { role: invite.role } });
         }
         const alreadyStaff = await prisma.staff.findFirst({ where: { user_id: user.user_id, branch_id: invite.branch_id } });

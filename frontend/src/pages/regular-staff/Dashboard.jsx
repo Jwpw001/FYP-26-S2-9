@@ -179,9 +179,9 @@ export default function StaffDashboard() {
       <div style={{ display: "flex", flexDirection: "column", gap: "20px", animation: "fadeUp .4s ease both" }}>
 
         {/* Greeting */}
-        <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B", margin: 0 }}>
+        <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B", margin: 0 }}>
           Good {getGreeting()}, {user?.full_name?.split(" ")[0] || "there"}
-          {branchName && <span style={{ marginLeft: "10px", fontSize: "13px", fontWeight: "600", color: "#2563EB", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "99px", padding: "2px 10px", verticalAlign: "middle" }}>{branchName}</span>}
+          {branchName && <span style={{ marginLeft: "10px", fontSize: "20px", fontWeight: "600", color: "#2563EB", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "99px", padding: "2px 10px", verticalAlign: "middle" }}>{branchName}</span>}
         </h2>
 
         {/* Next Shift card + Worked donut */}
@@ -196,29 +196,29 @@ export default function StaffDashboard() {
               </div>
             ) : nextShift ? (
               <>
-                <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: ".08em", textTransform: "uppercase", opacity: .75, margin: "0 0 10px" }}>Next Shift</p>
-                <h3 style={{ fontSize: "22px", fontWeight: "800", margin: "0 0 6px" }}>
+                <p style={{ fontSize: "18px", fontWeight: "700", letterSpacing: ".08em", textTransform: "uppercase", opacity: .75, margin: "0 0 10px" }}>Next Shift</p>
+                <h3 style={{ fontSize: "25px", fontWeight: "800", margin: "0 0 6px" }}>
                   {new Date(nextShift.shifts.shift_date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long" })}, {nextShift.shifts.title || "Shift"}
                 </h3>
-                <p style={{ fontSize: "14px", opacity: .85, margin: "0 0 20px" }}>
+                <p style={{ fontSize: "21px", opacity: .85, margin: "0 0 20px" }}>
                   {nextShift.shifts.start_time?.slice(0,5)} – {nextShift.shifts.end_time?.slice(0,5)}
                   {nextShift.shifts.branches?.name && ` · ${nextShift.shifts.branches.name}`}
                 </p>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <span style={{ background: "rgba(255,255,255,.18)", borderRadius: "100px", padding: "6px 14px", fontSize: "12.5px", fontWeight: "700" }}>
+                  <span style={{ background: "rgba(255,255,255,.18)", borderRadius: "100px", padding: "6px 14px", fontSize: "19.5px", fontWeight: "700" }}>
                     {nextDaysUntil === 0 ? "Today" : nextDaysUntil === 1 ? "Starts tomorrow" : `Starts in ${nextDaysUntil} days`}
                   </span>
                   <button onClick={() => navigate("/regular-staff/shifts")}
-                    style={{ background: "#fff", color: "#1D4ED8", border: "none", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}>
+                    style={{ background: "#fff", color: "#1D4ED8", border: "none", borderRadius: "9px", padding: "8px 16px", fontSize: "20px", fontWeight: "700", cursor: "pointer" }}>
                     View Details
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <p style={{ fontSize: "11px", fontWeight: "700", letterSpacing: ".08em", textTransform: "uppercase", opacity: .75, margin: "0 0 10px" }}>Next Shift</p>
-                <h3 style={{ fontSize: "18px", fontWeight: "700", margin: "0 0 8px", opacity: .9 }}>No upcoming shifts scheduled</h3>
-                <p style={{ fontSize: "13px", opacity: .7, margin: 0 }}>Check back with your manager for new assignments.</p>
+                <p style={{ fontSize: "18px", fontWeight: "700", letterSpacing: ".08em", textTransform: "uppercase", opacity: .75, margin: "0 0 10px" }}>Next Shift</p>
+                <h3 style={{ fontSize: "23px", fontWeight: "700", margin: "0 0 8px", opacity: .9 }}>No upcoming shifts scheduled</h3>
+                <p style={{ fontSize: "20px", opacity: .7, margin: 0 }}>Check back with your manager for new assignments.</p>
               </>
             )}
             {/* Decorative icon */}
@@ -232,18 +232,18 @@ export default function StaffDashboard() {
             ) : (
               <div style={{ width: "96px", height: "96px", borderRadius: "50%", background: `conic-gradient(#F97316 0deg ${workedDeg}deg, #FFEDD5 ${workedDeg}deg 360deg)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <div style={{ width: "74px", height: "74px", borderRadius: "50%", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: "20px", fontWeight: "800", color: "#0F172A" }}>{workedDays}/5</span>
-                  <span style={{ fontSize: "9.5px", color: "#94A3B8", fontWeight: "600" }}>days</span>
+                  <span style={{ fontSize: "23px", fontWeight: "800", color: "#0F172A" }}>{workedDays}/5</span>
+                  <span style={{ fontSize: "16.5px", color: "#94A3B8", fontWeight: "600" }}>days</span>
                 </div>
               </div>
             )}
-            <p style={{ fontSize: "12.5px", fontWeight: "600", color: "#1E293B", margin: 0 }}>Worked this week</p>
+            <p style={{ fontSize: "19.5px", fontWeight: "600", color: "#1E293B", margin: 0 }}>Worked this week</p>
           </div>
         </div>
 
         {/* 7-day calendar strip */}
         <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px" }}>
-          <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", margin: "0 0 16px" }}>This Week</h3>
+          <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B", margin: "0 0 16px" }}>This Week</h3>
           {loading ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: "8px" }}>
               {Array.from({ length: 7 }).map((_, i) => <Shimmer key={i} h="72px" r="12px" />)}
@@ -257,8 +257,8 @@ export default function StaffDashboard() {
                     style={{ cursor: "pointer", textAlign: "center", padding: "12px 4px", borderRadius: "12px",
                       background: isSel ? "#EFF6FF" : d.isToday ? "#FFF7ED" : "#FAFBFC",
                       border: `1.5px solid ${isSel ? "#93C5FD" : d.isToday ? "#FED7AA" : "#F1F5F9"}` }}>
-                    <p style={{ fontSize: "10px", fontWeight: "700", color: isSel ? "#2563EB" : "#94A3B8", margin: "0 0 4px", letterSpacing: ".03em" }}>{d.dayLabel}</p>
-                    <p style={{ fontSize: "16px", fontWeight: "800", color: isSel ? "#1D4ED8" : "#1E293B", margin: "0 0 6px" }}>{d.num}</p>
+                    <p style={{ fontSize: "17px", fontWeight: "700", color: isSel ? "#2563EB" : "#94A3B8", margin: "0 0 4px", letterSpacing: ".03em" }}>{d.dayLabel}</p>
+                    <p style={{ fontSize: "21px", fontWeight: "800", color: isSel ? "#1D4ED8" : "#1E293B", margin: "0 0 6px" }}>{d.num}</p>
                     <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: d.hasShift ? "#2563EB" : "#E2E8F0", margin: "0 auto" }} />
                   </div>
                 );
@@ -271,23 +271,23 @@ export default function StaffDashboard() {
               {selDayShift ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                   <div style={{ minWidth: "52px", textAlign: "center", background: "#EFF6FF", borderRadius: "10px", padding: "8px 4px" }}>
-                    <p style={{ fontSize: "11px", fontWeight: "700", color: "#2563EB", margin: 0 }}>{selectedDay?.dayLabel}</p>
-                    <p style={{ fontSize: "16px", fontWeight: "800", color: "#1E293B", margin: 0 }}>{selectedDay?.num}</p>
+                    <p style={{ fontSize: "18px", fontWeight: "700", color: "#2563EB", margin: 0 }}>{selectedDay?.dayLabel}</p>
+                    <p style={{ fontSize: "21px", fontWeight: "800", color: "#1E293B", margin: 0 }}>{selectedDay?.num}</p>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: "14px", fontWeight: "700", color: "#1E293B", margin: 0 }}>{selDayShift.title || "Shift"}</p>
-                    <p style={{ fontSize: "12.5px", color: "#64748B", margin: "2px 0 0" }}>
+                    <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", margin: 0 }}>{selDayShift.title || "Shift"}</p>
+                    <p style={{ fontSize: "19.5px", color: "#64748B", margin: "2px 0 0" }}>
                       {selDayShift.start_time?.slice(0,5)} – {selDayShift.end_time?.slice(0,5)}
                       {selDayShift.branches?.name && ` · ${selDayShift.branches.name}`}
                     </p>
                   </div>
                   <button onClick={() => setAcked(p => ({ ...p, [ackKey]: !p[ackKey] }))}
-                    style={{ background: isAcked ? "#DCFCE7" : "#2563EB", color: isAcked ? "#166534" : "#fff", border: `1px solid ${isAcked ? "#BBF7D0" : "#2563EB"}`, borderRadius: "9px", padding: "9px 16px", fontSize: "12.5px", fontWeight: "700", cursor: "pointer", flexShrink: 0 }}>
+                    style={{ background: isAcked ? "#DCFCE7" : "#2563EB", color: isAcked ? "#166534" : "#fff", border: `1px solid ${isAcked ? "#BBF7D0" : "#2563EB"}`, borderRadius: "9px", padding: "9px 16px", fontSize: "19.5px", fontWeight: "700", cursor: "pointer", flexShrink: 0 }}>
                     {isAcked ? "Acknowledged ✓" : "Acknowledge"}
                   </button>
                 </div>
               ) : (
-                <p style={{ fontSize: "13.5px", color: "#64748B", textAlign: "center", padding: "8px 0", margin: 0 }}>
+                <p style={{ fontSize: "20.5px", color: "#64748B", textAlign: "center", padding: "8px 0", margin: 0 }}>
                   You're off on {selectedDay?.dayLabel}. Enjoy your rest!
                 </p>
               )}
@@ -306,31 +306,31 @@ export default function StaffDashboard() {
                   const active = approvalTab === key;
                   return (
                     <button key={key} onClick={() => setApprovalTab(key)}
-                      style={{ padding: "7px 14px", borderRadius: "9px", border: `1px solid ${active ? "#BFDBFE" : "#E2E8F0"}`, background: active ? "#EFF6FF" : "transparent", color: active ? "#2563EB" : "#94A3B8", fontSize: "12.5px", fontWeight: "700", cursor: "pointer" }}>
+                      style={{ padding: "7px 14px", borderRadius: "9px", border: `1px solid ${active ? "#BFDBFE" : "#E2E8F0"}`, background: active ? "#EFF6FF" : "transparent", color: active ? "#2563EB" : "#94A3B8", fontSize: "19.5px", fontWeight: "700", cursor: "pointer" }}>
                       {label}
                     </button>
                   );
                 })}
               </div>
               <button onClick={() => setFormOpen(p => !p)}
-                style={{ background: "none", border: "none", fontSize: "12.5px", fontWeight: "700", color: "#F97316", cursor: "pointer" }}>
+                style={{ background: "none", border: "none", fontSize: "19.5px", fontWeight: "700", color: "#F97316", cursor: "pointer" }}>
                 {formOpen ? "− Cancel" : "+ New Request"}
               </button>
             </div>
 
             {formOpen && (
               <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: "10px", padding: "12px", marginBottom: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                <div style={{ fontSize: "12px", color: "#9A3412", fontWeight: "600" }}>New {onLeave ? "leave" : "swap"} request</div>
-                <div style={{ background: "#fff", border: "1px solid #FDBA74", borderRadius: "7px", padding: "8px 10px", fontSize: "12.5px", color: "#94A3B8" }}>
+                <div style={{ fontSize: "19px", color: "#9A3412", fontWeight: "600" }}>New {onLeave ? "leave" : "swap"} request</div>
+                <div style={{ background: "#fff", border: "1px solid #FDBA74", borderRadius: "7px", padding: "8px 10px", fontSize: "19.5px", color: "#94A3B8" }}>
                   Select dates and reason...
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button onClick={() => { setFormOpen(false); navigate(onLeave ? "/regular-staff/leave" : "/regular-staff/swaps"); }}
-                    style={{ flex: 1, background: "#F97316", color: "#fff", border: "none", borderRadius: "7px", padding: "7px", fontSize: "12px", fontWeight: "700", cursor: "pointer" }}>
+                    style={{ flex: 1, background: "#F97316", color: "#fff", border: "none", borderRadius: "7px", padding: "7px", fontSize: "19px", fontWeight: "700", cursor: "pointer" }}>
                     Submit
                   </button>
                   <button onClick={() => setFormOpen(false)}
-                    style={{ flex: 1, background: "#fff", color: "#9A3412", border: "1px solid #FDBA74", borderRadius: "7px", padding: "7px", fontSize: "12px", fontWeight: "700", cursor: "pointer" }}>
+                    style={{ flex: 1, background: "#fff", color: "#9A3412", border: "1px solid #FDBA74", borderRadius: "7px", padding: "7px", fontSize: "19px", fontWeight: "700", cursor: "pointer" }}>
                     Cancel
                   </button>
                 </div>
@@ -342,7 +342,7 @@ export default function StaffDashboard() {
                 {[1,2].map(i => <Shimmer key={i} h="50px" r="10px" />)}
               </div>
             ) : (onLeave ? leaveItems : swapItems).length === 0 ? (
-              <p style={{ fontSize: "12.5px", color: "#94A3B8", textAlign: "center", padding: "16px 0", margin: 0 }}>
+              <p style={{ fontSize: "19.5px", color: "#94A3B8", textAlign: "center", padding: "16px 0", margin: 0 }}>
                 No {onLeave ? "leave" : "swap"} requests yet.
               </p>
             ) : (
@@ -350,10 +350,10 @@ export default function StaffDashboard() {
                 {(onLeave ? leaveItems : swapItems).map(item => (
                   <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 10px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "10px" }}>
                     <div>
-                      <p style={{ fontSize: "12.5px", fontWeight: "600", color: "#1E293B", margin: 0 }}>{item.range}</p>
-                      {item.reason && <p style={{ fontSize: "11px", color: "#94A3B8", margin: "1px 0 0" }}>{item.reason}</p>}
+                      <p style={{ fontSize: "19.5px", fontWeight: "600", color: "#1E293B", margin: 0 }}>{item.range}</p>
+                      {item.reason && <p style={{ fontSize: "18px", color: "#94A3B8", margin: "1px 0 0" }}>{item.reason}</p>}
                     </div>
-                    <span style={{ fontSize: "10.5px", fontWeight: "700", padding: "3px 9px", borderRadius: "100px", background: item.bg, color: item.color, textTransform: "capitalize" }}>
+                    <span style={{ fontSize: "17.5px", fontWeight: "700", padding: "3px 9px", borderRadius: "100px", background: item.bg, color: item.color, textTransform: "capitalize" }}>
                       {item.status}
                     </span>
                   </div>
@@ -365,9 +365,9 @@ export default function StaffDashboard() {
           {/* Notifications */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-              <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1E293B", margin: 0 }}>Notifications</h3>
+              <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B", margin: 0 }}>Notifications</h3>
               {unreadCount > 0 && (
-                <span style={{ fontSize: "11px", fontWeight: "700", background: "#EF4444", color: "#fff", borderRadius: "100px", padding: "2px 8px" }}>{unreadCount}</span>
+                <span style={{ fontSize: "18px", fontWeight: "700", background: "#EF4444", color: "#fff", borderRadius: "100px", padding: "2px 8px" }}>{unreadCount}</span>
               )}
             </div>
             {loading ? (
@@ -375,7 +375,7 @@ export default function StaffDashboard() {
                 {[1,2,3].map(i => <Shimmer key={i} h="42px" r="9px" />)}
               </div>
             ) : notifications.length === 0 ? (
-              <p style={{ fontSize: "12.5px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No notifications.</p>
+              <p style={{ fontSize: "19.5px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No notifications.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 {notifications.map(n => (
@@ -383,8 +383,8 @@ export default function StaffDashboard() {
                     style={{ display: "flex", gap: "10px", padding: "10px 8px", borderRadius: "9px", cursor: n.is_read ? "default" : "pointer", background: n.is_read ? "transparent" : "#EFF6FF", transition: "background .15s" }}>
                     <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: n.is_read ? "#E2E8F0" : "#2563EB", marginTop: "6px", flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: "12.5px", color: "#1E293B", fontWeight: n.is_read ? 500 : 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.text}</p>
-                      <p style={{ fontSize: "11px", color: "#94A3B8", margin: "2px 0 0" }}>{relTime(n.created_at)}</p>
+                      <p style={{ fontSize: "19.5px", color: "#1E293B", fontWeight: n.is_read ? 500 : 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.text}</p>
+                      <p style={{ fontSize: "18px", color: "#94A3B8", margin: "2px 0 0" }}>{relTime(n.created_at)}</p>
                     </div>
                   </div>
                 ))}

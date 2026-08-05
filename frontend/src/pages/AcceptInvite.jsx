@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { getUser, setUser } from "../utils/auth";
+import { api } from "../lib/api";
 import { X, CheckCircle2 } from "lucide-react";
 
 const DASHBOARD = {
@@ -31,13 +32,9 @@ export default function AcceptInvite() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/invitations/${token}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.invitation) setInvite(d.invitation);
-        else setInviteError(d.message || "Invalid invitation");
-      })
-      .catch(() => setInviteError("Failed to load invitation"))
+    api.get(`/api/invitations/${token}`)
+      .then(d => setInvite(d.invitation))
+      .catch(err => setInviteError(err.message || "Invalid invitation"))
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -49,13 +46,7 @@ export default function AcceptInvite() {
   async function acceptAsExisting() {
     setSubmitting(true); setFormError("");
     try {
-      const res = await fetch(`/api/invitations/${token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ existing_user_id: loggedInUser.user_id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to accept invitation");
+      const data = await api.post(`/api/invitations/${token}/accept`, { existing_user_id: loggedInUser.user_id });
       // Update stored user with potentially new role/token
       setUser(data.user);
       localStorage.setItem("token", data.token);
@@ -73,13 +64,7 @@ export default function AcceptInvite() {
     if (form.password.length < 6) { setFormError("Password must be at least 6 characters"); return; }
     setSubmitting(true); setFormError("");
     try {
-      const res = await fetch(`/api/invitations/${token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: form.full_name, username: form.username, password: form.password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to create account");
+      const data = await api.post(`/api/invitations/${token}/accept`, { full_name: form.full_name, username: form.username, password: form.password });
       setUser(data.user);
       localStorage.setItem("token", data.token);
       setDone(true);
@@ -122,11 +107,11 @@ export default function AcceptInvite() {
           <>
             {/* Invite badge */}
             <div style={s.inviteBadge}>
-              <p style={{ fontSize: "13px", color: "#166534", fontWeight: "600" }}>
+              <p style={{ fontSize: "20px", color: "#166534", fontWeight: "600" }}>
                 You've been invited as <strong>{roleLabel(invite?.role)}</strong>
               </p>
               {invite?.branch_name && (
-                <p style={{ fontSize: "12px", color: "#4ADE80", marginTop: "3px" }}>Branch: {invite.branch_name}</p>
+                <p style={{ fontSize: "19px", color: "#4ADE80", marginTop: "3px" }}>Branch: {invite.branch_name}</p>
               )}
             </div>
 
@@ -134,14 +119,14 @@ export default function AcceptInvite() {
             {step === "linking" && loggedInUser && (
               <>
                 <h2 style={s.title}>Accept Invitation</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "20px" }}>
+                <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "20px" }}>
                   You're logged in as <strong>{loggedInUser.full_name || loggedInUser.email}</strong>. Accept this invitation to join the branch.
                 </p>
                 {formError && <p style={s.errorBox}>{formError}</p>}
                 <button onClick={acceptAsExisting} disabled={submitting} style={s.btnPrimary}>
                   {submitting ? "Joining…" : "Accept & Join"}
                 </button>
-                <p style={{ textAlign: "center", fontSize: "12px", color: "#94A3B8", marginTop: "14px" }}>
+                <p style={{ textAlign: "center", fontSize: "19px", color: "#94A3B8", marginTop: "14px" }}>
                   Not you?{" "}
                   <span onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("user"); setStep("choose"); }}
                     style={{ color: "#F59E0B", cursor: "pointer", fontWeight: "600" }}>Sign out</span>
@@ -153,11 +138,11 @@ export default function AcceptInvite() {
             {step === "choose" && !loggedInUser && (
               <>
                 <h2 style={s.title}>Join Krewby</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "24px" }}>
+                <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "24px" }}>
                   Invitation for <strong>{invite?.email}</strong>
                 </p>
                 <button onClick={() => setStep("signup")} style={s.btnPrimary}>Create New Account</button>
-                <div style={{ textAlign: "center", margin: "14px 0", fontSize: "12px", color: "#94A3B8" }}>— or —</div>
+                <div style={{ textAlign: "center", margin: "14px 0", fontSize: "19px", color: "#94A3B8" }}>— or —</div>
                 <Link to={`/login?redirect=/invite/${token}`} style={{ ...s.btnPrimary, background: "#F1F5F9", color: "#0F172A", display: "block", textAlign: "center", textDecoration: "none" }}>
                   Log In with Existing Account
                 </Link>
@@ -168,7 +153,7 @@ export default function AcceptInvite() {
             {step === "signup" && (
               <>
                 <h2 style={s.title}>Create Your Account</h2>
-                <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "4px" }}>
+                <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "4px" }}>
                   Email: <strong>{invite?.email}</strong>
                 </p>
                 <form onSubmit={handleSignup} style={{ marginTop: "16px" }}>
@@ -201,9 +186,9 @@ export default function AcceptInvite() {
 function Field({ label, type, value, onChange, placeholder }) {
   return (
     <div style={{ marginBottom: "14px" }}>
-      <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>{label}</label>
+      <label style={{ display: "block", fontSize: "19px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required
-        style={{ width: "100%", padding: "10px 12px", border: "1px solid #E2E8F0", borderRadius: "10px", fontSize: "14px", outline: "none", boxSizing: "border-box" }} />
+        style={{ width: "100%", padding: "10px 12px", border: "1px solid #E2E8F0", borderRadius: "10px", fontSize: "21px", outline: "none", boxSizing: "border-box" }} />
     </div>
   );
 }
@@ -212,12 +197,12 @@ const s = {
   page: { minHeight: "100vh", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" },
   card: { background: "#FFF", borderRadius: "18px", padding: "40px", width: "100%", maxWidth: "440px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" },
   logoRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px", justifyContent: "center" },
-  logo: { width: "36px", height: "36px", background: "#F59E0B", borderRadius: "10px", color: "#1C1917", fontWeight: "800", fontSize: "18px", display: "flex", alignItems: "center", justifyContent: "center" },
-  logoText: { fontSize: "18px", fontWeight: "800", color: "#0F172A" },
+  logo: { width: "36px", height: "36px", background: "#F59E0B", borderRadius: "10px", color: "#1C1917", fontWeight: "800", fontSize: "23px", display: "flex", alignItems: "center", justifyContent: "center" },
+  logoText: { fontSize: "23px", fontWeight: "800", color: "#0F172A" },
   inviteBadge: { background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px" },
-  title: { fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" },
-  muted: { color: "#94A3B8", textAlign: "center", fontSize: "13px" },
-  errorBox: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "10px 14px", color: "#DC2626", fontSize: "13px", marginBottom: "14px" },
+  title: { fontSize: "25px", fontWeight: "800", color: "#0F172A", marginBottom: "6px" },
+  muted: { color: "#94A3B8", textAlign: "center", fontSize: "20px" },
+  errorBox: { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "10px 14px", color: "#DC2626", fontSize: "20px", marginBottom: "14px" },
   successIcon: { width: "56px", height: "56px", background: "#D1FAE5", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", color: "#059669", margin: "0 auto 16px" },
-  btnPrimary: { display: "block", width: "100%", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: "700", cursor: "pointer", textAlign: "center", textDecoration: "none", marginTop: "6px", boxSizing: "border-box" },
+  btnPrimary: { display: "block", width: "100%", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "10px", padding: "12px", fontSize: "21px", fontWeight: "700", cursor: "pointer", textAlign: "center", textDecoration: "none", marginTop: "6px", boxSizing: "border-box" },
 };

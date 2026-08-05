@@ -145,8 +145,8 @@ export default function BOInvitations() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>Invitations</h2>
-            <p style={{ fontSize: "13px", color: "#64748B" }}>
+            <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>Invitations</h2>
+            <p style={{ fontSize: "20px", color: "#64748B" }}>
               Invite branch managers and staff to join your business
             </p>
           </div>
@@ -171,8 +171,8 @@ export default function BOInvitations() {
                   <stat.icon size={20} color={stat.color} />
                 </div>
                 <div>
-                  <p style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", lineHeight: 1 }}>{stat.value}</p>
-                  <p style={{ fontSize: "12px", color: "#94A3B8", fontWeight: "500", marginTop: "2px" }}>{stat.label}</p>
+                  <p style={{ fontSize: "25px", fontWeight: "800", color: "#0F172A", lineHeight: 1 }}>{stat.value}</p>
+                  <p style={{ fontSize: "19px", color: "#94A3B8", fontWeight: "500", marginTop: "2px" }}>{stat.label}</p>
                 </div>
               </div>
             ))}
@@ -188,8 +188,8 @@ export default function BOInvitations() {
                   <Check size={18} color="#059669" />
                 </div>
                 <div>
-                  <p style={{ fontWeight: "700", color: "#166534", marginBottom: "2px", fontSize: "14px" }}>Invitation sent to {successCode.email}</p>
-                  <p style={{ fontSize: "12px", color: "#4ADE80" }}>Share the code below or copy the invite link</p>
+                  <p style={{ fontWeight: "700", color: "#166534", marginBottom: "2px", fontSize: "21px" }}>Invitation sent to {successCode.email}</p>
+                  <p style={{ fontSize: "19px", color: "#4ADE80" }}>Share the code below or copy the invite link</p>
                 </div>
               </div>
               <button onClick={() => setSuccessCode(null)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", display: "inline-flex", alignItems: "center", padding: "4px" }}><X size={16} /></button>
@@ -202,7 +202,7 @@ export default function BOInvitations() {
               </div>
               <button onClick={() => copyCode(successCode.code)} style={{ ...sty.actionBtn, background: "#FFF", border: "1px solid #BBF7D0" }}>
                 {copied === `code-${successCode.code}` ? <Check size={14} color="#10B981" /> : <Copy size={14} color="#059669" />}
-                <span style={{ fontSize: "12px", color: "#059669", fontWeight: "600" }}>{copied === `code-${successCode.code}` ? "Copied!" : "Copy code"}</span>
+                <span style={{ fontSize: "19px", color: "#059669", fontWeight: "600" }}>{copied === `code-${successCode.code}` ? "Copied!" : "Copy code"}</span>
               </button>
             </div>
           </div>
@@ -217,8 +217,8 @@ export default function BOInvitations() {
                   <Send size={18} color="#D97706" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#1E293B" }}>Send New Invitation</h3>
-                  <p style={{ fontSize: "12px", color: "#94A3B8" }}>Fill in the details to invite a team member</p>
+                  <h3 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Send New Invitation</h3>
+                  <p style={{ fontSize: "19px", color: "#94A3B8" }}>Fill in the details to invite a team member</p>
                 </div>
               </div>
               <form onSubmit={handleSend}>
@@ -252,7 +252,7 @@ export default function BOInvitations() {
                 {error && (
                   <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "10px 14px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                     <XCircle size={14} color="#EF4444" />
-                    <p style={{ color: "#DC2626", fontSize: "13px", fontWeight: "500" }}>{error}</p>
+                    <p style={{ color: "#DC2626", fontSize: "20px", fontWeight: "500" }}>{error}</p>
                   </div>
                 )}
 
@@ -274,14 +274,14 @@ export default function BOInvitations() {
             {["all", "pending", "accepted"].map(st => (
               <button key={st} onClick={() => setFilterStatus(st)} className="bo-invite-filter-btn"
                 style={{
-                  padding: "7px 16px", borderRadius: "10px", border: "1.5px solid", fontSize: "12px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s",
+                  padding: "7px 16px", borderRadius: "10px", border: "1.5px solid", fontSize: "19px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s",
                   borderColor: filterStatus === st ? "#F59E0B" : "#E2E8F0",
                   background: filterStatus === st ? "#FEF3C7" : "#FFF",
                   color: filterStatus === st ? "#92400E" : "#64748B",
                 }}>
                 {st === "all" ? "All" : st.charAt(0).toUpperCase() + st.slice(1)}
                 <span style={{
-                  marginLeft: "6px", fontSize: "11px", fontWeight: "700", padding: "1px 7px", borderRadius: "100px",
+                  marginLeft: "6px", fontSize: "18px", fontWeight: "700", padding: "1px 7px", borderRadius: "100px",
                   background: filterStatus === st ? "#F59E0B" : "#F1F5F9",
                   color: filterStatus === st ? "#FFF" : "#94A3B8",
                 }}>
@@ -314,10 +314,10 @@ export default function BOInvitations() {
             <div style={{ width: "64px", height: "64px", borderRadius: "16px", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <Send size={28} color="#D97706" />
             </div>
-            <p style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>
+            <p style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B", marginBottom: "6px" }}>
               {invites.length === 0 ? "No invitations yet" : "No invitations match this filter"}
             </p>
-            <p style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "20px" }}>
+            <p style={{ fontSize: "20px", color: "#94A3B8", marginBottom: "20px" }}>
               {invites.length === 0 ? "Send your first invite to start building your team" : "Try a different filter to see more"}
             </p>
             {invites.length === 0 && (
@@ -347,25 +347,25 @@ export default function BOInvitations() {
                     width: "44px", height: "44px", borderRadius: "12px", flexShrink: 0,
                     background: `linear-gradient(135deg, ${rm.bg}, ${rm.bg}dd)`,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "16px", fontWeight: "800", color: rm.text,
+                    fontSize: "21px", fontWeight: "800", color: rm.text,
                   }}>
                     {inv.email?.charAt(0).toUpperCase()}
                   </div>
 
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: "700", color: "#0F172A", fontSize: "14px", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.email}</p>
+                    <p style={{ fontWeight: "700", color: "#0F172A", fontSize: "21px", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.email}</p>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                      <span style={{ background: rm.bg, color: rm.text, fontSize: "11px", fontWeight: "600", padding: "2px 10px", borderRadius: "100px" }}>
+                      <span style={{ background: rm.bg, color: rm.text, fontSize: "18px", fontWeight: "600", padding: "2px 10px", borderRadius: "100px" }}>
                         {rm.label}
                       </span>
                       {inv.branches?.name && (
-                        <span style={{ fontSize: "11px", color: "#94A3B8", display: "flex", alignItems: "center", gap: "3px" }}>
+                        <span style={{ fontSize: "18px", color: "#94A3B8", display: "flex", alignItems: "center", gap: "3px" }}>
                           <Building2 size={10} /> {inv.branches.name}
                         </span>
                       )}
                       {inv.expires_at && (
-                        <span style={{ fontSize: "11px", color: "#CBD5E1", display: "flex", alignItems: "center", gap: "3px" }}>
+                        <span style={{ fontSize: "18px", color: "#CBD5E1", display: "flex", alignItems: "center", gap: "3px" }}>
                           <Clock size={10} /> {new Date(inv.expires_at).toLocaleDateString()}
                         </span>
                       )}
@@ -375,7 +375,7 @@ export default function BOInvitations() {
                   {/* Invite code */}
                   {inv.invitation_code && (
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
-                      <span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "13px", color: "#334155", letterSpacing: "0.08em" }}>
+                      <span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "20px", color: "#334155", letterSpacing: "0.08em" }}>
                         {inv.invitation_code}
                       </span>
                       <button onClick={() => copyCode(inv.invitation_code)} className="bo-invite-action-btn"
@@ -388,7 +388,7 @@ export default function BOInvitations() {
                   {/* Status badge */}
                   <div style={{
                     display: "flex", alignItems: "center", gap: "5px",
-                    background: sm.bg, color: sm.text, fontSize: "11px", fontWeight: "700",
+                    background: sm.bg, color: sm.text, fontSize: "18px", fontWeight: "700",
                     padding: "5px 12px", borderRadius: "100px", flexShrink: 0,
                   }}>
                     <StatusIcon size={12} />
@@ -414,7 +414,7 @@ export default function BOInvitations() {
                       </>
                     )}
                     {inv.status === "accepted" && (
-                      <span style={{ fontSize: "11px", color: "#059669", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", padding: "0 4px" }}>
+                      <span style={{ fontSize: "18px", color: "#059669", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", padding: "0 4px" }}>
                         <Check size={13} strokeWidth={3} /> Joined
                       </span>
                     )}
@@ -431,8 +431,8 @@ export default function BOInvitations() {
               <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
                 <XCircle size={24} color="#EF4444" />
               </div>
-              <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#0F172A", marginBottom: "8px" }}>Cancel Invitation?</h3>
-              <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "24px", lineHeight: "1.5" }}>This invitation will be cancelled and the link and code will no longer work.</p>
+              <h3 style={{ fontSize: "22px", fontWeight: "800", color: "#0F172A", marginBottom: "8px" }}>Cancel Invitation?</h3>
+              <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "24px", lineHeight: "1.5" }}>This invitation will be cancelled and the link and code will no longer work.</p>
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
                 <button onClick={() => setConfirmCancel(null)} style={sty.btnSecondary}>Keep It</button>
                 <button onClick={confirmCancelAction} style={{ ...sty.btnPrimary, background: "#EF4444", color: "#FFF" }}>Yes, Cancel</button>
@@ -455,10 +455,10 @@ export default function BOInvitations() {
 }
 
 const sty = {
-  btnPrimary: { display: "inline-flex", alignItems: "center", gap: "7px", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "13px", fontWeight: "700", cursor: "pointer", transition: "all 0.15s" },
-  btnSecondary: { background: "#F1F5F9", color: "#475569", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" },
-  label: { display: "flex", alignItems: "center", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "7px" },
-  input: { width: "100%", padding: "10px 14px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "14px", outline: "none", boxSizing: "border-box", color: "#1E293B", background: "#FAFAFA", transition: "border-color 0.15s" },
+  btnPrimary: { display: "inline-flex", alignItems: "center", gap: "7px", background: "#F59E0B", color: "#1C1917", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "20px", fontWeight: "700", cursor: "pointer", transition: "all 0.15s" },
+  btnSecondary: { background: "#F1F5F9", color: "#475569", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "20px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" },
+  label: { display: "flex", alignItems: "center", fontSize: "19px", fontWeight: "600", color: "#374151", marginBottom: "7px" },
+  input: { width: "100%", padding: "10px 14px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "21px", outline: "none", boxSizing: "border-box", color: "#1E293B", background: "#FAFAFA", transition: "border-color 0.15s" },
   iconBtn: { background: "none", border: "1px solid #E2E8F0", borderRadius: "8px", width: "32px", height: "32px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#64748B", transition: "all 0.15s" },
   actionBtn: { display: "inline-flex", alignItems: "center", gap: "6px", border: "none", borderRadius: "8px", padding: "7px 14px", cursor: "pointer", transition: "all 0.15s" },
 };

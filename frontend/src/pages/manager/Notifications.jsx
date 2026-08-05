@@ -136,8 +136,8 @@ export default function Notifications() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1E293B" }}>Notifications</h2>
-            <p style={{ fontSize: "13px", color: "#64748B", marginTop: "2px" }}>
+            <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Notifications</h2>
+            <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
               {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
             </p>
           </div>
@@ -147,7 +147,7 @@ export default function Notifications() {
               style={{
                 background: "#EFF6FF", border: "1px solid #BFDBFE",
                 borderRadius: "9px", padding: "8px 16px",
-                fontSize: "13px", fontWeight: "600", color: "#1D4ED8",
+                fontSize: "20px", fontWeight: "600", color: "#1D4ED8",
                 cursor: "pointer",
               }}
             >
@@ -168,7 +168,7 @@ export default function Notifications() {
               style={{
                 padding: "7px 16px",
                 background: tab === t.value ? "#FFFFFF" : "transparent",
-                border: "none", borderRadius: "7px", fontSize: "13px",
+                border: "none", borderRadius: "7px", fontSize: "20px",
                 fontWeight: tab === t.value ? "600" : "500",
                 color: tab === t.value ? "#1E293B" : "#64748B",
                 cursor: "pointer",
@@ -179,7 +179,7 @@ export default function Notifications() {
             >
               {t.label}
               {t.badge && (
-                <span style={{ background: "#EF4444", color: "#FFF", fontSize: "10px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>
+                <span style={{ background: "#EF4444", color: "#FFF", fontSize: "17px", fontWeight: "700", padding: "1px 5px", borderRadius: "100px" }}>
                   {t.badge}
                 </span>
               )}
@@ -204,7 +204,7 @@ export default function Notifications() {
         ) : displayed.length === 0 ? (
           <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "60px", textAlign: "center" }}>
             <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}><Bell size={36} color="#CBD5E1" /></div>
-            <p style={{ fontSize: "16px", fontWeight: "600", color: "#64748B" }}>
+            <p style={{ fontSize: "21px", fontWeight: "600", color: "#64748B" }}>
               {tab === "unread" ? "No unread notifications" : "No notifications yet"}
             </p>
           </div>
@@ -228,7 +228,7 @@ export default function Notifications() {
           position: "fixed", bottom: "28px", right: "28px", zIndex: 9999,
           background: toast.type === "success" ? "#22C55E" : "#EF4444",
           color: "#fff", padding: "12px 20px", borderRadius: "10px",
-          fontSize: "14px", fontWeight: "600",
+          fontSize: "21px", fontWeight: "600",
           boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
           animation: "toastIn 0.3s ease both",
         }}>
@@ -287,20 +287,20 @@ function NotifRow({ notif, onRead, idx }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
           <p style={{
-            fontSize: "14px",
+            fontSize: "21px",
             fontWeight: notif.is_read ? "500" : "700",
             color: "#1E293B",
             margin: 0,
           }}>
             {notif.title}
           </p>
-          <span style={{ fontSize: "11px", color: "#94A3B8", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <span style={{ fontSize: "18px", color: "#94A3B8", whiteSpace: "nowrap", flexShrink: 0 }}>
             {fmtTime(notif.created_at)}
           </span>
         </div>
         {notif.message && (
           <p style={{
-            fontSize: "13px",
+            fontSize: "20px",
             color: "#64748B",
             marginTop: "3px",
             lineHeight: "1.45",

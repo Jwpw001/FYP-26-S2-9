@@ -62,7 +62,7 @@ const s = {
   },
   tab: {
     position: "relative", zIndex: 10, cursor: "pointer",
-    padding: "8px 18px", fontSize: "14px", fontWeight: "500",
+    padding: "8px 18px", fontSize: "21px", fontWeight: "500",
     color: "#475569", whiteSpace: "nowrap", borderRadius: "100px",
     transition: "color 0.15s ease",
   },

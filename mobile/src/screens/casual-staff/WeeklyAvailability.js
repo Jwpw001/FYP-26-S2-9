@@ -6,9 +6,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
 import { getUser } from "../../utils/auth";
+import { api } from "../../lib/api";
 import Toast from "../../components/Toast";
 
+// casual_availability.day_of_week is a Monday-indexed int (0=Mon…6=Sun), not a day name.
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const DAY_INDEX = Object.fromEntries(DAYS.map((d, i) => [d, i]));
 
 function getWeekStart(offset = 0) {
   const d = new Date();
@@ -50,11 +53,17 @@ export default function CasualWeeklyAvailability() {
 
     const fresh = initDays();
     if (sid) {
-      const { data } = await supabase.from("staff_availability")
-        .select("*").eq("staff_id", sid).eq("week_start", weekStartStr);
+      const { data } = await supabase.from("casual_availability")
+        .select("day_of_week, available_from, available_to")
+        .eq("staff_id", sid).eq("week_start_date", weekStartStr);
       (data || []).forEach(row => {
-        if (fresh[row.day_of_week]) {
-          fresh[row.day_of_week] = { available: true, start_time: row.start_time || "09:00", end_time: row.end_time || "18:00" };
+        const day = DAYS[row.day_of_week];
+        if (day) {
+          fresh[day] = {
+            available: true,
+            start_time: row.available_from?.slice(0, 5) || "09:00",
+            end_time: row.available_to?.slice(0, 5) || "18:00",
+          };
         }
       });
     }
@@ -75,12 +84,12 @@ export default function CasualWeeklyAvailability() {
     if (!staffId) return;
     setSaving(true);
     try {
-      await supabase.from("staff_availability").delete().eq("staff_id", staffId).eq("week_start", weekStartStr);
-      const rows = DAYS.filter(d => avail[d].available).map(d => ({
-        staff_id: staffId, week_start: weekStartStr, day_of_week: d,
-        start_time: avail[d].start_time, end_time: avail[d].end_time,
+      const availability = DAYS.filter(d => avail[d].available).map(d => ({
+        day_of_week: DAY_INDEX[d],
+        available_from: `${avail[d].start_time}:00`,
+        available_to: `${avail[d].end_time}:00`,
       }));
-      if (rows.length > 0) await supabase.from("staff_availability").insert(rows);
+      await api.post("/api/casual/availability/submit", { week_start_date: weekStartStr, availability });
       showToast("Availability saved!");
     } catch { showToast("Failed to save.", "error"); }
     finally { setSaving(false); }

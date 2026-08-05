@@ -9,6 +9,13 @@ function sanitizeFilename(name) {
   return (name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+async function getCallerBranchId(userId) {
+  const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
+  if (s?.branch_id) return s.branch_id;
+  const { data: mgr } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1).maybeSingle();
+  return mgr?.branch_id || null;
+}
+
 // POST /api/timesheets — submit (or resubmit) a work report, with an optional evidence file
 const submitReport = async (req, res) => {
   try {
@@ -114,12 +121,24 @@ const getEvidenceUrl = async (req, res) => {
     if (!ts) return res.status(404).json({ success: false, message: "Report not found." });
     if (!ts.evidence_path) return res.status(404).json({ success: false, message: "No evidence uploaded for this report." });
 
-    const isOwner = !MANAGER_ROLES.includes(req.user.role) && await prisma.staff.findFirst({
+    const isOwner = await prisma.staff.findFirst({
       where: { user_id: req.user.user_id, staff_id: ts.staff_id },
       select: { staff_id: true },
     });
-    if (!MANAGER_ROLES.includes(req.user.role) && !isOwner) {
-      return res.status(403).json({ success: false, message: "Access denied." });
+
+    if (!isOwner) {
+      if (!MANAGER_ROLES.includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: "Access denied." });
+      }
+      // A branch manager (unlike business_owner/system_admin) is scoped to their own branch —
+      // otherwise any manager could pull any other branch's evidence file by guessing the id.
+      if (req.user.role === "manager") {
+        const branchId = await getCallerBranchId(req.user.user_id);
+        const targetStaff = await prisma.staff.findUnique({ where: { staff_id: ts.staff_id }, select: { branch_id: true } });
+        if (branchId && targetStaff?.branch_id !== branchId) {
+          return res.status(403).json({ success: false, message: "Access denied." });
+        }
+      }
     }
 
     const { data: signed, error } = await supabaseAdmin.storage
