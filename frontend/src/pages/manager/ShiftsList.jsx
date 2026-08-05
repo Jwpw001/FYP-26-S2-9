@@ -475,9 +475,12 @@ export default function ShiftsList() {
         {selectMode && (
           <div style={{ marginBottom:"12px", background:"#EEF2FF", border:"1px solid #C7D2FE", borderRadius:"10px", padding:"10px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <div style={{ fontSize:"20px", fontWeight:"700", color:"#4338CA" }}>{selected.size} selected</div>
+            {(() => {
+              const hasDraft = [...selected].some(id => shifts.find(s => s.shift_id === id)?.status === "draft");
+              return (
             <div style={{ display:"flex", gap:"8px", opacity: selected.size > 0 ? 1 : 0.4, pointerEvents: selected.size > 0 ? "auto" : "none" }}>
-              <button onClick={publishSelected} disabled={publishing}
-                style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"19.5px", fontWeight:"700", background:"#fff", border:"1px solid #C7D2FE", cursor:"pointer" }}>
+              <button onClick={publishSelected} disabled={publishing || !hasDraft}
+                style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"14.5px", fontWeight:"700", background:"#fff", border:"1px solid #C7D2FE", cursor: hasDraft ? "pointer" : "default", opacity: hasDraft ? 1 : 0.4 }}>
                 {publishing ? "Publishing…" : "Publish"}
               </button>
               <button onClick={deleteSelected} disabled={deleting}
@@ -485,6 +488,8 @@ export default function ShiftsList() {
                 {deleting ? "Deleting…" : "Delete"}
               </button>
             </div>
+              );
+            })()}
           </div>
         )}
 

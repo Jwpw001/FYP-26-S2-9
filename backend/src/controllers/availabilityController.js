@@ -224,4 +224,25 @@ const deleteAvailability = async (req, res) => {
   }
 };
 
-module.exports = { getAvailability, getAvailabilityById, createAvailability, updateAvailability, deleteAvailability };
+// Staff cancel their own pending leave — does not require manager role
+const cancelOwnLeave = async (req, res) => {
+  try {
+    const requestId = Number(req.params.id);
+    const userId = req.user?.user_id;
+
+    const staffRecord = await prisma.staff.findFirst({ where: { user_id: userId }, select: { staff_id: true } });
+    if (!staffRecord) return res.status(403).json({ success: false, message: "No staff record found." });
+
+    const leave = await prisma.availability.findUnique({ where: { request_id: requestId } });
+    if (!leave) return res.status(404).json({ success: false, message: "Leave request not found." });
+    if (leave.staff_id !== staffRecord.staff_id) return res.status(403).json({ success: false, message: "You can only cancel your own leave requests." });
+    if (leave.status !== "pending") return res.status(400).json({ success: false, message: "Only pending leave requests can be cancelled." });
+
+    await prisma.availability.delete({ where: { request_id: requestId } });
+    res.json({ success: true, message: "Leave request cancelled." });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getAvailability, getAvailabilityById, createAvailability, updateAvailability, deleteAvailability, cancelOwnLeave };

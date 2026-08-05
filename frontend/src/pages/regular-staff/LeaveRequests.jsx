@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
 import { notifyUsers, getBranchManagerUserIds } from "../../lib/notify";
 import StaffLayout from "../../components/layout/StaffLayout";
@@ -305,7 +306,7 @@ export default function LeaveRequests() {
       setRangeEnd(null);
       setError("");
     } else if (dateStr === rangeStart) {
-      setRangeStart(null);
+      setRangeEnd(dateStr); // one-day leave: start == end
     } else if (dateStr < rangeStart) {
       setRangeStart(dateStr);
       setRangeEnd(null);
@@ -343,6 +344,18 @@ export default function LeaveRequests() {
       relatedEntity: "availability",
       relatedId: data.request_id,
     })).catch(() => {});
+  }
+
+  // ── Cancel own pending leave ────────────────────────────────────────────────
+  async function handleCancelLeave(requestId) {
+    if (!window.confirm("Cancel this leave request?")) return;
+    try {
+      await api.delete(`/api/availability/${requestId}/cancel`);
+      setRequests(prev => prev.filter(r => r.request_id !== requestId));
+      showToast("Leave request cancelled.");
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to cancel leave request.");
+    }
   }
 
   // ── Off day logic ───────────────────────────────────────────────────────────
@@ -559,6 +572,14 @@ export default function LeaveRequests() {
                         <InfoItem label="Duration" value={`${getDays(r.start_date, r.end_date)} day(s)`} />
                       </div>
                       {r.reason && <p style={{ fontSize: "20px", color: "#64748B", fontStyle: "italic", marginTop: "10px" }}>"{r.reason}"</p>}
+                      {r.status === "pending" && (
+                        <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "flex-end" }}>
+                          <button onClick={() => handleCancelLeave(r.request_id)}
+                            style={{ padding: "6px 14px", borderRadius: "8px", border: "1px solid #FECACA", background: "#FEF2F2", color: "#DC2626", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}>
+                            Cancel Request
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

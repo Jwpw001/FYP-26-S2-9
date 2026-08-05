@@ -66,6 +66,7 @@ import BOSkills      from "./pages/business-owner/Skills";
 import BOReports        from "./pages/business-owner/Reports";
 import BOReportHistory  from "./pages/business-owner/ReportHistory";
 import BOSettings    from "./pages/business-owner/Settings";
+import BOCasualPool  from "./pages/business-owner/CasualPool";
 import BusinessOwnerLayout from "./components/layout/BusinessOwnerLayout";
 import AcceptInvite  from "./pages/AcceptInvite";
 import JoinByCode    from "./pages/JoinByCode";
@@ -111,6 +112,7 @@ function App() {
         <Route path="/business-owner/reports"        element={<PR roles={["business_owner"]}><BOReports /></PR>} />
         <Route path="/business-owner/report-history" element={<PR roles={["business_owner"]}><BOReportHistory /></PR>} />
         <Route path="/business-owner/settings"     element={<PR roles={["business_owner"]}><BOSettings /></PR>} />
+        <Route path="/business-owner/casual"       element={<PR roles={["business_owner"]}><BOCasualPool /></PR>} />
         <Route path="/business-owner/notifications" element={<PR roles={["business_owner"]}>
           <NotificationsPage Layout={BusinessOwnerLayout} />
         </PR>} />

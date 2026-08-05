@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
@@ -58,9 +59,18 @@ function fmtTime(ts) {
   return d.toLocaleDateString("en-SG", { month: "short", day: "numeric" });
 }
 
+function getNotifRoute(type, relatedEntity) {
+  if (relatedEntity === "availability" || type?.includes("leave") || type?.includes("off_day")) return "/manager/availability";
+  if (relatedEntity === "swap_requests" || type?.includes("swap")) return "/manager/availability";
+  if (relatedEntity === "shifts" || type?.includes("shift") || type === "assignment" || type?.includes("assign")) return "/manager/shifts";
+  if (relatedEntity === "reports" || type?.includes("report")) return "/manager/reports";
+  return null;
+}
+
 export default function Notifications() {
-  const user = getUser();
-  const userId = user?.user_id;
+  const user     = getUser();
+  const userId   = user?.user_id;
+  const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading]             = useState(true);
@@ -95,13 +105,15 @@ export default function Notifications() {
     return () => { cancelled = true; };
   }, [userId]);
 
-  async function markRead(notifId) {
+  async function markRead(notifId, type, relatedEntity) {
     setNotifications(prev => prev.map(n =>
       n.notification_id === notifId ? { ...n, is_read: true } : n
     ));
     await supabase.from("notifications")
       .update({ is_read: true })
       .eq("notification_id", notifId);
+    const route = getNotifRoute(type, relatedEntity);
+    if (route) navigate(route);
   }
 
   async function markAllRead() {
@@ -202,7 +214,7 @@ export default function Notifications() {
               <NotifRow
                 key={n.notification_id}
                 notif={n}
-                onRead={() => markRead(n.notification_id)}
+                onRead={() => markRead(n.notification_id, n.type, n.related_entity)}
                 idx={idx}
               />
             ))}
