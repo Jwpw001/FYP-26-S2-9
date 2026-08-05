@@ -2,6 +2,7 @@ const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { getLimits } = require("../utils/planLimits");
 const { logAudit } = require("../utils/auditLog");
+const { offboardStaff } = require("../utils/offboarding");
 
 // Resolves business_id for both business owners and managers
 async function resolveBusinessId(user) {
@@ -499,6 +500,11 @@ const updateStaffDetail = async (req, res) => {
       },
       include: { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } },
     });
+
+    const isBeingDeactivated = is_active === false && staff.is_active !== false;
+    if (isBeingDeactivated) {
+      await offboardStaff(staff_id, req.user.user_id);
+    }
 
     if (Array.isArray(skill_ids)) {
       await prisma.user_skill_tags.deleteMany({ where: { user_id: staff.user_id } });

@@ -1,5 +1,6 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const { offboardStaff } = require("../utils/offboarding");
 
 async function getCallerBranchId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
@@ -106,7 +107,7 @@ const updateStaff = async (req, res) => {
     const staffId = Number(req.params.id);
     const branchId = await getCallerBranchId(req.user.user_id);
 
-    const existing = await prisma.staff.findUnique({ where: { staff_id: staffId }, select: { branch_id: true, staff_type: true, user_id: true } });
+    const existing = await prisma.staff.findUnique({ where: { staff_id: staffId }, select: { branch_id: true, staff_type: true, user_id: true, is_active: true } });
     if (!existing) return res.status(404).json({ success: false, message: "Staff not found" });
     if (branchId && !(await staffBelongsToBranch(existing, branchId)))
       return res.status(403).json({ success: false, message: "Access denied." });
@@ -116,6 +117,12 @@ const updateStaff = async (req, res) => {
       where: { staff_id: staffId },
       data: { branch_id: branch_id, staff_type, default_work_days, hired_at: hired_at ? new Date(hired_at) : undefined, is_active },
     });
+
+    const isBeingDeactivated = is_active === false && existing.is_active !== false;
+    if (isBeingDeactivated) {
+      await offboardStaff(staffId, req.user.user_id);
+    }
+
     res.json({ success: true, message: "Staff updated successfully", staff });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -3,6 +3,19 @@
 All notable changes to this project are documented in this file.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] - 2026-08-05 (2)
+
+### Added
+
+- **Formal staff offboarding.** Deactivating a staff member (`is_active: false`,
+  from either the manager or business-owner staff-detail views) previously left
+  them silently assigned to their future shifts with no cleanup. Now:
+  unassigns them from every future shift, reopens the affected tasks so they show
+  up as needing coverage again, notifies the branch's managers with a count of
+  affected shifts, and records the action in `audit_logs`. Shared logic lives in
+  `backend/src/utils/offboarding.js`, used by both `staffController.js` and
+  `businessOwnerController.js`. Verified end-to-end against a real assignment.
+
 ## [Unreleased] - 2026-08-05
 
 ### Fixed
