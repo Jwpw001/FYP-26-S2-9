@@ -30,16 +30,15 @@ export default function WorkerDashboard() {
     const today = new Date().toISOString().split("T")[0];
     const in7   = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
 
-    const { data: kw } = await supabase.from("krewby_workers").select("krewby_worker_id, rating").eq("user_id", u.user_id).limit(1);
-    const kwId = kw?.[0]?.krewby_worker_id;
-    setRating(kw?.[0]?.rating || null);
+    const { data: myStaff } = await supabase.from("staff").select("staff_id").eq("user_id", u.user_id).limit(1);
+    const staffId = myStaff?.[0]?.staff_id;
 
-    if (kwId) {
-      const { data: assignments, count } = await supabase.from("shift_assignments")
+    if (staffId) {
+      const { data: assignments, count } = await supabase.from("task_assignments")
         .select(`assignment_id, status,
-          shifts ( shift_id, title, shift_date, start_time, end_time, status, outlets ( name ) )`,
+          shifts ( shift_id, title, shift_date, start_time, end_time, status, branches ( name ) )`,
           { count: "exact" })
-        .eq("krewby_worker_id", kwId);
+        .eq("staff_id", staffId);
       const all = assignments || [];
       setTotal(count || 0);
       const up = all.filter(a => a.shifts?.shift_date >= today && a.shifts?.shift_date <= in7)
@@ -113,7 +112,7 @@ export default function WorkerDashboard() {
               <View style={{ flex: 1 }}>
                 <Text style={s.jobTitle}>{a.shifts?.title || "Job"}</Text>
                 <Text style={s.jobSub}>{fmtDate(a.shifts?.shift_date)} · {fmtTime(a.shifts?.start_time)} – {fmtTime(a.shifts?.end_time)}</Text>
-                {a.shifts?.outlets?.name && <Text style={s.outlet}>📍 {a.shifts.outlets.name}</Text>}
+                {a.shifts?.branches?.name && <Text style={s.outlet}>📍 {a.shifts.branches.name}</Text>}
               </View>
               <Badge label={a.status} variant={a.status} />
             </View>

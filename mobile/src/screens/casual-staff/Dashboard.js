@@ -46,9 +46,9 @@ export default function CasualDashboard() {
     const staffId = myStaff?.[0]?.staff_id;
     if (!staffId) { setLoading(false); setRefreshing(false); return; }
 
-    const { data: assignments } = await supabase.from("shift_assignments")
+    const { data: assignments } = await supabase.from("task_assignments")
       .select(`assignment_id, status, acknowledged,
-        shifts ( shift_id, title, shift_date, start_time, end_time, status, outlets ( name ) ),
+        shifts ( shift_id, title, shift_date, start_time, end_time, status, branches ( name ) ),
         attendance ( attendance_id, status, clock_in, clock_out )`)
       .eq("staff_id", staffId);
 
@@ -130,7 +130,7 @@ export default function CasualDashboard() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.shiftTitle}>{todayShift.shifts?.title || "Shift"}</Text>
-                  <Text style={s.shiftSub}>{fmtTime(todayShift.shifts?.start_time)} – {fmtTime(todayShift.shifts?.end_time)}{todayShift.shifts?.outlets?.name ? ` · ${todayShift.shifts.outlets.name}` : ""}</Text>
+                  <Text style={s.shiftSub}>{fmtTime(todayShift.shifts?.start_time)} – {fmtTime(todayShift.shifts?.end_time)}{todayShift.shifts?.branches?.name ? ` · ${todayShift.shifts.branches.name}` : ""}</Text>
                 </View>
               </View>
               <View style={s.clockRow}>

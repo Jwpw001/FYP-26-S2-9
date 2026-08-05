@@ -3,7 +3,7 @@ import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import { supabase } from "../../lib/supabaseClient";
-import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings2, Briefcase } from "lucide-react";
+import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings2 } from "lucide-react";
 import ProfileModal from "../ProfileModal";
 import AIAssistantWidget from "../AIAssistantWidget";
 import UserAvatar from "../UserAvatar";
@@ -12,7 +12,6 @@ const NAV = [
   { label: "Dashboard",   path: "/business-owner/dashboard",    Icon: LayoutDashboard },
   { label: "Branches",    path: "/business-owner/branches",      Icon: Building2 },
   { label: "Workforce",    path: "/business-owner/staff",        Icon: Users },
-  { label: "Casual Pool", path: "/business-owner/casual",       Icon: Briefcase },
   { label: "Invitations", path: "/business-owner/invitations",  Icon: UserPlus },
   { label: "Skill Tags",  path: "/business-owner/skills",       Icon: Tag },
   { label: "Reports",     path: "/business-owner/reports",      Icon: BarChart2 },

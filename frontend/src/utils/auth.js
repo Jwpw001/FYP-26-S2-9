@@ -13,4 +13,5 @@ export function setUser(profile) {
 
 export function clearUser() {
   localStorage.removeItem("user");
+  localStorage.removeItem("token");
 }

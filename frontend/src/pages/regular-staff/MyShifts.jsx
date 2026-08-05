@@ -526,12 +526,19 @@ function ScheduleTab({ shifts, loading, today, acknowledge }) {
                             {a.role_name && s.title && (
                               <p style={{ fontSize:"11px", color:"#94A3B8", fontWeight:"500", marginTop:"1px" }}>{s.title}</p>
                             )}
-                            <div style={{ display:"flex", alignItems:"center", gap:"5px", marginTop:"4px" }}>
-                              <Clock size={11} color="#CBD5E1"/>
-                              <span style={{ fontSize:"12px", color:"#94A3B8" }}>
-                                {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
-                                {duration > 0 && <span> · {fmtHours(duration)}</span>}
-                              </span>
+                            <div style={{ display:"flex", alignItems:"center", gap:"10px", marginTop:"4px", flexWrap:"wrap" }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:"5px" }}>
+                                <Clock size={11} color="#CBD5E1"/>
+                                <span style={{ fontSize:"12px", color:"#94A3B8" }}>
+                                  {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
+                                  {duration > 0 && <span> · {fmtHours(duration)}</span>}
+                                </span>
+                              </div>
+                              {s.branches?.name && (
+                                <span style={{ fontSize:"11px", fontWeight:"600", color:"#2563EB", background:"#EFF6FF", padding:"2px 8px", borderRadius:"100px" }}>
+                                  {s.branches.name}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"8px", flexShrink:0 }}>
@@ -608,6 +615,11 @@ function ShiftTasksModal({ shift, tasks, loading, onClose }) {
                   <Clock size={12} color="#94A3B8" />
                   {fmtTime(shift.start_time)} – {fmtTime(shift.end_time)}
                 </span>
+                {shift.branches?.name && (
+                  <span style={{ fontSize:"11px", fontWeight:"700", color:"#2563EB", background:"#EFF6FF", padding:"2px 9px", borderRadius:"100px" }}>
+                    {shift.branches.name}
+                  </span>
+                )}
               </div>
             </div>
             <button onClick={onClose}

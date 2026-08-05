@@ -205,12 +205,7 @@ function Message({ msg, onConfirm, onCancel }) {
   return (
     <div className="ai-msg" style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", marginBottom: 10 }}>
       {!isUser && (
-        <div style={{
-          width: 28, height: 28, borderRadius: "50%",
-          background: `linear-gradient(135deg, ${ACCENT}, #8B5CF6)`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0, marginRight: 8, marginTop: 2,
-        }}>K</div>
+        <img src="/chatbot.png" alt="Krewby chatbot" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0, marginRight: 8, marginTop: 2 }} />
       )}
       <div style={{
         maxWidth: "78%",
@@ -237,7 +232,8 @@ export default function AIAssistantWidget() {
   const storageKey  = `krewby_ai_chat_${user?.user_id || "guest"}`;
   const briefedKey  = `krewby_ai_briefed_${user?.user_id || "guest"}`;
 
-  const [open,     setOpen]     = useState(false);
+  const [open,       setOpen]       = useState(false);
+  const [pageContext, setPageContext] = useState(null);
   const [messages, setMessages] = useState(() => {
     try {
       const raw = localStorage.getItem(storageKey);
@@ -256,6 +252,13 @@ export default function AIAssistantWidget() {
   const inputRef       = useRef(null);
   const autoBriefRef   = useRef(false);
   const recognitionRef = useRef(null);
+
+  // Listen for page-level context broadcast (e.g. ShiftDetail tells us which shift is open)
+  useEffect(() => {
+    function onPageContext(e) { setPageContext(e.detail || null); }
+    window.addEventListener("krewby-page-context", onPageContext);
+    return () => window.removeEventListener("krewby-page-context", onPageContext);
+  }, []);
 
   // Persist conversation to localStorage whenever messages change
   useEffect(() => {
@@ -320,6 +323,9 @@ export default function AIAssistantWidget() {
         updated[index] = { ...updated[index], status: data.success ? "done" : "error", result: data.message };
         return updated;
       });
+      if (data.success) {
+        window.dispatchEvent(new CustomEvent("krewby-ai-action"));
+      }
     } catch {
       setMessages((prev) => {
         const updated = [...prev];
@@ -343,7 +349,16 @@ export default function AIAssistantWidget() {
     setInput("");
 
     const userMsg = { role: "user", content: question };
-    const history = messages.filter((m) => m.role !== "system" && m.role !== "tool_call");
+    const history = messages
+      .filter((m) => m.role !== "system")
+      .flatMap((m) => {
+        if (m.role === "tool_call") {
+          return m.status === "done" && m.result
+            ? [{ role: "assistant", content: `[Action completed: ${m.result}]` }]
+            : [];
+        }
+        return [m];
+      });
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
@@ -359,7 +374,7 @@ export default function AIAssistantWidget() {
           "Content-Type": "application/json",
           ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
         },
-        body: JSON.stringify({ question, conversationHistory }),
+        body: JSON.stringify({ question, conversationHistory, pageContext }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -528,16 +543,11 @@ export default function AIAssistantWidget() {
             padding: "14px 16px",
             display: "flex", alignItems: "center", gap: 10,
           }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: "50%",
-              background: "rgba(255,255,255,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, fontWeight: 800, color: "#fff",
-            }}>K</div>
+            <img src="/chatbot.png" alt="Krewby chatbot" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>AI Workforce Assistant</div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Krewby chatbot</div>
               <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>
-                Read-only · Powered by GPT-4o mini
+                {role === "manager" ? "Action-capable · Powered by GPT-4o mini" : "Read-only · Powered by GPT-4o mini"}
               </div>
             </div>
             <button
@@ -570,12 +580,7 @@ export default function AIAssistantWidget() {
             ))}
             {loading && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${ACCENT}, #8B5CF6)`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0,
-                }}>K</div>
+                <img src="/chatbot.png" alt="Krewby chatbot" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                 <div style={{ background: "#F1F5F9", borderRadius: "16px 16px 16px 4px", padding: "2px 4px" }}>
                   <TypingIndicator />
                 </div>
@@ -705,7 +710,7 @@ export default function AIAssistantWidget() {
             textAlign: "center", fontSize: 10.5, color: "#94A3B8",
             paddingBottom: 8, paddingTop: 2,
           }}>
-            Read-only assistant · Cannot perform system actions
+            {role === "manager" ? "Can approve leave · create shifts · assign staff" : "Read-only assistant · Cannot perform system actions"}
           </div>
         </div>
       )}

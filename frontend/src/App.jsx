@@ -4,6 +4,7 @@ import { PageTransitionProvider } from "./components/PageTransition";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import GetStarted from "./pages/GetStarted";
 import RegisterBusiness from "./pages/RegisterBusiness";
@@ -94,6 +95,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/register/business" element={<RegisterBusiness />} />
         <Route path="/register/account" element={<CreateAccount />} />

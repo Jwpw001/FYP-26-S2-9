@@ -6,6 +6,7 @@ import { api } from "../../lib/api";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { Plus, Trash2, Clock, Calendar, Tag, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
+import { toTitleCase } from "../../utils/text";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_FULL  = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
@@ -141,7 +142,7 @@ export default function CreateShift() {
     try {
       const res = await api.post("/api/shifts", {
         branch_id: branchId,
-        title: form.title.trim() || null,
+        title: form.title.trim() ? toTitleCase(form.title.trim()) : null,
         shift_date: form.shift_date,
         start_time: form.start_time,
         end_time: form.end_time,
@@ -174,7 +175,7 @@ export default function CreateShift() {
     try {
       for (const t of validTasks) {
         await api.post(`/api/shifts/${createdShift.shift_id}/tasks`, {
-          title: t.title.trim(),
+          title: toTitleCase(t.title.trim()),
           skill_id: t.skill_id ? Number(t.skill_id) : null,
           difficulty: t.difficulty || null,
           start_time: t.start_time || null,

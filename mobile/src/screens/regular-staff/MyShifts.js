@@ -31,9 +31,9 @@ export default function MyShifts() {
     const staffId = myStaff?.[0]?.staff_id;
     if (!staffId) { setLoading(false); setRefreshing(false); return; }
 
-    const query = supabase.from("shift_assignments")
+    const query = supabase.from("task_assignments")
       .select(`assignment_id, status, acknowledged,
-        shifts ( shift_id, title, shift_date, start_time, end_time, status, outlets ( name ) ),
+        shifts ( shift_id, title, shift_date, start_time, end_time, status, branches ( name ) ),
         attendance ( attendance_id, status, clock_in, clock_out )`)
       .eq("staff_id", staffId);
 
@@ -64,7 +64,7 @@ export default function MyShifts() {
           <View style={{ flex: 1 }}>
             <Text style={s.shiftTitle}>{item.shifts?.title || "Shift"}</Text>
             <Text style={s.shiftSub}>{fmtTime(item.shifts?.start_time)} – {fmtTime(item.shifts?.end_time)}</Text>
-            {item.shifts?.outlets?.name && <Text style={s.outlet}>📍 {item.shifts.outlets.name}</Text>}
+            {item.shifts?.branches?.name && <Text style={s.outlet}>📍 {item.shifts.branches.name}</Text>}
           </View>
           <Badge label={item.shifts?.status} variant={item.shifts?.status} />
         </View>

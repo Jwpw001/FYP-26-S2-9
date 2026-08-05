@@ -130,6 +130,7 @@ export default function BranchDetail() {
   const [editingRoles, setEditingRoles] = useState(false);
   const [rolesDraft, setRolesDraft] = useState([]);
   const [rolesSaving, setRolesSaving] = useState(false);
+  const [rolesSaveError, setRolesSaveError] = useState("");
   const [skills, setSkills] = useState([]);
 
   // Per-branch business setup settings
@@ -151,7 +152,7 @@ export default function BranchDetail() {
   const [modalCloseTime, setModalCloseTime] = useState("");
 
   useEffect(() => { fetchBranch(); fetchStaff(); fetchManagers(); fetchRoleTemplates(); fetchBizSettings(); }, [id]);
-  useEffect(() => { api.get("/api/business/skills").then(r => setSkills((r.skills || []).map(sk => ({ skill_id: sk.skill_id, name: sk.name })))).catch(() => {}); }, []);
+  useEffect(() => { api.get(`/api/business/branches/${id}/skills`).then(r => setSkills((r.skills || []).map(sk => ({ skill_id: sk.skill_id, name: sk.name })))).catch(() => {}); }, [id]);
 
   async function fetchBranch() {
     setLoading(true);
@@ -219,6 +220,7 @@ export default function BranchDetail() {
 
   function startEditRoles() {
     setRolesDraft(roleTemplates.map(t => ({ role_name: t.role_name, skill_id: t.skill_id || "", headcount: t.headcount })));
+    setRolesSaveError("");
     setEditingRoles(true);
   }
 
@@ -227,10 +229,12 @@ export default function BranchDetail() {
   }
 
   async function saveRoles() {
+    setRolesSaveError("");
     setRolesSaving(true);
     try {
+      const valid = rolesDraft.filter(r => r.role_name?.trim());
       await api.put(`/api/business/branches/${id}/role-templates`, {
-        role_templates: rolesDraft.filter(r => r.role_name.trim()).map(r => ({
+        role_templates: valid.map(r => ({
           role_name: r.role_name.trim(),
           skill_id: r.skill_id ? Number(r.skill_id) : null,
           headcount: Number(r.headcount) || 1,
@@ -239,7 +243,7 @@ export default function BranchDetail() {
       await fetchRoleTemplates();
       setEditingRoles(false);
     } catch (err) {
-      console.error(err);
+      setRolesSaveError(err.message || "Failed to save. Please try again.");
     } finally {
       setRolesSaving(false);
     }
@@ -545,6 +549,11 @@ export default function BranchDetail() {
           )
         ) : (
           <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "16px" }}>
+            {rolesSaveError && (
+              <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", marginBottom: "12px" }}>
+                {rolesSaveError}
+              </div>
+            )}
             {rolesDraft.length > 0 && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 32px", gap: "8px", padding: "0 4px", marginBottom: "10px" }}>
                 <span style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em" }}>Skill / Role</span>
@@ -575,7 +584,7 @@ export default function BranchDetail() {
                 </div>
               ))}
             </div>
-            <button onClick={() => setRolesDraft(p => [...p, { role_name: "", skill_id: "", headcount: 1 }])} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#F8FAFC", border: "1.5px dashed #CBD5E1", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
+            <button onClick={() => { setRolesSaveError(""); setRolesDraft(p => [...p, { role_name: "", skill_id: "", headcount: 1 }]); }} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#F8FAFC", border: "1.5px dashed #CBD5E1", borderRadius: "9px", padding: "8px 16px", fontSize: "13px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
               <Plus size={14} /> Add Role
             </button>
           </div>

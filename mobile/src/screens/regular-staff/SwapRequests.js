@@ -48,7 +48,7 @@ export default function SwapRequests() {
           requester_shift:shifts!swap_requests_requester_shift_id_fkey ( shift_id, title, shift_date, start_time, end_time )`)
         .eq("requester_id", sid)
         .order("created_at", { ascending: false }),
-      supabase.from("shift_assignments")
+      supabase.from("task_assignments")
         .select(`assignment_id, shifts ( shift_id, title, shift_date, start_time, end_time )`)
         .eq("staff_id", sid),
     ]);

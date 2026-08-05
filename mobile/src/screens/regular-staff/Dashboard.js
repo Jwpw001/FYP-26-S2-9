@@ -65,9 +65,9 @@ export default function StaffDashboard({ navigation }) {
       if (!staffId) { setLoading(false); setRefreshing(false); return; }
 
       const [{ data: assignments }, { data: leave }, { data: swaps }] = await Promise.all([
-        supabase.from("shift_assignments")
+        supabase.from("task_assignments")
           .select(`assignment_id, status, acknowledged,
-            shifts ( shift_id, title, shift_date, start_time, end_time, status, outlets ( name ) ),
+            shifts ( shift_id, title, shift_date, start_time, end_time, status, branches ( name ) ),
             attendance ( attendance_id, status, clock_in, clock_out )`)
           .eq("staff_id", staffId),
         supabase.from("availability").select("request_id").eq("staff_id", staffId).eq("status", "pending"),
@@ -184,7 +184,7 @@ export default function StaffDashboard({ navigation }) {
                   <Text style={s.shiftTitle}>{todayShift.shifts?.title || "Shift"}</Text>
                   <Text style={s.shiftSub}>
                     {fmtTime(todayShift.shifts?.start_time)} – {fmtTime(todayShift.shifts?.end_time)}
-                    {todayShift.shifts?.outlets?.name ? ` · ${todayShift.shifts.outlets.name}` : ""}
+                    {todayShift.shifts?.branches?.name ? ` · ${todayShift.shifts.branches.name}` : ""}
                   </Text>
                 </View>
               </View>
@@ -247,7 +247,7 @@ export default function StaffDashboard({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.itemTitle}>{a.shifts?.title || "Shift"}</Text>
-                <Text style={s.itemSub}>{fmtTime(a.shifts?.start_time)} – {fmtTime(a.shifts?.end_time)}{a.shifts?.outlets?.name ? ` · ${a.shifts.outlets.name}` : ""}</Text>
+                <Text style={s.itemSub}>{fmtTime(a.shifts?.start_time)} – {fmtTime(a.shifts?.end_time)}{a.shifts?.branches?.name ? ` · ${a.shifts.branches.name}` : ""}</Text>
               </View>
               <Badge label={a.shifts?.status} variant={a.shifts?.status} />
             </View>

@@ -15,7 +15,7 @@ export default function ForgotPassword() {
     setError("");
 
     try {
-      await api.post("/api/forgot-password", {
+      await api.post("/api/auth/forgot-password", {
         email: email.trim().toLowerCase(),
         redirectTo: `${window.location.origin}/reset-password`
       });

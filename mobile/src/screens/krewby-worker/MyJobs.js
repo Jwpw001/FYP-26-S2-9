@@ -19,14 +19,14 @@ export default function WorkerMyJobs() {
   const load = useCallback(async () => {
     const u = await getUser();
     if (!u) return;
-    const { data: kw } = await supabase.from("krewby_workers").select("krewby_worker_id").eq("user_id", u.user_id).limit(1);
-    const kwId = kw?.[0]?.krewby_worker_id;
-    if (!kwId) { setLoading(false); setRefreshing(false); return; }
+    const { data: myStaff } = await supabase.from("staff").select("staff_id").eq("user_id", u.user_id).limit(1);
+    const staffId = myStaff?.[0]?.staff_id;
+    if (!staffId) { setLoading(false); setRefreshing(false); return; }
 
-    const { data } = await supabase.from("shift_assignments")
+    const { data } = await supabase.from("task_assignments")
       .select(`assignment_id, status,
-        shifts ( shift_id, title, shift_date, start_time, end_time, status, outlets ( name ) )`)
-      .eq("krewby_worker_id", kwId)
+        shifts ( shift_id, title, shift_date, start_time, end_time, status, branches ( name ) )`)
+      .eq("staff_id", staffId)
       .order("assignment_id", { ascending: false });
 
     let arr = data || [];
@@ -46,7 +46,7 @@ export default function WorkerMyJobs() {
             <Text style={s.jobTitle}>{item.shifts?.title || "Job"}</Text>
             <Text style={s.jobDate}>{fmtDate(item.shifts?.shift_date)}</Text>
             <Text style={s.jobTime}>{fmtTime(item.shifts?.start_time)} – {fmtTime(item.shifts?.end_time)}</Text>
-            {item.shifts?.outlets?.name && <Text style={s.outlet}>📍 {item.shifts.outlets.name}</Text>}
+            {item.shifts?.branches?.name && <Text style={s.outlet}>📍 {item.shifts.branches.name}</Text>}
           </View>
           <Badge label={item.status} variant={item.status} />
         </View>
