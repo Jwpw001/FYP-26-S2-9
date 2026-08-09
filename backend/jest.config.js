@@ -7,6 +7,8 @@ module.exports = {
     "src/controllers/casualController.js",
     "src/utils/pushNotify.js",
     "src/controllers/pushController.js",
+    "src/utils/hoursMetrics.js",
+    "src/controllers/shiftGenerationController.js",
   ],
   coverageDirectory: "coverage",
   clearMocks: true,
