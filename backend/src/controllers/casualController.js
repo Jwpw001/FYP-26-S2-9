@@ -555,9 +555,14 @@ async function autoAssignCasual(req, res) {
       return res.status(400).json({ success: false, message: "This task is already assigned." });
     }
 
-    // shift_date day of week: Mon=0 … Sun=6
+    // shift_date day of week: Mon=0 … Sun=6. Prisma returns `@db.Date` columns as UTC-midnight
+    // ISO strings, and shiftWeekStart below is computed with setUTCDate — mixing that with a
+    // local-time getDay() here would silently shift the computed day by one near a UTC/local
+    // timezone boundary (e.g. late evening in a negative-UTC-offset server timezone), which then
+    // makes casual_availability's exact (day_of_week, week_start_date) match miss every
+    // candidate. Use UTC consistently for all of this function's date math.
     const shiftDate = new Date(shift.shift_date);
-    const dayOfWeek = (shiftDate.getDay() + 6) % 7;
+    const dayOfWeek = (shiftDate.getUTCDay() + 6) % 7;
 
     // Time helpers — handles both Prisma Date objects and "HH:MM:SS" strings
     const toHHMM = (t) => { if (!t) return null; const s = t instanceof Date ? t.toISOString() : String(t); return s.includes("T") ? s.slice(11, 16) : s.slice(0, 5); };
@@ -654,37 +659,64 @@ async function autoAssignCasual(req, res) {
     // no real signal behind them yet, until a real data source exists to back them.
     const NEUTRAL_SUBSCORE = 0.5;
 
+    // Batched eligibility lookups — one query per data source across all approved workers,
+    // instead of the previous per-candidate round trips (staff row, availability,
+    // double-booking, past-assignment count each queried once per worker in a loop). Total
+    // query count here is now independent of how many casual workers are in the pool.
+    const staffRowsForPool = await prisma.staff.findMany({
+      where: { user_id: { in: approvedUserIds }, staff_type: "casual" },
+      select: { staff_id: true, user_id: true },
+    });
+    const staffIdByUserId = Object.fromEntries(staffRowsForPool.map(s => [s.user_id, s.staff_id]));
+    const staffIds = staffRowsForPool.map(s => s.staff_id);
+
+    // Postgres DATE columns carry no time component, so any UTC-midnight Date for this day
+    // matches regardless of exact time-of-day — this is an exact-date filter, not a range.
+    const shiftDateOnly = new Date(`${shiftDateStr}T00:00:00.000Z`);
+
+    const [availRows, sameDayAssignments, pastAssignmentCounts] = await Promise.all([
+      prisma.casual_availability.findMany({
+        where: { staff_id: { in: staffIds }, day_of_week: dayOfWeek, week_start_date: shiftWeekStart },
+        select: { staff_id: true, available_from: true, available_to: true },
+      }),
+      // Only this exact date's assignments — the previous version fetched every assignment a
+      // staff member had *ever* had and filtered down to same-day in JS, an unbounded query that
+      // grew without limit over the lifetime of the app.
+      prisma.task_assignments.findMany({
+        where: { staff_id: { in: staffIds }, status: { not: "cancelled" }, shifts: { shift_date: shiftDateOnly } },
+        select: { staff_id: true, shifts: { select: { start_time: true, end_time: true } } },
+      }),
+      prisma.task_assignments.groupBy({
+        by: ["staff_id"],
+        where: { staff_id: { in: staffIds }, status: { not: "cancelled" } },
+        _count: { staff_id: true },
+      }),
+    ]);
+
+    const availByStaffId = Object.fromEntries(availRows.map(a => [a.staff_id, a]));
+    const sameDayAssignmentsByStaffId = {};
+    sameDayAssignments.forEach(a => {
+      if (!sameDayAssignmentsByStaffId[a.staff_id]) sameDayAssignmentsByStaffId[a.staff_id] = [];
+      sameDayAssignmentsByStaffId[a.staff_id].push(a.shifts);
+    });
+    const pastAssignmentsByStaffId = Object.fromEntries(pastAssignmentCounts.map(r => [r.staff_id, r._count.staff_id]));
+
     const candidates = [];
     const failReasons = { unavailable: 0, double_booked: 0, labor_rules: 0 };
 
     for (const cw of approvedWorkers) {
-      const staffRow = await prisma.staff.findFirst({
-        where: { user_id: cw.user_id, staff_type: "casual" },
-        select: { staff_id: true },
-      });
-      if (!staffRow) { failReasons.unavailable++; continue; }
+      const staffId = staffIdByUserId[cw.user_id];
+      if (!staffId) { failReasons.unavailable++; continue; }
 
       // Hard filter 1: weekly availability on this day and time overlaps
-      const avail = await prisma.casual_availability.findFirst({
-        where: { staff_id: staffRow.staff_id, day_of_week: dayOfWeek, week_start_date: shiftWeekStart },
-        select: { available_from: true, available_to: true },
-      });
-
+      const avail = availByStaffId[staffId];
       if (!avail) { failReasons.unavailable++; continue; }
       const availStart = toMins(avail.available_from);
       const availEnd   = toMins(avail.available_to);
       if (availStart > shiftStart || availEnd < shiftEnd) { failReasons.unavailable++; continue; }
 
       // Hard filter 2: not double-booked on same date with overlapping times
-      const conflictingShifts = await prisma.task_assignments.findMany({
-        where: { staff_id: staffRow.staff_id, status: { not: "cancelled" } },
-        select: { shifts: { select: { shift_date: true, start_time: true, end_time: true } } },
-      });
-      const doubleBooked = conflictingShifts.some(a => {
-        const s = a.shifts;
-        if (!s) return false;
-        const sDate = new Date(s.shift_date).toISOString().slice(0, 10);
-        if (sDate !== shiftDateStr) return false;
+      const doubleBooked = (sameDayAssignmentsByStaffId[staffId] || []).some(s => {
         const cStart = toMins(s.start_time);
         const cEnd   = toMins(s.end_time);
         return cStart < shiftEnd && cEnd > shiftStart; // overlap
@@ -692,19 +724,18 @@ async function autoAssignCasual(req, res) {
       if (doubleBooked) { failReasons.double_booked++; continue; }
 
       // Hard filter 3: branch labor rules (max daily hours, max consecutive working days) —
-      // the same check assignStaff uses for manual assignment. Without this, auto-assign could
-      // schedule a casual worker past the branch's eligibility limits with no warning.
-      const laborFailure = await checkLaborRules(staffRow.staff_id, Number(shift_id), branch.branch_id);
+      // the same check assignStaff uses for manual assignment. Kept as its own per-candidate
+      // call rather than batched: checkLaborRules is shared logic from taskController.js and is
+      // intentionally left unmodified.
+      const laborFailure = await checkLaborRules(staffId, Number(shift_id), branch.branch_id);
       if (laborFailure) { failReasons.labor_rules++; continue; }
 
       // Passed all hard filters — gather the raw signal needed for weighted scoring below.
-      const pastAssignments = await prisma.task_assignments.count({
-        where: { staff_id: staffRow.staff_id, status: { not: "cancelled" } },
-      });
+      const pastAssignments = pastAssignmentsByStaffId[staffId] || 0;
 
       candidates.push({
         cw,
-        staffId: staffRow.staff_id,
+        staffId,
         pastAssignments,
         subScores: {
           availability: availabilitySubScore(availStart, availEnd),
