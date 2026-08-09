@@ -108,7 +108,7 @@ export default function BOManagerDetail() {
     <BusinessOwnerLayout title="Manager Profile">
       <button style={s.back} onClick={() => goTo(`/business-owner/branches/${branch.branch_id}`)}>← Back to Branch</button>
 
-      <div style={s.layout}>
+      <div className="responsive-stack-2col" style={s.layout}>
         {/* ── Left: profile card ── */}
         <div style={s.profileCard}>
           <UserAvatar name={name} avatar_url={manager.avatar_url} size={72} style={{ margin: "0 auto 14px" }} />

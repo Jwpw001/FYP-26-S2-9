@@ -604,7 +604,7 @@ export default function Reports() {
             </div>
 
             {/* Breakdowns — 3-col grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "20px" }}>
+            <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "20px" }}>
               <BarMeterSection title="Shifts by Status"     sub="All shifts (all time)"             rows={shiftsByStatus}     loading={loading} />
               <BarMeterSection title="Timesheet Status"     sub="Submissions for the period"        rows={timesheetBreakdown} loading={loading} />
               <BarMeterSection title="Leave Requests"       sub="By approval status (all time)"     rows={leaveByStatus}      loading={loading} />

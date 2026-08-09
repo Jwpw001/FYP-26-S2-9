@@ -395,7 +395,7 @@ export default function LeaveRequests() {
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Top tab bar */}
-        <div style={{ display: "flex", gap: "0", marginBottom: "28px", borderBottom: "2px solid #E2E8F0" }}>
+        <div className="responsive-tab-scroll" style={{ display: "flex", gap: "0", marginBottom: "28px", borderBottom: "2px solid #E2E8F0" }}>
           {[
             { key: "leave",  label: "Leave Requests",  badge: pendingCount },
             ...(workingDays >= 6 ? [{ key: "offday", label: "Off Day Requests", badge: pendingOffDay }] : []),
@@ -521,7 +521,7 @@ export default function LeaveRequests() {
             )}
 
             {/* Filter tabs */}
-            <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", marginBottom: "16px", width: "fit-content" }}>
+            <div className="responsive-tab-scroll" style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", marginBottom: "16px", width: "fit-content", maxWidth: "100%" }}>
               {FILTER_TABS.map(t => (
                 <button key={t.value} onClick={() => setFilter(t.value)}
                   style={{ padding: "7px 16px", background: filter === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "20px", fontWeight: filter === t.value ? "600" : "500", color: filter === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filter === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>

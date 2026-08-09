@@ -20,7 +20,7 @@ function chipPalette(name = "") {
 
 function StatCard({ icon, label, value, sub }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px 22px", display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: 0 }}>
+    <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "20px 22px", display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "150px" }}>
       <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         {icon}
       </div>
@@ -188,7 +188,7 @@ function EditSkillsModal({ branch, onClose }) {
           </button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", overflow: "hidden", flex: 1, minHeight: 0 }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1fr 300px", overflow: "hidden", flex: 1, minHeight: 0 }}>
           {/* Left: current skills for this branch */}
           <div style={{ overflowY: "auto", padding: "22px 24px", borderRight: "1px solid #F1F5F9", display: "flex", flexDirection: "column" }}>
             {!pendingName && (

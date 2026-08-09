@@ -248,12 +248,12 @@ export default function CasualDashboard() {
                       style={{ minHeight: "42px", borderRadius: "9px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", padding: "5px 3px 4px", fontSize: "19px", fontWeight: c.isToday ? 800 : 600, cursor: "pointer", position: "relative", color, background: bg, border: `1.5px solid ${border}` }}>
                       <span>{c.date}</span>
                       {c.hasShift && (
-                        <div style={{ display: "flex", gap: "2px", marginTop: "3px", justifyContent: "center", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "3px", marginTop: "4px", justifyContent: "center", flexWrap: "wrap" }}>
                           {c.dayShifts.slice(0, 2).map((_, si) => (
                             <span key={si} style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#2563EB", flexShrink: 0 }} />
                           ))}
                           {c.dayShifts.length > 2 && (
-                            <span style={{ fontSize: "15px", fontWeight: "700", color: "#2563EB", lineHeight: "5px" }}>+{c.dayShifts.length - 2}</span>
+                            <span style={{ fontSize: "13px", fontWeight: "700", color: "#2563EB", lineHeight: 1 }}>+{c.dayShifts.length - 2}</span>
                           )}
                         </div>
                       )}
@@ -309,7 +309,7 @@ export default function CasualDashboard() {
         </div>
 
         {/* Upcoming Gigs + Branch card */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
 
           {/* Upcoming Gigs */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px" }}>

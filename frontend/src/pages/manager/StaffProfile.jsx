@@ -850,7 +850,7 @@ export default function StaffProfile() {
     <ManagerLayout title="Staff Profile">
       <button style={s.back} onClick={() => goTo("/manager/staff")}>← Back to Staff</button>
 
-      <div style={s.layout}>
+      <div className="responsive-stack-2col" style={s.layout}>
         {/* ── Left: profile card ── */}
         <div style={s.profileCard}>
           <UserAvatar name={name} avatar_url={member.users?.avatar_url} size={72} style={{ margin: "0 auto 14px" }} />

@@ -53,7 +53,7 @@ export default function AdminStaffDetail() {
     <AdminLayout title="Staff Profile">
       <button style={s.back} onClick={() => goTo(backPath)}>← Back</button>
 
-      <div style={s.layout}>
+      <div className="responsive-stack-2col" style={s.layout}>
         {/* Left card */}
         <div style={s.profileCard}>
           <UserAvatar name={name} avatar_url={member.users?.avatar_url} size={72} style={{ margin: "0 auto 14px" }} />

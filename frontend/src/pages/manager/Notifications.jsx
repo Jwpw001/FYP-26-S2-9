@@ -157,7 +157,7 @@ export default function Notifications() {
         </div>
 
         {/* Filter tabs */}
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+        <div className="responsive-tab-scroll" style={{ display: "flex", gap: "6px", marginBottom: "20px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content", maxWidth: "100%" }}>
           {[
             { value: "all",    label: "All" },
             { value: "unread", label: "Unread", badge: unreadCount || null },

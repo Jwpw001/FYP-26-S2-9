@@ -716,7 +716,7 @@ export default function AvailabilityLeave() {
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* ── Main tabs ─────────────────────────────────────── */}
-        <div style={{ display: "flex", gap: "0", marginBottom: "24px", borderBottom: "2px solid #E2E8F0" }}>
+        <div className="responsive-tab-scroll" style={{ display: "flex", gap: "0", marginBottom: "24px", borderBottom: "2px solid #E2E8F0" }}>
           {[
             { key: "leave",   label: "Leave Requests",    badge: pendingLeave },
             { key: "swap",    label: "Swap & Replacement", badge: pendingSwap },
@@ -765,7 +765,7 @@ export default function AvailabilityLeave() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "20px" }}>
-              <div style={{ display: "flex", gap: "6px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+              <div className="responsive-tab-scroll" style={{ display: "flex", gap: "6px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content", maxWidth: "100%" }}>
                 {LEAVE_FILTER_TABS.map(tab => (
                   <FilterTab
                     key={tab.value}
@@ -819,7 +819,7 @@ export default function AvailabilityLeave() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "20px" }}>
-              <div style={{ display: "flex", gap: "6px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+              <div className="responsive-tab-scroll" style={{ display: "flex", gap: "6px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content", maxWidth: "100%" }}>
                 {SWAP_FILTER_TABS.map(tab => (
                   <FilterTab
                     key={tab.value}
@@ -917,7 +917,7 @@ export default function AvailabilityLeave() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "20px" }}>
-              <div style={{ display: "flex", gap: "6px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+              <div className="responsive-tab-scroll" style={{ display: "flex", gap: "6px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content", maxWidth: "100%" }}>
                 {[
                   { value: "pending",  label: "Pending" },
                   { value: "approved", label: "Approved" },

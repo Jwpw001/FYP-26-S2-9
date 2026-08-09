@@ -203,8 +203,15 @@ button:focus-visible {
 
 /* Prevents any stray fixed-width element on a narrow/added-to-home-screen
    viewport from creating page-level horizontal scroll. Individual wide
-   content (tables, etc.) should scroll within its own container instead. */
-html, body {
+   content (tables, etc.) should scroll within its own container instead.
+   html only, not body: setting overflow-x on both forces the browser to
+   resolve each element's overflow-y to "auto" too (per the CSS overflow
+   spec's visible/non-visible pairing rule), which turns body into its own
+   nested scroll container distinct from the page's real (html-level)
+   scroll. Every position:sticky element inside body then computes its
+   stuck offset against body's own scrollTop — which never changes, since
+   the visible scrolling actually happens on html — so nothing sticks. */
+html {
   overflow-x: hidden;
 }
 
@@ -216,6 +223,19 @@ html, body {
   .responsive-stack-2col {
     grid-template-columns: 1fr !important;
   }
+}
+/* Grid items default to min-width:auto, i.e. they refuse to shrink below
+   their content's natural (min-content) size. A card with any nowrap text
+   inside (long notification text with text-overflow:ellipsis, a button row)
+   then locks the whole 1fr track to that text's full width instead of the
+   column actually sharing the row — the box stops responding to the
+   viewport entirely (same width whether the window is 1440px or 700px) and
+   silently pushes the page into horizontal scroll at every width, not just
+   on mobile. min-width:0 lets the item shrink to its grid track so nowrap +
+   ellipsis truncation (and everything else) can actually take effect. Not
+   gated to a media query — the bug isn't mobile-only. */
+.responsive-stack-2col > * {
+  min-width: 0;
 }
 
 /* A 7-across day grid (e.g. a week strip) has ~50px per cell on a phone —

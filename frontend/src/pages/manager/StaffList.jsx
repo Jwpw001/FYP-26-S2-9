@@ -138,7 +138,7 @@ export default function StaffList() {
 
         {/* Filter tabs */}
         <div style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+          <div className="responsive-tab-scroll" style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content", maxWidth: "100%" }}>
             {TABS.map(t => (
               <button key={t.value} onClick={() => setFilterType(t.value)}
                 style={{ padding: "7px 16px", background: filterType === t.value ? "#FFF" : "transparent", border: "none", borderRadius: "7px", fontSize: "20px", fontWeight: filterType === t.value ? "600" : "500", color: filterType === t.value ? "#1E293B" : "#64748B", cursor: "pointer", boxShadow: filterType === t.value ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
@@ -146,7 +146,7 @@ export default function StaffList() {
               </button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content" }}>
+          <div className="responsive-tab-scroll" style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", width: "fit-content", maxWidth: "100%" }}>
             {[
               { value: "all",      label: "All status" },
               { value: "active",   label: `Active (${activeCount})` },

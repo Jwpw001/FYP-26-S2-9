@@ -158,7 +158,7 @@ export default function BODashboard() {
         </div>
 
         {/* 3 KPI cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "16px" }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "16px" }}>
           {loading ? (
             [1,2,3].map(i => (
               <div key={i} style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px", animation: `popIn .4s ease ${i * 80}ms both` }}>
@@ -188,7 +188,7 @@ export default function BODashboard() {
         </div>
 
         {/* Branch performance + Quick Actions */}
-        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "20px", alignItems: "start" }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "20px", alignItems: "start" }}>
 
           {/* Branch Performance */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px 26px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>

@@ -275,7 +275,7 @@ function Submissions({ branchId, managerId, showToast }) {
   }
 
   return (
-    <div style={{ display:"grid", gridTemplateColumns: detail ? "1fr 380px" : "1fr", gap:"20px", alignItems:"start" }}>
+    <div className="responsive-stack-2col" style={{ display:"grid", gridTemplateColumns: detail ? "1fr 380px" : "1fr", gap:"20px", alignItems:"start" }}>
 
       {/* Card list */}
       <div>
@@ -689,7 +689,7 @@ function WorkingHours({ branchId }) {
 
       {/* KPIs */}
       {!loading && staffData.length > 0 && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:"12px", marginBottom:"20px" }}>
+        <div className="responsive-stack-2col" style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:"12px", marginBottom:"20px" }}>
           {[
             { label:"Staff with Approved Hours", value: staffData.length, color:"#2563EB" },
             { label:"Total Approved Hours",       value: fmtHours(totalHours), color:"#059669" },
