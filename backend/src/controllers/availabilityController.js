@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { logAudit } = require("../utils/auditLog");
+const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 
 async function getCallerBranchId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
@@ -128,6 +129,27 @@ const createAvailability = async (req, res) => {
         reviewed_at: reviewed_at ? new Date(reviewed_at) : null,
       },
     });
+
+    // Only alert managers for a staff-initiated request — a manager/admin creating a record on
+    // someone else's behalf (the non-self-service branch above) doesn't need to be told about
+    // their own action.
+    if (isSelfServiceRole(callerRole)) {
+      const staffWithBranch = await prisma.staff.findUnique({
+        where: { staff_id },
+        select: { branch_id: true, users: { select: { full_name: true } } },
+      });
+      if (staffWithBranch?.branch_id) {
+        const managerIds = await getBranchManagerUserIds(staffWithBranch.branch_id);
+        await notifyUsers(managerIds, {
+          type: "leave_request",
+          title: `${staffWithBranch.users?.full_name || "A staff member"} requested leave`,
+          message: `${leave_type || "Leave"} from ${start_date} to ${end_date}${reason ? `: ${reason}` : ""}`,
+          relatedEntity: "availability",
+          relatedId: availability.request_id,
+        });
+      }
+    }
+
     res.status(201).json({ success: true, message: "Availability request created successfully", availability });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -185,6 +207,19 @@ const updateAvailability = async (req, res) => {
         before: { status: existing.status },
         after: { status },
       });
+
+      if ((status === "approved" || status === "rejected") && existing.staff.user_id) {
+        await notifyUser({
+          recipientId: existing.staff.user_id,
+          type: status === "approved" ? "leave_approved" : "leave_rejected",
+          title: status === "approved" ? "Leave request approved" : "Leave request rejected",
+          message: availability.leave_type
+            ? `Your ${availability.leave_type} request has been ${status}.`
+            : `Your leave request has been ${status}.`,
+          relatedEntity: "availability",
+          relatedId: requestId,
+        });
+      }
     }
 
     res.json({ success: true, message: "Availability request updated successfully", availability });
