@@ -3,7 +3,7 @@ const router = express.Router();
 const protect = require("../middleware/authMiddleware");
 const allowRoles = require("../middleware/roleMiddleware");
 const ROLES = require("../constants/roles");
-const { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs } = require("../controllers/businessOwnerController");
+const { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates } = require("../controllers/businessOwnerController");
 
 router.use(protect);
 
@@ -42,6 +42,12 @@ router.patch("/branches/:branch_id/skills/:skill_id",  OWNER_OR_MGR, updateBranc
 router.delete("/branches/:branch_id/skills/:skill_id", OWNER_OR_MGR, deleteBranchSkill);
 router.get("/branches/:branch_id/role-templates",      OWNER_OR_MGR, getRoleTemplates);
 router.put("/branches/:branch_id/role-templates",      OWNER_OR_MGR, upsertRoleTemplates);
+router.get("/branches/:branch_id/task-templates",              OWNER_OR_MGR, getTaskTemplates);
+router.post("/branches/:branch_id/task-templates",             OWNER_OR_MGR, createTaskTemplate);
+router.put("/branches/:branch_id/task-templates/reorder",      OWNER_OR_MGR, reorderTaskTemplates);
+router.post("/branches/:branch_id/task-templates/copy",        OWNER_OR_MGR, copyTaskTemplates);
+router.patch("/branches/:branch_id/task-templates/:template_id",  OWNER_OR_MGR, updateTaskTemplate);
+router.delete("/branches/:branch_id/task-templates/:template_id", OWNER_OR_MGR, deleteTaskTemplate);
 router.get("/branches/:branch_id/settings",            OWNER_OR_MGR, getBranchSettings);
 router.put("/branches/:branch_id/settings",            OWNER_OR_MGR, updateBranchSettings);
 router.put("/branches/:branch_id/settings/allocation", OWNER_OR_MGR, updateBranchAllocationPrefs);

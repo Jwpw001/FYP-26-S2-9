@@ -104,6 +104,30 @@ model branch_role_templates {
   skills      skills?  @relation(fields: [skill_id], references: [skill_id], onDelete: SetNull, onUpdate: NoAction)
 }
 
+// Round 3: the branch's normal task set per weekday, used by the shift-generation routine
+// (Task 2) to populate generated shifts. day_of_week follows the same Monday-indexed
+// convention as branch_settings.operating_days and casual_availability.day_of_week (Mon=0
+// … Sun=6) — verified against shiftController.js's existing "day_of_week uses Mon=0…Sun=6"
+// comment and its (getUTCDay()+6)%7 conversion, not assumed.
+model branch_task_templates {
+  template_id      Int       @id @default(autoincrement())
+  branch_id        Int
+  day_of_week      Int       @db.SmallInt
+  title            String    @db.VarChar(100)
+  skill_id         Int?
+  start_time       DateTime? @db.Time(6)
+  end_time         DateTime? @db.Time(6)
+  required_workers Int       @default(1)
+  sort_order       Int       @default(0)
+  is_active        Boolean   @default(true)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @default(now()) @db.Timestamptz(6)
+  branches         branches  @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction)
+  skills           skills?   @relation(fields: [skill_id], references: [skill_id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([branch_id, day_of_week], map: "idx_branch_task_templates_branch_day")
+}
+
 // Same situation as branch_role_templates above: live, already read/written via raw supabase
 // calls in shiftController.js and casualController.js (the Phase 4 allocation-weight scoring),
 // but absent from this schema file. Reconstructed from a live introspection.
@@ -135,6 +159,7 @@ model branches {
   branch_settings           branch_settings?
   branch_skills             branch_skills[]
   branch_role_templates     branch_role_templates[]
+  branch_task_templates     branch_task_templates[]
   branch_allocation_preferences branch_allocation_preferences?
   businesses                businesses?                 @relation(fields: [business_id], references: [business_id], onUpdate: NoAction, map: "outlets_business_id_fkey")
   casual_branch_preferences casual_branch_preferences[]
@@ -330,6 +355,7 @@ model skills {
   users           users?            @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
   user_skill_tags user_skill_tags[]
   branch_role_templates branch_role_templates[]
+  branch_task_templates branch_task_templates[]
 
   @@unique([name, branch_id], map: "skills_name_outlet_id_key")
 }

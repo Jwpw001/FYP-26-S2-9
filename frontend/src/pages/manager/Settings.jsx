@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { SG_HOLIDAYS } from "../../data/sgHolidays";
+import TaskTemplatesEditor from "../../components/TaskTemplatesEditor";
 import {
   Clock, Calendar, Check, Minus, Plus,
   Users, Award, TrendingUp, BarChart3, Scale, Loader2, Settings2, Zap, Pencil, X, Save, RotateCcw, Lock,
@@ -76,6 +77,7 @@ export default function ManagerSettings() {
   const [savedAlloc, setSavedAlloc] = useState(null);
   const [editingAlloc, setEditingAlloc] = useState(false);
   const [branchId, setBranchId]     = useState(null);
+  const [taskSkills, setTaskSkills] = useState([]);
 
   useEffect(() => { load(); }, []);
 
@@ -107,6 +109,10 @@ export default function ManagerSettings() {
       const a = r.allocation ? { ...ALLOC_DEFAULTS, ...r.allocation } : { ...ALLOC_DEFAULTS };
       setAlloc(a);
       setSavedAlloc({ ...a });
+
+      if (oid) {
+        api.get(`/api/business/branches/${oid}/skills`).then(sk => setTaskSkills(sk.skills || [])).catch(() => {});
+      }
     } catch { }
     finally { setLoading(false); }
   }
@@ -260,6 +266,13 @@ export default function ManagerSettings() {
           ) : (
             <div style={{ textAlign: "center", padding: "60px 20px", color: "#94A3B8", fontSize: "20px" }}>No settings configured yet.</div>
           )}
+
+          {/* ── Task Templates (Round 3) — editable by managers, unlike Business setup above ── */}
+          <div style={{ marginTop: "28px", paddingTop: "24px", borderTop: "1px solid #F1F5F9" }}>
+            <h2 style={{ fontSize: "23px", fontWeight: "800", color: "#0F172A", marginBottom: "2px" }}>Task Templates</h2>
+            <p style={{ fontSize: "19px", color: "#94A3B8", marginBottom: "18px" }}>The tasks generated onto the calendar automatically for each weekday</p>
+            {branchId && <TaskTemplatesEditor branchId={branchId} skills={taskSkills} />}
+          </div>
         </div>
 
         {/* ── RIGHT: Holidays (read-only) + Smart Allocation (editable) ── */}

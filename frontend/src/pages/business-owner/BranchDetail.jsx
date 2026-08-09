@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
+import TaskTemplatesEditor from "../../components/TaskTemplatesEditor";
 import { useGoTo } from "../../components/PageTransition";
 import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star, Settings2, Calendar, Zap, Pencil, X, Save, Loader2, Check, Minus, Scale, Award, TrendingUp, BarChart3, RotateCcw } from "lucide-react";
 import { SG_HOLIDAYS } from "../../data/sgHolidays";
@@ -589,6 +590,15 @@ export default function BranchDetail() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* ── Task Templates (Round 3) ── */}
+      <div style={{ ...s.staffSection, marginTop: "20px" }}>
+        <div style={{ marginBottom: "18px" }}>
+          <h3 style={s.formTitle}>Task Templates</h3>
+          <p style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>The tasks generated onto the calendar automatically for each weekday</p>
+        </div>
+        <TaskTemplatesEditor branchId={id} skills={skills} />
       </div>
 
       {/* ── Staff at this branch ── */}

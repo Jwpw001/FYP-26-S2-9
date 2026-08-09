@@ -403,6 +403,246 @@ const upsertRoleTemplates = async (req, res) => {
   }
 };
 
+// ── Task templates (Round 3) ─────────────────────────────────────────────────
+// The branch's normal task set per weekday. Shift generation (Task 2) copies these rows
+// into shift_tasks for each operating day — editing a template never touches shifts that
+// were already generated from it.
+
+const DOW_MIN = 0, DOW_MAX = 6;
+
+function normalizeTemplate(t) {
+  const toHHMM = v => { if (!v) return null; const s = v instanceof Date ? v.toISOString() : String(v); return s.includes("T") ? s.slice(11, 19) : s; };
+  return { ...t, start_time: toHHMM(t.start_time), end_time: toHHMM(t.end_time) };
+}
+
+// GET /api/business/branches/:branch_id/task-templates
+const getTaskTemplates = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
+    const templates = await prisma.branch_task_templates.findMany({
+      where: { branch_id },
+      include: { skills: { select: { skill_id: true, name: true } } },
+      orderBy: [{ day_of_week: "asc" }, { sort_order: "asc" }, { template_id: "asc" }],
+    });
+    return res.json({ success: true, templates: templates.map(normalizeTemplate) });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// POST /api/business/branches/:branch_id/task-templates
+const createTaskTemplate = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
+    const { day_of_week, title, skill_id, start_time, end_time, required_workers, sort_order } = req.body;
+    const dow = Number(day_of_week);
+    if (!Number.isInteger(dow) || dow < DOW_MIN || dow > DOW_MAX) {
+      return res.status(400).json({ success: false, message: "day_of_week must be an integer 0–6 (Mon=0)." });
+    }
+    if (!title?.trim()) {
+      return res.status(400).json({ success: false, message: "title is required." });
+    }
+
+    let nextSort = Number(sort_order);
+    if (!Number.isInteger(nextSort)) {
+      const last = await prisma.branch_task_templates.findFirst({
+        where: { branch_id, day_of_week: dow },
+        orderBy: { sort_order: "desc" },
+        select: { sort_order: true },
+      });
+      nextSort = (last?.sort_order ?? -1) + 1;
+    }
+
+    const template = await prisma.branch_task_templates.create({
+      data: {
+        branch_id,
+        day_of_week: dow,
+        title: title.trim(),
+        skill_id: skill_id ? Number(skill_id) : null,
+        start_time: start_time ? new Date(`1970-01-01T${start_time}`) : null,
+        end_time: end_time ? new Date(`1970-01-01T${end_time}`) : null,
+        required_workers: Number(required_workers) || 1,
+        sort_order: nextSort,
+      },
+      include: { skills: { select: { skill_id: true, name: true } } },
+    });
+    return res.status(201).json({ success: true, template: normalizeTemplate(template) });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PATCH /api/business/branches/:branch_id/task-templates/:template_id
+const updateTaskTemplate = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    const template_id = Number(req.params.template_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
+    const existing = await prisma.branch_task_templates.findUnique({ where: { template_id } });
+    if (!existing || existing.branch_id !== branch_id) {
+      return res.status(404).json({ success: false, message: "Template not found." });
+    }
+
+    const { day_of_week, title, skill_id, start_time, end_time, required_workers, sort_order, is_active } = req.body;
+    const data = { updated_at: new Date() };
+    if (day_of_week !== undefined) {
+      const dow = Number(day_of_week);
+      if (!Number.isInteger(dow) || dow < DOW_MIN || dow > DOW_MAX) {
+        return res.status(400).json({ success: false, message: "day_of_week must be an integer 0–6 (Mon=0)." });
+      }
+      data.day_of_week = dow;
+    }
+    if (title !== undefined) {
+      if (!title?.trim()) return res.status(400).json({ success: false, message: "title cannot be empty." });
+      data.title = title.trim();
+    }
+    if (skill_id !== undefined) data.skill_id = skill_id ? Number(skill_id) : null;
+    if (start_time !== undefined) data.start_time = start_time ? new Date(`1970-01-01T${start_time}`) : null;
+    if (end_time !== undefined) data.end_time = end_time ? new Date(`1970-01-01T${end_time}`) : null;
+    if (required_workers !== undefined) data.required_workers = Number(required_workers) || 1;
+    if (sort_order !== undefined) data.sort_order = Number(sort_order) || 0;
+    if (is_active !== undefined) data.is_active = !!is_active;
+
+    const template = await prisma.branch_task_templates.update({
+      where: { template_id },
+      data,
+      include: { skills: { select: { skill_id: true, name: true } } },
+    });
+    return res.json({ success: true, template: normalizeTemplate(template) });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// DELETE /api/business/branches/:branch_id/task-templates/:template_id
+const deleteTaskTemplate = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    const template_id = Number(req.params.template_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
+    const existing = await prisma.branch_task_templates.findUnique({ where: { template_id } });
+    if (!existing || existing.branch_id !== branch_id) {
+      return res.status(404).json({ success: false, message: "Template not found." });
+    }
+
+    await prisma.branch_task_templates.delete({ where: { template_id } });
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PUT /api/business/branches/:branch_id/task-templates/reorder
+// body: { day_of_week, ordered_ids: [template_id, ...] } — sets sort_order to each id's index.
+const reorderTaskTemplates = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
+    const { day_of_week, ordered_ids } = req.body;
+    const dow = Number(day_of_week);
+    if (!Number.isInteger(dow) || dow < DOW_MIN || dow > DOW_MAX) {
+      return res.status(400).json({ success: false, message: "day_of_week must be an integer 0–6 (Mon=0)." });
+    }
+    if (!Array.isArray(ordered_ids) || ordered_ids.length === 0) {
+      return res.status(400).json({ success: false, message: "ordered_ids must be a non-empty array." });
+    }
+
+    // Confirm every id actually belongs to this branch+day before touching anything.
+    const rows = await prisma.branch_task_templates.findMany({
+      where: { template_id: { in: ordered_ids.map(Number) }, branch_id, day_of_week: dow },
+      select: { template_id: true },
+    });
+    if (rows.length !== ordered_ids.length) {
+      return res.status(400).json({ success: false, message: "One or more templates don't belong to this branch/day." });
+    }
+
+    await prisma.$transaction(
+      ordered_ids.map((id, index) =>
+        prisma.branch_task_templates.update({ where: { template_id: Number(id) }, data: { sort_order: index, updated_at: new Date() } })
+      )
+    );
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// POST /api/business/branches/:branch_id/task-templates/copy
+// body: { source_day, target_days: [...] } — replaces each target day's template rows with
+// copies of the source day's rows. Managers hand-entering 7 near-identical lists is exactly
+// the repetitive step this round removes.
+const copyTaskTemplates = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
+    const { source_day, target_days } = req.body;
+    const sourceDow = Number(source_day);
+    if (!Number.isInteger(sourceDow) || sourceDow < DOW_MIN || sourceDow > DOW_MAX) {
+      return res.status(400).json({ success: false, message: "source_day must be an integer 0–6 (Mon=0)." });
+    }
+    if (!Array.isArray(target_days) || target_days.length === 0) {
+      return res.status(400).json({ success: false, message: "target_days must be a non-empty array." });
+    }
+    const targetDows = target_days.map(Number);
+    if (targetDows.some(d => !Number.isInteger(d) || d < DOW_MIN || d > DOW_MAX)) {
+      return res.status(400).json({ success: false, message: "target_days must all be integers 0–6 (Mon=0)." });
+    }
+    if (targetDows.includes(sourceDow)) {
+      return res.status(400).json({ success: false, message: "target_days cannot include source_day." });
+    }
+
+    const sourceRows = await prisma.branch_task_templates.findMany({
+      where: { branch_id, day_of_week: sourceDow },
+      orderBy: { sort_order: "asc" },
+    });
+
+    await prisma.$transaction(async tx => {
+      await tx.branch_task_templates.deleteMany({ where: { branch_id, day_of_week: { in: targetDows } } });
+      if (sourceRows.length > 0) {
+        for (const dow of targetDows) {
+          await tx.branch_task_templates.createMany({
+            data: sourceRows.map(r => ({
+              branch_id,
+              day_of_week: dow,
+              title: r.title,
+              skill_id: r.skill_id,
+              start_time: r.start_time,
+              end_time: r.end_time,
+              required_workers: r.required_workers,
+              sort_order: r.sort_order,
+              is_active: r.is_active,
+            })),
+          });
+        }
+      }
+    });
+
+    return res.json({ success: true, copied: sourceRows.length, target_days: targetDows });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // DELETE /api/business/branches/:branch_id
 const deleteBranch = async (req, res) => {
   try {
@@ -1068,4 +1308,4 @@ const getBranchSkillsSummary = async (req, res) => {
   }
 };
 
-module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs };
+module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates };
