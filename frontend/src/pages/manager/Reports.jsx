@@ -609,6 +609,9 @@ export default function Reports() {
               <BarMeterSection title="Timesheet Status"     sub="Submissions for the period"        rows={timesheetBreakdown} loading={loading} />
               <BarMeterSection title="Leave Requests"       sub="By approval status (all time)"     rows={leaveByStatus}      loading={loading} />
             </div>
+
+            {/* Round 3, Task 6 */}
+            {branchId && <WorkingHoursReportPanel branchId={branchId} />}
           </div>
         )}
       </div>
@@ -672,5 +675,128 @@ function StaffKpiTable({ rows }) {
         })}
       </tbody>
     </table>
+  );
+}
+
+// Round 3, Task 6 — "the report is where the manager sees the picture and rebalances future
+// rosters. It replaces enforcement." Generated on demand for a date range (not auto-loaded with
+// the rest of the page, since it's a heavier query); sortable by any column client-side.
+const WH_COLUMNS = [
+  { key: "full_name",              label: "Staff" },
+  { key: "staff_type",             label: "Type" },
+  { key: "rostered_hours",         label: "Rostered" },
+  { key: "worked_hours",           label: "Worked" },
+  { key: "additional_hours",       label: "Additional" },
+  { key: "overtime_hours",         label: "Overtime" },
+  { key: "days_worked",            label: "Days" },
+  { key: "longest_consecutive_run",label: "Longest run" },
+  { key: "pending_submissions",    label: "Pending" },
+];
+
+function WorkingHoursReportPanel({ branchId }) {
+  const today = new Date();
+  const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+  const [startDate, setStartDate] = useState(weekAgo.toISOString().slice(0, 10));
+  const [endDate, setEndDate]     = useState(today.toISOString().slice(0, 10));
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState("");
+  const [report, setReport]       = useState(null);
+  const [sortKey, setSortKey]     = useState("worked_hours");
+  const [sortDir, setSortDir]     = useState("desc");
+
+  async function generate() {
+    setLoading(true); setError("");
+    try {
+      const r = await api.get(`/api/reports/working-hours?branch_id=${branchId}&start_date=${startDate}&end_date=${endDate}`);
+      setReport(r);
+    } catch (err) { setError(err.message || "Failed to generate report."); }
+    finally { setLoading(false); }
+  }
+
+  function toggleSort(key) {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("desc"); }
+  }
+
+  const sortedRows = report ? [...report.rows].sort((a, b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    const cmp = typeof av === "string" ? (av || "").localeCompare(bv || "") : (av ?? 0) - (bv ?? 0);
+    return sortDir === "asc" ? cmp : -cmp;
+  }) : [];
+
+  return (
+    <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px", marginTop: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <div style={{ marginBottom: "16px" }}>
+        <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#0F172A", margin: 0 }}>Working Hours Report</h3>
+        <p style={{ fontSize: "19px", color: "#94A3B8", margin: "3px 0 0" }}>Rostered vs. actual hours, additional time, and overtime — approved submissions only</p>
+      </div>
+
+      <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", marginBottom: "16px" }}>
+        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "18px" }} />
+        <span style={{ color: "#94A3B8" }}>to</span>
+        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "18px" }} />
+        <button onClick={generate} disabled={loading}
+          style={{ background: "#1E293B", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontSize: "18px", fontWeight: "700", cursor: "pointer" }}>
+          {loading ? "Generating…" : "Generate"}
+        </button>
+      </div>
+
+      {error && <p style={{ color: "#DC2626", fontSize: "19px", marginBottom: "12px" }}>{error}</p>}
+
+      {report && (
+        report.rows.length === 0 ? (
+          <p style={{ color: "#94A3B8", fontSize: "20px", textAlign: "center", padding: "24px 0" }}>No rostered staff in this period.</p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "19px", minWidth: "760px" }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #F1F5F9" }}>
+                  {WH_COLUMNS.map(c => (
+                    <th key={c.key} onClick={() => toggleSort(c.key)}
+                      style={{ padding: "10px 12px", textAlign: c.key === "full_name" ? "left" : "center", fontSize: "17px", fontWeight: "700", color: sortKey === c.key ? "#1E293B" : "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap", cursor: "pointer", userSelect: "none" }}>
+                      {c.label}{sortKey === c.key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedRows.map(r => (
+                  <tr key={r.staff_id} style={{ borderBottom: "1px solid #F8FAFC", background: r.breaches_limit ? "#FFFBEB" : "transparent" }}>
+                    <td style={{ padding: "12px" }}>
+                      <p style={{ fontWeight: "600", color: "#0F172A", margin: 0 }}>{r.full_name || "—"}</p>
+                      {r.warnings.map((w, i) => (
+                        <p key={i} style={{ fontSize: "16px", color: "#D97706", fontWeight: "600", margin: "2px 0 0" }}>⚠ {w}</p>
+                      ))}
+                    </td>
+                    <td style={{ padding: "12px", textAlign: "center" }}>
+                      <span style={{ fontSize: "17px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px", background: r.staff_type === "regular" ? "#EFF6FF" : "#F5F3FF", color: r.staff_type === "regular" ? "#2563EB" : "#7C3AED", textTransform: "capitalize" }}>{r.staff_type}</span>
+                    </td>
+                    <td style={{ padding: "12px", textAlign: "center" }}>{r.rostered_hours.toFixed(1)}h</td>
+                    <td style={{ padding: "12px", textAlign: "center", fontWeight: "700" }}>
+                      {r.worked_hours.toFixed(1)}h{r.hours_partially_unknown && <span title="Some submissions have no exact start/end time — figure may be incomplete" style={{ color: "#94A3B8" }}> *</span>}
+                    </td>
+                    <td style={{ padding: "12px", textAlign: "center", color: r.additional_hours > 0 ? "#2563EB" : "#CBD5E1", fontWeight: r.additional_hours > 0 ? "700" : "400" }}>{r.additional_hours.toFixed(1)}h</td>
+                    <td style={{ padding: "12px", textAlign: "center", color: r.overtime_hours > 0 ? "#DC2626" : "#CBD5E1", fontWeight: r.overtime_hours > 0 ? "700" : "400" }}>{r.overtime_hours.toFixed(1)}h</td>
+                    <td style={{ padding: "12px", textAlign: "center" }}>{r.days_worked}</td>
+                    <td style={{ padding: "12px", textAlign: "center", fontWeight: r.breaches_limit ? "700" : "400", color: r.breaches_limit ? "#D97706" : "#1E293B" }}>{r.longest_consecutive_run}</td>
+                    <td style={{ padding: "12px", textAlign: "center", color: r.pending_submissions > 0 ? "#D97706" : "#CBD5E1" }}>{r.pending_submissions || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{ borderTop: "2px solid #F1F5F9", fontWeight: "700" }}>
+                  <td style={{ padding: "12px" }} colSpan={2}>Branch total</td>
+                  <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.rostered_hours.toFixed(1)}h</td>
+                  <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.worked_hours.toFixed(1)}h</td>
+                  <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.additional_hours.toFixed(1)}h</td>
+                  <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.overtime_hours.toFixed(1)}h</td>
+                  <td colSpan={3} />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )
+      )}
+    </div>
   );
 }
