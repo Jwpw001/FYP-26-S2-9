@@ -8,7 +8,6 @@ import ManagerLayout from "../../components/layout/ManagerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { Plus, Trash2, Clock, Calendar, Tag, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
 
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_FULL  = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 const DIFF_LEVELS = [
   { value: "junior", label: "Junior",  color: "#166534", bg: "#DCFCE7" },
@@ -99,10 +98,20 @@ export default function CreateShift() {
   const timeMin       = !allowOvertime ? (branchHours.open  || undefined) : undefined;
   const timeMax       = !allowOvertime ? (branchHours.close || undefined) : undefined;
 
+  // Round 3, Task 8: the old always-visible day-pill legend is gone (noise now that every
+  // operating day is generated automatically) — this is a single brief, targeted note for the
+  // date actually picked. Two different situations, two different messages: a closure/public
+  // holiday (Task 3) doesn't block creation, just confirms; a non-operating weekday still does
+  // (handleCreateShift's own check, unchanged — that's a structural fact about the branch, not a
+  // soft preference like the labor-rule limits Task 5 loosened) so its note says so upfront
+  // rather than the manager only finding out after clicking Save.
   function checkDateOperating(dateStr) {
     if (!dateStr || !branchSettings) { setDateWarning(""); return; }
+    const holidays = Array.isArray(branchSettings.holidays) ? branchSettings.holidays : [];
+    const closed = holidays.find(h => h?.date === dateStr && h?.enabled !== false);
+    if (closed) { setDateWarning(`${closed.name || "Marked closed"} — you can still create a shift, just confirming.`); return; }
     const dow = jsDayToMonBased(new Date(dateStr + "T00:00:00").getDay());
-    setDateWarning(!operatingDays[dow] ? `${DAY_FULL[dow]} is not an operating day.` : "");
+    setDateWarning(!operatingDays[dow] ? `${DAY_FULL[dow]} is not an operating day — shifts can't be created on it.` : "");
   }
 
   function handleDateChange(dateStr) {
@@ -248,18 +257,6 @@ export default function CreateShift() {
                   type="date" value={form.shift_date} onChange={e => handleDateChange(e.target.value)} />
                 {dateWarning && (
                   <p style={s.warningText}><AlertTriangle size={11} /> {dateWarning}</p>
-                )}
-                {branchSettings && (
-                  <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px" }}>
-                    {DAY_NAMES.map((d, i) => (
-                      <span key={d} style={{
-                        fontSize: "17px", fontWeight: "700", padding: "2px 7px", borderRadius: "99px",
-                        border: `1.5px solid ${operatingDays[i] ? "#2563EB" : "#E2E8F0"}`,
-                        background: operatingDays[i] ? "#EFF6FF" : "#F8FAFC",
-                        color: operatingDays[i] ? "#2563EB" : "#CBD5E1",
-                      }}>{d}</span>
-                    ))}
-                  </div>
                 )}
               </Field>
 
