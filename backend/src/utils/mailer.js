@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const logger = require("../config/logger");
 
 let transporter = null;
 function getTransporter() {
@@ -21,7 +22,10 @@ function getTransporter() {
 async function sendMail({ to, subject, html }) {
   const t = getTransporter();
   if (!t) {
-    console.log(`[EMAIL - DEV] To: ${to} | Subject: ${subject}\n${html}`);
+    // Dev-only fallback (no GMAIL_USER/GMAIL_APP_PASSWORD configured) — intentionally logs the
+    // full email body, including any reset/invite link, so a developer without real credentials
+    // configured can still read and use it locally. Never reached once real credentials are set.
+    logger.info({ to, subject, html }, "[EMAIL - DEV] no mail transport configured, logging instead");
     return { sent: false, dev: true };
   }
   try {
@@ -33,7 +37,7 @@ async function sendMail({ to, subject, html }) {
     });
     return { sent: true };
   } catch (err) {
-    console.error("[mailer] sendMail failed:", err.message);
+    logger.error({ err }, "[mailer] sendMail failed");
     return { sent: false, error: err.message };
   }
 }

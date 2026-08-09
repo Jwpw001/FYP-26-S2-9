@@ -3,6 +3,7 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 const { getLimits } = require("../utils/planLimits");
 const { logAudit } = require("../utils/auditLog");
 const { offboardStaff } = require("../utils/offboarding");
+const { parsePagination } = require("../utils/pagination");
 
 // Resolves business_id for both business owners and managers
 async function resolveBusinessId(user) {
@@ -129,16 +130,25 @@ const getAllStaff = async (req, res) => {
     const branchIds = branches.map(o => o.branch_id);
     if (branchIds.length === 0) return res.json({ success: true, staff: [] });
 
-    const staff = await prisma.staff.findMany({
-      where: { branch_id: { in: branchIds } },
-      include: { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } },
-      orderBy: { staff_id: "asc" },
-    });
-
     const branchNameById = Object.fromEntries(branches.map(o => [o.branch_id, o.name]));
-    const enriched = staff.map(s => ({ ...s, branch_name: branchNameById[s.branch_id] }));
+    const where = { branch_id: { in: branchIds } };
+    const include = { users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } } };
 
-    return res.json({ success: true, staff: enriched });
+    const { requested, page, limit, skip } = parsePagination(req.query);
+    if (!requested) {
+      // No ?page/?limit supplied — preserve the pre-pagination response shape unchanged so
+      // existing frontend calls keep working without a coordinated update.
+      const staff = await prisma.staff.findMany({ where, include, orderBy: { staff_id: "asc" } });
+      const enriched = staff.map(s => ({ ...s, branch_name: branchNameById[s.branch_id] }));
+      return res.json({ success: true, staff: enriched });
+    }
+
+    const [staff, total] = await Promise.all([
+      prisma.staff.findMany({ where, include, orderBy: { staff_id: "asc" }, skip, take: limit }),
+      prisma.staff.count({ where }),
+    ]);
+    const data = staff.map(s => ({ ...s, branch_name: branchNameById[s.branch_id] }));
+    return res.json({ success: true, data, page, limit, total });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

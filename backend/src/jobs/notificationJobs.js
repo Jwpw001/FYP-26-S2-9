@@ -3,6 +3,7 @@ const OpenAI = require("openai");
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUser } = require("../utils/notify");
+const logger = require("../config/logger");
 const { buildBriefMessages } = require("../services/aiAssistantService");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -45,7 +46,7 @@ async function remindMissingAvailability() {
       });
     }
   } catch (err) {
-    console.error("[remindMissingAvailability] error:", err.message);
+    logger.error({ err }, "[remindMissingAvailability] error");
   }
 }
 
@@ -90,7 +91,7 @@ async function remindMissingReports() {
       }
     }
   } catch (err) {
-    console.error("[remindMissingReports] error:", err.message);
+    logger.error({ err }, "[remindMissingReports] error");
   }
 }
 
@@ -123,11 +124,11 @@ async function sendMondayDigest() {
           message: completion.choices[0].message.content,
         });
       } catch (err) {
-        console.error(`[Monday digest] manager ${userId}:`, err.message);
+        logger.error({ err, userId }, "[Monday digest] manager digest failed");
       }
     }
   } catch (err) {
-    console.error("[sendMondayDigest] error:", err.message);
+    logger.error({ err }, "[sendMondayDigest] error");
   }
 }
 
@@ -188,11 +189,11 @@ async function suggestUnderstaffedShifts() {
           message: completion.choices[0].message.content,
         });
       } catch (err) {
-        console.error(`[suggestUnderstaffedShifts] manager ${userId}:`, err.message);
+        logger.error({ err, userId }, "[suggestUnderstaffedShifts] manager suggestion failed");
       }
     }
   } catch (err) {
-    console.error("[suggestUnderstaffedShifts] error:", err.message);
+    logger.error({ err }, "[suggestUnderstaffedShifts] error");
   }
 }
 

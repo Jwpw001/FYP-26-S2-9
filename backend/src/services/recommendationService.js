@@ -1,6 +1,7 @@
 const supabaseAdmin = require("../config/supabaseAdmin");
 const prisma = require("../config/prisma");
 const OpenAI = require("openai");
+const logger = require("../config/logger");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -144,7 +145,7 @@ async function getShiftRecommendations(shiftId) {
       .in("staff_id", casualStaffIds)
       .eq("week_start_date", weekStartStr)
       .eq("day_of_week", dayOfWeek);
-    if (availErr) console.error("casual_availability query failed:", availErr.message);
+    if (availErr) logger.error({ err: availErr }, "casual_availability query failed");
     (availRows || []).forEach(a => { casualAvailMap[a.staff_id] = a; });
   }
 
@@ -362,7 +363,7 @@ Include up to 3 suggestions per task, ordered best-first. Only include staff fro
     });
     source = "ai";
   } catch (err) {
-    console.error("[getShiftRecommendations] AI call failed, using deterministic fallback:", err.message);
+    logger.error({ err }, "[getShiftRecommendations] AI call failed, using deterministic fallback");
     fixedRecs = await buildDeterministicRecommendations();
     source = "deterministic";
   }

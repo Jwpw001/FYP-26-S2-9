@@ -1,4 +1,5 @@
 const { getShiftRecommendations } = require("../services/recommendationService");
+const logger = require("../config/logger");
 
 const recommendShiftStaff = async (req, res) => {
   try {
@@ -8,7 +9,7 @@ const recommendShiftStaff = async (req, res) => {
     const result = await getShiftRecommendations(shiftId);
     res.json(result);
   } catch (err) {
-    console.error("Recommendation error:", err.message);
+    (req.log || logger).error({ err }, "Recommendation error");
     res.status(500).json({ message: "Failed to generate recommendations." });
   }
 };

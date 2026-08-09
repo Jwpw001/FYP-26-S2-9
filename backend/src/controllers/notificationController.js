@@ -1,20 +1,26 @@
 const prisma = require("../config/prisma");
+const { parsePagination } = require("../utils/pagination");
 
 const getNotifications = async (req, res) => {
     try {
-        const notifications = await prisma.notifications.findMany({
-            where: {
-                recipient_id: req.dbUser.user_id
-            },
-            orderBy: {
-                notification_id: "asc"
-            }
-        });
+        const where = { recipient_id: req.dbUser.user_id };
 
-        res.json({
-            success: true,
-            notifications
-        });
+        const { requested, page, limit, skip } = parsePagination(req.query);
+        if (!requested) {
+            // No ?page/?limit supplied — preserve the pre-pagination response shape unchanged so
+            // existing frontend calls keep working without a coordinated update.
+            const notifications = await prisma.notifications.findMany({
+                where,
+                orderBy: { notification_id: "asc" }
+            });
+            return res.json({ success: true, notifications });
+        }
+
+        const [data, total] = await Promise.all([
+            prisma.notifications.findMany({ where, orderBy: { notification_id: "asc" }, skip, take: limit }),
+            prisma.notifications.count({ where }),
+        ]);
+        res.json({ success: true, data, page, limit, total });
     } catch (error) {
         res.status(500).json({
             success: false,

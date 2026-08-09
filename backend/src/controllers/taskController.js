@@ -2,6 +2,7 @@ const prisma        = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 const { logAudit } = require("../utils/auditLog");
+const logger = require("../config/logger");
 
 // Prisma returns date/time columns as JS Date objects, which Express serializes to full ISO
 // strings (e.g. "1970-01-01T09:00:00.000Z" for a `time` column, "2026-07-18T00:00:00.000Z" for
@@ -585,7 +586,7 @@ const getStaffRoster = async (req, res) => {
 
     res.json({ success: true, roster });
   } catch (error) {
-    console.error("[getStaffRoster] ERROR:", error.message, error.stack?.split("\n")[1]);
+    (req.log || logger).error({ err: error }, "[getStaffRoster] error");
     res.status(500).json({ success: false, message: error.message });
   }
 };

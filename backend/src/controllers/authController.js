@@ -3,6 +3,7 @@ const generateToken = require("../utils/generateToken");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const supabaseAuth = require("../config/supabaseAuth");
 const { notifyUsers, getSystemAdminUserIds } = require("../utils/notify");
+const logger = require("../config/logger");
 
 const login = async (req, res) => {
     try {
@@ -254,7 +255,7 @@ const forgotPassword = async (req, res) => {
             options: { redirectTo: `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password` },
         });
         if (error) {
-            console.error("[forgotPassword]", error.message);
+            (req.log || logger).error({ err: error }, "[forgotPassword] generateLink failed");
             // Don't reveal whether the email exists
             return res.json({ success: true, message: "If that email exists, a reset link has been sent." });
         }
@@ -376,7 +377,7 @@ const createStaffAccount = async (req, res) => {
 
         return res.status(201).json({ success: true, message: "Staff account created successfully." });
     } catch (error) {
-        console.error("createStaffAccount error:", error);
+        (req.log || logger).error({ err: error }, "createStaffAccount error");
         return res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -417,7 +418,7 @@ const createManagerAccount = async (req, res) => {
             user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role, avatar_url: newUser.avatar_url || "/avatars/default.png" },
         });
     } catch (error) {
-        console.error("createManagerAccount error:", error);
+        (req.log || logger).error({ err: error }, "createManagerAccount error");
         return res.status(500).json({ success: false, message: error.message });
     }
 };

@@ -1,5 +1,6 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
+const logger = require("../config/logger");
 
 function fmtTime(t) {
   if (!t) return null;
@@ -47,12 +48,12 @@ async function queryFoundryKnowledge(question) {
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!res.ok) { console.error("[Foundry] HTTP error:", res.status); return null; }
+    if (!res.ok) { logger.error({ status: res.status }, "[Foundry] HTTP error"); return null; }
     const data = await res.json();
     return data.output?.[0]?.content?.[0]?.text || null;
   } catch (err) {
     clearTimeout(timeout);
-    if (err.name !== "AbortError") console.error("[Foundry] query failed:", err.message);
+    if (err.name !== "AbortError") logger.error({ err }, "[Foundry] query failed");
     return null;
   }
 }
@@ -90,7 +91,7 @@ async function fetchManagerContext(userId, overrideBranchId = null) {
     branchId = staffRecord?.branch_id ?? null;
   }
 
-  console.log("[AI] userId:", userId, "| branchId resolved:", branchId, overrideBranchId ? `(override from page: ${overrideBranchId})` : "");
+  logger.debug({ userId, branchId, overrideBranchId }, "[AI] resolved branch context");
   context.branchId = branchId;
 
   if (!branchId) {
@@ -102,7 +103,7 @@ async function fetchManagerContext(userId, overrideBranchId = null) {
   const todayStr = today.toISOString().slice(0, 10);
   const weekFromNow = new Date(today);
   weekFromNow.setDate(today.getDate() + 7);
-  console.log("[AI] date window:", todayStr, "→", weekFromNow.toISOString().slice(0,10), "| branchId:", branchId);
+  logger.debug({ todayStr, weekEnd: weekFromNow.toISOString().slice(0, 10), branchId }, "[AI] date window");
   const { monday, sunday } = getWeekBounds();
   const fourWeeksAgo = fourWeeksAgoDate();
   const fourWeeksAgoStr = fourWeeksAgo.toISOString().slice(0, 10);
@@ -170,7 +171,7 @@ async function fetchManagerContext(userId, overrideBranchId = null) {
 
   context.branch = branch;
   context.pendingSwapRequests = pendingSwaps.length;
-  console.log("[AI] shifts fetched:", shifts.length, "→", shifts.map(s => `#${s.shift_id}(${s.title}|${s.shift_date})`).join(", "));
+  logger.debug({ count: shifts.length, shiftIds: shifts.map(s => s.shift_id) }, "[AI] shifts fetched");
 
   // ── Upcoming shifts ──
   context.upcomingShifts = shifts.map((s) => ({
@@ -278,7 +279,7 @@ async function fetchManagerContext(userId, overrideBranchId = null) {
   const branchStaff = [...regularStaff, ...casualStaff];
   const staffIds = branchStaff.map((s) => s.staff_id);
   const userIds  = branchStaff.map((s) => s.users?.user_id).filter(Boolean);
-  console.log("[AI] regular:", regularStaff.length, "| casual:", casualStaff.length, "| staffIds:", staffIds.length);
+  logger.debug({ regularCount: regularStaff.length, casualCount: casualStaff.length, staffIdCount: staffIds.length }, "[AI] staff pool resolved");
 
   if (staffIds.length === 0) {
     context.staffRoster = [];
@@ -1226,12 +1227,12 @@ async function buildMessages(userId, role, question, conversationHistory = [], p
   if (role === "manager") {
     const fullContext = await fetchManagerContext(userId, pageContext?.branch_id ?? null);
     const categories  = classifyQuestion(question);
-    console.log("[AI] question categories:", [...categories]);
+    logger.debug({ categories: [...categories] }, "[AI] question categories");
     context = selectManagerContext(fullContext, categories);
   } else if (role === "business_owner") {
     const fullContext = await fetchBOContext(userId);
     const categories  = classifyQuestion(question);
-    console.log("[AI] question categories:", [...categories]);
+    logger.debug({ categories: [...categories] }, "[AI] question categories");
     context = selectBOContext(fullContext, categories);
   } else if (role === "regular_staff") {
     context = await fetchRegularStaffContext(userId);

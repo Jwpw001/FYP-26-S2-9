@@ -1,5 +1,6 @@
 const OpenAI = require("openai");
 const { buildMessages, buildBriefMessages, TOOLS } = require("../services/aiAssistantService");
+const logger = require("../config/logger");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -70,7 +71,7 @@ async function chat(req, res) {
           const args = JSON.parse(toolCallBuffer.arguments);
           res.write(`data: ${JSON.stringify({ tool_call: { name: toolCallBuffer.name, args } })}\n\n`);
         } catch (e) {
-          console.error("[AI] Failed to parse tool call args:", e);
+          (req.log || logger).error({ err: e }, "[AI] Failed to parse tool call args");
         }
       }
     }
@@ -78,7 +79,7 @@ async function chat(req, res) {
     res.write("data: [DONE]\n\n");
     res.end();
   } catch (err) {
-    console.error("AI Assistant error:", err);
+    (req.log || logger).error({ err }, "AI Assistant error");
     if (!res.headersSent) {
       return res.status(500).json({
         success: false,
@@ -113,7 +114,7 @@ async function brief(req, res) {
 
     res.json({ success: true, content: completion.choices[0].message.content });
   } catch (err) {
-    console.error("AI brief error:", err);
+    (req.log || logger).error({ err }, "AI brief error");
     if (!res.headersSent) {
       res.status(500).json({ success: false, message: "Brief unavailable." });
     }
@@ -208,7 +209,7 @@ Review this shift assignment.`,
 
     res.json({ success: true, review: completion.choices[0].message.content });
   } catch (err) {
-    console.error("AI shift review error:", err);
+    (req.log || logger).error({ err }, "AI shift review error");
     res.status(500).json({ success: false, message: "AI review unavailable." });
   }
 }
@@ -266,7 +267,7 @@ Be concise — max 8 bullet points. Bullet format only. Lead with an overall ver
 
     res.json({ success: true, review: completion.choices[0].message.content });
   } catch (err) {
-    console.error("AI weekly review error:", err);
+    (req.log || logger).error({ err }, "AI weekly review error");
     res.status(500).json({ success: false, message: "AI review unavailable." });
   }
 }

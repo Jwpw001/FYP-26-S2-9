@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const { getLimits } = require("../utils/planLimits");
 const dns = require("dns").promises;
 const { sendMail } = require("../utils/mailer");
+const logger = require("../config/logger");
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -156,7 +157,7 @@ const sendInvitation = async (req, res) => {
 
     return res.status(201).json({ success: true, message: "Invitation sent.", invite_link: inviteLink, code });
   } catch (error) {
-    console.error("sendInvitation error:", error);
+    (req.log || logger).error({ err: error }, "sendInvitation error");
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -323,7 +324,7 @@ const acceptInvitation = async (req, res) => {
       user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role },
     });
   } catch (error) {
-    console.error("acceptInvitation error:", error);
+    (req.log || logger).error({ err: error }, "acceptInvitation error");
     return res.status(500).json({ success: false, message: error.message });
   }
 };

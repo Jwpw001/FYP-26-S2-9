@@ -1,5 +1,7 @@
+const logger = require("../config/logger");
+
 const errorHandler = (err, req, res, next) => {
-    console.error(err.stack);
+    (req.log || logger).error({ err }, "Unhandled error");
 
     const statusCode = err.statusCode || 500;
     // In production, don't hand callers raw error internals (stack-adjacent messages, driver

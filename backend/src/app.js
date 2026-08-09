@@ -3,7 +3,9 @@ const cors = require("cors");
 const morgan = require("morgan");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const pinoHttp = require("pino-http");
 
+const logger = require("./config/logger");
 const errorHandler = require("./middleware/errorMiddleware");
 const authRoutes = require("./routes/authRoutes");
 
@@ -51,6 +53,10 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(morgan("dev"));
+// Attaches req.log (a pino child logger tagged with a request id) so any middleware/controller
+// can log with request context instead of a bare console.log. Kept alongside morgan's terse dev
+// console line rather than replacing it.
+app.use(pinoHttp({ logger }));
 
 // Blanket rate limit across the API; login/register get a tighter limit below to slow brute-forcing.
 app.use(rateLimit({

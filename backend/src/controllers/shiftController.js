@@ -2,6 +2,8 @@ const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUsers } = require("../utils/notify");
 const { logAudit } = require("../utils/auditLog");
+const logger = require("../config/logger");
+const { parsePagination } = require("../utils/pagination");
 
 async function getAssignedStaffUserIds(shiftId) {
   const assignments = await prisma.task_assignments.findMany({
@@ -47,25 +49,35 @@ const getShifts = async (req, res) => {
     const branchId = await getCallerBranchId(req.user.user_id);
     if (!branchId) return res.status(403).json({ success: false, message: "No branch found for your account." });
 
-    const shifts = await prisma.shifts.findMany({
-      where: { branch_id: branchId },
-      include: {
-        branches: true,
-        users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } },
-        shift_tasks: {
-          include: {
-            skills: { select: { skill_id: true, name: true } },
-            task_assignments: {
-              include: {
-                staff: { include: { users: { select: { user_id: true, full_name: true, email: true } } } },
-              },
+    const where = { branch_id: branchId };
+    const include = {
+      branches: true,
+      users: { select: { user_id: true, full_name: true, email: true, role: true, avatar_url: true } },
+      shift_tasks: {
+        include: {
+          skills: { select: { skill_id: true, name: true } },
+          task_assignments: {
+            include: {
+              staff: { include: { users: { select: { user_id: true, full_name: true, email: true } } } },
             },
           },
         },
       },
-      orderBy: { shift_date: "asc" },
-    });
-    res.json({ success: true, shifts });
+    };
+
+    const { requested, page, limit, skip } = parsePagination(req.query);
+    if (!requested) {
+      // No ?page/?limit supplied — preserve the pre-pagination response shape unchanged so
+      // existing frontend calls keep working without a coordinated update.
+      const shifts = await prisma.shifts.findMany({ where, include, orderBy: { shift_date: "asc" } });
+      return res.json({ success: true, shifts });
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.shifts.findMany({ where, include, orderBy: { shift_date: "asc" }, skip, take: limit }),
+      prisma.shifts.count({ where }),
+    ]);
+    res.json({ success: true, data, page, limit, total });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -695,14 +707,14 @@ Generate ALL ${totalShifts} shifts now (${shiftsPerDay} per day × ${finalWorkin
     } catch (aiErr) {
       // Never surface a raw OpenAI/provider error to the client — log it server-side and fall
       // back to the deterministic scorer instead of failing the whole request.
-      console.error("[generateWeeklySchedule] AI scheduling failed, using deterministic fallback:", aiErr.message);
+      (req.log || logger).error({ err: aiErr }, "[generateWeeklySchedule] AI scheduling failed, using deterministic fallback");
       schedule = buildDeterministicSchedule();
       source = "deterministic";
     }
 
     return res.json({ success: true, schedule, hasRoleTemplates: dbTemplates.length > 0, missedCasuals, source });
   } catch (err) {
-    console.error("generateWeeklySchedule error:", err.message);
+    (req.log || logger).error({ err }, "generateWeeklySchedule error");
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -770,7 +782,7 @@ const confirmWeeklySchedule = async (req, res) => {
 
     return res.json({ success: true, created: created.length });
   } catch (err) {
-    console.error("confirmWeeklySchedule error:", err.message);
+    (req.log || logger).error({ err }, "confirmWeeklySchedule error");
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -946,7 +958,7 @@ const rescheduleStaff = async (req, res) => {
 
     return res.json({ success: true, schedule: result });
   } catch (err) {
-    console.error("rescheduleStaff error:", err.message);
+    (req.log || logger).error({ err }, "rescheduleStaff error");
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -1030,7 +1042,7 @@ Max 5 flags. Cover: coverage gaps, workload balance, overworked staff, positive 
     const review = JSON.parse(completion.choices[0].message.content);
     return res.json({ success: true, review });
   } catch (err) {
-    console.error("reviewWeeklySchedule error:", err.message);
+    (req.log || logger).error({ err }, "reviewWeeklySchedule error");
     return res.status(500).json({ error: err.message });
   }
 };
@@ -1188,7 +1200,7 @@ const previewRoster = async (req, res) => {
 
     res.json({ success: true, roster });
   } catch (error) {
-    console.error("[previewRoster] ERROR:", error.message, error.stack?.split("\n")[1]);
+    (req.log || logger).error({ err: error }, "[previewRoster] error");
     res.status(500).json({ success: false, message: error.message });
   }
 };

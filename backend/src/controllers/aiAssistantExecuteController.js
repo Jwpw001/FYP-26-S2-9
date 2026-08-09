@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUser } = require("../utils/notify");
+const logger = require("../config/logger");
 
 const ALLOWED_TOOLS = ["approve_leave", "reject_leave", "create_draft_shift", "add_task_to_shift", "publish_shift", "assign_staff_to_task", "set_staff_active"];
 
@@ -249,7 +250,7 @@ async function execute(req, res) {
 
     res.json({ success: true, message });
   } catch (err) {
-    console.error("[AI execute] error:", err);
+    (req.log || logger).error({ err }, "[AI execute] error");
     if (!res.headersSent) {
       res.status(500).json({ success: false, message: "Action failed. Please try again." });
     }
