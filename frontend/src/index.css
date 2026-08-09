@@ -296,3 +296,55 @@ html {
     padding-top: max(0px, env(safe-area-inset-top));
   }
 }
+
+/* ── Suggested-skills bottom sheet (manager Skill Tags, <1024px) ──────────
+   A fixed-width side panel (like the dashboard sidebar) has no room on a
+   phone or a narrow tablet — but a SIDE drawer at this width would collide
+   with the existing hamburger nav drawer and fight the browser's back-swipe
+   gesture, so this slides up from the bottom instead. Reuses the exact
+   transform/transition approach .dash-sidebar already uses (translate,
+   0.25s ease, an -open modifier class) rather than inventing a new one —
+   just on the Y axis instead of X. The scrim itself can't reuse
+   .dash-overlay directly: that's hard-coded to the nav drawer's 768px
+   breakpoint, and this needs 1024px, so it's the same rgba/z-index values
+   in a same-shaped class instead. */
+@media (min-width: 1024px) {
+  .skill-sheet-trigger { display: none !important; }
+}
+/* Unconditional base state, same as .dash-overlay's own pattern — otherwise this div, unstyled,
+   would fall back to the browser's default block display at ≥1024px and become a stray empty
+   flex child in the LEFT+RIGHT row, which is exactly the "byte-identical desktop" this task
+   requires NOT to happen. */
+.skill-sheet-scrim {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .skill-sheet-scrim.skill-sheet-scrim-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 400;
+  }
+  .skill-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 401;
+    max-height: 68vh;
+    border-radius: 20px 20px 0 0 !important;
+    width: auto !important;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18);
+  }
+  .skill-sheet.skill-sheet-open {
+    transform: translateY(0);
+  }
+}
+@supports (padding: max(0px)) {
+  .skill-sheet {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}

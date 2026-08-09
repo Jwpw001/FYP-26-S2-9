@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
-import { Plus, X, Search, CheckCircle2, Sparkles, PartyPopper } from "lucide-react";
+import { Plus, X, Search, CheckCircle2, Sparkles, PartyPopper, ChevronDown } from "lucide-react";
 
 export default function SkillSettings() {
   const [branchId,     setBranchId]     = useState(null);
@@ -18,6 +18,14 @@ export default function SkillSettings() {
   const [deleting,     setDeleting]     = useState(null);
   const [error,        setError]        = useState("");
   const [success,      setSuccess]      = useState("");
+  const [sheetOpen,    setSheetOpen]    = useState(false); // Round 4, Task 2: suggested-skills bottom sheet, <1024px only
+
+  useEffect(() => {
+    if (!sheetOpen) return;
+    function onKey(e) { if (e.key === "Escape") setSheetOpen(false); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [sheetOpen]);
 
   useEffect(() => {
     // Load global suggestions immediately regardless of branch assignment
@@ -59,6 +67,7 @@ export default function SkillSettings() {
     try {
       await api.post(`/api/business/branches/${branchId}/skills`, { skill_id });
       await loadSkills(branchId);
+      setSheetOpen(false); // no-op on desktop where the sheet isn't in play
     } catch (err) { setError(err.message); }
     finally { setAdding(false); }
   }
@@ -113,6 +122,16 @@ export default function SkillSettings() {
               </span>
             )}
           </div>
+
+          {/* Round 4, Task 2 — the side panel becomes a bottom sheet below 1024px; this is how
+              it's opened there. Hidden ≥1024px via .skill-sheet-trigger, where the panel is
+              already visible inline as it always was. */}
+          {!noBranch && (
+            <button className="skill-sheet-trigger" onClick={() => setSheetOpen(true)}
+              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", width:"100%", marginBottom:"16px", flexShrink:0, padding:"10px 14px", borderRadius:"10px", border:"1.5px solid #BFDBFE", background:"#EFF6FF", color:"#1D4ED8", fontSize:"20px", fontWeight:"700", cursor:"pointer" }}>
+              <Sparkles size={14} /> Suggested skills ({suggestions.length})
+            </button>
+          )}
 
           {!pendingName && (
             <div style={{ display:"flex", gap:"8px", marginBottom:"16px", flexShrink:0 }}>
@@ -237,11 +256,25 @@ export default function SkillSettings() {
           </div>
         </div>
 
-        {/* ── RIGHT: Suggestions ── */}
-        <div style={{ width:"340px", flexShrink:0, display:"flex", flexDirection:"column", background:"#FAFBFE", overflow:"hidden" }}>
+        {/* ── RIGHT: Suggestions — inline panel ≥1024px, bottom sheet below it ── */}
+        <div className={`skill-sheet-scrim${sheetOpen ? " skill-sheet-scrim-open" : ""}`} onClick={() => setSheetOpen(false)} />
+        <div className={`skill-sheet${sheetOpen ? " skill-sheet-open" : ""}`} style={{ width:"340px", flexShrink:0, display:"flex", flexDirection:"column", background:"#FAFBFE", overflow:"hidden" }}>
+          {/* Drag handle + close — only rendered content that matters ≥1024px is everything below; this row is invisible there since the sheet itself isn't fixed/positioned at that width, just sits inline as always. */}
+          <div className="skill-sheet-trigger" style={{ display:"flex", justifyContent:"center", padding:"10px 0 0", flexShrink:0 }}>
+            <button onClick={() => setSheetOpen(false)} aria-label="Close"
+              style={{ width:"36px", height:"5px", borderRadius:"100px", background:"#E2E8F0", border:"none", cursor:"pointer", padding:0 }} />
+          </div>
           <div style={{ padding:"28px 24px 16px", flexShrink:0, borderBottom:"1px solid #F1F5F9" }}>
-            <h3 style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B", marginBottom:"3px" }}>Suggested Skills</h3>
-            <p style={{ fontSize:"18px", color:"#94A3B8", marginBottom:"12px" }}>Click any skill to add it to your branch</p>
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"8px" }}>
+              <div>
+                <h3 style={{ fontSize:"21px", fontWeight:"700", color:"#1E293B", marginBottom:"3px" }}>Suggested Skills</h3>
+                <p style={{ fontSize:"18px", color:"#94A3B8", marginBottom:"12px" }}>Click any skill to add it to your branch</p>
+              </div>
+              <button className="skill-sheet-trigger" onClick={() => setSheetOpen(false)} aria-label="Close suggestions"
+                style={{ flexShrink:0, width:"30px", height:"30px", borderRadius:"8px", border:"1px solid #E2E8F0", background:"#fff", color:"#64748B", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <ChevronDown size={16} />
+              </button>
+            </div>
             <div style={{ display:"flex", alignItems:"center", gap:"8px", background:"#F8FAFC", borderRadius:"9px", padding:"7px 12px", border:"1px solid #E8EDF5" }}>
               <Search size={13} color="#94A3B8" strokeWidth={2}/>
               <input value={suggestSearch} onChange={e => setSuggestSearch(e.target.value)}
