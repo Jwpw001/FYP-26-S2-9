@@ -1,4 +1,5 @@
 const supabaseAdmin = require("../config/supabaseAdmin");
+const prisma = require("../config/prisma");
 const OpenAI = require("openai");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -205,7 +206,93 @@ async function getShiftRecommendations(shiftId) {
     end_time: toHHMM(t.end_time) || toHHMM(shift.end_time),
   }));
 
-  // 8. Call Groq
+  // 8. Deterministic fallback — used if the AI call fails for any reason (missing/invalid API
+  // key, rate limit, network error, malformed JSON). Scores every candidate actually offered to
+  // the AI for each task with the same weighted formula as autoAssignCasual (availability,
+  // skills, workload, neutral attendance/performance), using the business's configured
+  // branch_allocation_preferences weights.
+  async function buildDeterministicRecommendations() {
+    const { data: branchAlloc } = await supabaseAdmin
+      .from("branch_allocation_preferences")
+      .select("*")
+      .eq("branch_id", shift.branch_id)
+      .maybeSingle();
+    const wAvail  = branchAlloc?.weight_availability ?? 40;
+    const wSkills = branchAlloc?.weight_skills       ?? 30;
+    const wAttend = branchAlloc?.weight_attendance   ?? 15;
+    const wPerf   = branchAlloc?.weight_performance  ?? 10;
+    const wWork   = branchAlloc?.weight_workload     ?? 5;
+    const NEUTRAL = 0.5;
+    const EXPERIENCE_SCORE = { junior: 0.5, intermediate: 0.75, senior: 1, expert: 1 };
+
+    const staffIds = staffRows.map(s => s.staff_id);
+    const pastCounts = staffIds.length > 0
+      ? await prisma.task_assignments.groupBy({
+          by: ["staff_id"],
+          where: { staff_id: { in: staffIds }, status: { not: "cancelled" } },
+          _count: { staff_id: true },
+        })
+      : [];
+    const pastByStaffId = Object.fromEntries(pastCounts.map(r => [r.staff_id, r._count.staff_id]));
+    const maxPast = Math.max(...staffIds.map(id => pastByStaffId[id] || 0), 0);
+
+    return openTasks.map(t => {
+      const rangeStart = t.start_time || shift.start_time;
+      const rangeEnd   = t.end_time   || shift.end_time;
+
+      const scored = staffRows
+        .map(s => {
+          const user = userMap[s.user_id] || {};
+          if (user.role === "manager") return null;
+          if (alreadyAssignedStaffIds.has(s.staff_id)) return null;
+          if (onLeaveStaffIds.has(s.staff_id)) return null;
+          if (doubleBookedIds.has(s.staff_id)) return null;
+
+          let availSub = 1;
+          let lowConfidence = false;
+          if (s.staff_type === "casual") {
+            const av = casualAvailMap[s.staff_id];
+            if (!av) return null; // no availability submitted — not a real candidate
+            const covers = fullyCovers(av.available_from, av.available_to, rangeStart, rangeEnd);
+            if (!covers) { availSub = 0.3; lowConfidence = true; }
+          } else {
+            const bitmask = s.default_work_days || "1111100";
+            if (bitmask[dayOfWeek] !== "1") return null; // not a regular work day
+          }
+
+          const skillTags = skillMap[s.user_id] || [];
+          let skillsSub, hasSkill = false;
+          if (!t.skill_id) {
+            skillsSub = 1;
+          } else {
+            const tag = skillTags.find(sk => sk.skill_id === t.skill_id);
+            if (!tag) { skillsSub = 0; }
+            else { hasSkill = true; skillsSub = EXPERIENCE_SCORE[(tag.proficiency || "").toLowerCase()] ?? 0.7; }
+          }
+
+          const pastAssignments = pastByStaffId[s.staff_id] || 0;
+          const workSub = maxPast === 0 ? 1 : 1 - pastAssignments / maxPast;
+
+          const score = wAvail * availSub + wSkills * skillsSub + wAttend * NEUTRAL + wPerf * NEUTRAL + wWork * workSub;
+
+          return { staff_id: s.staff_id, name: user.full_name || user.email, score, lowConfidence, hasSkill };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map(c => ({
+          staff_id: c.staff_id,
+          name: c.name,
+          confidence: c.lowConfidence ? "low" : (c.score >= 75 ? "high" : c.score >= 50 ? "medium" : "low"),
+          reason: c.lowConfidence
+            ? "Deterministic fallback: available window doesn't fully cover this task's hours, so flagged low confidence."
+            : `Deterministic fallback: ranked by availability, skill match and workload${c.hasSkill ? " (holds the required skill)" : ""}.`,
+        }));
+
+      return { role_id: t.task_id, role_name: t.title, suggestions: scored };
+    });
+  }
+
   const prompt = `You are a smart workforce scheduling assistant for an F&B branch.
 
 SHIFT: ${shift.title} on ${shift.shift_date} (${shiftDayName}), ${toHHMM(shift.start_time)}–${toHHMM(shift.end_time)} at ${shift.branches?.name}
@@ -242,25 +329,43 @@ Respond ONLY with valid JSON in this exact format:
 
 Include up to 3 suggestions per task, ordered best-first. Only include staff from that task's available-staff list above.`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-    max_tokens: 1500,
-    temperature: 0.3,
-    response_format: { type: "json_object" },
-  });
+  let fixedRecs;
+  let source;
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1500,
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+    });
 
-  const raw = completion.choices[0].message.content;
-  const parsed = JSON.parse(raw);
+    const raw = completion.choices[0].message.content;
+    const parsed = JSON.parse(raw);
 
-  // LLM often hallucinates task IDs — remap by task title to real IDs
-  const taskTitleToId = Object.fromEntries(
-    openTasks.map(t => [t.title.toLowerCase().trim(), t.task_id])
-  );
-  const fixedRecs = (parsed.recommendations || []).map(rec => ({
-    ...rec,
-    role_id: taskTitleToId[rec.role_name?.toLowerCase().trim()] ?? rec.role_id,
-  }));
+    // LLM often hallucinates task IDs — remap by task title to real IDs first (second line of
+    // defense; the staff_id/task_id check below is the primary one).
+    const taskTitleToId = Object.fromEntries(
+      openTasks.map(t => [t.title.toLowerCase().trim(), t.task_id])
+    );
+    // The exact candidate staff_id set actually offered to the model for each task — anything
+    // outside this per task is a hallucination and gets dropped rather than trusted.
+    const validStaffIdsByTask = Object.fromEntries(
+      openTasks.map(t => [t.task_id, new Set(buildStaffContext(t).map(s => s.staff_id))])
+    );
+
+    fixedRecs = (parsed.recommendations || []).map(rec => {
+      const role_id = taskTitleToId[rec.role_name?.toLowerCase().trim()] ?? rec.role_id;
+      const validStaffIds = validStaffIdsByTask[role_id];
+      const suggestions = (rec.suggestions || []).filter(s => validStaffIds?.has(s.staff_id));
+      return { ...rec, role_id, suggestions };
+    });
+    source = "ai";
+  } catch (err) {
+    console.error("[getShiftRecommendations] AI call failed, using deterministic fallback:", err.message);
+    fixedRecs = await buildDeterministicRecommendations();
+    source = "deterministic";
+  }
 
   return {
     shift: {
@@ -270,6 +375,7 @@ Include up to 3 suggestions per task, ordered best-first. Only include staff fro
       end_time: shift.end_time,
     },
     recommendations: fixedRecs,
+    source,
   };
 }
 

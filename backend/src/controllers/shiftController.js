@@ -609,19 +609,98 @@ OUTPUT FORMAT:
 
 Generate ALL ${totalShifts} shifts now (${shiftsPerDay} per day × ${finalWorkingDays.length} working days):`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 5000,
-      temperature: 0.2,
-    });
+    // Deterministic fallback if the AI call fails for any reason (missing/invalid API key, rate
+    // limit, network error, malformed response) — this is a core scheduling feature and
+    // shouldn't go dark just because the OpenAI call did, especially given the business was told
+    // to expect low ongoing cost. Greedy per-slot: for each date x shift x role, score every
+    // eligible person with the same weighted formula as autoAssignCasual/getShiftRecommendations
+    // (availability, skills, workload, neutral attendance/performance) and take the top scorers.
+    // Skill matching here is a crude case-insensitive role-name/skill-name substring match rather
+    // than the AI's semantic judgement — a real limitation of a rule-based fallback, documented
+    // rather than hidden.
+    function buildDeterministicSchedule() {
+      const NEUTRAL = 0.5;
+      const weeklyAssignmentCount = {};
+      const bump = (name) => { weeklyAssignmentCount[name] = (weeklyAssignmentCount[name] || 0) + 1; };
+      const countOf = (name) => weeklyAssignmentCount[name] || 0;
 
-    const raw = completion.choices[0].message.content;
-    const match = raw.match(/\[[\s\S]*\]/);
-    if (!match) return res.status(500).json({ success: false, message: "AI returned invalid schedule format. Please try again." });
+      function skillsSubScoreFor(name, roleName) {
+        const skills = skillsByStaff[name];
+        if (!skills || skills.length === 0) return NEUTRAL;
+        const rn = (roleName || "").toLowerCase();
+        const hasMatch = skills.some(sk => sk && (rn.includes(sk.toLowerCase()) || sk.toLowerCase().includes(rn)));
+        return hasMatch ? 1 : 0.3;
+      }
 
-    const schedule = JSON.parse(match[0]);
-    return res.json({ success: true, schedule, hasRoleTemplates: dbTemplates.length > 0, missedCasuals });
+      return finalWorkingDays.flatMap(date => {
+        const onLeaveNames = new Set(
+          Object.entries(leaveDaysByName).filter(([, ds]) => ds.includes(date)).map(([n]) => n)
+        );
+        const casualOnDate = casualSlotsByDate[date] || {};
+
+        return shiftSlots.map((slot, si) => {
+          const roles = getRolesForShift(si);
+          const effectiveRoles = roles.length > 0 ? roles : [{ role_name: "Staff", headcount: 1 }];
+          const ss = toMins(slot.start), se = toMins(slot.end);
+          const assignedThisShift = new Set();
+
+          const roleResults = effectiveRoles.map(role => {
+            const headcount = role.headcount || 1;
+            const pool = [];
+            regularStaff.forEach(name => {
+              if (onLeaveNames.has(name) || assignedThisShift.has(name)) return;
+              pool.push({ name, availSub: 1 });
+            });
+            Object.entries(casualOnDate).forEach(([name, { from, to }]) => {
+              if (onLeaveNames.has(name) || assignedThisShift.has(name)) return;
+              const af = toMins(from), at = toMins(to);
+              const covers = af !== null && at !== null && af <= ss && at >= se;
+              pool.push({ name, availSub: covers ? 1 : 0.3 });
+            });
+
+            const scored = pool.map(p => {
+              const skillsSub = skillsSubScoreFor(p.name, role.role_name);
+              const workSub = 1 / (1 + countOf(p.name)); // more picks already this week -> lower score
+              const score = wAvail * p.availSub + wSkills * skillsSub + wAttend * NEUTRAL + wPerf * NEUTRAL + wWork * workSub;
+              return { ...p, score };
+            }).sort((a, b) => b.score - a.score);
+
+            const picked = scored.slice(0, headcount);
+            picked.forEach(p => { assignedThisShift.add(p.name); bump(p.name); });
+
+            return { role_name: role.role_name, headcount, assigned_staff: picked.map(p => p.name) };
+          });
+
+          return { title: `${slot.name} Shift`, date, start_time: slot.start, end_time: slot.end, roles: roleResults };
+        });
+      });
+    }
+
+    let schedule;
+    let source;
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 5000,
+        temperature: 0.2,
+      });
+
+      const raw = completion.choices[0].message.content;
+      const match = raw.match(/\[[\s\S]*\]/);
+      if (!match) throw new Error("AI returned invalid schedule format.");
+
+      schedule = JSON.parse(match[0]);
+      source = "ai";
+    } catch (aiErr) {
+      // Never surface a raw OpenAI/provider error to the client — log it server-side and fall
+      // back to the deterministic scorer instead of failing the whole request.
+      console.error("[generateWeeklySchedule] AI scheduling failed, using deterministic fallback:", aiErr.message);
+      schedule = buildDeterministicSchedule();
+      source = "deterministic";
+    }
+
+    return res.json({ success: true, schedule, hasRoleTemplates: dbTemplates.length > 0, missedCasuals, source });
   } catch (err) {
     console.error("generateWeeklySchedule error:", err.message);
     return res.status(500).json({ success: false, message: err.message });
