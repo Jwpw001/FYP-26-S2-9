@@ -29,6 +29,8 @@ const {
     validateAssignment,
 } = require("../controllers/taskController");
 
+const { generateShifts } = require("../controllers/shiftGenerationController");
+
 const validate = require("../middleware/validateMiddleware");
 const verifyToken = require("../middleware/authMiddleware");
 const allowRoles = require("../middleware/roleMiddleware");
@@ -51,6 +53,7 @@ const MANAGER_ONLY = [ROLES.BRANCH_MANAGER, ROLES.SYSTEM_ADMIN];
 
 router.get("/me/tasks",     verifyToken, allowRoles(...ALL_SHIFT_ROLES), getMyTasks);
 router.post("/generate-week",  verifyToken, allowRoles(...MANAGER_ONLY), generateWeeklySchedule);
+router.post("/generate",       verifyToken, allowRoles(...MANAGER_ONLY), generateShifts);
 router.post("/confirm-week",   verifyToken, allowRoles(...MANAGER_ONLY), confirmWeeklySchedule);
 router.post("/reschedule-staff", verifyToken, allowRoles(...MANAGER_ONLY), rescheduleStaff);
 router.post("/review-schedule",  verifyToken, allowRoles(...MANAGER_ONLY), reviewWeeklySchedule);

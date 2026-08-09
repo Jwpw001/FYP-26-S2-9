@@ -152,6 +152,7 @@ const createShift = async (req, res) => {
         deadline: deadline ? new Date(deadline) : null,
         status,
         created_by: req.user.user_id,
+        source: "manual",
       },
     });
     res.status(201).json({ success: true, message: "Shift created successfully", shift });

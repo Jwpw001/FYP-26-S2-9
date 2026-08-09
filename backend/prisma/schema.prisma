@@ -332,6 +332,11 @@ model shifts {
   created_by       Int?
   shift_type       String             @default("regular") @db.VarChar(30)
   deadline         DateTime?          @db.Date
+  // Round 3, Task 2: distinguishes shifts created by the template-based generation routine from
+  // manually created ones, so generation can skip a date a manager already handled by hand and
+  // the UI can show which is which. Nullable (not defaulted) so every pre-existing row reads as
+  // NULL — application code treats NULL the same as "manual", exactly its prior behaviour.
+  source           String?            @db.VarChar(20)
   shift_tasks      shift_tasks[]
   users            users?             @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
   branches         branches           @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction, map: "shifts_outlet_id_fkey")

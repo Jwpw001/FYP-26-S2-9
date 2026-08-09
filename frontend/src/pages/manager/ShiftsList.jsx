@@ -4,7 +4,7 @@ import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
-import { Trash2, Check, X, Sparkles, Calendar, AlertTriangle } from "lucide-react";
+import { Trash2, Check, X, Sparkles, Calendar, AlertTriangle, RefreshCw } from "lucide-react";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-shifts-styles")) {
@@ -87,6 +87,20 @@ export default function ShiftsList() {
   const [calendarScope, setCalendarScope] = useState("week");
   const [dayOffset, setDayOffset]   = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
+
+  // Round 3, Task 2 — template-based generation (deterministic, distinct from the AI weekly
+  // scheduler below): fills the rolling horizon from branch_task_templates.
+  const [templateGen, setTemplateGen] = useState({ running: false, result: null, error: "" });
+
+  async function runTemplateGeneration() {
+    setTemplateGen({ running: true, result: null, error: "" });
+    try {
+      const res = await api.post("/api/shifts/generate", {});
+      setTemplateGen({ running: false, result: res, error: "" });
+    } catch (e) {
+      setTemplateGen({ running: false, result: null, error: e.message || "Generation failed." });
+    }
+  }
 
   // AI Weekly Schedule state — step: 'config' | 'generating' | 'preview' | 'creating' | 'done'
   const [weeklyAI, setWeeklyAI] = useState(null);
@@ -516,6 +530,11 @@ export default function ShiftsList() {
           </button>
           <div style={{ fontSize:"22px", fontWeight:"700", color:"#1E293B" }}>{periodLabel}</div>
           <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+            <button onClick={runTemplateGeneration} disabled={templateGen.running}
+              title="Fill the rolling horizon from this branch's task templates"
+              style={{ background:"#fff", color:"#334155", padding:"8px 14px", borderRadius:"9px", fontSize:"20px", fontWeight:"700", border:"1.5px solid #E2E8F0", cursor: templateGen.running ? "default" : "pointer", display:"flex", alignItems:"center", gap:"6px" }}>
+              <RefreshCw size={13} /> {templateGen.running ? "Generating…" : "Generate from Templates"}
+            </button>
             {(view === "list" || calendarScope === "week") && (
               <button onClick={() => openGenerateConfig(weekDates)}
                 style={{ background:"linear-gradient(135deg,#8B5CF6,#6D28D9)", color:"#fff", padding:"8px 14px", borderRadius:"9px", fontSize:"20px", fontWeight:"700", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:"6px", transition:"filter 0.15s" }}>
@@ -528,6 +547,17 @@ export default function ShiftsList() {
             </button>
           </div>
         </div>
+
+        {(templateGen.result || templateGen.error) && (
+          <div style={{ background: templateGen.error ? "#FEF2F2" : "#F0FDF4", border:`1px solid ${templateGen.error ? "#FECACA" : "#BBF7D0"}`, borderRadius:"10px", padding:"10px 14px", marginBottom:"14px", fontSize:"19px", color: templateGen.error ? "#991B1B" : "#166534", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"10px" }}>
+            <span>
+              {templateGen.error
+                ? templateGen.error
+                : `Generated ${templateGen.result.created_count} shift${templateGen.result.created_count === 1 ? "" : "s"}. ${templateGen.result.skipped.length} day${templateGen.result.skipped.length === 1 ? "" : "s"} skipped (already covered, closed, or no templates set).`}
+            </span>
+            <button onClick={() => setTemplateGen({ running:false, result:null, error:"" })} style={{ background:"none", border:"none", cursor:"pointer", color:"inherit", display:"flex" }}><X size={14} /></button>
+          </div>
+        )}
 
         {/* ── Main content ── */}
         {loading ? (
