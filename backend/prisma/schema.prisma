@@ -464,6 +464,15 @@ model timesheets {
   shift_id      Int?
   evidence_path String?
   evidence_name String?
+  // Round 3, Task 4: actual worked from/to time, distinct from the rostered shift/task window.
+  // Nullable, no default — every existing row has neither (they only ever recorded
+  // hours_worked), and application code must keep tolerating that: when either is null, worked/
+  // additional/overtime hours are reported as unknown, falling back to hours_worked for the
+  // worked-hours figure only. When both are present, hours_worked is derived from them at
+  // submission time (see timesheetController.submitReport) so every existing reader of
+  // hours_worked keeps working unchanged.
+  start_time    DateTime? @db.Time(6)
+  end_time      DateTime? @db.Time(6)
   users         users?    @relation(fields: [reviewed_by], references: [user_id], onUpdate: NoAction)
   staff         staff     @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
 }

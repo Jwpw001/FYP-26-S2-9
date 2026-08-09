@@ -114,6 +114,10 @@ function DateBlock({ date, highlight = false }) {
 export default function MyTasks({ Layout = StaffLayout }) {
   const user   = getUser();
   const userId = user?.user_id;
+  // Round 3, Task 4: casual workers report actual worked hours as a from/to time; regular staff
+  // keep the existing plain-hours flow unchanged, per the task's own instruction not to add a
+  // new obligation for them.
+  const isCasual = user?.role === "casual_staff";
 
   const [staffId,    setStaffId]    = useState(null);
   const [shifts,     setShifts]     = useState([]);
@@ -164,6 +168,10 @@ export default function MyTasks({ Layout = StaffLayout }) {
           acknowledged:  a.acknowledged,
           shift:         a.shifts,
           role_name:     a.shift_tasks?.title || null,
+          // Round 3, Task 4: the task's own window, when set, is the "rostered" window a casual
+          // worker's actual-hours entry pre-fills from — falls back to the shift's window below.
+          task_start_time: a.shift_tasks?.start_time || null,
+          task_end_time:   a.shift_tasks?.end_time || null,
         })));
 
         const { data: tsRows } = await supabase
@@ -220,18 +228,30 @@ export default function MyTasks({ Layout = StaffLayout }) {
   }
 
   async function submitReport(a) {
-    const d     = formData[formKey(a)] || {};
-    const hours = parseFloat(d.hours || "0");
-    const desc  = (d.desc || "").trim();
-    if (!hours || hours <= 0) { showToast("Please enter valid hours.", false); return; }
-    if (!desc)                { showToast("Please describe what you did.", false); return; }
+    const d    = formData[formKey(a)] || {};
+    const desc = (d.desc || "").trim();
+    if (!desc) { showToast("Please describe what you did.", false); return; }
+
+    let hours = null;
+    if (isCasual) {
+      if (!d.startTime || !d.endTime) { showToast("Please enter both a start and end time.", false); return; }
+      if (d.endTime <= d.startTime)   { showToast("End time must be after start time.", false); return; }
+    } else {
+      hours = parseFloat(d.hours || "0");
+      if (!hours || hours <= 0) { showToast("Please enter valid hours.", false); return; }
+    }
 
     setSubmitting(formKey(a));
     try {
       const body = new FormData();
       body.append("log_date", a.shift?.shift_date || "");
-      body.append("hours_worked", String(hours));
       body.append("description", desc);
+      if (isCasual) {
+        body.append("start_time", d.startTime);
+        body.append("end_time", d.endTime);
+      } else {
+        body.append("hours_worked", String(hours));
+      }
       if (a.shift?.shift_id != null) body.append("shift_id", String(a.shift.shift_id));
       if (d.file) body.append("evidence", d.file);
 
@@ -333,7 +353,15 @@ export default function MyTasks({ Layout = StaffLayout }) {
         <SubmitReportModal
           assignment={reportModalFor}
           existing={timesheets[tsKey(reportModalFor)]}
-          form={formData[formKey(reportModalFor)] || { hours: shiftDuration(reportModalFor.shift?.start_time, reportModalFor.shift?.end_time) > 0 ? String(shiftDuration(reportModalFor.shift?.start_time, reportModalFor.shift?.end_time)) : "", desc: "", file: null }}
+          isCasual={isCasual}
+          form={formData[formKey(reportModalFor)] || {
+            hours: shiftDuration(reportModalFor.shift?.start_time, reportModalFor.shift?.end_time) > 0 ? String(shiftDuration(reportModalFor.shift?.start_time, reportModalFor.shift?.end_time)) : "",
+            // Pre-filled with the rostered TASK window (falling back to the shift's) so the
+            // common case for a casual worker is one confirmation, not manual entry.
+            startTime: (reportModalFor.task_start_time || reportModalFor.shift?.start_time || "").slice(0, 5),
+            endTime:   (reportModalFor.task_end_time || reportModalFor.shift?.end_time || "").slice(0, 5),
+            desc: "", file: null,
+          }}
           onChange={patch => setFormData(p => ({ ...p, [formKey(reportModalFor)]: { ...(p[formKey(reportModalFor)] || {}), ...patch } }))}
           submitting={submitting === formKey(reportModalFor)}
           onSubmit={() => submitReport(reportModalFor)}
@@ -865,7 +893,7 @@ function ReportsTab({ shifts, allDoneCount, loading, timesheets, tsKey, formKey,
 }
 
 // ── Submit Report Modal ────────────────────────────────────────────────────────
-function SubmitReportModal({ assignment: a, existing, form, onChange, submitting, onSubmit, onClose }) {
+function SubmitReportModal({ assignment: a, existing, form, onChange, submitting, onSubmit, onClose, isCasual }) {
   const s = a.shift;
   const isResubmit = existing?.status === "rejected";
   const fileInputId = "report-evidence-input";
@@ -909,14 +937,32 @@ function SubmitReportModal({ assignment: a, existing, form, onChange, submitting
 
         {/* Form */}
         <div style={{ padding:"20px 24px", overflowY:"auto", flex:1 }}>
-          <div style={{ marginBottom:"16px" }}>
-            <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>HOURS WORKED</label>
-            <input type="number" min="0.5" max="24" step="0.5" placeholder="e.g. 6"
-              value={form.hours}
-              onChange={e => onChange({ hours: e.target.value })}
-              style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px",
-                color:"#1E293B", outline:"none", background:"#FFF", width:"120px", boxSizing:"border-box" }} />
-          </div>
+          {isCasual ? (
+            <div style={{ marginBottom:"16px" }}>
+              <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>ACTUAL TIME WORKED</label>
+              <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+                <input type="time" value={form.startTime || ""}
+                  onChange={e => onChange({ startTime: e.target.value })}
+                  style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px",
+                    color:"#1E293B", outline:"none", background:"#FFF", boxSizing:"border-box" }} />
+                <span style={{ color:"#94A3B8" }}>–</span>
+                <input type="time" value={form.endTime || ""}
+                  onChange={e => onChange({ endTime: e.target.value })}
+                  style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px",
+                    color:"#1E293B", outline:"none", background:"#FFF", boxSizing:"border-box" }} />
+              </div>
+              <p style={{ fontSize:"11px", color:"#94A3B8", marginTop:"6px" }}>Pre-filled with your rostered time — change it if you actually worked different hours.</p>
+            </div>
+          ) : (
+            <div style={{ marginBottom:"16px" }}>
+              <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>HOURS WORKED</label>
+              <input type="number" min="0.5" max="24" step="0.5" placeholder="e.g. 6"
+                value={form.hours}
+                onChange={e => onChange({ hours: e.target.value })}
+                style={{ padding:"10px 12px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"14px",
+                  color:"#1E293B", outline:"none", background:"#FFF", width:"120px", boxSizing:"border-box" }} />
+            </div>
+          )}
 
           <div style={{ marginBottom:"16px" }}>
             <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>WHAT DID YOU WORK ON?</label>

@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
+const { computeHoursMetrics } = require("../utils/hoursMetrics");
 
 const EVIDENCE_BUCKET = "report-evidence";
 const MANAGER_ROLES = ["manager", "business_owner", "system_admin"];
@@ -23,11 +24,33 @@ const submitReport = async (req, res) => {
     const staffRow = await prisma.staff.findFirst({ where: { user_id: userId }, select: { staff_id: true } });
     if (!staffRow) return res.status(404).json({ success: false, message: "Staff record not found." });
 
-    const { shift_id, log_date, hours_worked, description } = req.body;
-    const hours = Number(hours_worked);
+    const { shift_id, log_date, hours_worked, description, start_time, end_time } = req.body;
     if (!log_date) return res.status(400).json({ success: false, message: "log_date is required." });
-    if (!hours || hours <= 0) return res.status(400).json({ success: false, message: "Valid hours_worked is required." });
     if (!description?.trim()) return res.status(400).json({ success: false, message: "Description is required." });
+
+    // Round 3, Task 4: actual worked from/to time is optional (regular staff keep submitting a
+    // plain hours_worked total, exactly as before). When both are given, they're the source of
+    // truth — hours_worked is derived from them, not taken from the client, so the two can never
+    // disagree. Midnight-crossing isn't supported anywhere else in this schema (shift creation
+    // already rejects end <= start), so the same rule applies here rather than guessing a
+    // next-day rollover for just this one form.
+    let hours;
+    let actualStart = null, actualEnd = null;
+    if (start_time || end_time) {
+      if (!start_time || !end_time) {
+        return res.status(400).json({ success: false, message: "Provide both a start and end time, or neither." });
+      }
+      if (end_time <= start_time) {
+        return res.status(400).json({ success: false, message: "End time must be after start time." });
+      }
+      const metrics = computeHoursMetrics({ actualStart: start_time, actualEnd: end_time });
+      hours = metrics.workedHours;
+      actualStart = start_time;
+      actualEnd = end_time;
+    } else {
+      hours = Number(hours_worked);
+      if (!hours || hours <= 0) return res.status(400).json({ success: false, message: "Valid hours_worked is required." });
+    }
 
     const shiftId = shift_id ? Number(shift_id) : null;
 
@@ -62,6 +85,8 @@ const submitReport = async (req, res) => {
       shift_id: shiftId,
       log_date,
       hours_worked: hours,
+      start_time: actualStart,
+      end_time: actualEnd,
       description: description.trim(),
       status: "pending",
       evidence_path: evidencePath,
