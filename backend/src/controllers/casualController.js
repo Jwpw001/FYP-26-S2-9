@@ -3,6 +3,13 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 const generateToken = require("../utils/generateToken");
 const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 const { checkLaborRules } = require("./taskController");
+const {
+  toMinutesFromTimeValue,
+  doTimeRangesOverlap,
+  getUTCDayOfWeekMondayFirst,
+  getUTCMondayWeekStart,
+  computeWeightedScore,
+} = require("../utils/scheduling");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -556,18 +563,17 @@ async function autoAssignCasual(req, res) {
     }
 
     // shift_date day of week: Mon=0 … Sun=6. Prisma returns `@db.Date` columns as UTC-midnight
-    // ISO strings, and shiftWeekStart below is computed with setUTCDate — mixing that with a
-    // local-time getDay() here would silently shift the computed day by one near a UTC/local
-    // timezone boundary (e.g. late evening in a negative-UTC-offset server timezone), which then
-    // makes casual_availability's exact (day_of_week, week_start_date) match miss every
-    // candidate. Use UTC consistently for all of this function's date math.
+    // ISO strings, and shiftWeekStart below is computed in UTC — mixing that with a local-time
+    // getDay() here would silently shift the computed day by one near a UTC/local timezone
+    // boundary (e.g. late evening in a negative-UTC-offset server timezone), which then makes
+    // casual_availability's exact (day_of_week, week_start_date) match miss every candidate.
+    // getUTCDayOfWeekMondayFirst/getUTCMondayWeekStart (utils/scheduling.js) keep this UTC
+    // consistently, and are unit tested directly (tests/scheduling.test.js).
     const shiftDate = new Date(shift.shift_date);
-    const dayOfWeek = (shiftDate.getUTCDay() + 6) % 7;
+    const dayOfWeek = getUTCDayOfWeekMondayFirst(shiftDate);
 
-    // Time helpers — handles both Prisma Date objects and "HH:MM:SS" strings
-    const toHHMM = (t) => { if (!t) return null; const s = t instanceof Date ? t.toISOString() : String(t); return s.includes("T") ? s.slice(11, 16) : s.slice(0, 5); };
-    const toMins = (t) => { const hhmm = toHHMM(t); if (!hhmm) return null; const [h, m] = hhmm.split(":"); return Number(h) * 60 + Number(m); };
     // Use the task's own time window (falls back to the shift's overall span if unset)
+    const toMins = toMinutesFromTimeValue;
     const shiftStart = toMins(task?.start_time || shift.start_time);
     const shiftEnd   = toMins(task?.end_time || shift.end_time);
     const shiftDateStr = shiftDate.toISOString().slice(0, 10);
@@ -591,8 +597,7 @@ async function autoAssignCasual(req, res) {
     }
 
     // week_start_date for the shift's week (Mon-aligned), to match casual_availability's granularity
-    const shiftWeekStart = new Date(shiftDate);
-    shiftWeekStart.setUTCDate(shiftWeekStart.getUTCDate() - dayOfWeek);
+    const shiftWeekStart = getUTCMondayWeekStart(shiftDate);
 
     // Configurable allocation weights (business owner sets these in Settings; same table
     // shiftController.js reads for the AI weekly scheduler). Weights are on a 0-100 scale and
@@ -716,11 +721,9 @@ async function autoAssignCasual(req, res) {
       if (availStart > shiftStart || availEnd < shiftEnd) { failReasons.unavailable++; continue; }
 
       // Hard filter 2: not double-booked on same date with overlapping times
-      const doubleBooked = (sameDayAssignmentsByStaffId[staffId] || []).some(s => {
-        const cStart = toMins(s.start_time);
-        const cEnd   = toMins(s.end_time);
-        return cStart < shiftEnd && cEnd > shiftStart; // overlap
-      });
+      const doubleBooked = (sameDayAssignmentsByStaffId[staffId] || []).some(s =>
+        doTimeRangesOverlap(toMins(s.start_time), toMins(s.end_time), shiftStart, shiftEnd)
+      );
       if (doubleBooked) { failReasons.double_booked++; continue; }
 
       // Hard filter 3: branch labor rules (max daily hours, max consecutive working days) —
@@ -763,11 +766,9 @@ async function autoAssignCasual(req, res) {
     const maxPastAssignments = Math.max(...candidates.map(c => c.pastAssignments), 0);
     candidates.forEach(c => {
       c.subScores.workload = maxPastAssignments === 0 ? 1 : 1 - c.pastAssignments / maxPastAssignments;
-      c.score = wAvail * c.subScores.availability
-        + wSkills * c.subScores.skills
-        + wAttend * c.subScores.attendance
-        + wPerf * c.subScores.performance
-        + wWork * c.subScores.workload;
+      c.score = computeWeightedScore(c.subScores, {
+        availability: wAvail, skills: wSkills, attendance: wAttend, performance: wPerf, workload: wWork,
+      });
     });
 
     // Pick top scorer
