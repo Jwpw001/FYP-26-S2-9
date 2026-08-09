@@ -4,7 +4,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, Mail, Tag, Settings } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, Mail, Tag, Settings, Menu, X } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 import UserAvatar from "../UserAvatar";
@@ -40,10 +40,17 @@ export default function ManagerLayout({ children, title }) {
       .then(({ count }) => setUnread(count || 0));
   }, [user?.user_id]);
 
+  useEffect(() => { setOpen(false); }, [location.pathname]);
+
   return (
     <div style={s.shell}>
+      <div
+        className={`dash-overlay${open ? " dash-overlay-open" : ""}`}
+        onClick={() => setOpen(false)}
+      />
       {/* ── Sidebar ───────────────────────────────────── */}
       <aside
+        className={`dash-sidebar${open ? " dash-sidebar-open" : ""}`}
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
@@ -68,7 +75,7 @@ export default function ManagerLayout({ children, title }) {
                 onClick={() => setOpen(false)}
               >
                 <span style={s.navIcon}><item.Icon size={18} strokeWidth={1.8} /></span>
-                <span style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "160px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>
+                <span className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "160px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>
                   {item.label}
                 </span>
               </Link>
@@ -80,26 +87,29 @@ export default function ManagerLayout({ children, title }) {
           <button onClick={() => setShowProfile(true)} title="View profile"
             style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
             <UserAvatar name={user?.full_name || "M"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
-            <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
+            <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Manager"}</p>
               <p style={s.userRole}>Manager</p>
             </div>
           </button>
-          <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
+          <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
             <SignOutButton />
           </div>
         </div>
       </aside>
 
-      {/* ── Mobile overlay ────────────────────────────── */}
-      {open && (
-        <div style={s.overlay} onClick={() => setOpen(false)} />
-      )}
-
       {/* ── Main content ──────────────────────────────── */}
-      <div style={s.main}>
+      <div className="dash-main" style={s.main}>
         {/* Top bar */}
-        <header style={s.topbar}>
+        <header className="dash-topbar" style={s.topbar}>
+          <button
+            className="dash-hamburger"
+            onClick={() => setOpen(v => !v)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            style={s.hamburgerBtn}
+          >
+            {open ? <X size={20} /> : <Menu size={20} />}
+          </button>
           <h1 style={s.pageTitle}>{title}</h1>
           <div style={{ flex: 1 }} />
           {/* Notification bell */}
@@ -132,7 +142,7 @@ export default function ManagerLayout({ children, title }) {
           </button>
         </header>
 
-        <div style={s.content}>
+        <div className="dash-content" style={s.content}>
           {children}
         </div>
       </div>
@@ -163,12 +173,6 @@ const s = {
     transition: "width 0.25s ease",
     overflow: "hidden",
     flexShrink: 0,
-  },
-  sidebarOpen: {
-    position: "fixed",
-    left: 0,
-    top: 0,
-    height: "100vh",
   },
   sidebarTop: {
     padding: "24px 20px 16px",
@@ -286,15 +290,6 @@ const s = {
     textAlign: "center",
   },
 
-  /* Overlay */
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.4)",
-    zIndex: 199,
-    display: "none",
-  },
-
   /* Main */
   main: {
     flex: 1,
@@ -315,14 +310,17 @@ const s = {
     top: 0,
     zIndex: 100,
   },
-  menuBtn: {
+  hamburgerBtn: {
     background: "none",
     border: "none",
-    fontSize: "23px",
-    color: "#1C1B18",
     cursor: "pointer",
-    display: "none",
-    padding: "4px",
+    padding: "6px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#1C1B18",
+    marginRight: "4px",
+    flexShrink: 0,
   },
   pageTitle: {
     fontSize: "22px",

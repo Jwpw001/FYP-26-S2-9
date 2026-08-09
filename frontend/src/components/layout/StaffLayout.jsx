@@ -4,7 +4,7 @@ import { getUser } from "../../utils/auth";
 import { useState, useEffect } from "react";
 import SignOutButton from "../SignOutButton";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, CalendarDays, UmbrellaOff, ArrowLeftRight } from "lucide-react";
+import { LayoutDashboard, CalendarDays, UmbrellaOff, ArrowLeftRight, Menu, X } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 import UserAvatar from "../UserAvatar";
@@ -23,6 +23,7 @@ export default function StaffLayout({ children, title }) {
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
   const [showProfile, setShowProfile] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -34,11 +35,20 @@ export default function StaffLayout({ children, title }) {
       .then(({ count }) => setUnread(count || 0));
   }, [user?.user_id]);
 
+  // Hover-to-expand is a desktop-only interaction (no hover on touch) — the mobile drawer
+  // (opened via the hamburger button) closes itself on navigation instead.
+  useEffect(() => { setMobileNavOpen(false); }, [location.pathname]);
+
   const onNotifPage = location.pathname === "/regular-staff/notifications";
 
   return (
     <div style={s.shell}>
+      <div
+        className={`dash-overlay${mobileNavOpen ? " dash-overlay-open" : ""}`}
+        onClick={() => setMobileNavOpen(false)}
+      />
       <aside
+        className={`dash-sidebar${mobileNavOpen ? " dash-sidebar-open" : ""}`}
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
@@ -57,7 +67,7 @@ export default function StaffLayout({ children, title }) {
                 className={`sidebar-nav-item${active ? " sidebar-nav-active" : ""}`}
                 style={{ ...s.navItem, ...(active ? s.navItemActive : {}) }}>
                 <span style={s.navIcon}><item.Icon size={18} strokeWidth={1.8} /></span>
-                <span style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "160px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>
+                <span className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "160px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>
                   {item.label}
                 </span>
               </Link>
@@ -68,19 +78,27 @@ export default function StaffLayout({ children, title }) {
           <button onClick={() => setShowProfile(true)} title="View profile"
             style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
             <UserAvatar name={user?.full_name || "S"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
-            <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
+            <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Worker"}</p>
               <p style={s.userRole}>Regular Worker</p>
             </div>
           </button>
-          <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
+          <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
             <SignOutButton />
           </div>
         </div>
       </aside>
 
-      <div style={s.main}>
-        <header style={s.topbar}>
+      <div className="dash-main" style={s.main}>
+        <header className="dash-topbar" style={s.topbar}>
+          <button
+            className="dash-hamburger"
+            onClick={() => setMobileNavOpen(v => !v)}
+            aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+            style={s.hamburgerBtn}
+          >
+            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
           <h1 style={s.pageTitle}>{title}</h1>
           <div style={{ flex: 1 }} />
           <button
@@ -109,7 +127,7 @@ export default function StaffLayout({ children, title }) {
             )}
           </button>
         </header>
-        <div style={s.content}>{children}</div>
+        <div className="dash-content" style={s.content}>{children}</div>
       </div>
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
       <AIAssistantWidget />
@@ -157,5 +175,10 @@ const s = {
     position: "sticky", top: 0, zIndex: 100,
   },
   pageTitle: { fontSize: "22px", fontWeight: "700", color: "#1E293B" },
+  hamburgerBtn: {
+    background: "none", border: "none", cursor: "pointer", padding: "6px",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    color: "#1E293B", marginRight: "4px", flexShrink: 0,
+  },
   content: { flex: 1, padding: "28px", boxSizing: "border-box" },
 };

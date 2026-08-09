@@ -81,3 +81,102 @@ button:focus-visible {
     text-align: center;
   }
 }
+
+/* ── Dashboard shell (StaffLayout/CasualLayout/ManagerLayout/AdminLayout/
+   BusinessOwnerLayout) responsive nav ────────────────────────────────────
+   Desktop: hover-to-expand sidebar (unchanged, inline styles in each layout).
+   Mobile: hover doesn't exist on touch, so the sidebar is hidden off-canvas by
+   default and opens as a tap-triggered drawer instead. !important is required
+   here specifically to win over each layout's inline `width`/`marginLeft`. */
+/* !important: each layout's hamburgerBtn style sets its own inline display:"flex" for its own
+   internal icon centering — a plain (non-important) rule here would lose to that inline style
+   and the button would show on desktop too. */
+.dash-hamburger { display: none !important; }
+
+@media (max-width: 768px) {
+  .dash-sidebar {
+    width: 240px !important;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  .dash-sidebar.dash-sidebar-open {
+    transform: translateX(0);
+  }
+  .dash-sidebar-label {
+    opacity: 1 !important;
+    max-width: none !important;
+    max-height: none !important;
+  }
+  .dash-main {
+    margin-left: 0 !important;
+  }
+  .dash-hamburger {
+    display: flex !important;
+  }
+  .dash-content {
+    padding: 16px !important;
+  }
+  .dash-topbar {
+    padding: 0 16px !important;
+  }
+}
+
+.dash-overlay {
+  display: none;
+}
+@media (max-width: 768px) {
+  .dash-overlay.dash-overlay-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 290;
+  }
+}
+
+/* Prevents any stray fixed-width element on a narrow/added-to-home-screen
+   viewport from creating page-level horizontal scroll. Individual wide
+   content (tables, etc.) should scroll within its own container instead. */
+html, body {
+  overflow-x: hidden;
+}
+
+/* ── Reusable responsive helpers for dashboard page content ──────────────
+   Two side-by-side cards (grid-template-columns: 1fr 1fr / 1.3fr 1fr, etc.)
+   stack to one column below 640px, where side-by-side text/buttons have no
+   room left and start clipping instead of wrapping. */
+@media (max-width: 640px) {
+  .responsive-stack-2col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* A 7-across day grid (e.g. a week strip) has ~50px per cell on a phone —
+   too narrow for a day label + date number to render without clipping.
+   Below 640px this becomes a horizontally scrollable row of fixed-width
+   cards instead of forcing 7 columns into the viewport. */
+.responsive-day-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+@media (max-width: 640px) {
+  .responsive-day-strip {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .responsive-day-strip::-webkit-scrollbar { display: none; }
+  .responsive-day-strip > * {
+    flex: 0 0 60px !important;
+  }
+}
+
+/* Safe-area padding for notched phones when running standalone (added to
+   home screen) — keeps fixed headers/bottom bars clear of the notch/home
+   indicator. No-ops on browsers without notch support. */
+@supports (padding: max(0px)) {
+  .dash-topbar {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+}

@@ -4,7 +4,7 @@ import AIAssistantWidget from "../AIAssistantWidget";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
-import { LayoutDashboard, Building2, CalendarClock, CalendarDays, ArrowLeftRight } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarClock, CalendarDays, ArrowLeftRight, Menu, X } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 import UserAvatar from "../UserAvatar";
@@ -24,6 +24,7 @@ export default function CasualLayout({ children, title }) {
   const [expanded, setExpanded]   = useState(false);
   const [unread, setUnread]       = useState(0);
   const [showProfile, setShowProfile] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -35,11 +36,18 @@ export default function CasualLayout({ children, title }) {
       .then(({ count }) => setUnread(count || 0));
   }, [user?.user_id]);
 
+  useEffect(() => { setMobileNavOpen(false); }, [location.pathname]);
+
   const onNotifPage = location.pathname === "/casual-staff/notifications";
 
   return (
     <div style={s.shell}>
+      <div
+        className={`dash-overlay${mobileNavOpen ? " dash-overlay-open" : ""}`}
+        onClick={() => setMobileNavOpen(false)}
+      />
       <aside
+        className={`dash-sidebar${mobileNavOpen ? " dash-sidebar-open" : ""}`}
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
@@ -60,7 +68,7 @@ export default function CasualLayout({ children, title }) {
                 className={`sidebar-nav-item${active ? " sidebar-nav-active" : ""}`}
                 style={{ ...s.navItem, ...(active ? s.navItemActive : {}) }}>
                 <span style={s.navIcon}><item.Icon size={18} strokeWidth={1.8} /></span>
-                <span style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "160px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>
+                <span className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "160px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden", whiteSpace: "nowrap" }}>
                   {item.label}
                 </span>
               </Link>
@@ -72,19 +80,27 @@ export default function CasualLayout({ children, title }) {
           <button onClick={() => setShowProfile(true)} title="View profile"
             style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
             <UserAvatar name={user?.full_name || "C"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
-            <div style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
+            <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Casual Worker"}</p>
               <p style={s.userRole}>Casual Worker</p>
             </div>
           </button>
-          <div style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
+          <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
             <SignOutButton />
           </div>
         </div>
       </aside>
 
-      <div style={s.main}>
-        <header style={s.topbar}>
+      <div className="dash-main" style={s.main}>
+        <header className="dash-topbar" style={s.topbar}>
+          <button
+            className="dash-hamburger"
+            onClick={() => setMobileNavOpen(v => !v)}
+            aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+            style={s.hamburgerBtn}
+          >
+            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
           <h1 style={s.pageTitle}>{title}</h1>
           <div style={{ flex: 1 }} />
           <button
@@ -107,7 +123,7 @@ export default function CasualLayout({ children, title }) {
             )}
           </button>
         </header>
-        <div style={s.content}>{children}</div>
+        <div className="dash-content" style={s.content}>{children}</div>
       </div>
 
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
@@ -135,5 +151,6 @@ const s = {
   main:    { flex: 1, display: "flex", flexDirection: "column", minWidth: 0, marginLeft: "64px" },
   topbar:  { height: "60px", background: "#FFF", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", padding: "0 28px", gap: "16px", position: "sticky", top: 0, zIndex: 100 },
   pageTitle: { fontSize: "22px", fontWeight: "700", color: "#1E293B" },
+  hamburgerBtn: { background: "none", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center", color: "#1E293B", marginRight: "4px", flexShrink: 0 },
   content: { flex: 1, padding: "28px", boxSizing: "border-box" },
 };

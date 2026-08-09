@@ -185,7 +185,7 @@ export default function StaffDashboard() {
         </h2>
 
         {/* Next Shift card + Worked donut */}
-        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "18px" }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "18px" }}>
           {/* Next Shift gradient card */}
           <div style={{ background: "linear-gradient(135deg,#2563EB,#1D4ED8)", borderRadius: "18px", padding: "26px 28px", color: "#fff", position: "relative", overflow: "hidden" }}>
             {loading ? (
@@ -204,7 +204,7 @@ export default function StaffDashboard() {
                   {nextShift.shifts.start_time?.slice(0,5)} – {nextShift.shifts.end_time?.slice(0,5)}
                   {nextShift.shifts.branches?.name && ` · ${nextShift.shifts.branches.name}`}
                 </p>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px" }}>
                   <span style={{ background: "rgba(255,255,255,.18)", borderRadius: "100px", padding: "6px 14px", fontSize: "19.5px", fontWeight: "700" }}>
                     {nextDaysUntil === 0 ? "Today" : nextDaysUntil === 1 ? "Starts tomorrow" : `Starts in ${nextDaysUntil} days`}
                   </span>
@@ -245,11 +245,11 @@ export default function StaffDashboard() {
         <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px" }}>
           <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B", margin: "0 0 16px" }}>This Week</h3>
           {loading ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: "8px" }}>
+            <div className="responsive-day-strip" style={{ gap: "8px" }}>
               {Array.from({ length: 7 }).map((_, i) => <Shimmer key={i} h="72px" r="12px" />)}
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: "8px", marginBottom: "16px" }}>
+            <div className="responsive-day-strip" style={{ gap: "8px", marginBottom: "16px" }}>
               {weekDays.map((d, i) => {
                 const isSel = selectedDay?.iso === d.iso;
                 return (
@@ -296,7 +296,7 @@ export default function StaffDashboard() {
         </div>
 
         {/* Leave/Swap tabs + Notifications */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
 
           {/* Leave / Swap */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px" }}>

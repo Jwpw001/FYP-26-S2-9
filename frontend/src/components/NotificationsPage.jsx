@@ -203,14 +203,14 @@ export default function NotificationsPage({ Layout }) {
     <Layout title="Notifications">
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "24px" }}>
           <div>
             <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Notifications</h2>
             <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
               {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
             </p>
           </div>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
             {isPushSupported() && (
               <button onClick={togglePush} disabled={pushBusy}
                 style={{
