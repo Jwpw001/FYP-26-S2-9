@@ -572,6 +572,15 @@ BUSINESS RULES:
 - Min ${minWorkers} worker per role slot
 - Overtime: ${allowOT ? "allowed" : "NOT allowed"}
 
+ALLOCATION PRIORITY WEIGHTS (business-configured, must sum to 100 — after Rule #1's hard
+availability filter, use these to break ties among eligible staff for the same slot; a higher
+number means that factor should weigh more heavily in who you pick):
+- Availability fit (prefer a tighter match to the shift's hours over someone barely fitting): ${wAvail}
+- Skill match (prefer higher-proficiency matches to the role's required skill): ${wSkills}
+- Attendance record: ${wAttend}
+- Past performance: ${wPerf}
+- Workload balance (see below): ${wWork}
+
 WORKLOAD BALANCE (secondary — only after availability is satisfied):
 - Across the whole week, keep each eligible person's assignment count as even as possible.
 - Within each shift's eligible pool, prefer the person with the fewest assignments so far.

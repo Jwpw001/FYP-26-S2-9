@@ -550,7 +550,7 @@ async function autoAssignCasual(req, res) {
 
     // One task = one person: reject if already assigned
     const existingAssignment = await prisma.task_assignments.findFirst({ where: { task_id: Number(task_id) } });
-    const task = await prisma.shift_tasks.findUnique({ where: { task_id: Number(task_id) }, select: { title: true, start_time: true, end_time: true } });
+    const task = await prisma.shift_tasks.findUnique({ where: { task_id: Number(task_id) }, select: { title: true, start_time: true, end_time: true, skill_id: true } });
     if (existingAssignment) {
       return res.status(400).json({ success: false, message: "This task is already assigned." });
     }
@@ -588,6 +588,71 @@ async function autoAssignCasual(req, res) {
     // week_start_date for the shift's week (Mon-aligned), to match casual_availability's granularity
     const shiftWeekStart = new Date(shiftDate);
     shiftWeekStart.setUTCDate(shiftWeekStart.getUTCDate() - dayOfWeek);
+
+    // Configurable allocation weights (business owner sets these in Settings; same table
+    // shiftController.js reads for the AI weekly scheduler). Weights are on a 0-100 scale and
+    // sum to 100 by convention, so the composite candidate scores below land in a readable
+    // 0-100 range.
+    const { data: branchAlloc } = await supabaseAdmin
+      .from("branch_allocation_preferences")
+      .select("*")
+      .eq("branch_id", branch.branch_id)
+      .maybeSingle();
+    const wAvail  = branchAlloc?.weight_availability ?? 40;
+    const wSkills = branchAlloc?.weight_skills       ?? 30;
+    const wAttend = branchAlloc?.weight_attendance   ?? 15;
+    const wPerf   = branchAlloc?.weight_performance  ?? 10;
+    const wWork   = branchAlloc?.weight_workload     ?? 5;
+
+    // Batched lookups for scoring — fetched for every approved worker up front (not just the
+    // eventual winner) so the response can show a full per-candidate breakdown.
+    const approvedUserIds = approvedWorkers.map(w => w.user_id);
+    const [skillTagRows, userRows] = await Promise.all([
+      prisma.user_skill_tags.findMany({
+        where: { user_id: { in: approvedUserIds } },
+        select: { user_id: true, skill_id: true, experience_level: true },
+      }),
+      prisma.users.findMany({
+        where: { user_id: { in: approvedUserIds } },
+        select: { user_id: true, full_name: true },
+      }),
+    ]);
+    const skillTagsByUser = {};
+    skillTagRows.forEach(t => {
+      if (!skillTagsByUser[t.user_id]) skillTagsByUser[t.user_id] = [];
+      skillTagsByUser[t.user_id].push(t);
+    });
+    const nameByUser = Object.fromEntries(userRows.map(u => [u.user_id, u.full_name]));
+
+    // 0-1 sub-score: does the candidate hold the task's required skill, weighted by their
+    // recorded experience level? A task with no skill_id has nothing to differentiate on, so
+    // every candidate scores full marks for this dimension.
+    const EXPERIENCE_LEVEL_SCORE = { junior: 0.6, intermediate: 0.8, senior: 1, expert: 1 };
+    function skillsSubScore(userId) {
+      if (!task?.skill_id) return 1;
+      const tag = (skillTagsByUser[userId] || []).find(t => t.skill_id === task.skill_id);
+      if (!tag) return 0;
+      const level = (tag.experience_level || "").toLowerCase();
+      return EXPERIENCE_LEVEL_SCORE[level] ?? 0.7;
+    }
+
+    // 0-1 sub-score: how tightly the candidate's declared availability window fits the task's
+    // time window. Every candidate reaching this point already fully covers the task (hard
+    // filter 1 below) — this only ranks *how* generously, so an exact-fit window outranks
+    // someone who's "available all day" for a 1-hour task.
+    function availabilitySubScore(availStart, availEnd) {
+      const availDuration = availEnd - availStart;
+      const taskDuration = shiftEnd - shiftStart;
+      if (availDuration <= 0) return 0;
+      return Math.min(1, taskDuration / availDuration);
+    }
+
+    // No attendance-quality or performance-rating data exists anywhere in the schema for casual
+    // workers (no attendance model, no rating/review table). Rather than invent a metric, both
+    // dimensions use a fixed neutral score. This applies identically to every candidate, so it
+    // never changes the ranking — it just means the attendance/performance weight sliders have
+    // no real signal behind them yet, until a real data source exists to back them.
+    const NEUTRAL_SUBSCORE = 0.5;
 
     const candidates = [];
     const failReasons = { unavailable: 0, double_booked: 0, labor_rules: 0 };
@@ -632,12 +697,22 @@ async function autoAssignCasual(req, res) {
       const laborFailure = await checkLaborRules(staffRow.staff_id, Number(shift_id), branch.branch_id);
       if (laborFailure) { failReasons.labor_rules++; continue; }
 
-      // Passed all hard filters — compute soft rank score (fewer recent assignments ranks higher)
+      // Passed all hard filters — gather the raw signal needed for weighted scoring below.
       const pastAssignments = await prisma.task_assignments.count({
         where: { staff_id: staffRow.staff_id, status: { not: "cancelled" } },
       });
 
-      candidates.push({ cw, staffId: staffRow.staff_id, score: -pastAssignments, pastAssignments });
+      candidates.push({
+        cw,
+        staffId: staffRow.staff_id,
+        pastAssignments,
+        subScores: {
+          availability: availabilitySubScore(availStart, availEnd),
+          skills: skillsSubScore(cw.user_id),
+          attendance: NEUTRAL_SUBSCORE,
+          performance: NEUTRAL_SUBSCORE,
+        },
+      });
     }
 
     if (candidates.length === 0) {
@@ -651,6 +726,18 @@ async function autoAssignCasual(req, res) {
         reason: `No eligible casual workers — ${parts.join(", ")}.`,
       });
     }
+
+    // Workload is normalised relative to this candidate set (not a fixed scale), so it can only
+    // be computed once every surviving candidate's past-assignment count is known.
+    const maxPastAssignments = Math.max(...candidates.map(c => c.pastAssignments), 0);
+    candidates.forEach(c => {
+      c.subScores.workload = maxPastAssignments === 0 ? 1 : 1 - c.pastAssignments / maxPastAssignments;
+      c.score = wAvail * c.subScores.availability
+        + wSkills * c.subScores.skills
+        + wAttend * c.subScores.attendance
+        + wPerf * c.subScores.performance
+        + wWork * c.subScores.workload;
+    });
 
     // Pick top scorer
     candidates.sort((a, b) => b.score - a.score);
@@ -685,6 +772,24 @@ async function autoAssignCasual(req, res) {
         full_name: user?.full_name,
         user_id: winner.cw.user_id,
         past_assignments: winner.pastAssignments,
+        score: Math.round(winner.score * 10) / 10,
+      },
+      // Explainable breakdown for every candidate who passed the hard filters (already sorted
+      // best-first), so a demo can show why the winner beat the runners-up.
+      score_breakdown: {
+        weights_applied: { availability: wAvail, skills: wSkills, attendance: wAttend, performance: wPerf, workload: wWork },
+        candidates: candidates.map(c => ({
+          user_id: c.cw.user_id,
+          full_name: nameByUser[c.cw.user_id] || null,
+          score: Math.round(c.score * 10) / 10,
+          sub_scores: {
+            availability: Math.round(c.subScores.availability * 100) / 100,
+            skills: Math.round(c.subScores.skills * 100) / 100,
+            attendance: c.subScores.attendance,
+            performance: c.subScores.performance,
+            workload: Math.round(c.subScores.workload * 100) / 100,
+          },
+        })),
       },
     });
   } catch (err) {
