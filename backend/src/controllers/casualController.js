@@ -465,13 +465,13 @@ async function approveWorker(req, res) {
     const { data: cw } = await supabaseAdmin.from("casual_workers").select("user_id").eq("id", Number(req.params.id)).maybeSingle();
     if (cw?.user_id) {
       await prisma.staff.updateMany({ where: { user_id: cw.user_id, staff_type: "casual" }, data: { is_active: true } });
-      await supabaseAdmin.from("notifications").insert({
-        recipient_id: cw.user_id,
+      await notifyUser({
+        recipientId: cw.user_id,
         type: "casual_approved",
         title: "Your application was approved!",
         message: `You've been approved as a casual worker for ${biz.name}. You can now set your preferred branches.`,
-        related_entity: "casual_worker",
-        related_id: Number(req.params.id),
+        relatedEntity: "casual_worker",
+        relatedId: Number(req.params.id),
       });
     }
 
@@ -788,13 +788,13 @@ async function autoAssignCasual(req, res) {
 
     // Notify the worker
     const user = await prisma.users.findUnique({ where: { user_id: winner.cw.user_id }, select: { full_name: true } });
-    await supabaseAdmin.from("notifications").insert({
-      recipient_id: winner.cw.user_id,
+    await notifyUser({
+      recipientId: winner.cw.user_id,
       type: "casual_assigned",
       title: "You've been assigned to a shift!",
       message: `You've been assigned to ${task?.title || "a task"} on ${shiftDateStr} at ${branch.name}. Please check your schedule.`,
-      related_entity: "shift",
-      related_id: Number(shift_id),
+      relatedEntity: "shift",
+      relatedId: Number(shift_id),
     });
 
     return res.json({

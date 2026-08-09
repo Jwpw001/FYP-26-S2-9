@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
-import { notifyUser } from "../../lib/notify";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import UserAvatar from "../../components/UserAvatar";
 
@@ -199,15 +198,15 @@ function Submissions({ branchId, managerId, showToast }) {
 
       const recipientId = row && staffUserMap[row.staff_id];
       if (recipientId) {
-        notifyUser({
-          recipientId,
+        api.post("/api/notifications/notify-my-staff", {
+          recipient_user_id: recipientId,
           type: "report_decision",
           title: status === "approved" ? "Report Approved" : "Report Rejected",
           message: status === "approved"
             ? `Your report for ${row.shiftTitle || "your shift"} on ${row.log_date} has been approved.`
             : `Your report for ${row.shiftTitle || "your shift"} on ${row.log_date} was rejected.`,
-          relatedEntity: "timesheets",
-          relatedId: tsId,
+          related_entity: "timesheets",
+          related_id: tsId,
         }).catch(() => {});
       }
     } catch { showToast("Failed to update.", false); }
@@ -233,15 +232,15 @@ function Submissions({ branchId, managerId, showToast }) {
       targetRows.forEach(row => {
         const recipientId = staffUserMap[row.staff_id];
         if (!recipientId) return;
-        notifyUser({
-          recipientId,
+        api.post("/api/notifications/notify-my-staff", {
+          recipient_user_id: recipientId,
           type: "report_decision",
           title: status === "approved" ? "Report Approved" : "Report Rejected",
           message: status === "approved"
             ? `Your report for ${row.shiftTitle || "your shift"} on ${row.log_date} has been approved.`
             : `Your report for ${row.shiftTitle || "your shift"} on ${row.log_date} was rejected.`,
-          relatedEntity: "timesheets",
-          relatedId: row.timesheet_id,
+          related_entity: "timesheets",
+          related_id: row.timesheet_id,
         }).catch(() => {});
       });
     } catch { showToast("Bulk action failed.", false); }

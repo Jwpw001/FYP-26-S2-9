@@ -1,5 +1,14 @@
 const prisma = require("../config/prisma");
+const supabaseAdmin = require("../config/supabaseAdmin");
 const { parsePagination } = require("../utils/pagination");
+const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
+
+async function getCallerBranchId(userId) {
+    const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
+    if (s?.branch_id) return s.branch_id;
+    const { data: mgr } = await supabaseAdmin.from("branch_managers").select("branch_id").eq("user_id", userId).limit(1).maybeSingle();
+    return mgr?.branch_id || null;
+}
 
 const getNotifications = async (req, res) => {
     try {
@@ -80,15 +89,13 @@ const createNotification = async (req, res) => {
             });
         }
 
-        const notification = await prisma.notifications.create({
-            data: {
-                recipient_id,
-                title,
-                message,
-                type,
-                related_entity: related_entity || null,
-                related_id: related_id ?? null
-            }
+        const notification = await notifyUser({
+            recipientId: recipient_id,
+            title,
+            message,
+            type,
+            relatedEntity: related_entity || null,
+            relatedId: related_id ?? null
         });
 
         res.status(201).json({
@@ -184,10 +191,87 @@ const deleteNotification = async (req, res) => {
     }
 };
 
+// POST /api/notifications/notify-my-managers — self-service roles only (regular_staff/
+// casual_staff), for notifying THEIR OWN branch's managers about something they just did
+// (leave/off-day/swap request, shift acknowledgment, etc). Recipients are always resolved
+// server-side from the caller's own staff record — a client never gets to supply who receives
+// this, otherwise any authenticated user could spam arbitrary notifications at will.
+const notifyMyManagers = async (req, res) => {
+    try {
+        const { type, title, message, related_entity, related_id } = req.body;
+        if (!type || !title) {
+            return res.status(400).json({ success: false, message: "type and title are required." });
+        }
+
+        const staff = await prisma.staff.findFirst({
+            where: { user_id: req.user.user_id },
+            select: { branch_id: true },
+        });
+        if (!staff?.branch_id) {
+            // No branch on record (e.g. a pool-based casual worker) — nothing to notify, not an error.
+            return res.json({ success: true, notified: 0 });
+        }
+
+        const managerIds = await getBranchManagerUserIds(staff.branch_id);
+        await notifyUsers(managerIds, {
+            type,
+            title,
+            message,
+            relatedEntity: related_entity || null,
+            relatedId: related_id ?? null,
+        });
+
+        res.json({ success: true, notified: managerIds.length });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST /api/notifications/notify-my-staff — manager/admin only, for notifying one specific
+// staff member about a decision (leave/off-day/swap/report approved or rejected). The target is
+// verified to be within the caller's own branch server-side before anything is sent — a manager
+// can't use this to message someone else's staff.
+const notifyMyStaff = async (req, res) => {
+    try {
+        const { recipient_user_id, type, title, message, related_entity, related_id } = req.body;
+        if (!recipient_user_id || !type || !title) {
+            return res.status(400).json({ success: false, message: "recipient_user_id, type and title are required." });
+        }
+
+        const targetStaff = await prisma.staff.findFirst({
+            where: { user_id: Number(recipient_user_id) },
+            select: { branch_id: true },
+        });
+        if (!targetStaff) {
+            return res.status(404).json({ success: false, message: "Recipient not found." });
+        }
+
+        const callerBranchId = await getCallerBranchId(req.user.user_id);
+        if (callerBranchId && targetStaff.branch_id !== callerBranchId) {
+            return res.status(403).json({ success: false, message: "That staff member is not in your branch." });
+        }
+
+        const notification = await notifyUser({
+            recipientId: Number(recipient_user_id),
+            type,
+            title,
+            message,
+            relatedEntity: related_entity || null,
+            relatedId: related_id ?? null,
+        });
+
+        res.json({ success: true, notification });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getNotifications,
     getNotificationById,
     createNotification,
     updateNotification,
-    deleteNotification
+    deleteNotification,
+    notifyMyManagers,
+    notifyMyStaff,
 };

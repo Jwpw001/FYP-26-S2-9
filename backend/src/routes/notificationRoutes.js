@@ -7,7 +7,9 @@ const {
     getNotificationById,
     createNotification,
     updateNotification,
-    deleteNotification
+    deleteNotification,
+    notifyMyManagers,
+    notifyMyStaff
 } = require("../controllers/notificationController");
 
 const validate = require("../middleware/validateMiddleware");
@@ -30,6 +32,21 @@ router.get(
         ROLES.BRANCH_CASUAL_STAFF
     ),
     getNotifications
+);
+
+// Static routes before /:id — otherwise Express would match these as an :id param.
+router.post(
+    "/notify-my-managers",
+    verifyToken,
+    allowRoles(ROLES.REGULAR_STAFF, ROLES.BRANCH_CASUAL_STAFF),
+    notifyMyManagers
+);
+
+router.post(
+    "/notify-my-staff",
+    verifyToken,
+    allowRoles(ROLES.BRANCH_MANAGER, ROLES.SYSTEM_ADMIN),
+    notifyMyStaff
 );
 
 router.get(

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
-import { notifyUsers, getBranchManagerUserIds } from "../../lib/notify";
+import { api } from "../../lib/api";
 import StaffLayout from "../../components/layout/StaffLayout";
 // Layout is injected by the casual wrapper so the same component serves both roles
 import { RefreshCw, AlertCircle, ChevronLeft, ChevronRight, X } from "lucide-react";
@@ -127,7 +127,6 @@ export default function SwapRequests({ Layout = StaffLayout }) {
   const [error,          setError]          = useState("");
   const [toast,          setToast]          = useState(null);
   const [staffId,        setStaffId]        = useState(null);
-  const [branchId,       setBranchId]       = useState(null);
   const [weekStart,      setWeekStart]      = useState(() => getWeekStart(new Date()));
 
   // Swap modal
@@ -176,11 +175,10 @@ export default function SwapRequests({ Layout = StaffLayout }) {
       setLoading(true);
       try {
         const today = toLocalDateStr(new Date());
-        const { data: myStaff } = await supabase.from("staff").select("staff_id, branch_id").eq("user_id", userId).limit(1);
+        const { data: myStaff } = await supabase.from("staff").select("staff_id").eq("user_id", userId).limit(1);
         const sid = myStaff?.[0]?.staff_id;
         if (cancelled) return;
         setStaffId(sid || null);
-        setBranchId(myStaff?.[0]?.branch_id || null);
         if (!sid) { setMyShifts([]); setRequests([]); setLoading(false); return; }
 
         const [{ data: assignments }, { data: reqs }] = await Promise.all([
@@ -271,13 +269,13 @@ export default function SwapRequests({ Layout = StaffLayout }) {
       setSwapModal(null);
       showToast("Request submitted successfully.");
 
-      getBranchManagerUserIds(branchId).then(managerIds => notifyUsers(managerIds, {
+      api.post("/api/notifications/notify-my-managers", {
         type: "swap_request",
         title: data.request_type === "swap" ? "New Swap Request" : "New Replacement Request",
         message: `${user?.full_name || "A staff member"} requested a ${data.request_type} for ${swapModal.shifts?.title || "a shift"} on ${fmtDate(swapModal.shifts?.shift_date)}.`,
-        relatedEntity: "swap_requests",
-        relatedId: data.swap_id,
-      })).catch(() => {});
+        related_entity: "swap_requests",
+        related_id: data.swap_id,
+      }).catch(() => {});
     } catch (err) {
       setError(err.message || "Failed to submit request.");
       console.error(err);

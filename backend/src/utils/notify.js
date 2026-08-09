@@ -4,8 +4,8 @@ const { sendPushToUsers } = require("./pushNotify");
 const logger = require("../config/logger");
 
 async function notifyUser({ recipientId, type, title, message, relatedEntity, relatedId }) {
-  if (!recipientId) return;
-  await supabaseAdmin.from("notifications").insert({
+  if (!recipientId) return null;
+  const { data: notification } = await supabaseAdmin.from("notifications").insert({
     recipient_id: recipientId,
     type,
     title,
@@ -14,10 +14,11 @@ async function notifyUser({ recipientId, type, title, message, relatedEntity, re
     related_id: relatedId != null ? String(relatedId) : null,
     is_read: false,
     created_at: new Date().toISOString(),
-  });
+  }).select().single();
   // Fire-and-forget: push failures are logged inside sendPushToUsers and never thrown here —
   // the in-app notification above is the primary path and has already succeeded.
   sendPushToUsers([recipientId], { title, message }).catch(err => logger.error({ err }, "[push] notifyUser push failed"));
+  return notification;
 }
 
 async function notifyUsers(recipientIds, { type, title, message, relatedEntity, relatedId }) {

@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
 import { getUser } from "../../utils/auth";
-import { notifyUser } from "../../lib/notify";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { ClipboardList, List, GanttChartSquare, Search, X } from "lucide-react";
@@ -303,15 +302,15 @@ export default function AvailabilityLeave() {
 
     if (req?.staff?.user_id) {
       const isApproved = action === "approved";
-      notifyUser({
-        recipientId: req.staff.user_id,
+      api.post("/api/notifications/notify-my-staff", {
+        recipient_user_id: req.staff.user_id,
         type: "off_day_decision",
         title: isApproved ? "Off Day Request Approved" : "Off Day Request Rejected",
         message: isApproved
           ? `Your off day request for ${fmtDate(req.requested_date)} has been approved.`
           : `Your off day request for ${fmtDate(req.requested_date)} was rejected.`,
-        relatedEntity: "off_day_requests",
-        relatedId: id,
+        related_entity: "off_day_requests",
+        related_id: id,
       }).catch(() => {});
     }
   }
@@ -406,8 +405,8 @@ export default function AvailabilityLeave() {
         const staffUserId = req.staff?.user_id || staffUserMap[req.staff_id];
         if (staffUserId) {
           const isApproved = action === "approved";
-          await supabase.from("notifications").insert({
-            recipient_id: staffUserId,
+          api.post("/api/notifications/notify-my-staff", {
+            recipient_user_id: staffUserId,
             type: "leave_decision",
             title: isApproved ? "Leave Request Approved" : "Leave Request Rejected",
             message: isApproved
@@ -415,9 +414,7 @@ export default function AvailabilityLeave() {
               : `Your ${req.leave_type} leave request (${fmtDate(req.start_date)} – ${fmtDate(req.end_date)}) was rejected.`,
             related_entity: "availability",
             related_id: String(requestId),
-            is_read: false,
-            created_at: new Date().toISOString(),
-          });
+          }).catch(() => {});
         }
       }
 
@@ -452,13 +449,13 @@ export default function AvailabilityLeave() {
 
         const requesterUserId = sw && staffUserMap[sw.requester_id];
         if (requesterUserId) {
-          notifyUser({
-            recipientId: requesterUserId,
+          api.post("/api/notifications/notify-my-staff", {
+            recipient_user_id: requesterUserId,
             type: "swap_decision",
             title: "Swap Request Rejected",
             message: `Your ${sw.request_type === "swap" ? "swap" : "replacement"} request was rejected.`,
-            relatedEntity: "swap_requests",
-            relatedId: swapId,
+            related_entity: "swap_requests",
+            related_id: swapId,
           }).catch(() => {});
         }
       } catch (err) {
@@ -562,31 +559,27 @@ export default function AvailabilityLeave() {
       if (requesterUserId) {
         const coverStaff = swapApproveModal.roster.find(s => String(s.staff_id) === String(pickedStaffId));
         const coverName = coverStaff?.full_name || "a colleague";
-        await supabase.from("notifications").insert({
-          recipient_id: requesterUserId,
+        api.post("/api/notifications/notify-my-staff", {
+          recipient_user_id: requesterUserId,
           type: "swap_decision",
           title: "Swap Request Approved",
           message: `Your swap request has been approved. ${coverName} will cover your shift.`,
           related_entity: "swap_requests",
           related_id: String(sw.swap_id),
-          is_read: false,
-          created_at: new Date().toISOString(),
-        });
+        }).catch(() => {});
       }
 
       // 5. Notify the cover staff
       const coverUserId = staffUserMap[pickedStaffId] || staffUserMap[Number(pickedStaffId)];
       if (coverUserId) {
-        await supabase.from("notifications").insert({
-          recipient_id: coverUserId,
+        api.post("/api/notifications/notify-my-staff", {
+          recipient_user_id: coverUserId,
           type: "shift_assigned",
           title: "New Shift Assignment",
           message: `You have been assigned to cover a shift as part of a swap approval.`,
           related_entity: "task_assignments",
           related_id: String(assignRow.shift_id),
-          is_read: false,
-          created_at: new Date().toISOString(),
-        });
+        }).catch(() => {});
       }
 
       setSwaps(prev => prev.map(s =>
