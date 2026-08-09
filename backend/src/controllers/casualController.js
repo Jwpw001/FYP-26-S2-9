@@ -2,6 +2,7 @@ const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const generateToken = require("../utils/generateToken");
 const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
+const { checkLaborRules } = require("./taskController");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -589,7 +590,7 @@ async function autoAssignCasual(req, res) {
     shiftWeekStart.setUTCDate(shiftWeekStart.getUTCDate() - dayOfWeek);
 
     const candidates = [];
-    const failReasons = { unavailable: 0, double_booked: 0 };
+    const failReasons = { unavailable: 0, double_booked: 0, labor_rules: 0 };
 
     for (const cw of approvedWorkers) {
       const staffRow = await prisma.staff.findFirst({
@@ -625,6 +626,12 @@ async function autoAssignCasual(req, res) {
       });
       if (doubleBooked) { failReasons.double_booked++; continue; }
 
+      // Hard filter 3: branch labor rules (max daily hours, max consecutive working days) —
+      // the same check assignStaff uses for manual assignment. Without this, auto-assign could
+      // schedule a casual worker past the branch's eligibility limits with no warning.
+      const laborFailure = await checkLaborRules(staffRow.staff_id, Number(shift_id), branch.branch_id);
+      if (laborFailure) { failReasons.labor_rules++; continue; }
+
       // Passed all hard filters — compute soft rank score (fewer recent assignments ranks higher)
       const pastAssignments = await prisma.task_assignments.count({
         where: { staff_id: staffRow.staff_id, status: { not: "cancelled" } },
@@ -637,6 +644,7 @@ async function autoAssignCasual(req, res) {
       const parts = [];
       if (failReasons.unavailable > 0) parts.push(`${failReasons.unavailable} unavailable on ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][dayOfWeek]}`);
       if (failReasons.double_booked > 0) parts.push(`${failReasons.double_booked} already booked at this time`);
+      if (failReasons.labor_rules > 0) parts.push(`${failReasons.labor_rules} would exceed branch labor limits (max hours/day or consecutive days)`);
       return res.json({
         success: false,
         flagged: true,
