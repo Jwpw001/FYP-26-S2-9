@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
 import { api } from "../lib/api";
 import { setUser } from "../utils/auth";
@@ -17,6 +18,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleLogin() {
     if (!email.trim() || !password) { setError("Please enter your email and password."); return; }
@@ -89,14 +91,24 @@ export default function LoginScreen() {
             />
 
             <Text style={s.label}>Password</Text>
-            <TextInput
-              style={s.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor="#94A3B8"
-              secureTextEntry
-            />
+            <View style={s.passwordWrap}>
+              <TextInput
+                style={[s.input, s.passwordInput]}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                style={s.eyeBtn}
+                onPress={() => setShowPassword(v => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+              >
+                <Feather name={showPassword ? "eye-off" : "eye"} size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[s.btn, loading && { opacity: 0.7 }]}
@@ -146,6 +158,12 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: "#E2E8F0", borderRadius: 12,
     padding: 13, fontSize: 14, color: "#1E293B",
     backgroundColor: "#F8FAFC", marginBottom: 16,
+  },
+  passwordWrap: { position: "relative", justifyContent: "center" },
+  passwordInput: { paddingRight: 42 },
+  eyeBtn: {
+    position: "absolute", right: 12, top: 0, bottom: 16,
+    justifyContent: "center", alignItems: "center",
   },
   btn: {
     backgroundColor: "#2563EB", borderRadius: 12, padding: 15,

@@ -10,5 +10,9 @@ export default defineConfig({
   },
   datasource: {
     url: process.env["DATABASE_URL"],
+    // DATABASE_URL is Supabase's pooled PgBouncer connection (port 6543) — fine for the
+    // runtime client, but schema-engine DDL (db push/migrate) needs the direct, non-pooled
+    // connection (port 5432) or it hangs indefinitely.
+    directUrl: process.env["DIRECT_URL"],
   },
 });

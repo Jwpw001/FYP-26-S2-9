@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { api } from "../lib/api";
 import { setUser } from "../utils/auth";
 
@@ -115,18 +116,28 @@ export default function RegisterCasual() {
 }
 
 function Field({ label, value, onChange, type = "text", placeholder, required, autoComplete }) {
+  const [show, setShow] = useState(false);
+  const isPassword = type === "password";
   return (
     <div style={s.fieldGroup}>
       <label style={s.label}>{label}</label>
-      <input
-        style={s.input}
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        autoComplete={autoComplete}
-      />
+      <div style={{ position: "relative" }}>
+        <input
+          style={{ ...s.input, width: "100%", boxSizing: "border-box", paddingRight: isPassword ? "40px" : "13px" }}
+          type={isPassword && show ? "text" : type}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          autoComplete={autoComplete}
+        />
+        {isPassword && (
+          <button type="button" onClick={() => setShow(v => !v)} aria-label={show ? "Hide password" : "Show password"}
+            style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", padding: "4px", display: "flex", cursor: "pointer", color: "#A09D97" }}>
+            {show ? <EyeOff size={17} /> : <Eye size={17} />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

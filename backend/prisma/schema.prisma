@@ -3,8 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // DATABASE_URL is Supabase's pooled PgBouncer connection (transaction mode, port 6543) —
+  // fine for the runtime client, but DDL (migrate/db push) needs a direct, non-pooled
+  // connection or it hangs. DIRECT_URL (port 5432) already existed in .env for this.
+  directUrl = env("DIRECT_URL")
 }
 
 // Append-only compliance/audit trail: who changed what, when, and the before/after state.
@@ -84,6 +88,38 @@ model branch_skills {
   @@unique([branch_id, skill_id])
 }
 
+// Was live in the database and already used by shiftController.js / businessOwnerController.js
+// (prisma.branch_role_templates + raw supabase "branch_role_templates" calls) but had never been
+// added to this schema file — reconstructed from a live introspection (columns, FK delete/update
+// rules) rather than guessed, specifically so `prisma db push` stops wanting to drop this
+// non-empty table.
+model branch_role_templates {
+  template_id Int      @id @default(autoincrement())
+  branch_id   Int
+  role_name   String   @db.VarChar
+  skill_id    Int?
+  headcount   Int      @default(1)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  branches    branches @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction)
+  skills      skills?  @relation(fields: [skill_id], references: [skill_id], onDelete: SetNull, onUpdate: NoAction)
+}
+
+// Same situation as branch_role_templates above: live, already read/written via raw supabase
+// calls in shiftController.js and casualController.js (the Phase 4 allocation-weight scoring),
+// but absent from this schema file. Reconstructed from a live introspection.
+model branch_allocation_preferences {
+  id                  Int       @id @default(autoincrement())
+  branch_id           Int       @unique
+  weight_availability Int       @default(40)
+  weight_skills       Int       @default(30)
+  weight_attendance   Int       @default(15)
+  weight_performance  Int       @default(10)
+  weight_workload     Int       @default(5)
+  updated_at          DateTime? @db.Timestamptz(6)
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  branches            branches  @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model branches {
   branch_id                 Int                         @id(map: "outlets_pkey") @default(autoincrement())
@@ -98,6 +134,8 @@ model branches {
   branch_managers           branch_managers[]
   branch_settings           branch_settings?
   branch_skills             branch_skills[]
+  branch_role_templates     branch_role_templates[]
+  branch_allocation_preferences branch_allocation_preferences?
   businesses                businesses?                 @relation(fields: [business_id], references: [business_id], onUpdate: NoAction, map: "outlets_business_id_fkey")
   casual_branch_preferences casual_branch_preferences[]
   invitations               invitations[]
@@ -291,6 +329,7 @@ model skills {
   businesses      businesses?       @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
   users           users?            @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
   user_skill_tags user_skill_tags[]
+  branch_role_templates branch_role_templates[]
 
   @@unique([name, branch_id], map: "skills_name_outlet_id_key")
 }
@@ -410,6 +449,24 @@ model users {
   swap_requests             swap_requests[]
   timesheets                timesheets[]
   user_skill_tags           user_skill_tags[]
+  push_subscriptions        push_subscriptions[]
+}
+
+// One row per registered device/browser. `subscription` shape depends on `platform`:
+// expo -> { token: "ExponentPushToken[...]" }; web -> { endpoint, keys: { p256dh, auth } }
+// (exactly what PushSubscription.toJSON() returns in the browser). Dedup and removal on
+// send-failure are handled at the application level, not via a DB constraint, since
+// uniqueness lives inside the JSON payload rather than a plain column.
+model push_subscriptions {
+  id           Int       @id @default(autoincrement())
+  user_id      Int
+  platform     String    @db.VarChar(20)
+  subscription Json
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  last_used_at DateTime? @db.Timestamptz(6)
+  users        users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

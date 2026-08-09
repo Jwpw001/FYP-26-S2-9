@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { getUser } from "../utils/auth";
-import { ClipboardList, CheckCircle2, XCircle, Bell, CalendarDays, RefreshCw, Megaphone, FileText, Building2, ClipboardCheck, UserCheck, UserX, CalendarX, CalendarClock } from "lucide-react";
+import { ClipboardList, CheckCircle2, XCircle, Bell, BellOff, CalendarDays, RefreshCw, Megaphone, FileText, Building2, ClipboardCheck, UserCheck, UserX, CalendarX, CalendarClock } from "lucide-react";
+import { isPushSupported, isSubscribed, subscribeToPush, unsubscribeFromPush } from "../lib/push";
 
 if (typeof document !== "undefined" && !document.getElementById("shared-notif-styles")) {
   const style = document.createElement("style");
@@ -126,10 +127,37 @@ export default function NotificationsPage({ Layout }) {
   const [loading, setLoading]             = useState(true);
   const [tab, setTab]                     = useState("all");
   const [toast, setToast]                 = useState(null);
+  const [pushOn, setPushOn]               = useState(false);
+  const [pushBusy, setPushBusy]           = useState(false);
 
   function showToast(msg) {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  }
+
+  useEffect(() => {
+    if (!isPushSupported()) return;
+    isSubscribed().then(setPushOn);
+  }, []);
+
+  async function togglePush() {
+    if (pushBusy) return;
+    setPushBusy(true);
+    try {
+      if (pushOn) {
+        await unsubscribeFromPush();
+        setPushOn(false);
+        showToast("Push notifications turned off.");
+      } else {
+        await subscribeToPush();
+        setPushOn(true);
+        showToast("Push notifications turned on.");
+      }
+    } catch (err) {
+      showToast(err.message || "Couldn't update push notifications.");
+    } finally {
+      setPushBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -182,12 +210,28 @@ export default function NotificationsPage({ Layout }) {
               {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
             </p>
           </div>
-          {unreadCount > 0 && (
-            <button onClick={markAllRead}
-              style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "9px", padding: "8px 16px", fontSize: "20px", fontWeight: "600", color: "#1D4ED8", cursor: "pointer" }}>
-              Mark all as read
-            </button>
-          )}
+          <div style={{ display: "flex", gap: "10px" }}>
+            {isPushSupported() && (
+              <button onClick={togglePush} disabled={pushBusy}
+                style={{
+                  display: "flex", alignItems: "center", gap: "6px",
+                  background: pushOn ? "#EFF6FF" : "#F8FAFC",
+                  border: `1px solid ${pushOn ? "#BFDBFE" : "#E2E8F0"}`,
+                  borderRadius: "9px", padding: "8px 16px", fontSize: "20px", fontWeight: "600",
+                  color: pushOn ? "#1D4ED8" : "#64748B", cursor: pushBusy ? "default" : "pointer",
+                  opacity: pushBusy ? 0.6 : 1,
+                }}>
+                {pushOn ? <Bell size={16} /> : <BellOff size={16} />}
+                {pushOn ? "Push on" : "Enable push"}
+              </button>
+            )}
+            {unreadCount > 0 && (
+              <button onClick={markAllRead}
+                style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "9px", padding: "8px 16px", fontSize: "20px", fontWeight: "600", color: "#1D4ED8", cursor: "pointer" }}>
+                Mark all as read
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", padding: "4px", borderRadius: "10px", marginBottom: "20px", width: "fit-content" }}>

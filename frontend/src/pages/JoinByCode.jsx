@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getUser, setUser } from "../utils/auth";
 import { api } from "../lib/api";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 
 const DASHBOARD = {
   manager:      "/manager/dashboard",
@@ -189,11 +189,21 @@ export default function JoinByCode() {
 }
 
 function Field({ label, type, value, onChange, placeholder }) {
+  const [show, setShow] = useState(false);
+  const isPassword = type === "password";
   return (
     <div style={{ marginBottom: "14px" }}>
       <label style={{ display: "block", fontSize: "19px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required
-        style={{ width: "100%", padding: "10px 12px", border: "1px solid #E2E8F0", borderRadius: "10px", fontSize: "21px", outline: "none", boxSizing: "border-box" }} />
+      <div style={{ position: "relative" }}>
+        <input type={isPassword && show ? "text" : type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required
+          style={{ width: "100%", padding: "10px 12px", paddingRight: isPassword ? "40px" : "12px", border: "1px solid #E2E8F0", borderRadius: "10px", fontSize: "21px", outline: "none", boxSizing: "border-box" }} />
+        {isPassword && (
+          <button type="button" onClick={() => setShow(v => !v)} aria-label={show ? "Hide password" : "Show password"}
+            style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", padding: "4px", display: "flex", cursor: "pointer", color: "#94A3B8" }}>
+            {show ? <EyeOff size={17} /> : <Eye size={17} />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

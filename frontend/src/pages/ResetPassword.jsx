@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { clearUser } from "../utils/auth";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff } from "lucide-react";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -13,6 +13,8 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     // Supabase's client parses the recovery token out of the URL hash and fires this
@@ -88,27 +90,39 @@ export default function ResetPassword() {
 
             <form onSubmit={handleSubmit} noValidate>
               <label htmlFor="new-password" style={styles.label}>New password</label>
-              <input
-                id="new-password"
-                style={styles.input}
-                type="password"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                placeholder="Min. 6 characters"
-                disabled={loading}
-                autoComplete="new-password"
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  id="new-password"
+                  style={{ ...styles.input, paddingRight: "42px" }}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                  placeholder="Min. 6 characters"
+                  disabled={loading}
+                  autoComplete="new-password"
+                />
+                <button type="button" onClick={() => setShowPassword(v => !v)} style={styles.eyeBtn}
+                  aria-label={showPassword ? "Hide password" : "Show password"}>
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
               <label htmlFor="confirm-password" style={{ ...styles.label, marginTop: "14px" }}>Confirm password</label>
-              <input
-                id="confirm-password"
-                style={styles.input}
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
-                placeholder="Repeat password"
-                disabled={loading}
-                autoComplete="new-password"
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  id="confirm-password"
+                  style={{ ...styles.input, paddingRight: "42px" }}
+                  type={showConfirm ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
+                  placeholder="Repeat password"
+                  disabled={loading}
+                  autoComplete="new-password"
+                />
+                <button type="button" onClick={() => setShowConfirm(v => !v)} style={styles.eyeBtn}
+                  aria-label={showConfirm ? "Hide password" : "Show password"}>
+                  {showConfirm ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
               <button
                 style={{ ...styles.button, ...(loading ? styles.buttonDisabled : {}) }}
                 disabled={loading}
@@ -211,6 +225,18 @@ const styles = {
   buttonDisabled: {
     opacity: 0.65,
     cursor: "not-allowed",
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: "10px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    background: "none",
+    border: "none",
+    padding: "4px",
+    display: "flex",
+    cursor: "pointer",
+    color: "#7A7870",
   },
   successBox: {
     textAlign: "center",

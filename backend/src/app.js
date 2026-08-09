@@ -22,6 +22,7 @@ const businessOwnerRoutes = require("./routes/businessOwnerRoutes");
 const skillsRoutes = require("./routes/skillsRoutes");
 const casualRoutes = require("./routes/casualRoutes");
 const timesheetRoutes = require("./routes/timesheetRoutes");
+const pushRoutes = require("./routes/pushRoutes");
 
 const app = express();
 
@@ -100,6 +101,7 @@ app.use("/api/business", businessOwnerRoutes);
 app.use("/api/skills", skillsRoutes);
 app.use("/api/casual", casualRoutes);
 app.use("/api/timesheets", timesheetRoutes);
+app.use("/api/push", pushRoutes);
 
 app.use(errorHandler);
 

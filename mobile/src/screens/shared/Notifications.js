@@ -3,8 +3,11 @@ import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Notifications from "expo-notifications";
+import { Feather } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { getUser } from "../../utils/auth";
+import { registerForPushNotificationsAsync } from "../../lib/push";
 
 function fmtDate(iso) {
   if (!iso) return "";
@@ -27,12 +30,30 @@ export default function NotificationsScreen() {
   const [notifs, setNotifs]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId]   = useState(null);
+  const [pushOn, setPushOn]   = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState("");
 
   useEffect(() => {
     getUser().then((u) => {
       if (u?.user_id) { setUserId(u.user_id); load(u.user_id); }
     });
+    Notifications.getPermissionsAsync().then(({ status }) => setPushOn(status === "granted"));
   }, []);
+
+  async function togglePush() {
+    if (pushBusy || pushOn) return;
+    setPushBusy(true);
+    setPushError("");
+    try {
+      await registerForPushNotificationsAsync();
+      setPushOn(true);
+    } catch (err) {
+      setPushError(err.message || "Couldn't enable push notifications.");
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   async function load(uid) {
     setLoading(true);
@@ -68,7 +89,20 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
       <View style={s.header}>
-        <Text style={s.heading}>Notifications</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={s.heading}>Notifications</Text>
+          <TouchableOpacity
+            onPress={togglePush}
+            disabled={pushBusy || pushOn}
+            style={[s.pushBtn, pushOn && s.pushBtnOn]}
+          >
+            <Feather name={pushOn ? "bell" : "bell-off"} size={14} color={pushOn ? "#1D4ED8" : "#64748B"} />
+            <Text style={[s.pushBtnText, pushOn && s.pushBtnTextOn]}>
+              {pushBusy ? "Enabling…" : pushOn ? "Push on" : "Enable push"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {!!pushError && <Text style={s.pushError}>{pushError}</Text>}
       </View>
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} color="#2563EB" />
@@ -93,6 +127,15 @@ const s = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: "#F8FAFC" },
   header: { padding: 20, paddingBottom: 12, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
   heading:{ fontSize: 20, fontWeight: "800", color: "#1E293B" },
+  pushBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0",
+    borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12,
+  },
+  pushBtnOn: { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" },
+  pushBtnText: { fontSize: 12, fontWeight: "700", color: "#64748B" },
+  pushBtnTextOn: { color: "#1D4ED8" },
+  pushError: { fontSize: 12, color: "#DC2626", marginTop: 8 },
   item: {
     flexDirection: "row", alignItems: "flex-start", gap: 12,
     backgroundColor: "#fff", borderRadius: 14, padding: 14,
