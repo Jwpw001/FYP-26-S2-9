@@ -143,6 +143,28 @@ export default function ManagerSettings() {
 
   function cancelAlloc() { setAlloc({ ...savedAlloc }); setEditingAlloc(false); setError(""); }
 
+  const [closureDate, setClosureDate] = useState("");
+  const [closureReason, setClosureReason] = useState("");
+  const [closureSaving, setClosureSaving] = useState(false);
+  const [closureResult, setClosureResult] = useState("");
+
+  // Managers can mark a date closed (day-to-day operational calls) even though the rest of
+  // Business setup, including the public-holiday list above, stays business-owner-managed.
+  async function markClosed() {
+    if (!closureDate || !branchId) return;
+    setClosureSaving(true); setError(""); setClosureResult("");
+    try {
+      const r = await api.post(`/api/business/branches/${branchId}/closures`, { date: closureDate, reason: closureReason });
+      setClosureResult(r.cancelled_shifts > 0
+        ? `Marked closed. ${r.cancelled_shifts} shift(s) cancelled, ${r.notified} staff notified.`
+        : "Marked closed.");
+      setClosureDate(""); setClosureReason("");
+      await load();
+      setTimeout(() => setClosureResult(""), 5000);
+    } catch (err) { setError(err.message); }
+    finally { setClosureSaving(false); }
+  }
+
   async function saveAllocation() {
     const total = WEIGHTS.reduce((s, w) => s + (alloc[w.key] || 0), 0);
     if (total !== 100) { setError("Weights must sum to 100%."); return; }
@@ -289,6 +311,19 @@ export default function ManagerSettings() {
                 <span style={{ fontSize: "17px", color: "#CBD5E1", fontWeight: "600" }}>Read only</span>
               </div>
             </div>
+
+            <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+              <input type="date" value={closureDate} onChange={e => setClosureDate(e.target.value)} style={{ flex: 1, padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "17px" }} />
+              <input type="text" placeholder="Reason (optional)" value={closureReason} onChange={e => setClosureReason(e.target.value)} style={{ flex: 1, padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "17px" }} />
+              <button onClick={markClosed} disabled={!closureDate || closureSaving}
+                style={{ background: "#1E293B", color: "#fff", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "17px", fontWeight: "700", cursor: closureDate ? "pointer" : "default", opacity: closureDate ? 1 : 0.5, whiteSpace: "nowrap" }}>
+                {closureSaving ? "…" : "Mark closed"}
+              </button>
+            </div>
+            {closureResult && (
+              <p style={{ fontSize: "17px", color: "#166534", marginBottom: "10px" }}>{closureResult}</p>
+            )}
+
             {settings ? (
               <div style={{ background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "12px", maxHeight: "240px", overflowY: "auto" }}>
                 {settings.holidays.map((h, i) => (

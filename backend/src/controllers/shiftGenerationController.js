@@ -46,10 +46,26 @@ async function generateShiftsForBranch(branchId, startDateStr, endDateStr) {
   ]);
 
   const operatingDays = branchSettings?.operating_days || "1111100";
-  // holidays entries are { date: "YYYY-MM-DD", name, enabled } — see frontend/src/data/sgHolidays.js
-  // for the canonical shape and business-owner/manager Settings.jsx for where enabled is toggled.
+  // holidays entries are { date: "YYYY-MM-DD", name, enabled, reason? } — see
+  // frontend/src/data/sgHolidays.js for the canonical shape and business-owner/manager
+  // Settings.jsx for where enabled is toggled. This array covers BOTH the legacy per-holiday
+  // toggle list and Task 3's ad-hoc closures (markDateClosed) — both are "this branch is closed
+  // on this date" when enabled !== false, regardless of which put the entry there.
   const rawHolidays = Array.isArray(branchSettings?.holidays) ? branchSettings.holidays : [];
   const closedDates = new Set(rawHolidays.filter(h => h?.enabled !== false).map(h => h?.date));
+
+  // Task 3: independently of the above, skip any date the global public_holidays reference
+  // table knows about — UNLESS this branch has opted to work through public holidays. This
+  // means a branch doesn't need every holiday pre-added to `holidays` to get sensible default
+  // behaviour; treat_public_holidays_as_working is nullable (see schema comment) so `!== true`
+  // (not `=== false`) treats an unset value the same as its column default of false.
+  if (branchSettings?.treat_public_holidays_as_working !== true) {
+    const publicHolidays = await prisma.public_holidays.findMany({
+      where: { country_code: "SG", holiday_date: { gte: new Date(`${startDateStr}T00:00:00Z`), lte: new Date(`${endDateStr}T00:00:00Z`) } },
+      select: { holiday_date: true },
+    });
+    for (const h of publicHolidays) closedDates.add(toDateStr(h.holiday_date));
+  }
 
   const templatesByDow = {};
   for (const t of templates) {

@@ -35,6 +35,7 @@ const DEFAULT_SETTINGS = {
   holidays: SG_HOLIDAYS.map(h => ({ ...h })),
   work_hours_day: 8, max_work_hours_day: 12,
   max_consecutive_days: 6, allow_overtime: false, min_workers_per_assignment: 1,
+  treat_public_holidays_as_working: false,
 };
 
 function DonutChart({ weights, size = 160 }) {
@@ -83,6 +84,7 @@ function parseSettings(s) {
     max_consecutive_days: s.max_consecutive_days ?? 6,
     allow_overtime: s.allow_overtime ?? false,
     min_workers_per_assignment: s.min_workers_per_assignment ?? 1,
+    treat_public_holidays_as_working: s.treat_public_holidays_as_working ?? false,
   };
 }
 
@@ -157,6 +159,26 @@ export default function BOSettings() {
     const holidays = [...settings.holidays];
     holidays[i] = { ...holidays[i], enabled: !holidays[i].enabled };
     setS("holidays", holidays);
+  }
+
+  const [closureDate, setClosureDate] = useState("");
+  const [closureReason, setClosureReason] = useState("");
+  const [closureSaving, setClosureSaving] = useState(false);
+  const [closureResult, setClosureResult] = useState("");
+
+  async function markClosed() {
+    if (!closureDate) return;
+    setClosureSaving(true); setError(""); setClosureResult("");
+    try {
+      const r = await api.post(`/api/business/branches/${selectedId}/closures`, { date: closureDate, reason: closureReason });
+      setClosureResult(r.cancelled_shifts > 0
+        ? `Marked closed. ${r.cancelled_shifts} shift(s) cancelled, ${r.notified} staff notified.`
+        : "Marked closed.");
+      setClosureDate(""); setClosureReason("");
+      await loadBranchSettings(selectedId);
+      setTimeout(() => setClosureResult(""), 5000);
+    } catch (err) { setError(err.message); }
+    finally { setClosureSaving(false); }
   }
 
   function cancelSetup() {
@@ -391,6 +413,30 @@ export default function BOSettings() {
                     <span style={{ fontSize: "17px", color: "#94A3B8", marginLeft: "auto" }}>Edit to change</span>
                   )}
                 </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <p style={{ fontSize: "19px", fontWeight: "600", color: "#1E293B" }}>Work through public holidays</p>
+                    <p style={{ fontSize: "17px", color: "#94A3B8", marginTop: "1px" }}>Off by default — generated shifts skip public holidays</p>
+                  </div>
+                  <button type="button" disabled={!editingSetup} onClick={() => editingSetup && setS("treat_public_holidays_as_working", !settings.treat_public_holidays_as_working)}
+                    style={{ width: "40px", height: "22px", borderRadius: "11px", border: "none", background: settings.treat_public_holidays_as_working ? "#2563EB" : "#D1D5DB", cursor: editingSetup ? "pointer" : "default", position: "relative", transition: "background 0.2s", flexShrink: 0, opacity: editingSetup ? 1 : 0.7 }}>
+                    <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#fff", position: "absolute", top: "3px", left: settings.treat_public_holidays_as_working ? "21px" : "3px", transition: "left 0.2s", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+                  <input type="date" value={closureDate} onChange={e => setClosureDate(e.target.value)} style={{ flex: 1, padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "17px" }} />
+                  <input type="text" placeholder="Reason (optional)" value={closureReason} onChange={e => setClosureReason(e.target.value)} style={{ flex: 1, padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "17px" }} />
+                  <button onClick={markClosed} disabled={!closureDate || closureSaving}
+                    style={{ background: "#1E293B", color: "#fff", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "17px", fontWeight: "700", cursor: closureDate ? "pointer" : "default", opacity: closureDate ? 1 : 0.5, whiteSpace: "nowrap" }}>
+                    {closureSaving ? "…" : "Mark closed"}
+                  </button>
+                </div>
+                {closureResult && (
+                  <p style={{ fontSize: "17px", color: "#166534", marginBottom: "10px" }}>{closureResult}</p>
+                )}
+
                 <div style={{ background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "12px", maxHeight: "240px", overflowY: "auto" }}>
                   {settings.holidays.map((h, i) => (
                     <div key={h.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: i < settings.holidays.length - 1 ? "1px solid #F1F5F9" : "none" }}>

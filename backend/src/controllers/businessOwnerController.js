@@ -4,6 +4,7 @@ const { getLimits } = require("../utils/planLimits");
 const { logAudit } = require("../utils/auditLog");
 const { offboardStaff } = require("../utils/offboarding");
 const { parsePagination } = require("../utils/pagination");
+const { notifyUsers } = require("../utils/notify");
 
 // Resolves business_id for both business owners and managers
 async function resolveBusinessId(user) {
@@ -1145,7 +1146,7 @@ const updateBranchSettings = async (req, res) => {
     const { data: branch } = await supabaseAdmin.from("branches").select("branch_id, open_time, close_time").eq("branch_id", branch_id).eq("business_id", biz.business_id).maybeSingle();
     if (!branch) return res.status(404).json({ success: false, message: "Branch not found." });
 
-    const { operating_days, open_time, close_time, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment } = req.body;
+    const { operating_days, open_time, close_time, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment, treat_public_holidays_as_working } = req.body;
 
     if (operating_days && !/^[01]{7}$/.test(operating_days)) {
       return res.status(400).json({ success: false, message: "operating_days must be a 7-character string of 0s and 1s." });
@@ -1160,6 +1161,7 @@ const updateBranchSettings = async (req, res) => {
       ...(max_consecutive_days !== undefined && { max_consecutive_days }),
       ...(allow_overtime !== undefined && { allow_overtime }),
       ...(min_workers_per_assignment !== undefined && { min_workers_per_assignment }),
+      ...(treat_public_holidays_as_working !== undefined && { treat_public_holidays_as_working: !!treat_public_holidays_as_working }),
       updated_at: new Date().toISOString(),
     };
 
@@ -1177,6 +1179,65 @@ const updateBranchSettings = async (req, res) => {
     if (error) throw new Error(error.message);
 
     return res.json({ success: true, settings: { ...data, open_time: open_time ?? branch.open_time, close_time: close_time ?? branch.close_time } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// POST /api/business/branches/:branch_id/closures  body: { date: "YYYY-MM-DD", reason? }
+// Marks a date closed by adding/updating an entry in branch_settings.holidays (the same array
+// the existing public-holiday toggle already uses — Task 3 deliberately reuses it rather than
+// adding a new table). If a shift already exists on that date, it is NEVER deleted: its status
+// is set to "cancelled" (preserving the audit trail and existing assignments) and every assigned
+// staff member is notified. Silently dropping a roster would be a data-loss trap.
+const markDateClosed = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
+    const { date, reason } = req.body;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, message: "date must be a YYYY-MM-DD string." });
+    }
+
+    const { data: settingsRow } = await supabaseAdmin.from("branch_settings").select("holidays").eq("branch_id", branch_id).maybeSingle();
+    const holidays = Array.isArray(settingsRow?.holidays) ? [...settingsRow.holidays] : [];
+    const idx = holidays.findIndex(h => h?.date === date);
+    const entry = { date, name: reason?.trim() || "Closed", enabled: true, reason: reason?.trim() || null };
+    if (idx >= 0) holidays[idx] = { ...holidays[idx], ...entry };
+    else holidays.push(entry);
+
+    const { error: upsertError } = await supabaseAdmin
+      .from("branch_settings")
+      .upsert({ branch_id, holidays, updated_at: new Date().toISOString() }, { onConflict: "branch_id" });
+    if (upsertError) throw new Error(upsertError.message);
+
+    // Cancel (never delete) any existing, not-already-cancelled shift on this date and notify
+    // every staff member currently assigned to it.
+    const affectedShifts = await prisma.shifts.findMany({
+      where: { branch_id, shift_date: new Date(`${date}T00:00:00Z`), status: { not: "cancelled" } },
+      include: { task_assignments: { where: { staff_id: { not: null } }, include: { staff: { select: { user_id: true } } } } },
+    });
+
+    let notifiedCount = 0;
+    for (const shift of affectedShifts) {
+      await prisma.shifts.update({ where: { shift_id: shift.shift_id }, data: { status: "cancelled" } });
+      const userIds = [...new Set(shift.task_assignments.map(a => a.staff?.user_id).filter(Boolean))];
+      if (userIds.length > 0) {
+        await notifyUsers(userIds, {
+          type: "shift_cancelled",
+          title: "Shift Cancelled",
+          message: `Your shift on ${date} was cancelled — the branch is marked closed${reason ? ` (${reason.trim()})` : ""}.`,
+          relatedEntity: "shifts",
+          relatedId: shift.shift_id,
+        });
+        notifiedCount += userIds.length;
+      }
+    }
+
+    return res.json({ success: true, holidays, cancelled_shifts: affectedShifts.length, notified: notifiedCount });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -1308,4 +1369,4 @@ const getBranchSkillsSummary = async (req, res) => {
   }
 };
 
-module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates };
+module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates, markDateClosed };

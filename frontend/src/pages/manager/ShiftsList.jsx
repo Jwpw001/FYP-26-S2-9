@@ -76,6 +76,7 @@ export default function ShiftsList() {
   const [shifts, setShifts]         = useState([]);
   const [branchInfo, setBranchInfo] = useState({ branch_id: null });
   const [operatingDays, setOperatingDays] = useState(null); // null = not loaded yet
+  const [closedDateInfo, setClosedDateInfo] = useState({}); // { "YYYY-MM-DD": name } — closures + enabled public holidays
   const [loading, setLoading]       = useState(true);
   const [view, setView]             = useState("calendar");
   const [filterStatus, setFilter]   = useState("all");
@@ -123,11 +124,18 @@ export default function ShiftsList() {
 
         if (!cancelled) setBranchInfo({ branch_id: oid });
 
-        // Fetch branch settings for operating days
+        // Fetch branch settings for operating days + closures/public holidays (Round 3, Task 3)
         api.get(`/api/business/branches/${oid}/settings`).then(r => {
-          if (!cancelled && r?.settings?.operating_days) {
+          if (cancelled) return;
+          if (r?.settings?.operating_days) {
             setOperatingDays(r.settings.operating_days.split("").map(Number));
           }
+          const holidays = Array.isArray(r?.settings?.holidays) ? r.settings.holidays : [];
+          const map = {};
+          for (const h of holidays) {
+            if (h?.date && h.enabled !== false) map[h.date] = h.name || "Closed";
+          }
+          setClosedDateInfo(map);
         }).catch(() => {});
 
         const { data: shiftRows } = await supabase
@@ -800,17 +808,25 @@ export default function ShiftsList() {
                   const isToday = cell.date.toDateString() === new Date().toDateString();
                   const preview = cellShifts.slice(0,2);
                   const moreCount = Math.max(0, cellShifts.length - 2);
+                  // Round 3, Task 3: mark closures/public holidays and non-operating days distinctly.
+                  const closedName = closedDateInfo[dateStr];
+                  const dow = (cell.date.getDay() + 6) % 7; // Mon=0…Sun=6
+                  const isNonOperating = Array.isArray(operatingDays) && operatingDays[dow] === 0;
                   return (
                     <div key={ci}
                       onClick={() => { const off = Math.round((new Date(cell.date.getFullYear(),cell.date.getMonth(),cell.date.getDate())-new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()))/86400000); setCalendarScope("day"); setDayOffset(off); }}
-                      style={{ minHeight:"86px", border:"1px solid #E2E8F0", borderRadius:"10px", padding:"7px", cursor:"pointer",
-                        opacity: cell.inMonth ? 1 : 0.35, background:"#fff", transition:"box-shadow 0.15s" }}
+                      title={closedName || (isNonOperating ? "Non-operating day" : undefined)}
+                      style={{ minHeight:"86px", border:`1px solid ${closedName ? "#FECACA" : "#E2E8F0"}`, borderRadius:"10px", padding:"7px", cursor:"pointer",
+                        opacity: cell.inMonth ? 1 : 0.35, background: closedName ? "#FEF2F2" : isNonOperating ? "#F8FAFC" : "#fff", transition:"box-shadow 0.15s" }}
                       onMouseEnter={e => { e.currentTarget.style.boxShadow="0 4px 10px rgba(0,0,0,0.08)"; }}
                       onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; }}>
                       <div style={{ width:"22px", height:"22px", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", fontWeight:"800",
                         background: isToday ? "#2563EB" : "transparent", color: isToday ? "#fff" : "#1E293B" }}>
                         {cell.date.getDate()}
                       </div>
+                      {closedName && (
+                        <div style={{ fontSize:"15px", fontWeight:"700", color:"#DC2626", marginTop:"3px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{closedName}</div>
+                      )}
                       {preview.map((sh, pi) => {
                         const c = STATUS_COLORS[sh.status] || STATUS_COLORS.draft;
                         return (

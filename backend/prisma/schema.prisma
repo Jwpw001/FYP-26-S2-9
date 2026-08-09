@@ -72,6 +72,13 @@ model branch_settings {
   created_at                 DateTime    @default(now()) @db.Timestamptz(6)
   updated_at                 DateTime    @default(now()) @db.Timestamptz(6)
   off_days_per_week          Int?        @default(1)
+  // Round 3, Task 3: when false (the default), shift generation skips any date listed in the
+  // new public_holidays reference table for this branch, without the manager needing to add
+  // each one to `holidays` individually. When true, generation runs through public holidays
+  // normally. Independent of `holidays` below — a branch can still mark an individual date
+  // closed via `holidays` even while this is true (e.g. "we work through public holidays
+  // generally, except Christmas Day specifically").
+  treat_public_holidays_as_working Boolean? @default(false)
   business_id                Int?
   businesses                 businesses? @relation(fields: [business_id], references: [business_id], onDelete: NoAction, onUpdate: NoAction)
   branches                   branches    @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction, map: "outlet_settings_outlet_id_fkey")
@@ -126,6 +133,24 @@ model branch_task_templates {
   skills           skills?   @relation(fields: [skill_id], references: [skill_id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([branch_id, day_of_week], map: "idx_branch_task_templates_branch_day")
+}
+
+// Round 3, Task 3: a global reference list of gazetted public holidays, seeded once via
+// prisma/seed/publicHolidays.sql (not a branch_settings-style per-branch list — every branch
+// shares the same set of dates for a given country; whether a branch is OPEN or closed on one
+// is governed by branch_settings.treat_public_holidays_as_working, and a branch can still
+// override an individual date via branch_settings.holidays). Not used to store branch-specific
+// ad-hoc closures — those stay in branch_settings.holidays, per the task's own instruction not
+// to create a new table for that.
+model public_holidays {
+  holiday_id   Int      @id @default(autoincrement())
+  country_code String   @default("SG") @db.VarChar(2)
+  holiday_date DateTime @db.Date
+  name         String   @db.VarChar(100)
+  year         Int
+
+  @@unique([country_code, holiday_date])
+  @@index([country_code, year], map: "idx_public_holidays_country_year")
 }
 
 // Same situation as branch_role_templates above: live, already read/written via raw supabase
