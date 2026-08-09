@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import { getUser } from "../utils/auth";
 import { ClipboardList, CheckCircle2, XCircle, Bell, BellOff, CalendarDays, RefreshCw, Megaphone, FileText, Building2, ClipboardCheck, UserCheck, UserX, CalendarX, CalendarClock } from "lucide-react";
 import { isPushSupported, isSubscribed, subscribeToPush, unsubscribeFromPush } from "../lib/push";
+import { resolveNotificationLink } from "../utils/notificationLink";
 
 if (typeof document !== "undefined" && !document.getElementById("shared-notif-styles")) {
   const style = document.createElement("style");
@@ -84,40 +85,6 @@ const TYPE_ICONS = {
   general:              Bell,
 };
 
-function getNotifRoute(type, relatedEntity, role) {
-  const isManager      = role === "manager";
-  const isRegular      = role === "regular_staff";
-  const isCasual       = role === "casual_staff";
-  const isOwner        = role === "business_owner";
-
-  if (relatedEntity === "availability" || type?.includes("leave") || type?.includes("off_day")) {
-    if (isManager) return "/manager/availability";
-    if (isRegular) return "/regular-staff/leave";
-    return null;
-  }
-  if (relatedEntity === "swap_requests" || type?.includes("swap")) {
-    if (isManager)  return "/manager/availability";
-    if (isRegular)  return "/regular-staff/swaps";
-    if (isCasual)   return "/casual-staff/swap-requests";
-    return null;
-  }
-  if (relatedEntity === "shifts" || type?.includes("shift") || type === "assignment" || type?.includes("assign")) {
-    if (isManager) return "/manager/shifts";
-    if (isRegular) return "/regular-staff/shifts";
-    if (isCasual)  return "/casual-staff/shifts";
-    return null;
-  }
-  if (relatedEntity === "reports" || type?.includes("report")) {
-    if (isManager) return "/manager/reports";
-    if (isOwner)   return "/business-owner/reports";
-    return null;
-  }
-  if (relatedEntity === "businesses" || type === "business_registered") {
-    return "/admin/businesses";
-  }
-  return null;
-}
-
 export default function NotificationsPage({ Layout }) {
   const user     = getUser();
   const userId   = user?.user_id;
@@ -177,13 +144,13 @@ export default function NotificationsPage({ Layout }) {
     return () => { cancelled = true; };
   }, [userId]);
 
-  async function markRead(notifId, type, relatedEntity) {
-    setNotifications(prev => prev.map(n =>
-      n.notification_id === notifId ? { ...n, is_read: true } : n
+  async function markRead(n) {
+    setNotifications(prev => prev.map(x =>
+      x.notification_id === n.notification_id ? { ...x, is_read: true } : x
     ));
     await supabase.from("notifications")
-      .update({ is_read: true }).eq("notification_id", notifId);
-    const route = getNotifRoute(type, relatedEntity, user?.role);
+      .update({ is_read: true }).eq("notification_id", n.notification_id);
+    const route = resolveNotificationLink({ type: n.type, relatedEntity: n.related_entity, relatedId: n.related_id }, user?.role);
     if (route) navigate(route);
   }
 
@@ -281,17 +248,19 @@ export default function NotificationsPage({ Layout }) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {displayed.map((n, idx) => (
+            {displayed.map((n, idx) => {
+              const isLinked = !!resolveNotificationLink({ type: n.type, relatedEntity: n.related_entity, relatedId: n.related_id }, user?.role);
+              return (
               <div
                 key={n.notification_id}
-                className="shared-notif-row"
-                onClick={() => markRead(n.notification_id, n.type, n.related_entity)}
+                className={isLinked ? "shared-notif-row" : undefined}
+                onClick={() => markRead(n)}
                 style={{
                   background: n.is_read ? "#FFFFFF" : "#EFF6FF",
                   border: `1px solid ${n.is_read ? "#E2E8F0" : "#BFDBFE"}`,
                   borderRadius: "12px", padding: "16px 18px",
                   display: "flex", gap: "14px", alignItems: "flex-start",
-                  cursor: "pointer", transition: "background 0.15s",
+                  cursor: isLinked ? "pointer" : "default", transition: "background 0.15s",
                   animation: `fadeSlideUp 0.3s ease ${idx * 0.04}s both`,
                 }}>
                 <div style={{ paddingTop: "4px", flexShrink: 0 }}>
@@ -322,7 +291,8 @@ export default function NotificationsPage({ Layout }) {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -71,6 +71,8 @@ async function execute(req, res) {
           type: "leave_approved",
           title: "Leave Request Approved",
           message: `Your leave request (${from} to ${to}) has been approved.`,
+          relatedEntity: "availability",
+          relatedId: leave.request_id,
         });
       }
 
@@ -104,6 +106,8 @@ async function execute(req, res) {
           type: "leave_rejected",
           title: "Leave Request Rejected",
           message: `Your leave request has been rejected${reason ? `: ${reason}` : "."}`,
+          relatedEntity: "availability",
+          relatedId: leave.request_id,
         });
       }
 
