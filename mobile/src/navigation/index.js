@@ -81,7 +81,7 @@ function CasualStaffTabs() {
 
 function RoleNavigator({ role }) {
   if (role === "regular_staff") return <RegularStaffTabs />;
-  if (role === "outlet_casual_staff") return <CasualStaffTabs />;
+  if (role === "casual_staff") return <CasualStaffTabs />;
   return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ color: "#64748B", fontSize: 14 }}>

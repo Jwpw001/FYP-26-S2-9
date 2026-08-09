@@ -7,7 +7,6 @@ import { toTitleCase } from "../../utils/text";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { Plus, Trash2, Clock, Calendar, Tag, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
-import { toTitleCase } from "../../utils/text";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_FULL  = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
