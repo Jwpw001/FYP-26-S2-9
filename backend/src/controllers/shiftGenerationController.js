@@ -39,11 +39,34 @@ const ROLLING_HORIZON_DAYS = 56;
 // or modified. Every skip is reported with a reason so a manager can see why a date has no
 // generated shift instead of silently wondering.
 async function generateShiftsForBranch(branchId, startDateStr, endDateStr) {
-  const [branchSettings, branch, templates] = await Promise.all([
+  const [branchSettings, branch, templates, regularStaff] = await Promise.all([
     prisma.branch_settings.findUnique({ where: { branch_id: branchId } }),
     prisma.branches.findUnique({ where: { branch_id: branchId }, select: { open_time: true, close_time: true } }),
     prisma.branch_task_templates.findMany({ where: { branch_id: branchId, is_active: true }, orderBy: [{ day_of_week: "asc" }, { sort_order: "asc" }] }),
+    // Round 3, Task 7: regular staff are POPULATED (placed on their contracted days), not
+    // ALLOCATED like casual workers (matched/scored) — see the round's brief. staff.default_work_days
+    // is the existing contracted-days field; no new column.
+    prisma.staff.findMany({ where: { branch_id: branchId, staff_type: "regular", is_active: true }, select: { staff_id: true, default_work_days: true } }),
   ]);
+
+  const staffMissingWorkDays = regularStaff.filter(s => !s.default_work_days).map(s => s.staff_id);
+  const eligibleRegularStaff = regularStaff.filter(s => s.default_work_days);
+
+  // Approved off-day requests for these staff anywhere in the generation range, so each day's
+  // pass can just check a Set instead of a query per staff per day.
+  const offDayRows = eligibleRegularStaff.length > 0
+    ? await prisma.off_day_requests.findMany({
+        where: {
+          staff_id: { in: eligibleRegularStaff.map(s => s.staff_id) },
+          status: "approved",
+          requested_date: { gte: new Date(`${startDateStr}T00:00:00Z`), lte: new Date(`${endDateStr}T00:00:00Z`) },
+        },
+        select: { staff_id: true, requested_date: true },
+      })
+    : [];
+  const offDaySet = new Set(offDayRows.map(r => `${r.staff_id}:${toDateStr(r.requested_date)}`));
+  const autoPopulated = []; // { date, assigned_count }
+  const dataGaps = staffMissingWorkDays.length > 0 ? { staff_ids: staffMissingWorkDays } : null;
 
   const operatingDays = branchSettings?.operating_days || "1111100";
   // holidays entries are { date: "YYYY-MM-DD", name, enabled, reason? } — see
@@ -141,15 +164,38 @@ async function generateShiftsForBranch(branchId, startDateStr, endDateStr) {
         });
       }
     }
+    let createdTasks = [];
     if (taskRows.length > 0) {
-      await prisma.shift_tasks.createMany({ data: taskRows });
+      createdTasks = await prisma.shift_tasks.createManyAndReturn({ data: taskRows });
     }
+
+    // Task 7: place contracted regular staff onto today's open tasks. Simple placement, not
+    // skill-matched scoring — that precision is reserved for casual allocation per the brief's
+    // own distinction ("regular staff are populated, casual workers are allocated"). Each
+    // eligible staff member (contracted this weekday, no approved off-day covering this date)
+    // fills one open task in whatever order the tasks were generated; leftover tasks (more tasks
+    // than eligible staff) are exactly what's left for casual allocation to target.
+    const todaysEligibleStaff = eligibleRegularStaff.filter(s =>
+      s.default_work_days[dow] === "1" && !offDaySet.has(`${s.staff_id}:${dateStr}`)
+    );
+    let openTasks = [...createdTasks];
+    let placedCount = 0;
+    for (const s of todaysEligibleStaff) {
+      const task = openTasks.shift();
+      if (!task) break; // more contracted staff than open tasks today — nothing left to place them on
+      await prisma.task_assignments.create({
+        data: { task_id: task.task_id, shift_id: shift.shift_id, staff_id: s.staff_id, status: "assigned" },
+      });
+      await prisma.shift_tasks.update({ where: { task_id: task.task_id }, data: { status: "assigned" } });
+      placedCount++;
+    }
+    if (placedCount > 0) autoPopulated.push({ date: dateStr, assigned_count: placedCount });
 
     created.push(dateStr);
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 
-  return { created, skipped };
+  return { created, skipped, autoPopulated, dataGaps };
 }
 
 // POST /api/shifts/generate  body: { start_date?, end_date? } (both "YYYY-MM-DD")
@@ -171,8 +217,29 @@ const generateShifts = async (req, res) => {
       return res.status(400).json({ success: false, message: "end_date must be on or after start_date." });
     }
 
-    const { created, skipped } = await generateShiftsForBranch(branchId, start_date, end_date);
-    return res.json({ success: true, created_count: created.length, created_dates: created, skipped });
+    const { created, skipped, autoPopulated, dataGaps } = await generateShiftsForBranch(branchId, start_date, end_date);
+
+    // Task 7: surface the "missing default_work_days" data-completeness prompt with names, not
+    // just ids, so it's actually actionable for the manager reading the response — never guessed
+    // a default for these staff, just skipped them (see generateShiftsForBranch's own comment).
+    let dataGapStaff = [];
+    if (dataGaps?.staff_ids?.length > 0) {
+      const rows = await prisma.staff.findMany({
+        where: { staff_id: { in: dataGaps.staff_ids } },
+        select: { staff_id: true, users: { select: { full_name: true } } },
+      });
+      dataGapStaff = rows.map(r => ({ staff_id: r.staff_id, full_name: r.users?.full_name || null }));
+    }
+
+    return res.json({
+      success: true,
+      created_count: created.length,
+      created_dates: created,
+      skipped,
+      auto_populated: autoPopulated,
+      auto_populated_count: autoPopulated.reduce((sum, a) => sum + a.assigned_count, 0),
+      data_gap_staff: dataGapStaff,
+    });
   } catch (error) {
     logger.error({ err: error }, "[generateShifts] error");
     return res.status(500).json({ success: false, message: error.message });

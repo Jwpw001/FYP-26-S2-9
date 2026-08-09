@@ -557,13 +557,20 @@ export default function ShiftsList() {
         </div>
 
         {(templateGen.result || templateGen.error) && (
-          <div style={{ background: templateGen.error ? "#FEF2F2" : "#F0FDF4", border:`1px solid ${templateGen.error ? "#FECACA" : "#BBF7D0"}`, borderRadius:"10px", padding:"10px 14px", marginBottom:"14px", fontSize:"19px", color: templateGen.error ? "#991B1B" : "#166534", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"10px" }}>
-            <span>
-              {templateGen.error
-                ? templateGen.error
-                : `Generated ${templateGen.result.created_count} shift${templateGen.result.created_count === 1 ? "" : "s"}. ${templateGen.result.skipped.length} day${templateGen.result.skipped.length === 1 ? "" : "s"} skipped (already covered, closed, or no templates set).`}
-            </span>
-            <button onClick={() => setTemplateGen({ running:false, result:null, error:"" })} style={{ background:"none", border:"none", cursor:"pointer", color:"inherit", display:"flex" }}><X size={14} /></button>
+          <div style={{ background: templateGen.error ? "#FEF2F2" : "#F0FDF4", border:`1px solid ${templateGen.error ? "#FECACA" : "#BBF7D0"}`, borderRadius:"10px", padding:"10px 14px", marginBottom:"14px", fontSize:"19px", color: templateGen.error ? "#991B1B" : "#166534" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"10px" }}>
+              <span>
+                {templateGen.error
+                  ? templateGen.error
+                  : `Generated ${templateGen.result.created_count} shift${templateGen.result.created_count === 1 ? "" : "s"}${templateGen.result.auto_populated_count > 0 ? `, auto-filled ${templateGen.result.auto_populated_count} task${templateGen.result.auto_populated_count === 1 ? "" : "s"} with regular staff` : ""}. ${templateGen.result.skipped.length} day${templateGen.result.skipped.length === 1 ? "" : "s"} skipped (already covered, closed, or no templates set).`}
+              </span>
+              <button onClick={() => setTemplateGen({ running:false, result:null, error:"" })} style={{ background:"none", border:"none", cursor:"pointer", color:"inherit", display:"flex", flexShrink:0 }}><X size={14} /></button>
+            </div>
+            {templateGen.result?.data_gap_staff?.length > 0 && (
+              <p style={{ marginTop:"6px", color:"#D97706" }}>
+                ⚠ {templateGen.result.data_gap_staff.map(s => s.full_name || `Staff #${s.staff_id}`).join(", ")} — no contracted days on file, so they weren't auto-scheduled. Set their default work days to include them.
+              </p>
+            )}
           </div>
         )}
 
