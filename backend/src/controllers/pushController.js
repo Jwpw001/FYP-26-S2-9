@@ -60,4 +60,4 @@ async function unregisterPush(req, res) {
   }
 }
 
-module.exports = { registerPush, unregisterPush };
+module.exports = { registerPush, unregisterPush, subscriptionKey };
