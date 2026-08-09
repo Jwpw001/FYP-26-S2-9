@@ -114,10 +114,47 @@ button:focus-visible {
     display: flex !important;
   }
   .dash-content {
-    padding: 16px !important;
+    /* Extra bottom clearance so the last row of content can be scrolled past the floating AI
+       button below instead of staying permanently covered by it. */
+    padding: 16px 16px 90px !important;
   }
   .dash-topbar {
     padding: 0 16px !important;
+  }
+}
+
+/* A gantt-style timeline (fixed name column + time-axis labels + proportionally-positioned
+   bars) has no fluid way to compress: shrinking the name column or bar area misaligns the labels
+   from the bars they're meant to sit above. Scrolls horizontally at a fixed, readable width on
+   mobile instead of squeezing every label/bar until they overlap. */
+.responsive-gantt-scroll { }
+@media (max-width: 640px) {
+  .responsive-gantt-scroll {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .responsive-gantt-inner {
+    min-width: 560px !important;
+  }
+}
+
+/* AI assistant floating button + chat panel — fixed size/position is fine on desktop's spare
+   corner space, but on a phone it collides with page content (fixed corner offset, page content
+   reflows to fill that same corner) and the chat panel (360px wide, right:28) doesn't fit at all
+   on anything narrower than ~420px. */
+@media (max-width: 640px) {
+  .ai-fab {
+    width: 46px !important;
+    height: 46px !important;
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+  .ai-chat-panel {
+    width: calc(100vw - 32px) !important;
+    right: 16px !important;
+    left: 16px !important;
+    bottom: 70px !important;
+    max-height: 65vh !important;
   }
 }
 

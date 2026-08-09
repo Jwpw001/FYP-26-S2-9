@@ -490,7 +490,7 @@ export default function AIAssistantWidget() {
     <>
       {/* FAB */}
       <button
-        className={hasNew ? "ai-fab-pulse" : ""}
+        className={`ai-fab${hasNew ? " ai-fab-pulse" : ""}`}
         onClick={() => setOpen((v) => !v)}
         style={{
           position: "fixed", bottom: 28, right: 28,
@@ -525,7 +525,7 @@ export default function AIAssistantWidget() {
 
       {/* Chat panel */}
       {open && (
-        <div style={{
+        <div className="ai-chat-panel" style={{
           position: "fixed", bottom: 92, right: 28,
           width: 360, maxHeight: 520,
           background: "#fff", borderRadius: 18,

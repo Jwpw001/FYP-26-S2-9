@@ -337,42 +337,48 @@ export default function ManagerDashboard() {
             <h3 style={{ fontSize: "22px", fontWeight: "700", color: "#1E293B", margin: 0 }}>Today's Roster</h3>
             <span style={{ fontSize: "18px", color: "#64748B", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "6px", padding: "3px 9px", fontWeight: "500" }}>8AM – 10PM</span>
           </div>
-          {/* Time labels */}
-          <div style={{ paddingLeft: "130px", marginBottom: "8px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "17.5px", color: "#94A3B8", fontWeight: "600" }}>
-              {TIME_LABELS.map(t => <span key={t}>{t}</span>)}
-            </div>
-          </div>
-          {loading ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {[1,2,3].map(i => (
-                <div key={i} style={{ display: "flex", gap: "12px", padding: "9px 0", borderTop: "1px solid #F1F5F9" }}>
-                  <Shimmer w="118px" h="26px" r="13px" />
-                  <Shimmer h="28px" r="6px" />
-                </div>
-              ))}
-            </div>
-          ) : rosterRows.length === 0 ? (
+          {!loading && rosterRows.length === 0 ? (
             <p style={{ fontSize: "20px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No published shifts assigned today.</p>
           ) : (
-            rosterRows.map((row, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "9px 0", borderTop: "1px solid #F1F5F9" }}>
-                <div style={{ width: "118px", flexShrink: 0, display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                  <UserAvatar name={row.name} avatar_url={row.avatar_url} size={26} fontSize={11} />
-                  <span style={{ fontSize: "19.5px", fontWeight: "600", color: "#1E293B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.name}</span>
-                </div>
-                <div style={{ flex: 1, position: "relative", height: "28px", background: "#FAFBFC", borderRadius: "6px" }}>
-                  <div style={{ position: "absolute", top: "2px", height: "24px", left: `${row.left}%`, width: `${row.width}%`, background: row.bg, color: row.color, border: `1px solid ${row.border}`, borderRadius: "6px", display: "flex", alignItems: "center", padding: "0 8px", fontSize: "18px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden" }}>
-                    {row.label}
+            <div className="responsive-gantt-scroll">
+              <div className="responsive-gantt-inner">
+                {/* Time labels */}
+                <div style={{ paddingLeft: "130px", marginBottom: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "17.5px", color: "#94A3B8", fontWeight: "600" }}>
+                    {TIME_LABELS.map(t => <span key={t}>{t}</span>)}
                   </div>
                 </div>
+                {loading ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {[1,2,3].map(i => (
+                      <div key={i} style={{ display: "flex", gap: "12px", padding: "9px 0", borderTop: "1px solid #F1F5F9" }}>
+                        <Shimmer w="118px" h="26px" r="13px" />
+                        <Shimmer h="28px" r="6px" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  rosterRows.map((row, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "9px 0", borderTop: "1px solid #F1F5F9" }}>
+                      <div style={{ width: "118px", flexShrink: 0, display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                        <UserAvatar name={row.name} avatar_url={row.avatar_url} size={26} fontSize={11} />
+                        <span style={{ fontSize: "19.5px", fontWeight: "600", color: "#1E293B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.name}</span>
+                      </div>
+                      <div style={{ flex: 1, position: "relative", height: "28px", background: "#FAFBFC", borderRadius: "6px" }}>
+                        <div style={{ position: "absolute", top: "2px", height: "24px", left: `${row.left}%`, width: `${row.width}%`, background: row.bg, color: row.color, border: `1px solid ${row.border}`, borderRadius: "6px", display: "flex", alignItems: "center", padding: "0 8px", fontSize: "18px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden" }}>
+                          {row.label}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            ))
+            </div>
           )}
         </div>
 
         {/* Workload + Leave/Swap */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
 
           {/* Weekly Workload */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px" }}>
