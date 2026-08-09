@@ -133,7 +133,7 @@ export default function ShiftDetail() {
 
   function showToast(msg, type="success") {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), type === "warning" ? 7000 : 3500);
   }
 
   function openEditShift() {
@@ -348,7 +348,11 @@ export default function ShiftDetail() {
       if (!res.success) throw new Error(res.message);
       await reloadTasks();
       await refreshRoster();
-      showToast(`${staffName} assigned to "${task.title}"`);
+      // Round 3, Task 5: labor-rule breaches no longer block assignment — the assignment always
+      // goes through; a breach just surfaces here as a warning instead, so the manager decides
+      // with the information in front of them rather than fighting the system.
+      if (res.warning) showToast(`${staffName} assigned to "${task.title}" — ${res.warning}`, "warning");
+      else showToast(`${staffName} assigned to "${task.title}"`);
       setAiNotes(prev => ({ ...prev, [task.task_id]: { loading: true } }));
       api.post(`/api/shifts/tasks/${task.task_id}/validate-assignment`, { staff_id: Number(staffId), roster })
         .then(aiRes => {
@@ -1153,7 +1157,7 @@ export default function ShiftDetail() {
       {toast && (
         <div style={{
           position:"fixed",bottom:"28px",right:rosterOpen?"388px":"28px",zIndex:9999,
-          background:toast.type==="success"?"#22C55E":"#EF4444",
+          background:toast.type==="success"?"#22C55E":toast.type==="warning"?"#D97706":"#EF4444",
           color:"#FFF",padding:"12px 20px",borderRadius:"10px",fontSize:"21px",fontWeight:"600",
           boxShadow:"0 4px 20px rgba(0,0,0,0.15)",
           animation:"toastIn 0.3s ease both",

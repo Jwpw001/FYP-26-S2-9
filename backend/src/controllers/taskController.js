@@ -229,11 +229,12 @@ const assignStaff = async (req, res) => {
     const existing = await prisma.task_assignments.findFirst({ where: { task_id: taskId } });
     if (existing) return res.status(409).json({ success: false, message: "Task already has an assignee. Remove the current assignee first." });
 
-    // ── Labor-rule checks — the AI weekly scheduler already respects these branch_settings
-    // (max_work_hours_day, max_consecutive_days, allow_overtime); manual assignment previously
-    // didn't check them at all, so a manager could silently schedule past either limit.
-    const laborCheckFailure = await checkLaborRules(Number(staff_id), task.shift_id, task.shifts.branch_id);
-    if (laborCheckFailure) return res.status(409).json({ success: false, message: laborCheckFailure });
+    // ── Labor-rule check — Round 3, Task 5: advisory, not blocking. No single hour cap fits
+    // every business, and a manager who gets blocked works around the system instead of using
+    // it. The assignment always proceeds; a breach is surfaced as a warning in the response
+    // (and logged below) so the manager decides with the information in front of them, and
+    // Task 6's report can flag it later.
+    const laborWarning = await checkLaborRules(Number(staff_id), task.shift_id, task.shifts.branch_id);
 
     const assignment = await prisma.task_assignments.create({
       data: {
@@ -266,10 +267,22 @@ const assignStaff = async (req, res) => {
 
     await logAudit({
       actorId: req.user.user_id, action: "staff_assigned", entity: "task_assignments", entityId: assignment.assignment_id,
-      before: null, after: { task_id: taskId, staff_id: Number(staff_id) },
+      before: null, after: { task_id: taskId, staff_id: Number(staff_id), labor_warning: laborWarning || null },
     });
+    // A second, distinctly-actioned audit entry specifically for the labor-rule breach itself —
+    // easy to find/filter later ("staff_assigned" entries wouldn't be) even though Task 6's
+    // report recomputes warnings fresh from the final roster rather than reading these back (see
+    // that task's own notes: many assignments — regular-staff auto-population, casual
+    // auto-allocation — never call checkLaborRules at all, so a report built from persisted
+    // warnings alone would be systematically incomplete).
+    if (laborWarning) {
+      await logAudit({
+        actorId: req.user.user_id, action: "labor_rule_warning", entity: "task_assignments", entityId: assignment.assignment_id,
+        before: null, after: { task_id: taskId, staff_id: Number(staff_id), warning: laborWarning },
+      });
+    }
 
-    res.status(201).json({ success: true, assignment });
+    res.status(201).json({ success: true, assignment, warning: laborWarning || null });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

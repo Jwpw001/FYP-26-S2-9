@@ -12,6 +12,10 @@ jest.mock("../src/config/prisma", () => ({
 }));
 jest.mock("../src/config/supabaseAdmin", () => ({ from: jest.fn() }));
 jest.mock("../src/controllers/taskController", () => ({ checkLaborRules: jest.fn() }));
+// Only reached once a candidate actually wins and gets assigned+notified — the two pre-existing
+// filter-chain tests below return early and never touch this, but the Task 5 soft-penalty test
+// does reach the full happy path.
+jest.mock("../src/utils/notify", () => ({ notifyUser: jest.fn().mockResolvedValue(undefined) }));
 
 const prisma = require("../src/config/prisma");
 const supabaseAdmin = require("../src/config/supabaseAdmin");
@@ -125,22 +129,34 @@ describe("autoAssignCasual filter chain", () => {
     expect(checkLaborRules).not.toHaveBeenCalled(); // never reached hard filter 3
   });
 
-  test("candidates who pass availability and double-booking checks but would exceed labor rules are excluded", async () => {
+  // Round 3, Task 5: checkLaborRules moved from a hard filter to a soft score penalty — a
+  // breaching candidate now ranks lower but still appears and can still be assigned.
+  test("candidates who would exceed labor rules are ranked lower, not excluded, and the assignment still succeeds", async () => {
     prisma.casual_availability.findMany.mockResolvedValue([
       { staff_id: S1, available_from: t("08:00"), available_to: t("18:00") },
       { staff_id: S2, available_from: t("08:00"), available_to: t("18:00") },
     ]);
     prisma.task_assignments.findMany.mockResolvedValue([]); // not double-booked
-    checkLaborRules.mockResolvedValue("This would put the staff member over the branch's daily-hours limit.");
+    // Only S2 would breach — S1 should win despite otherwise-identical sub-scores.
+    checkLaborRules.mockImplementation(async (staffId) =>
+      staffId === S2 ? "This would put the staff member over the branch's daily-hours limit." : null
+    );
+    prisma.users.findUnique.mockResolvedValue({ full_name: "Worker One" });
+    prisma.task_assignments.create.mockResolvedValue({ assignment_id: 999 });
 
     const res = makeRes();
     await autoAssignCasual(makeReq(), res);
 
     const body = res.json.mock.calls[0][0];
-    expect(body.success).toBe(false);
-    expect(body.reason).toMatch(/2 would exceed branch labor limits/);
-    expect(body.reason).not.toMatch(/unavailable/);
-    expect(body.reason).not.toMatch(/already booked/);
-    expect(checkLaborRules).toHaveBeenCalledTimes(2); // once per surviving candidate
+    expect(body.success).toBe(true);
+    expect(body.assigned.user_id).toBe(U1); // the clean candidate, not the breaching one
+    expect(body.assigned.labor_warning).toBeNull();
+    expect(checkLaborRules).toHaveBeenCalledTimes(2); // once per surviving candidate, neither excluded
+
+    const s1 = body.score_breakdown.candidates.find(c => c.user_id === U1);
+    const s2 = body.score_breakdown.candidates.find(c => c.user_id === U2);
+    expect(s1.labor_warning).toBeNull();
+    expect(s2.labor_warning).toMatch(/daily-hours limit/);
+    expect(s2.score).toBeLessThan(s1.score); // penalised, but still present in the breakdown
   });
 });

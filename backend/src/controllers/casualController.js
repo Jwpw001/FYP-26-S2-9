@@ -726,20 +726,23 @@ async function autoAssignCasual(req, res) {
       );
       if (doubleBooked) { failReasons.double_booked++; continue; }
 
-      // Hard filter 3: branch labor rules (max daily hours, max consecutive working days) —
-      // the same check assignStaff uses for manual assignment. Kept as its own per-candidate
-      // call rather than batched: checkLaborRules is shared logic from taskController.js and is
-      // intentionally left unmodified.
-      const laborFailure = await checkLaborRules(staffId, Number(shift_id), branch.branch_id);
-      if (laborFailure) { failReasons.labor_rules++; continue; }
+      // Round 3, Task 5: branch labor rules (max daily hours, max consecutive working days) are
+      // now a SOFT signal, not a hard filter — the same check assignStaff uses for manual
+      // assignment (checkLaborRules is shared, unmodified logic from taskController.js), but a
+      // breach here only ranks the candidate lower via laborPenalty below, applied after
+      // weighted scoring. failReasons.labor_rules is kept for the score_breakdown / empty-result
+      // messaging below, now meaning "would breach" rather than "excluded".
+      const laborWarning = await checkLaborRules(staffId, Number(shift_id), branch.branch_id);
+      if (laborWarning) failReasons.labor_rules++;
 
-      // Passed all hard filters — gather the raw signal needed for weighted scoring below.
+      // Passed the remaining hard filters — gather the raw signal needed for weighted scoring.
       const pastAssignments = pastAssignmentsByStaffId[staffId] || 0;
 
       candidates.push({
         cw,
         staffId,
         pastAssignments,
+        laborWarning,
         subScores: {
           availability: availabilitySubScore(availStart, availEnd),
           skills: skillsSubScore(cw.user_id),
@@ -750,10 +753,12 @@ async function autoAssignCasual(req, res) {
     }
 
     if (candidates.length === 0) {
+      // labor_rules is deliberately not a possible cause here any more (Task 5: it's a soft
+      // score penalty below, not a filter) — any candidate who only breaches labor rules is
+      // still in `candidates`, so reaching zero can only mean unavailable/double_booked.
       const parts = [];
       if (failReasons.unavailable > 0) parts.push(`${failReasons.unavailable} unavailable on ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][dayOfWeek]}`);
       if (failReasons.double_booked > 0) parts.push(`${failReasons.double_booked} already booked at this time`);
-      if (failReasons.labor_rules > 0) parts.push(`${failReasons.labor_rules} would exceed branch labor limits (max hours/day or consecutive days)`);
       return res.json({
         success: false,
         flagged: true,
@@ -764,11 +769,18 @@ async function autoAssignCasual(req, res) {
     // Workload is normalised relative to this candidate set (not a fixed scale), so it can only
     // be computed once every surviving candidate's past-assignment count is known.
     const maxPastAssignments = Math.max(...candidates.map(c => c.pastAssignments), 0);
+    // Round 3, Task 5: a labor-rule breach costs 30% of the otherwise-earned score rather than
+    // excluding the candidate outright — enough to consistently rank a clean candidate above a
+    // breaching one when both are viable, but a breaching candidate can still win when nobody
+    // else fits (matching allow_overtime's own meaning: the branch already expects some breaches
+    // to happen sometimes).
+    const LABOR_WARNING_PENALTY = 0.7;
     candidates.forEach(c => {
       c.subScores.workload = maxPastAssignments === 0 ? 1 : 1 - c.pastAssignments / maxPastAssignments;
       c.score = computeWeightedScore(c.subScores, {
         availability: wAvail, skills: wSkills, attendance: wAttend, performance: wPerf, workload: wWork,
       });
+      if (c.laborWarning) c.score *= LABOR_WARNING_PENALTY;
     });
 
     // Pick top scorer
@@ -805,6 +817,7 @@ async function autoAssignCasual(req, res) {
         user_id: winner.cw.user_id,
         past_assignments: winner.pastAssignments,
         score: Math.round(winner.score * 10) / 10,
+        labor_warning: winner.laborWarning || null,
       },
       // Explainable breakdown for every candidate who passed the hard filters (already sorted
       // best-first), so a demo can show why the winner beat the runners-up.
@@ -821,6 +834,10 @@ async function autoAssignCasual(req, res) {
             performance: c.subScores.performance,
             workload: Math.round(c.subScores.workload * 100) / 100,
           },
+          // Round 3, Task 5: the labor-rule outcome for this candidate — null when clean, the
+          // human-readable reason from checkLaborRules when it would breach a limit. Applied as
+          // a 30% score penalty above, not an exclusion.
+          labor_warning: c.laborWarning || null,
         })),
       },
     });
