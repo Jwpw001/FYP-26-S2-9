@@ -340,8 +340,8 @@ export default function ManagerDashboard() {
           {!loading && rosterRows.length === 0 ? (
             <p style={{ fontSize: "20px", color: "#94A3B8", textAlign: "center", padding: "20px 0", margin: 0 }}>No published shifts assigned today.</p>
           ) : (
-            <div className="responsive-gantt-scroll">
-              <div className="responsive-gantt-inner">
+            <div className="responsive-hscroll">
+              <div className="responsive-hscroll-inner">
                 {/* Time labels */}
                 <div style={{ paddingLeft: "130px", marginBottom: "8px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "17.5px", color: "#94A3B8", fontWeight: "600" }}>

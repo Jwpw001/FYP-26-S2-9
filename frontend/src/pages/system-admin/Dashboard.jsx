@@ -141,7 +141,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Horizontal stats bar */}
-        <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "18px 26px", display: "flex", alignItems: "center" }}>
+        <div className="responsive-tab-scroll" style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "18px 26px", display: "flex", alignItems: "center" }}>
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} style={{ flex: 1, textAlign: "center", padding: i > 0 ? "0 0 0 1px" : 0 }}>
@@ -167,7 +167,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Charts row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "20px" }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "20px" }}>
 
           {/* Donut — Businesses by Plan */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px" }}>
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick actions + Activity */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
 
           {/* Quick Actions */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px" }}>

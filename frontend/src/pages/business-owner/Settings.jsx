@@ -229,7 +229,7 @@ export default function BOSettings() {
 
   return (
     <BusinessOwnerLayout title="Settings">
-      <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)", overflow: "hidden" }}>
+      <div className="responsive-scroll-shell" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)", overflow: "hidden" }}>
 
         {/* Branch selector bar */}
         <div style={{ padding: "16px 32px", borderBottom: "1px solid #F1F5F9", background: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexShrink: 0, flexWrap: "wrap" }}>
@@ -278,7 +278,7 @@ export default function BOSettings() {
             <p style={{ fontSize: "21px" }}>No branches available. Create a branch first.</p>
           </div>
         ) : (
-          <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <div className="responsive-flex-stack" style={{ display: "flex", flex: 1, overflow: "hidden" }}>
 
             {/* ── LEFT COLUMN: Schedule & Rules ── */}
             <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", borderRight: "1px solid #F1F5F9" }}>

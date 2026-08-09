@@ -393,7 +393,7 @@ export default function BranchDetail() {
     <BusinessOwnerLayout title="Branch Details">
       <button style={s.back} onClick={() => goTo("/business-owner/branches")}>← Back to Branches</button>
 
-      <div style={s.layout}>
+      <div className="responsive-stack-2col" style={s.layout}>
         {/* ── Left: branch card ── */}
         <div style={s.profileCard}>
           <div style={s.avatarLg}><Building2 size={28} color="#F59E0B" /></div>
@@ -701,7 +701,7 @@ export default function BranchDetail() {
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", overflow: "hidden", flex: 1, minHeight: 0 }}>
+          <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1fr 340px", overflow: "hidden", flex: 1, minHeight: 0 }}>
             <div style={{ overflowY: "auto", padding: "24px 28px", borderRight: "1px solid #F1F5F9" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "24px" }}>
                 <div>

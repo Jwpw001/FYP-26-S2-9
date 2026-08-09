@@ -123,18 +123,48 @@ button:focus-visible {
   }
 }
 
-/* A gantt-style timeline (fixed name column + time-axis labels + proportionally-positioned
-   bars) has no fluid way to compress: shrinking the name column or bar area misaligns the labels
-   from the bars they're meant to sit above. Scrolls horizontally at a fixed, readable width on
-   mobile instead of squeezing every label/bar until they overlap. */
-.responsive-gantt-scroll { }
+/* A row of filter/tab pill buttons (e.g. Pending/Approved/Rejected/All) with no wrap and no
+   scroll silently clips on a narrow screen instead of breaking to a new line — tabs are exactly
+   the kind of control users expect to swipe through anyway. */
+.responsive-tab-scroll {
+  overflow-x: visible;
+}
 @media (max-width: 640px) {
-  .responsive-gantt-scroll {
+  .responsive-tab-scroll {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .responsive-tab-scroll::-webkit-scrollbar { display: none; }
+  .responsive-tab-scroll > * {
+    flex-shrink: 0;
+  }
+}
+
+/* An action bar with a label, a flex:1 spacer, then a button cluster pushed to the far right —
+   fine on desktop, but on mobile the spacer doesn't collapse fast enough and the buttons run off
+   the edge instead of wrapping. Forcing the spacer to flex-basis:100% makes it act as an explicit
+   line break in the flex-wrap flow, so the buttons drop to their own row below the label. */
+@media (max-width: 640px) {
+  .responsive-bar-break {
+    flex-basis: 100% !important;
+    height: 0 !important;
+  }
+}
+
+/* Generic "scroll horizontally at a fixed, readable width instead of squeezing" pair, for any
+   content with no fluid way to compress (a gantt timeline whose labels must stay aligned to bars
+   below; a weekly calendar whose columns each hold a full day of stacked shift cards, not just a
+   date number). Pass a min-width via the --hscroll-min-width custom property; defaults to 560px
+   (a simple gantt-style row) if unset. */
+.responsive-hscroll { }
+@media (max-width: 640px) {
+  .responsive-hscroll {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
   }
-  .responsive-gantt-inner {
-    min-width: 560px !important;
+  .responsive-hscroll-inner {
+    min-width: var(--hscroll-min-width, 560px) !important;
   }
 }
 
@@ -206,6 +236,35 @@ html, body {
   .responsive-day-strip::-webkit-scrollbar { display: none; }
   .responsive-day-strip > * {
     flex: 0 0 60px !important;
+  }
+}
+
+/* A two-pane flex row (main content flex:1 + a fixed-width side panel, e.g.
+   420px) has no room for the fixed panel on a phone — flex items don't wrap
+   by default, so the side panel and main content fight for the same space
+   and visibly overlap instead of clipping cleanly. Stack to a single column
+   and let the side panel take its natural full width below 640px.
+   Pairs with .responsive-scroll-shell on the page's outer wrapper: these
+   panels are normally height-capped with independent internal scroll
+   (siblings inside a fixed-height, overflow:hidden shell), which — once
+   stacked to a column — starves whichever pane has flex:1/flex-basis:0 of
+   any height at all instead of letting each pane take its natural content
+   height. flex:none lets each stacked pane size to its own content, and the
+   shell needs to become a normal auto-height, page-scrolling container for
+   that content to actually be reachable. */
+@media (max-width: 640px) {
+  .responsive-flex-stack {
+    flex-direction: column !important;
+  }
+  .responsive-flex-stack > * {
+    width: 100% !important;
+    flex: none !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .responsive-scroll-shell {
+    height: auto !important;
+    overflow: visible !important;
   }
 }
 

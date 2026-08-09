@@ -277,11 +277,14 @@ export default function CasualAvailability() {
 
         {/* ── 7 day cards in a single row ───────────────────────────── */}
         {loadingWeek ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "10px", marginBottom: "20px" }}>
+          <div className="responsive-hscroll">
+          <div className="responsive-hscroll-inner" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "10px", marginBottom: "20px", "--hscroll-min-width": "640px" }}>
             {Array.from({ length: 7 }).map((_, i) => <Shimmer key={i} h="130px" r="14px" />)}
           </div>
+          </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "10px", marginBottom: "20px" }}>
+          <div className="responsive-hscroll">
+          <div className="responsive-hscroll-inner" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "10px", marginBottom: "20px", "--hscroll-min-width": "640px" }}>
             {DAYS.map(day => {
               const s = schedule[day.value];
               const date = getDayDate(weekStart, day.value);
@@ -330,6 +333,7 @@ export default function CasualAvailability() {
               );
             })}
           </div>
+          </div>
         )}
 
         {/* ── Summary bar ───────────────────────────────────────────── */}
@@ -374,7 +378,7 @@ export default function CasualAvailability() {
                 const isCurrent = weekStr === weekStartStr;
                 return (
                   <div key={weekStr}
-                    style={{ background: isCurrent ? "#F0F9FF" : "#FFF", border: `1.5px solid ${isCurrent ? "#BAE6FD" : "#E2E8F0"}`, borderRadius: "12px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px", animation: `pageIn 0.3s ease ${idx * 0.04}s both` }}>
+                    style={{ background: isCurrent ? "#F0F9FF" : "#FFF", border: `1.5px solid ${isCurrent ? "#BAE6FD" : "#E2E8F0"}`, borderRadius: "12px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap", animation: `pageIn 0.3s ease ${idx * 0.04}s both` }}>
                     <div style={{ minWidth: "220px" }}>
                       <span style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B" }}>
                         {fmtWeekLabel(weekStr)}

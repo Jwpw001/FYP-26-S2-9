@@ -281,7 +281,7 @@ function Submissions({ branchId, managerId, showToast }) {
       <div>
         {/* Filter bar */}
         <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"12px", flexWrap:"wrap" }}>
-          <div style={{ display:"flex", gap:"3px", background:"#F1F5F9", borderRadius:"10px", padding:"3px" }}>
+          <div className="responsive-tab-scroll" style={{ display:"flex", gap:"3px", background:"#F1F5F9", borderRadius:"10px", padding:"3px" }}>
             {[["pending","Pending"],["approved","Approved"],["rejected","Rejected"],["all","All"]].map(([f, label]) => (
               <button key={f} onClick={() => setFilter(f)}
                 style={{ padding:"6px 14px", borderRadius:"7px", border:"none", cursor:"pointer", fontSize:"19px", fontWeight:"600", transition:"all 0.15s",
@@ -311,7 +311,7 @@ function Submissions({ branchId, managerId, showToast }) {
               </span>
             </label>
 
-            <div style={{ flex:1 }} />
+            <div className="responsive-bar-break" style={{ flex:1 }} />
 
             {/* Approve/Reject All (acts on all filtered pending) */}
             {!someChecked && (

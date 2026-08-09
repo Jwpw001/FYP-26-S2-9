@@ -120,7 +120,7 @@ export default function AddStaff() {
         ← Back to Staff
       </button>
 
-      <div style={s.layout}>
+      <div className="responsive-stack-2col" style={s.layout}>
         <div style={s.section}>
           <h3 style={s.sectionTitle}>Staff Details</h3>
 

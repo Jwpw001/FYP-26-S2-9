@@ -157,7 +157,7 @@ export default function BOInvitations() {
 
         {/* Stats row */}
         {!loading && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px", marginBottom: "24px" }}>
+          <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px", marginBottom: "24px" }}>
             {[
               { label: "Total Sent", value: visibleInvites.length, icon: Mail, color: "#3B82F6", bg: "#EFF6FF" },
               { label: "Pending", value: counts.pending, icon: Clock, color: "#D97706", bg: "#FEF3C7" },
@@ -227,7 +227,7 @@ export default function BOInvitations() {
                   <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                     placeholder="name@company.com" required style={sty.input} />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
+                <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
                   <div>
                     <label style={sty.label}><Users size={12} style={{ marginRight: "4px" }} /> Role</label>
                     <SearchableSelect

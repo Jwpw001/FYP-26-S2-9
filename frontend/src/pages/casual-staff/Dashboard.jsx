@@ -193,7 +193,7 @@ export default function CasualDashboard() {
         </div>
 
         {/* Calendar + This Week's Hours */}
-        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "18px" }}>
+        <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "18px" }}>
 
           {/* Monthly availability calendar */}
           <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "22px 24px" }}>

@@ -169,7 +169,7 @@ export default function ManagerSettings() {
 
   return (
     <ManagerLayout title="Settings">
-      <div style={{ display: "flex", height: "calc(100vh - 60px)", overflow: "hidden" }}>
+      <div className="responsive-scroll-shell responsive-flex-stack" style={{ display: "flex", height: "calc(100vh - 60px)", overflow: "hidden" }}>
 
         {/* ── LEFT: Business Setup (read-only) ── */}
         <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", borderRight: "1px solid #F1F5F9" }}>

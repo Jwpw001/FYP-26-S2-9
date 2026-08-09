@@ -589,8 +589,8 @@ export default function ShiftsList() {
           </div>
         ) : calendarScope === "week" ? (
           /* ── Week calendar view ── */
-          <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"14px", overflow:"hidden" }}>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)" }}>
+          <div className="responsive-hscroll" style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:"14px", overflow:"hidden" }}>
+            <div className="responsive-hscroll-inner" style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", "--hscroll-min-width": "720px" }}>
               {weekDates.map((date, i) => {
                 const dayShifts = getShiftsForDate(date).filter(s => filterStatus==="all"||s.status===filterStatus);
                 const isToday = date.toDateString() === new Date().toDateString();
@@ -755,7 +755,8 @@ export default function ShiftsList() {
           const { cells } = buildMonthCells(monthOffset);
           const DOW_HEADERS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
           return (
-            <div>
+            <div className="responsive-hscroll">
+            <div className="responsive-hscroll-inner" style={{ "--hscroll-min-width": "630px" }}>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", marginBottom:"6px" }}>
                 {DOW_HEADERS.map(d => (
                   <div key={d} style={{ textAlign:"center", fontSize:"18px", fontWeight:"700", letterSpacing:"0.05em", color:"#64748B", padding:"6px 0" }}>{d}</div>
@@ -796,6 +797,7 @@ export default function ShiftsList() {
                   );
                 })}
               </div>
+            </div>
             </div>
           );
         })()}
@@ -1732,7 +1734,8 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
       </div>
 
       {/* Calendar grid */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,minmax(0,1fr))", gap:"8px", marginBottom: editingIdx!==null?"20px":"0" }}>
+      <div className="responsive-hscroll">
+      <div className="responsive-hscroll-inner" style={{ display:"grid", gridTemplateColumns:"repeat(7,minmax(0,1fr))", gap:"8px", marginBottom: editingIdx!==null?"20px":"0", "--hscroll-min-width": "980px" }}>
         {cols.map((dateKey, di) => {
           const d       = new Date(dateKey+"T12:00:00Z"); // noon UTC — safe in any timezone
           const dayAbbr = d.toLocaleDateString("en-SG",{weekday:"short"});
@@ -1904,6 +1907,7 @@ function WeeklySchedulePreview({ schedule, accepted, branchStaff = [], weekStart
             </div>
           );
         })}
+      </div>
       </div>
 
       {/* ── Stats + AI Review ── */}
