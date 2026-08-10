@@ -134,22 +134,29 @@ function Submissions({ branchId, managerId, showToast }) {
     async function load() {
       setLoading(true);
       try {
-        const { data: staffRows } = await supabase
-          .from("staff").select("staff_id, user_id, users(full_name, avatar_url)")
-          .eq("branch_id", branchId).eq("is_active", true);
-        if (!staffRows?.length || cancelled) { setRows([]); setLoading(false); return; }
-
-        const staffIds = staffRows.map(s => s.staff_id);
-        const staffMap = Object.fromEntries(staffRows.map(s => [s.staff_id, s.users?.full_name || "Staff"]));
-        const avatarMap = Object.fromEntries(staffRows.map(s => [s.staff_id, s.users?.avatar_url || "/avatars/default.png"]));
-        setStaffUserMap(Object.fromEntries(staffRows.map(s => [s.staff_id, s.user_id])));
+        // Staff whose timesheets belong to this branch are determined by which shifts they
+        // submitted a report against, not by staff.branch_id — a pool-based casual worker (no
+        // fixed branch, floats across the business via task_assignments) would otherwise never
+        // show up here even though they worked, and submitted, at this branch.
+        const { data: branchShifts } = await supabase
+          .from("shifts").select("shift_id").eq("branch_id", branchId);
+        const shiftIds = (branchShifts || []).map(s => s.shift_id);
+        if (!shiftIds.length || cancelled) { setRows([]); setLoading(false); return; }
 
         const { data: ts } = await supabase
           .from("timesheets")
           .select("timesheet_id, staff_id, log_date, hours_worked, description, status, reviewed_at, evidence_path, evidence_name")
-          .in("staff_id", staffIds)
+          .in("shift_id", shiftIds)
           .order("log_date", { ascending: false });
         if (cancelled) return;
+
+        const staffIds = [...new Set((ts || []).map(t => t.staff_id))];
+        const { data: staffRows } = staffIds.length
+          ? await supabase.from("staff").select("staff_id, user_id, users(full_name, avatar_url)").in("staff_id", staffIds)
+          : { data: [] };
+        const staffMap = Object.fromEntries((staffRows || []).map(s => [s.staff_id, s.users?.full_name || "Staff"]));
+        const avatarMap = Object.fromEntries((staffRows || []).map(s => [s.staff_id, s.users?.avatar_url || "/avatars/default.png"]));
+        setStaffUserMap(Object.fromEntries((staffRows || []).map(s => [s.staff_id, s.user_id])));
 
         const { data: assignments } = await supabase
           .from("task_assignments")
@@ -591,30 +598,31 @@ function WorkingHours({ branchId }) {
     async function load() {
       setLoading(true);
       try {
-        // Get staff in branch
-        const { data: staffRows } = await supabase
-          .from("staff")
-          .select("staff_id, users(full_name, avatar_url)")
-          .eq("branch_id", branchId)
-          .eq("is_active", true);
+        // Same as the Submissions tab: derive staff via shifts at this branch, not staff.branch_id
+        // — a pool-based casual worker has no fixed branch_id but still worked, and submitted, here.
+        const { data: branchShifts } = await supabase
+          .from("shifts").select("shift_id").eq("branch_id", branchId);
+        const shiftIds = (branchShifts || []).map(s => s.shift_id);
+        if (!shiftIds.length || cancelled) { setStaffData([]); setLoading(false); return; }
 
-        if (!staffRows?.length || cancelled) { setStaffData([]); setLoading(false); return; }
-
-        const staffIds = staffRows.map(s => s.staff_id);
-        const staffMap = Object.fromEntries(staffRows.map(s => [s.staff_id, s.users?.full_name || "Staff"]));
-        const staffAvatarMap = Object.fromEntries(staffRows.map(s => [s.staff_id, s.users?.avatar_url || "/avatars/default.png"]));
-
-        // Get approved timesheets for this period
+        // Get approved timesheets for this period, scoped to this branch's shifts
         const { data: ts } = await supabase
           .from("timesheets")
-          .select("timesheet_id, staff_id, log_date, hours_worked, description")
-          .in("staff_id", staffIds)
+          .select("timesheet_id, staff_id, log_date, hours_worked, description, shift_id")
+          .in("shift_id", shiftIds)
           .eq("status", "approved")
           .gte("log_date", startDate)
           .lte("log_date", endDate)
           .order("log_date", { ascending: false });
 
         if (cancelled) return;
+
+        const staffIds = [...new Set((ts || []).map(t => t.staff_id))];
+        const { data: staffRows } = staffIds.length
+          ? await supabase.from("staff").select("staff_id, users(full_name, avatar_url)").in("staff_id", staffIds)
+          : { data: [] };
+        const staffMap = Object.fromEntries((staffRows || []).map(s => [s.staff_id, s.users?.full_name || "Staff"]));
+        const staffAvatarMap = Object.fromEntries((staffRows || []).map(s => [s.staff_id, s.users?.avatar_url || "/avatars/default.png"]));
 
         // Fetch shift titles for context
         const { data: assignments } = await supabase

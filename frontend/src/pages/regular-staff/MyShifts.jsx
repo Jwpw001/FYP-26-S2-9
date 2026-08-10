@@ -199,6 +199,18 @@ export default function MyTasks({ Layout = StaffLayout }) {
     return `${a.source}_${a.assignment_id}`;
   }
 
+  // Pre-filled with the rostered TASK window (falling back to the shift's) so the common case
+  // for a casual worker is one confirmation, not manual entry.
+  function defaultFormFor(a) {
+    const dur = shiftDuration(a.shift?.start_time, a.shift?.end_time);
+    return {
+      hours: dur > 0 ? String(dur) : "",
+      startTime: (a.task_start_time || a.shift?.start_time || "").slice(0, 5),
+      endTime:   (a.task_end_time || a.shift?.end_time || "").slice(0, 5),
+      desc: "", file: null,
+    };
+  }
+
   function tsKey(a) {
     const sid = a.shift?.shift_id;
     return sid != null ? `shift_${sid}` : `date_${a.shift?.shift_date}`;
@@ -354,15 +366,15 @@ export default function MyTasks({ Layout = StaffLayout }) {
           assignment={reportModalFor}
           existing={timesheets[tsKey(reportModalFor)]}
           isCasual={isCasual}
-          form={formData[formKey(reportModalFor)] || {
-            hours: shiftDuration(reportModalFor.shift?.start_time, reportModalFor.shift?.end_time) > 0 ? String(shiftDuration(reportModalFor.shift?.start_time, reportModalFor.shift?.end_time)) : "",
-            // Pre-filled with the rostered TASK window (falling back to the shift's) so the
-            // common case for a casual worker is one confirmation, not manual entry.
-            startTime: (reportModalFor.task_start_time || reportModalFor.shift?.start_time || "").slice(0, 5),
-            endTime:   (reportModalFor.task_end_time || reportModalFor.shift?.end_time || "").slice(0, 5),
-            desc: "", file: null,
-          }}
-          onChange={patch => setFormData(p => ({ ...p, [formKey(reportModalFor)]: { ...(p[formKey(reportModalFor)] || {}), ...patch } }))}
+          form={formData[formKey(reportModalFor)] || defaultFormFor(reportModalFor)}
+          // Merge against defaultFormFor, not {} — formData[key] is still undefined until the
+          // FIRST onChange fires (the JSX line above only computes the pre-filled defaults for
+          // display, it never writes them into state). Merging a patch like { desc } against {}
+          // silently threw away the pre-filled startTime/endTime the instant a user typed
+          // anything before touching the time fields — caught live: the "Actual time worked"
+          // inputs visibly showed the rostered time, then reverted to blank the moment the
+          // description was typed, so submitting used the (empty) fields shown just then.
+          onChange={patch => setFormData(p => ({ ...p, [formKey(reportModalFor)]: { ...(p[formKey(reportModalFor)] || defaultFormFor(reportModalFor)), ...patch } }))}
           submitting={submitting === formKey(reportModalFor)}
           onSubmit={() => submitReport(reportModalFor)}
           onClose={() => setReportModalFor(null)}
