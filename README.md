@@ -2,25 +2,30 @@
 
 # Krewby
 
-Krewby is a Smart Workforce Management System for managing:
-
-- Staff
-- Shift scheduling
-- Attendance
-- Availability
-- Workforce requests
+Krewby is a workforce scheduling and task allocation platform for
+Business → Branch → Shift → Task structures, built for CSIT-26-S2-04
+("Smart Task Allocation Application").
 
 ---
 
 # Features
 
-- Role-based login
-- Different dashboards for different actors
-- Shift management
-- Availability management
-- Attendance management
-- Supabase authentication
-- PostgreSQL database with Prisma
+- Five roles with role-scoped dashboards: `system_admin`, `business_owner`,
+  `manager`, `regular_staff`, `casual_staff`
+- Automatic shift generation from per-weekday task templates, with manual
+  creation for exceptions (closures, one-off cover shifts)
+- Branch closures and public holidays (with a `treat_public_holidays_as_working`
+  toggle), operating-hours and labour-rule configuration
+- Deterministic + AI-assisted casual worker auto-assignment, with a
+  configurable weighting model (availability, skills, attendance, performance,
+  workload)
+- Timesheets with actual worked/additional/overtime hours, manager
+  approve/reject, and a working-hours report
+- Leave, off-day, and swap requests with approval workflows
+- Role-aware in-app notifications plus web push (VAPID) and Expo push
+- Installable PWA with offline-friendly service worker and safe-area support
+  for mobile browsers
+- Supabase authentication; PostgreSQL via Supabase, accessed through Prisma
 
 ---
 
@@ -30,11 +35,13 @@ Frontend:
 - React
 - Vite
 - React Router DOM
+- Deployed on Vercel; installable as a PWA
 
 Backend:
 - Node.js
 - Express.js
 - Prisma ORM
+- Deployed on Render
 
 Database & Authentication:
 - Supabase PostgreSQL
@@ -75,7 +82,13 @@ Inside `backend/.env`
 DATABASE_URL=your_database_url
 DIRECT_URL=your_direct_database_url
 JWT_SECRET=your_secret_key
+PORT=3001
 ```
+
+(`PORT` falls back to 5000 in code if unset, but this project runs on
+3001 — keep it set to 3001, since that's what the frontend's
+`VITE_API_URL` below expects for local development. The deployed
+backend runs on Render.)
 
 ## Run Prisma
 
@@ -92,7 +105,7 @@ npm run dev
 Backend runs on:
 
 ```txt
-http://localhost:5000
+http://localhost:3001
 ```
 
 ---
@@ -118,7 +131,13 @@ Inside `frontend/.env`
 ```env
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_API_URL=http://localhost:3001
 ```
+
+(`VITE_API_URL` is where the frontend sends its API calls — point it
+at the backend port above. Web push notifications also need
+`VITE_VAPID_PUBLIC_KEY`, matching `VAPID_PUBLIC_KEY` in the backend's
+`.env`; see `backend/src/utils/pushNotify.js`.)
 
 ## Start frontend
 
@@ -182,12 +201,16 @@ public.users
 
 ```txt
 system_admin
-outlet_manager
+business_owner
+manager
 regular_staff
-outlet_casual_staff
-krewby_coordinator
-krewby_casual_worker
+casual_staff
 ```
+
+`business_owner` owns one or more businesses, each with one or more
+branches. `manager` is scoped to a single branch. `regular_staff`
+belong to a branch; `casual_staff` belong to a business and express
+branch preferences rather than being fixed to one branch.
 
 ---
 
@@ -239,10 +262,10 @@ git push origin main
 
 ---
 
-# To-Do
+# Mobile
 
-- Improve dashboard UI
-- Add shift assignment system
-- Add attendance tracking
-- Add notifications
-- Add reporting system
+`mobile/` is a React Native (Expo) prototype — exploratory, not the
+delivered product. It is not deployed and isn't part of the
+submission's mobile story. Mobile access to Krewby is via the web
+app's installable PWA (see `frontend/public/manifest.json` and
+`frontend/public/sw.js`), which runs the same app as desktop.
