@@ -197,6 +197,57 @@ function TypingIndicator() {
   );
 }
 
+// Renders **bold** spans within a single line of text.
+function renderInline(text, keyPrefix) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={`${keyPrefix}-${i}`}>{part.slice(2, -2)}</strong>
+      : <span key={`${keyPrefix}-${i}`}>{part}</span>
+  );
+}
+
+// The assistant is instructed to reply with markdown (bold, bullet/numbered lists) — this turns
+// that into real formatting instead of the raw asterisks/dashes showing up as literal text.
+function renderMarkdownLite(content) {
+  const lines = content.split("\n");
+  const blocks = [];
+  let list = null; // { type: "ul" | "ol", items: [] }
+
+  function flushList() {
+    if (list) { blocks.push(list); list = null; }
+  }
+
+  lines.forEach((line, i) => {
+    const bullet = line.match(/^\s*[-*]\s+(.*)/);
+    const numbered = line.match(/^\s*\d+[.)]\s+(.*)/);
+    if (bullet) {
+      if (!list || list.type !== "ul") { flushList(); list = { type: "ul", items: [] }; }
+      list.items.push(bullet[1]);
+    } else if (numbered) {
+      if (!list || list.type !== "ol") { flushList(); list = { type: "ol", items: [] }; }
+      list.items.push(numbered[1]);
+    } else {
+      flushList();
+      blocks.push({ type: "p", text: line });
+    }
+  });
+  flushList();
+
+  return blocks.map((b, i) => {
+    if (b.type === "ul" || b.type === "ol") {
+      const Tag = b.type;
+      return (
+        <Tag key={i} style={{ margin: "4px 0", paddingLeft: "18px" }}>
+          {b.items.map((item, j) => <li key={j} style={{ marginBottom: "2px" }}>{renderInline(item, `${i}-${j}`)}</li>)}
+        </Tag>
+      );
+    }
+    if (b.text === "") return <div key={i} style={{ height: "8px" }} />;
+    return <div key={i}>{renderInline(b.text, `${i}`)}</div>;
+  });
+}
+
 function Message({ msg, onConfirm, onCancel }) {
   if (msg.role === "tool_call") {
     return <ActionCard msg={msg} onConfirm={onConfirm} onCancel={onCancel} />;
@@ -215,10 +266,10 @@ function Message({ msg, onConfirm, onCancel }) {
         borderRadius: isUser ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
         fontSize: 13.5,
         lineHeight: 1.55,
-        whiteSpace: "pre-wrap",
+        whiteSpace: isUser ? "pre-wrap" : "normal",
         boxShadow: isUser ? "0 2px 8px rgba(99,102,241,0.25)" : "0 1px 4px rgba(0,0,0,0.06)",
       }}>
-        {msg.content}
+        {isUser ? msg.content : renderMarkdownLite(msg.content)}
       </div>
     </div>
   );
