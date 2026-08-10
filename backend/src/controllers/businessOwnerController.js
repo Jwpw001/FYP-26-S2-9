@@ -417,6 +417,126 @@ function normalizeTemplate(t) {
   return { ...t, start_time: toHHMM(t.start_time), end_time: toHHMM(t.end_time) };
 }
 
+// ── Shift Periods (Round 6, Task 2) ──────────────────────────────────────────
+
+// GET /api/business/branches/:branch_id/shift-periods
+const getShiftPeriods = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+    const periods = await prisma.branch_shift_periods.findMany({
+      where: { branch_id },
+      orderBy: [{ sort_order: "asc" }, { period_id: "asc" }],
+    });
+    return res.json({ success: true, periods: periods.map(normalizePeriod) });
+  } catch (error) {
+    return sendServerError(res, error, req);
+  }
+};
+
+// POST /api/business/branches/:branch_id/shift-periods
+const createShiftPeriod = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+    const { name, start_time, end_time, active_days, sort_order } = req.body;
+    if (!name?.trim()) return res.status(400).json({ success: false, message: "name is required." });
+    if (!start_time || !end_time) return res.status(400).json({ success: false, message: "start_time and end_time are required." });
+    if (active_days !== undefined && !/^[01]{7}$/.test(active_days)) {
+      return res.status(400).json({ success: false, message: "active_days must be a 7-character string of 0s and 1s." });
+    }
+
+    let nextSort = Number(sort_order);
+    if (!Number.isInteger(nextSort)) {
+      const last = await prisma.branch_shift_periods.findFirst({ where: { branch_id }, orderBy: { sort_order: "desc" }, select: { sort_order: true } });
+      nextSort = (last?.sort_order ?? -1) + 1;
+    }
+
+    const period = await prisma.branch_shift_periods.create({
+      data: {
+        branch_id,
+        name: name.trim(),
+        start_time: new Date(`1970-01-01T${start_time}Z`),
+        end_time: new Date(`1970-01-01T${end_time}Z`),
+        active_days: active_days || "1111111",
+        sort_order: nextSort,
+      },
+    });
+    return res.status(201).json({ success: true, period: normalizePeriod(period) });
+  } catch (error) {
+    return sendServerError(res, error, req);
+  }
+};
+
+// PATCH /api/business/branches/:branch_id/shift-periods/:period_id — also used for
+// reorder (sort_order) and deactivate (is_active: false).
+const updateShiftPeriod = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    const period_id = Number(req.params.period_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+    const existing = await prisma.branch_shift_periods.findUnique({ where: { period_id } });
+    if (!existing || existing.branch_id !== branch_id) {
+      return res.status(404).json({ success: false, message: "Period not found." });
+    }
+
+    const { name, start_time, end_time, active_days, sort_order, is_active } = req.body;
+    const data = { updated_at: new Date() };
+    if (name !== undefined) {
+      if (!name?.trim()) return res.status(400).json({ success: false, message: "name cannot be empty." });
+      data.name = name.trim();
+    }
+    if (start_time !== undefined) data.start_time = new Date(`1970-01-01T${start_time}Z`);
+    if (end_time !== undefined) data.end_time = new Date(`1970-01-01T${end_time}Z`);
+    if (active_days !== undefined) {
+      if (!/^[01]{7}$/.test(active_days)) return res.status(400).json({ success: false, message: "active_days must be a 7-character string of 0s and 1s." });
+      data.active_days = active_days;
+    }
+    if (sort_order !== undefined) data.sort_order = Number(sort_order) || 0;
+    if (is_active !== undefined) data.is_active = !!is_active;
+
+    const period = await prisma.branch_shift_periods.update({ where: { period_id }, data });
+    return res.json({ success: true, period: normalizePeriod(period) });
+  } catch (error) {
+    return sendServerError(res, error, req);
+  }
+};
+
+// DELETE /api/business/branches/:branch_id/shift-periods/:period_id — templates pointed at this
+// period fall back to null (ON DELETE SET NULL), landing in the fallback shift going forward.
+const deleteShiftPeriod = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    const period_id = Number(req.params.period_id);
+    if (!(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+    const existing = await prisma.branch_shift_periods.findUnique({ where: { period_id } });
+    if (!existing || existing.branch_id !== branch_id) {
+      return res.status(404).json({ success: false, message: "Period not found." });
+    }
+    await prisma.branch_shift_periods.delete({ where: { period_id } });
+    return res.json({ success: true });
+  } catch (error) {
+    return sendServerError(res, error, req);
+  }
+};
+
+function toHHMM(v) {
+  if (!v) return null;
+  const s = v instanceof Date ? v.toISOString() : String(v);
+  return s.includes("T") ? s.slice(11, 19) : s;
+}
+function normalizePeriod(p) {
+  return { ...p, start_time: toHHMM(p.start_time), end_time: toHHMM(p.end_time) };
+}
+
 // GET /api/business/branches/:branch_id/task-templates
 const getTaskTemplates = async (req, res) => {
   try {
@@ -427,7 +547,7 @@ const getTaskTemplates = async (req, res) => {
 
     const templates = await prisma.branch_task_templates.findMany({
       where: { branch_id },
-      include: { skills: { select: { skill_id: true, name: true } } },
+      include: { skills: { select: { skill_id: true, name: true } }, branch_shift_periods: { select: { period_id: true, name: true } } },
       orderBy: [{ day_of_week: "asc" }, { sort_order: "asc" }, { template_id: "asc" }],
     });
     return res.json({ success: true, templates: templates.map(normalizeTemplate) });
@@ -444,13 +564,21 @@ const createTaskTemplate = async (req, res) => {
       return res.status(404).json({ success: false, message: "Branch not found." });
     }
 
-    const { day_of_week, title, skill_id, start_time, end_time, required_workers, sort_order } = req.body;
+    const { day_of_week, title, skill_id, start_time, end_time, required_workers, sort_order, period_id } = req.body;
     const dow = Number(day_of_week);
     if (!Number.isInteger(dow) || dow < DOW_MIN || dow > DOW_MAX) {
       return res.status(400).json({ success: false, message: "day_of_week must be an integer 0–6 (Mon=0)." });
     }
     if (!title?.trim()) {
       return res.status(400).json({ success: false, message: "title is required." });
+    }
+
+    let periodRow = null;
+    if (period_id) {
+      periodRow = await prisma.branch_shift_periods.findUnique({ where: { period_id: Number(period_id) } });
+      if (!periodRow || periodRow.branch_id !== branch_id) {
+        return res.status(400).json({ success: false, message: "That period does not belong to this branch." });
+      }
     }
 
     let nextSort = Number(sort_order);
@@ -479,14 +607,37 @@ const createTaskTemplate = async (req, res) => {
         end_time: end_time ? new Date(`1970-01-01T${end_time}Z`) : null,
         required_workers: Number(required_workers) || 1,
         sort_order: nextSort,
+        period_id: periodRow ? periodRow.period_id : null,
       },
-      include: { skills: { select: { skill_id: true, name: true } } },
+      include: { skills: { select: { skill_id: true, name: true } }, branch_shift_periods: { select: { period_id: true, name: true } } },
     });
-    return res.status(201).json({ success: true, template: normalizeTemplate(template) });
+    // Round 6, Task 2: warn, never block, if the task's own times fall outside its period's window.
+    const warning = periodRow && start_time && end_time && !timeWithinPeriod(start_time, end_time, periodRow)
+      ? `This task's time (${start_time}–${end_time}) falls outside "${periodRow.name}"'s window (${toHHMM(periodRow.start_time)}–${toHHMM(periodRow.end_time)}).`
+      : undefined;
+    return res.status(201).json({ success: true, template: normalizeTemplate(template), ...(warning ? { warning } : {}) });
   } catch (error) {
     return sendServerError(res, error, req);
   }
 };
+
+// Round 6, Task 2 — advisory only (see createTaskTemplate/updateTaskTemplate's warning field).
+// Reuses the same HH:MM-string minute-comparison approach as hoursMetrics.toMinutes rather than
+// importing it, since a period window is never expected to be zero-length or overnight here (an
+// overnight PERIOD is handled at generation time, not at template-editing time) — keeping this
+// self-contained avoids a cross-controller dependency for a two-line check.
+function timeToMin(t) {
+  if (!t) return null;
+  const s = t instanceof Date ? t.toISOString().slice(11, 16) : String(t).slice(0, 5);
+  const [h, m] = s.split(":").map(Number);
+  return Number.isNaN(h) || Number.isNaN(m) ? null : h * 60 + m;
+}
+function timeWithinPeriod(startStr, endStr, period) {
+  const s = timeToMin(startStr), e = timeToMin(endStr);
+  const ps = timeToMin(period.start_time), pe = timeToMin(period.end_time);
+  if (s === null || e === null || ps === null || pe === null) return true; // can't evaluate — don't warn
+  return s >= ps && e <= pe;
+}
 
 // PATCH /api/business/branches/:branch_id/task-templates/:template_id
 const updateTaskTemplate = async (req, res) => {
@@ -502,7 +653,7 @@ const updateTaskTemplate = async (req, res) => {
       return res.status(404).json({ success: false, message: "Template not found." });
     }
 
-    const { day_of_week, title, skill_id, start_time, end_time, required_workers, sort_order, is_active } = req.body;
+    const { day_of_week, title, skill_id, start_time, end_time, required_workers, sort_order, is_active, period_id } = req.body;
     const data = { updated_at: new Date() };
     if (day_of_week !== undefined) {
       const dow = Number(day_of_week);
@@ -522,12 +673,30 @@ const updateTaskTemplate = async (req, res) => {
     if (sort_order !== undefined) data.sort_order = Number(sort_order) || 0;
     if (is_active !== undefined) data.is_active = !!is_active;
 
+    let periodRow = null;
+    if (period_id !== undefined) {
+      if (period_id === null || period_id === "") {
+        data.period_id = null;
+      } else {
+        periodRow = await prisma.branch_shift_periods.findUnique({ where: { period_id: Number(period_id) } });
+        if (!periodRow || periodRow.branch_id !== branch_id) {
+          return res.status(400).json({ success: false, message: "That period does not belong to this branch." });
+        }
+        data.period_id = periodRow.period_id;
+      }
+    }
+
     const template = await prisma.branch_task_templates.update({
       where: { template_id },
       data,
-      include: { skills: { select: { skill_id: true, name: true } } },
+      include: { skills: { select: { skill_id: true, name: true } }, branch_shift_periods: { select: { period_id: true, name: true } } },
     });
-    return res.json({ success: true, template: normalizeTemplate(template) });
+    const effectiveStart = start_time !== undefined ? start_time : toHHMM(existing.start_time);
+    const effectiveEnd = end_time !== undefined ? end_time : toHHMM(existing.end_time);
+    const warning = periodRow && effectiveStart && effectiveEnd && !timeWithinPeriod(effectiveStart, effectiveEnd, periodRow)
+      ? `This task's time (${effectiveStart}–${effectiveEnd}) falls outside "${periodRow.name}"'s window (${toHHMM(periodRow.start_time)}–${toHHMM(periodRow.end_time)}).`
+      : undefined;
+    return res.json({ success: true, template: normalizeTemplate(template), ...(warning ? { warning } : {}) });
   } catch (error) {
     return sendServerError(res, error, req);
   }
@@ -639,6 +808,7 @@ const copyTaskTemplates = async (req, res) => {
               required_workers: r.required_workers,
               sort_order: r.sort_order,
               is_active: r.is_active,
+              period_id: r.period_id,
             })),
           });
         }
@@ -1460,4 +1630,4 @@ const getBranchSkillsSummary = async (req, res) => {
   }
 };
 
-module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, getBranchSkillSuggestions, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates, markDateClosed, verifyBranchAccess };
+module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, getBranchSkillSuggestions, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getShiftPeriods, createShiftPeriod, updateShiftPeriod, deleteShiftPeriod, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates, markDateClosed, verifyBranchAccess };

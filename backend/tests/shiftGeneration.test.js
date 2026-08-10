@@ -2,6 +2,7 @@ jest.mock("../src/config/prisma", () => ({
   branch_settings: { findUnique: jest.fn() },
   branches: { findUnique: jest.fn() },
   branch_task_templates: { findMany: jest.fn() },
+  branch_shift_periods: { findMany: jest.fn() },
   staff: { findMany: jest.fn() },
   off_day_requests: { findMany: jest.fn() },
   public_holidays: { findMany: jest.fn() },
@@ -22,12 +23,16 @@ const t = (hhmm) => new Date(`1970-01-01T${hhmm}:00.000Z`);
 // to mock it), one template on Monday (Mon=0, matching the app's existing convention), no
 // regular staff unless a test adds them, and every date is "fresh" (no existing shift) unless a
 // test's shifts.findFirst override says otherwise.
-function setupBaseline({ templates = [], regularStaff = [], offDayRows = [], holidays = [], existingShiftDates = [] } = {}) {
+function setupBaseline({ templates = [], regularStaff = [], offDayRows = [], holidays = [], existingShiftDates = [], periods = [] } = {}) {
   prisma.branch_settings.findUnique.mockResolvedValue({
     branch_id: BRANCH_ID, operating_days: "1111111", holidays, treat_public_holidays_as_working: true,
   });
   prisma.branches.findUnique.mockResolvedValue({ open_time: t("09:00"), close_time: t("22:00") });
   prisma.branch_task_templates.findMany.mockResolvedValue(templates);
+  // Round 6, Task 2: empty by default — every existing test in this file exercises the
+  // no-periods path, which is exactly the regression guarantee this round depends on. Tests that
+  // need periods pass their own `periods` array.
+  prisma.branch_shift_periods.findMany.mockResolvedValue(periods);
   prisma.staff.findMany.mockResolvedValue(regularStaff);
   prisma.off_day_requests.findMany.mockResolvedValue(offDayRows);
   // Round 6, Task 4: generateShiftsForBranch now fetches every existing shift in the range with
@@ -35,7 +40,7 @@ function setupBaseline({ templates = [], regularStaff = [], offDayRows = [], hol
   // round-trips for a no-op re-check — see the function's own comment). findFirst is kept mocked
   // above for any test that still reaches for it directly, but the generator itself no longer does.
   prisma.shifts.findMany.mockImplementation(() =>
-    Promise.resolve(existingShiftDates.map(dateStr => ({ shift_id: 999, source: "generated", shift_date: new Date(`${dateStr}T00:00:00Z`) })))
+    Promise.resolve(existingShiftDates.map(dateStr => ({ shift_id: 999, source: "generated", shift_date: new Date(`${dateStr}T00:00:00Z`), period_id: null })))
   );
   let nextShiftId = 1;
   prisma.shifts.create.mockImplementation(() => Promise.resolve({ shift_id: nextShiftId++ }));
@@ -189,5 +194,118 @@ describe("generateShiftsForBranch — regular staff auto-population", () => {
     const result = await generateShiftsForBranch(BRANCH_ID, "2026-08-10", "2026-08-10");
     expect(prisma.task_assignments.create).toHaveBeenCalledTimes(1); // only one task existed
     expect(result.autoPopulated).toEqual([{ date: "2026-08-10", assigned_count: 1 }]);
+  });
+});
+
+// Round 6, Task 2 — shift periods. 2026-08-10 is a Monday (dow=0); 2026-08-16 is the following
+// Sunday (dow=6).
+describe("generateShiftsForBranch — shift periods", () => {
+  const morning = { period_id: 1, branch_id: BRANCH_ID, name: "Morning", start_time: t("08:00"), end_time: t("16:00"), active_days: "1111111", sort_order: 0, is_active: true };
+  const evening = { period_id: 2, branch_id: BRANCH_ID, name: "Evening", start_time: t("16:00"), end_time: t("23:59"), active_days: "1111111", sort_order: 1, is_active: true };
+
+  test("the key regression guarantee: a branch with ONE full-day period generates identically to pre-round behaviour", async () => {
+    const fullDay = { period_id: 9, branch_id: BRANCH_ID, name: "Full Day", start_time: t("09:00"), end_time: t("22:00"), active_days: "1111111", sort_order: 0, is_active: true };
+    const template = { day_of_week: 0, title: "Cashier", skill_id: null, start_time: t("09:00"), end_time: t("17:00"), required_workers: 1, sort_order: 0, period_id: 9 };
+    setupBaseline({ templates: [template], periods: [fullDay] });
+
+    const result = await generateShiftsForBranch(BRANCH_ID, "2026-08-10", "2026-08-10");
+    expect(prisma.shifts.create).toHaveBeenCalledTimes(1);
+    expect(prisma.shifts.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ title: "Full Day", start_time: t("09:00"), end_time: t("22:00"), period_id: 9 }),
+    }));
+    expect(result.created.length).toBe(1);
+  });
+
+  test("branch with two periods generates two shifts per operating day", async () => {
+    const templates = [
+      { day_of_week: 0, title: "Kitchen Prep", skill_id: null, start_time: t("08:00"), end_time: t("16:00"), required_workers: 1, sort_order: 0, period_id: 1 },
+      { day_of_week: 0, title: "Bar Service", skill_id: null, start_time: t("16:00"), end_time: t("23:00"), required_workers: 1, sort_order: 0, period_id: 2 },
+    ];
+    setupBaseline({ templates, periods: [morning, evening] });
+
+    const result = await generateShiftsForBranch(BRANCH_ID, "2026-08-10", "2026-08-10");
+    expect(prisma.shifts.create).toHaveBeenCalledTimes(2);
+    expect(result.created).toEqual(["2026-08-10 (Morning)", "2026-08-10 (Evening)"]);
+  });
+
+  test("a period with active_days excluding Sunday produces no Sunday shift for that period", async () => {
+    const weekdayOnly = { ...evening, active_days: "1111110" }; // Mon-Sat, not Sun
+    const templates = [
+      { day_of_week: 6, title: "Kitchen Prep", skill_id: null, start_time: t("08:00"), end_time: t("16:00"), required_workers: 1, sort_order: 0, period_id: 1 },
+      { day_of_week: 6, title: "Bar Service", skill_id: null, start_time: t("16:00"), end_time: t("23:00"), required_workers: 1, sort_order: 0, period_id: 2 },
+    ];
+    setupBaseline({ templates, periods: [morning, weekdayOnly] });
+
+    const result = await generateShiftsForBranch(BRANCH_ID, "2026-08-16", "2026-08-16"); // Sunday
+    expect(prisma.shifts.create).toHaveBeenCalledTimes(1);
+    expect(result.created).toEqual(["2026-08-16 (Morning)"]);
+  });
+
+  test("templates with null period_id land in one fallback shift covering branch operating hours", async () => {
+    const templates = [
+      { day_of_week: 0, title: "Kitchen Prep", skill_id: null, start_time: t("08:00"), end_time: t("16:00"), required_workers: 1, sort_order: 0, period_id: 1 },
+      { day_of_week: 0, title: "Deep Clean", skill_id: null, start_time: t("06:00"), end_time: t("08:00"), required_workers: 1, sort_order: 0, period_id: null },
+    ];
+    setupBaseline({ templates, periods: [morning, evening] });
+
+    const result = await generateShiftsForBranch(BRANCH_ID, "2026-08-10", "2026-08-10");
+    expect(prisma.shifts.create).toHaveBeenCalledTimes(2); // Morning + one fallback (Evening has no templates today, skipped)
+    expect(result.created).toEqual(["2026-08-10 (Morning)", "2026-08-10 (unassigned tasks)"]);
+    expect(prisma.shifts.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ period_id: null, start_time: t("09:00"), end_time: t("22:00") }), // branch operating hours, not a period's window
+    }));
+  });
+
+  test("generation remains idempotent with periods defined", async () => {
+    const templates = [{ day_of_week: 0, title: "Kitchen Prep", skill_id: null, start_time: t("08:00"), end_time: t("16:00"), required_workers: 1, sort_order: 0, period_id: 1 }];
+    setupBaseline({ templates, periods: [morning] });
+    await generateShiftsForBranch(BRANCH_ID, "2026-08-10", "2026-08-10");
+
+    jest.clearAllMocks();
+    setupBaseline({
+      templates, periods: [morning],
+      existingShiftDates: [], // overridden below to attach period_id
+    });
+    prisma.shifts.findMany.mockResolvedValue([{ shift_id: 999, source: "generated", shift_date: new Date("2026-08-10T00:00:00Z"), period_id: 1 }]);
+    const second = await generateShiftsForBranch(BRANCH_ID, "2026-08-10", "2026-08-10");
+    expect(prisma.shifts.create).not.toHaveBeenCalled();
+    expect(second.created).toEqual([]);
+    expect(second.skipped[0]).toMatchObject({ date: "2026-08-10" });
+  });
+
+  test("a closure (non-operating/holiday day) skips every period shift on that date", async () => {
+    const templates = [
+      { day_of_week: 0, title: "Kitchen Prep", skill_id: null, start_time: t("08:00"), end_time: t("16:00"), required_workers: 1, sort_order: 0, period_id: 1 },
+      { day_of_week: 0, title: "Bar Service", skill_id: null, start_time: t("16:00"), end_time: t("23:00"), required_workers: 1, sort_order: 0, period_id: 2 },
+    ];
+    setupBaseline({ templates, periods: [morning, evening], holidays: [{ date: "2026-08-10", name: "Closed", enabled: true }] });
+
+    const result = await generateShiftsForBranch(BRANCH_ID, "2026-08-10", "2026-08-10");
+    expect(prisma.shifts.create).not.toHaveBeenCalled();
+    expect(result.skipped).toEqual([{ date: "2026-08-10", reason: "marked closed / public holiday" }]);
+  });
+
+  test("a regular staff member contracted on a two-period day is placed in at most one shift, not both", async () => {
+    const templates = [
+      { day_of_week: 0, title: "Kitchen Prep", skill_id: null, start_time: t("08:00"), end_time: t("16:00"), required_workers: 1, sort_order: 0, period_id: 1 },
+      { day_of_week: 0, title: "Bar Service", skill_id: null, start_time: t("16:00"), end_time: t("23:00"), required_workers: 1, sort_order: 0, period_id: 2 },
+    ];
+    const staff = [{ staff_id: 1, default_work_days: "1000000" }]; // Monday only
+    setupBaseline({ templates, periods: [morning, evening], regularStaff: staff });
+
+    const result = await generateShiftsForBranch(BRANCH_ID, "2026-08-10", "2026-08-10");
+    expect(prisma.task_assignments.create).toHaveBeenCalledTimes(1); // not 2 — placed once, not in both periods
+    expect(result.autoPopulated).toEqual([{ date: "2026-08-10", assigned_count: 1 }]);
+  });
+
+  test("overnight period (end <= start) generates a shift ending at 23:59:59, not a midnight crossing", async () => {
+    const overnight = { period_id: 3, branch_id: BRANCH_ID, name: "Night", start_time: t("22:00"), end_time: t("00:00"), active_days: "1111111", sort_order: 0, is_active: true };
+    const templates = [{ day_of_week: 0, title: "Security", skill_id: null, start_time: t("22:00"), end_time: t("00:00"), required_workers: 1, sort_order: 0, period_id: 3 }];
+    setupBaseline({ templates, periods: [overnight] });
+
+    await generateShiftsForBranch(BRANCH_ID, "2026-08-10", "2026-08-10");
+    expect(prisma.shifts.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ start_time: t("22:00"), end_time: new Date("1970-01-01T23:59:59Z") }),
+    }));
   });
 });

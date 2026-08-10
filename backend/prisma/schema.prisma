@@ -133,10 +133,43 @@ model branch_task_templates {
   is_active        Boolean   @default(true)
   created_at       DateTime  @default(now()) @db.Timestamptz(6)
   updated_at       DateTime  @default(now()) @db.Timestamptz(6)
+  // Round 6, Task 2: which named shift period (Morning/Evening/…) this task belongs to. Nullable
+  // — a template with no period lands in the branch's fallback "operating hours" shift at
+  // generation time (see generateShiftsForBranch's own comment). ON DELETE SET NULL rather than
+  // Cascade: deleting a period shouldn't silently delete the tasks that referenced it.
+  period_id        Int?
   branches         branches  @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction)
   skills           skills?   @relation(fields: [skill_id], references: [skill_id], onDelete: SetNull, onUpdate: NoAction)
+  branch_shift_periods branch_shift_periods? @relation(fields: [period_id], references: [period_id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([branch_id, day_of_week], map: "idx_branch_task_templates_branch_day")
+}
+
+// Round 6, Task 2: named shift periods (e.g. "Morning" 08:00-16:00, "Evening" 16:00-00:00) a
+// branch can define once, in settings. Every branch ends up with at least one — the backfill
+// script (prisma/seed/branchShiftPeriodsBackfill.sql) gives every existing branch a single
+// "Full Day" period spanning its existing open_time/close_time, so a branch with one continuous
+// service generates exactly as it did before this round (see generateShiftsForBranch's own
+// comment for the regression guarantee this makes possible).
+model branch_shift_periods {
+  period_id   Int      @id @default(autoincrement())
+  branch_id   Int
+  name        String   @db.VarChar(50)
+  start_time  DateTime @db.Time(6)
+  end_time    DateTime @db.Time(6)
+  // Same convention as branch_settings.operating_days — Mon=index0…Sun=index6, '1' = this period
+  // runs that day. Lets a branch run an evening period only on weekends, for example.
+  active_days String   @default("1111111") @db.VarChar(7)
+  sort_order  Int      @default(0)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  branches    branches @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction)
+  branch_task_templates branch_task_templates[]
+  shift_tasks shift_tasks[]
+  shifts      shifts[]
+
+  @@index([branch_id], map: "idx_branch_shift_periods_branch")
 }
 
 // Round 3, Task 3: a global reference list of gazetted public holidays, seeded once via
@@ -188,6 +221,7 @@ model branches {
   branch_settings           branch_settings?
   branch_skills             branch_skills[]
   branch_role_templates     branch_role_templates[]
+  branch_shift_periods      branch_shift_periods[]
   branch_task_templates     branch_task_templates[]
   branch_allocation_preferences branch_allocation_preferences?
   businesses                businesses?                 @relation(fields: [business_id], references: [business_id], onUpdate: NoAction, map: "outlets_business_id_fkey")
@@ -342,8 +376,14 @@ model shift_tasks {
   end_time         DateTime?          @db.Time(6)
   status           String             @default("open") @db.VarChar(20)
   difficulty       String?            @db.VarChar(20)
+  // Round 6, Task 2/6: copied from the generating template's period at creation time (same
+  // "copy, never reference" pattern as title/skill_id/start_time/end_time) — lets Task 6's
+  // availability matching know which period this task belongs to without re-deriving it from
+  // times that may have been edited since generation.
+  period_id        Int?
   shifts           shifts             @relation(fields: [shift_id], references: [shift_id], onDelete: Cascade, onUpdate: NoAction)
   skills           skills?            @relation(fields: [skill_id], references: [skill_id], onUpdate: NoAction)
+  branch_shift_periods branch_shift_periods? @relation(fields: [period_id], references: [period_id], onDelete: SetNull, onUpdate: NoAction)
   task_assignments task_assignments[]
 
   @@index([shift_id], map: "idx_shift_tasks_shift")
@@ -366,9 +406,16 @@ model shifts {
   // the UI can show which is which. Nullable (not defaulted) so every pre-existing row reads as
   // NULL — application code treats NULL the same as "manual", exactly its prior behaviour.
   source           String?            @db.VarChar(20)
+  // Round 6, Task 2: which named period this generated shift represents (null for a branch with
+  // no periods, and null for the single fallback shift covering null-period templates on a
+  // branch that DOES have periods). Needed so re-running generation can tell "Morning already
+  // generated for this date" apart from "Evening already generated for this date" — without this,
+  // idempotency could only be checked per date, not per date+period.
+  period_id        Int?
   shift_tasks      shift_tasks[]
   users            users?             @relation(fields: [created_by], references: [user_id], onUpdate: NoAction)
   branches         branches           @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction, map: "shifts_outlet_id_fkey")
+  branch_shift_periods branch_shift_periods? @relation(fields: [period_id], references: [period_id], onDelete: SetNull, onUpdate: NoAction)
   task_assignments task_assignments[]
 
   @@index([branch_id, shift_date], map: "idx_shifts_outlet_date")
