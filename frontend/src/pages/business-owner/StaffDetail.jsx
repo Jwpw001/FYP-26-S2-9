@@ -20,7 +20,6 @@ if (typeof document !== "undefined" && !document.getElementById("bo-staffdetail-
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const AVATAR_COLORS = ["#6366F1","#F59E0B","#10B981","#EF4444","#8B5CF6","#EC4899","#14B8A6","#F97316"];
-const LEVELS = ["junior","intermediate","senior","lead"];
 const LEVEL_META = {
   junior:       { label:"Junior",       bg:"#DBEAFE", color:"#1D4ED8", border:"#93C5FD" },
   intermediate: { label:"Intermediate", bg:"#FEF3C7", color:"#92400E", border:"#FCD34D" },
@@ -51,14 +50,16 @@ function chipPalette(name = "") {
   return CHIP_PALETTES[Math.abs(h) % CHIP_PALETTES.length];
 }
 
+// Read-only: the backend intentionally restricts staff skill-set writes to managers/system
+// admins (skillsRoutes.js: "Staff skills — BO can view, only managers can modify"), but this
+// component used to render fully-interactive Add/Remove controls anyway. A business owner
+// clicking "Yes" on a remove got a silent 403 — the request failed, the confirm dialog just
+// never got the setConfirmDel(null)/setAssigned(...) that only ran on success, while "No" looked
+// like it worked because it's pure local state. Matches this app's existing read-only pattern
+// (see BranchHolidaySettings.jsx's readOnlyBadge) instead of quietly offering dead buttons.
 function SkillSetsSection({ staffId }) {
   const [assigned, setAssigned] = useState([]);
-  const [library,  setLibrary]  = useState([]);
   const [loading,  setLoading]  = useState(true);
-  const [adding,   setAdding]   = useState(false);
-  const [form,     setForm]     = useState({ skill_id: "", experience_level: "junior", years_of_experience: "" });
-  const [saving,   setSaving]   = useState(false);
-  const [confirmDel, setConfirmDel] = useState(null);
 
   useEffect(() => {
     if (!staffId) return;
@@ -66,43 +67,13 @@ function SkillSetsSection({ staffId }) {
     async function load() {
       setLoading(true);
       try {
-        const [asgRes, libRes] = await Promise.all([
-          api.get(`/api/skills/staff/${staffId}`).catch(() => ({ skills: [] })),
-          api.get("/api/business/skills/assignable").catch(() => ({ skills: [] })),
-        ]);
-        if (!cancelled) { setAssigned(asgRes.skills || []); setLibrary(libRes.skills || []); }
+        const asgRes = await api.get(`/api/skills/staff/${staffId}`).catch(() => ({ skills: [] }));
+        if (!cancelled) setAssigned(asgRes.skills || []);
       } finally { if (!cancelled) setLoading(false); }
     }
     load();
     return () => { cancelled = true; };
   }, [staffId]);
-
-  const assignedIds = new Set(assigned.map(a => a.skill_id));
-  const available   = library.filter(s => !assignedIds.has(s.skill_id));
-
-  async function handleAdd() {
-    if (!form.skill_id) return;
-    setSaving(true);
-    try {
-      const res = await api.post(`/api/skills/staff/${staffId}`, {
-        skill_id: Number(form.skill_id),
-        experience_level: form.experience_level || null,
-        years_of_experience: form.years_of_experience !== "" ? Number(form.years_of_experience) : null,
-      });
-      setAssigned(prev => [...prev, res.skill]);
-      setAdding(false);
-      setForm({ skill_id: "", experience_level: "junior", years_of_experience: "" });
-    } catch (err) { console.error(err); }
-    finally { setSaving(false); }
-  }
-
-  async function handleDelete(skill_id) {
-    try {
-      await api.delete(`/api/skills/staff/${staffId}/${skill_id}`);
-      setAssigned(prev => prev.filter(a => a.skill_id !== skill_id));
-      setConfirmDel(null);
-    } catch (err) { console.error(err); }
-  }
 
   return (
     <div style={{ marginTop: "28px", borderTop: "1px solid #F1F5F9", paddingTop: "20px" }}>
@@ -113,119 +84,40 @@ function SkillSetsSection({ staffId }) {
             {assigned.length} SKILL{assigned.length !== 1 ? "S" : ""} ASSIGNED
           </p>
         </div>
-        {!adding && (
-          <button onClick={() => setAdding(true)}
-            style={{ display: "flex", alignItems: "center", gap: "5px", padding: "7px 13px", borderRadius: "8px", background: "#F0FDF4", border: "1px solid #BBF7D0", color: "#15803D", fontSize: "20px", fontWeight: "600", cursor: "pointer" }}>
-            + Add Skill Set
-          </button>
-        )}
+        <span style={{ fontSize: "18px", color: "#94A3B8" }}>Managed by branch managers</span>
       </div>
 
       {loading ? (
         <div style={{ height: "60px", borderRadius: "10px", background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />
+      ) : assigned.length === 0 ? (
+        <div style={{ border: "1.5px dashed #E2E8F0", borderRadius: "12px", padding: "32px", textAlign: "center" }}>
+          <p style={{ fontSize: "20px", color: "#94A3B8" }}>No skills assigned yet.</p>
+        </div>
       ) : (
-        <>
-          {assigned.length === 0 && !adding && (
-            <div style={{ border: "1.5px dashed #E2E8F0", borderRadius: "12px", padding: "32px", textAlign: "center" }}>
-              <p style={{ fontSize: "20px", color: "#94A3B8" }}>No skills assigned yet. Click "Add Skill Set" to get started.</p>
-            </div>
-          )}
-
-          {assigned.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: adding ? "16px" : 0 }}>
-              {assigned.map(sk => {
-                const p  = chipPalette(sk.name);
-                const lm = LEVEL_META[sk.experience_level] || {};
-                return (
-                  <div key={sk.skill_id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px", border: "1px solid #F1F5F9", borderRadius: "10px", background: "#FAFAFA" }}>
-                    <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 11px", borderRadius: "100px", background: p.bg, border: `1px solid ${p.border}`, fontSize: "19px", fontWeight: "700", color: p.text }}>
-                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: p.dot, display: "inline-block" }} />
-                        {sk.name}
-                      </span>
-                      {sk.experience_level && (
-                        <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "18px", fontWeight: "600", background: lm.bg || "#F1F5F9", color: lm.color || "#64748B", border: `1px solid ${lm.border || "#E2E8F0"}` }}>
-                          {lm.label || sk.experience_level}
-                        </span>
-                      )}
-                      {sk.years_of_experience != null && (
-                        <span style={{ fontSize: "19px", color: "#94A3B8", fontWeight: "500" }}>{sk.years_of_experience}yr{sk.years_of_experience !== 1 ? "s" : ""}</span>
-                      )}
-                    </div>
-                    {confirmDel === sk.skill_id ? (
-                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                        <span style={{ fontSize: "18px", color: "#DC2626" }}>Remove?</span>
-                        <button onClick={() => handleDelete(sk.skill_id)} style={{ padding: "3px 10px", borderRadius: "6px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: "18px", fontWeight: "700", cursor: "pointer" }}>Yes</button>
-                        <button onClick={() => setConfirmDel(null)} style={{ padding: "3px 10px", borderRadius: "6px", background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#64748B", fontSize: "18px", fontWeight: "600", cursor: "pointer" }}>No</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setConfirmDel(sk.skill_id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#CBD5E1", fontSize: "23px", lineHeight: 1, padding: "2px 4px" }}>×</button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {adding && (
-            <div style={{ border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "18px", background: "#FAFAFA" }}>
-              <p style={{ fontSize: "18px", fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "14px" }}>New Skill Set</p>
-
-              <div style={{ marginBottom: "14px" }}>
-                <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>1 · Skill</label>
-                {available.length === 0 ? (
-                  <p style={{ fontSize: "19px", color: "#94A3B8" }}>
-                    {library.length === 0 ? "No skills in library yet — add some via Skill Settings." : "All library skills are already assigned."}
-                  </p>
-                ) : (
-                  <SearchableSelect
-                    options={available.map(s => ({ value: s.skill_id, label: s.name }))}
-                    value={form.skill_id}
-                    onChange={v => setForm(p => ({ ...p, skill_id: v }))}
-                    placeholder="Select a skill…"
-                  />
-                )}
-              </div>
-
-              <div style={{ marginBottom: "14px" }}>
-                <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>2 · Experience Level</label>
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                  {LEVELS.map(lvl => {
-                    const lm  = LEVEL_META[lvl];
-                    const sel = form.experience_level === lvl;
-                    return (
-                      <button key={lvl} type="button" onClick={() => setForm(p => ({ ...p, experience_level: lvl }))}
-                        style={{ padding: "6px 13px", borderRadius: "100px", fontSize: "19px", fontWeight: "600", cursor: "pointer",
-                          background: sel ? lm.bg : "#F1F5F9", color: sel ? lm.color : "#64748B",
-                          border: sel ? `1.5px solid ${lm.border}` : "1.5px solid #E2E8F0" }}>
-                        {lm.label}
-                      </button>
-                    );
-                  })}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {assigned.map(sk => {
+            const p  = chipPalette(sk.name);
+            const lm = LEVEL_META[sk.experience_level] || {};
+            return (
+              <div key={sk.skill_id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px", border: "1px solid #F1F5F9", borderRadius: "10px", background: "#FAFAFA" }}>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 11px", borderRadius: "100px", background: p.bg, border: `1px solid ${p.border}`, fontSize: "19px", fontWeight: "700", color: p.text }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: p.dot, display: "inline-block" }} />
+                    {sk.name}
+                  </span>
+                  {sk.experience_level && (
+                    <span style={{ padding: "3px 9px", borderRadius: "100px", fontSize: "18px", fontWeight: "600", background: lm.bg || "#F1F5F9", color: lm.color || "#64748B", border: `1px solid ${lm.border || "#E2E8F0"}` }}>
+                      {lm.label || sk.experience_level}
+                    </span>
+                  )}
+                  {sk.years_of_experience != null && (
+                    <span style={{ fontSize: "19px", color: "#94A3B8", fontWeight: "500" }}>{sk.years_of_experience}yr{sk.years_of_experience !== 1 ? "s" : ""}</span>
+                  )}
                 </div>
               </div>
-
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "18px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>3 · Years of Experience</label>
-                <input type="number" min="0" max="50" value={form.years_of_experience}
-                  onChange={e => setForm(p => ({ ...p, years_of_experience: e.target.value }))}
-                  placeholder="e.g. 3"
-                  style={{ width: "120px", padding: "8px 10px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "20px", color: "#1E293B", background: "#FFF", boxSizing: "border-box" }} />
-              </div>
-
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button onClick={handleAdd} disabled={saving || !form.skill_id}
-                  style={{ padding: "8px 18px", borderRadius: "8px", background: "#2563EB", color: "#FFF", border: "none", fontSize: "20px", fontWeight: "700", cursor: saving || !form.skill_id ? "not-allowed" : "pointer", opacity: saving || !form.skill_id ? 0.6 : 1 }}>
-                  {saving ? "Saving…" : "Save"}
-                </button>
-                <button onClick={() => { setAdding(false); setForm({ skill_id: "", experience_level: "junior", years_of_experience: "" }); }}
-                  style={{ padding: "8px 14px", borderRadius: "8px", background: "#F1F5F9", color: "#64748B", border: "1px solid #E2E8F0", fontSize: "20px", fontWeight: "600", cursor: "pointer" }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-        </>
+            );
+          })}
+        </div>
       )}
     </div>
   );
