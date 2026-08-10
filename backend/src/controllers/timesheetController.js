@@ -1,7 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
-const { computeHoursMetrics } = require("../utils/hoursMetrics");
+const { computeHoursMetrics, toMinutes } = require("../utils/hoursMetrics");
 
 const sendServerError = require("../utils/sendServerError");
 const EVIDENCE_BUCKET = "report-evidence";
@@ -25,9 +25,17 @@ const submitReport = async (req, res) => {
     const staffRow = await prisma.staff.findFirst({ where: { user_id: userId }, select: { staff_id: true } });
     if (!staffRow) return res.status(404).json({ success: false, message: "Staff record not found." });
 
-    const { shift_id, log_date, hours_worked, description, start_time, end_time } = req.body;
+    const { shift_id, log_date, hours_worked, description, start_time, end_time, break_minutes } = req.body;
     if (!log_date) return res.status(400).json({ success: false, message: "log_date is required." });
     if (!description?.trim()) return res.status(400).json({ success: false, message: "Description is required." });
+
+    // Round 6, Task 3: defaults to 0 (never guessed) — an unset field means "no break was taken",
+    // not "unknown". Shared by both submission paths below: MyShifts.jsx uses one form component
+    // for casual (start/end) and regular (plain hours) staff alike, so both get the field.
+    const breakMinutes = break_minutes !== undefined && break_minutes !== "" ? Number(break_minutes) : 0;
+    if (!Number.isFinite(breakMinutes) || breakMinutes < 0) {
+      return res.status(400).json({ success: false, message: "break_minutes must be zero or a positive number." });
+    }
 
     // Round 3, Task 4: actual worked from/to time is optional (regular staff keep submitting a
     // plain hours_worked total, exactly as before). When both are given, they're the source of
@@ -44,13 +52,23 @@ const submitReport = async (req, res) => {
       if (end_time <= start_time) {
         return res.status(400).json({ success: false, message: "End time must be after start time." });
       }
-      const metrics = computeHoursMetrics({ actualStart: start_time, actualEnd: end_time });
+      const spanMinutes = toMinutes(end_time) - toMinutes(start_time);
+      if (breakMinutes >= spanMinutes) {
+        return res.status(400).json({ success: false, message: "Break cannot be equal to or longer than the time worked." });
+      }
+      const metrics = computeHoursMetrics({ actualStart: start_time, actualEnd: end_time, breakMinutes });
       hours = metrics.workedHours;
       actualStart = start_time;
       actualEnd = end_time;
     } else {
-      hours = Number(hours_worked);
-      if (!hours || hours <= 0) return res.status(400).json({ success: false, message: "Valid hours_worked is required." });
+      const rawHours = Number(hours_worked);
+      if (!rawHours || rawHours <= 0) return res.status(400).json({ success: false, message: "Valid hours_worked is required." });
+      // No separate start/end for this path — the entered hours figure IS the span a break gets
+      // measured against.
+      if (breakMinutes >= rawHours * 60) {
+        return res.status(400).json({ success: false, message: "Break cannot be equal to or longer than the time worked." });
+      }
+      hours = Math.round((rawHours - breakMinutes / 60) * 10) / 10;
     }
 
     const shiftId = shift_id ? Number(shift_id) : null;
@@ -88,6 +106,7 @@ const submitReport = async (req, res) => {
       hours_worked: hours,
       start_time: actualStart,
       end_time: actualEnd,
+      break_minutes: breakMinutes,
       description: description.trim(),
       status: "pending",
       evidence_path: evidencePath,

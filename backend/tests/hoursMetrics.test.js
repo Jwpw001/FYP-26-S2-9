@@ -101,3 +101,52 @@ describe("computeHoursMetrics — additional hours", () => {
     expect(m.additionalHours).toBeNull();
   });
 });
+
+// Round 6, Task 3 — break/rest hours. All three rows of the round's own worked-example table:
+// period 10:00-15:00 (rostered 5.0h), branch open 08:00-22:00.
+describe("computeHoursMetrics — break minutes", () => {
+  const period = { rosteredStart: "10:00", rosteredEnd: "15:00" };
+  const branch = { branchOpenTime: "08:00", branchCloseTime: "22:00" };
+
+  test("null break_minutes behaves exactly as before — the regression guard", () => {
+    const withNull = computeHoursMetrics({ ...period, ...branch, actualStart: "10:00", actualEnd: "16:00", breakMinutes: null });
+    const withUndefined = computeHoursMetrics({ ...period, ...branch, actualStart: "10:00", actualEnd: "16:00" });
+    expect(withNull).toEqual(withUndefined);
+    expect(withNull.workedHours).toBe(6); // span, unreduced — no break recorded
+  });
+
+  test("row 1: submitted exactly as rostered, 60m break → worked 4.0, additional 0, overtime 0", () => {
+    const m = computeHoursMetrics({ ...period, ...branch, actualStart: "10:00", actualEnd: "15:00", breakMinutes: 60 });
+    expect(m.spanHours).toBe(5);
+    expect(m.workedHours).toBe(4);
+    expect(m.additionalHours).toBe(0);
+    expect(m.overtimeHours).toBe(0);
+  });
+
+  test("row 2: stayed an hour past the period, 60m break → worked 5.0, additional +1.0 (not 0), overtime 0", () => {
+    const m = computeHoursMetrics({ ...period, ...branch, actualStart: "10:00", actualEnd: "16:00", breakMinutes: 60 });
+    expect(m.spanHours).toBe(6);
+    expect(m.workedHours).toBe(5);
+    expect(m.additionalHours).toBe(1); // measured on span (6 - 5 rostered), NOT on net worked (5 - 5 = 0)
+    expect(m.overtimeHours).toBe(0);
+  });
+
+  test("row 3: worked past branch close, 60m break → worked 4.0, additional 0, overtime 1.0 (unadjusted for break)", () => {
+    const m = computeHoursMetrics({ ...period, ...branch, actualStart: "18:00", actualEnd: "23:00", breakMinutes: 60 });
+    expect(m.spanHours).toBe(5);
+    expect(m.workedHours).toBe(4);
+    expect(m.additionalHours).toBe(0);
+    expect(m.overtimeHours).toBe(1); // computed on the raw span (18:00-23:00 vs 08:00-22:00), never net of break
+  });
+
+  test("30-minute break on a 6.5-hour span gives worked 6.0", () => {
+    const m = computeHoursMetrics({ actualStart: "09:00", actualEnd: "15:30", breakMinutes: 30 });
+    expect(m.spanHours).toBe(6.5);
+    expect(m.workedHours).toBe(6);
+  });
+
+  test("additional hours measured on span, not net: 60m break against a 10:00-15:00 period gives +1.0", () => {
+    const m = computeHoursMetrics({ rosteredStart: "10:00", rosteredEnd: "15:00", actualStart: "10:00", actualEnd: "16:00", breakMinutes: 60 });
+    expect(m.additionalHours).toBe(1); // NOT 0 — computing from net (5.0 worked - 5.0 rostered) would hide the late stay
+  });
+});

@@ -207,6 +207,9 @@ export default function MyTasks({ Layout = StaffLayout }) {
       hours: dur > 0 ? String(dur) : "",
       startTime: (a.task_start_time || a.shift?.start_time || "").slice(0, 5),
       endTime:   (a.task_end_time || a.shift?.end_time || "").slice(0, 5),
+      // Round 6, Task 3: defaults to 0, never a guess — an unset break means "none taken", not
+      // "unknown". Never auto-extends startTime/endTime above either way.
+      breakMinutes: "0",
       desc: "", file: null,
     };
   }
@@ -244,20 +247,30 @@ export default function MyTasks({ Layout = StaffLayout }) {
     const desc = (d.desc || "").trim();
     if (!desc) { showToast("Please describe what you did.", false); return; }
 
+    const breakMinutes = Number(d.breakMinutes || 0);
+    if (!Number.isFinite(breakMinutes) || breakMinutes < 0) { showToast("Break must be zero or a positive number.", false); return; }
+
     let hours = null;
+    let spanMinutes = null;
     if (isCasual) {
       if (!d.startTime || !d.endTime) { showToast("Please enter both a start and end time.", false); return; }
       if (d.endTime <= d.startTime)   { showToast("End time must be after start time.", false); return; }
+      const [sh, sm] = d.startTime.split(":").map(Number);
+      const [eh, em] = d.endTime.split(":").map(Number);
+      spanMinutes = (eh * 60 + em) - (sh * 60 + sm);
     } else {
       hours = parseFloat(d.hours || "0");
       if (!hours || hours <= 0) { showToast("Please enter valid hours.", false); return; }
+      spanMinutes = hours * 60;
     }
+    if (breakMinutes >= spanMinutes) { showToast("Break cannot be equal to or longer than the time worked.", false); return; }
 
     setSubmitting(formKey(a));
     try {
       const body = new FormData();
       body.append("log_date", a.shift?.shift_date || "");
       body.append("description", desc);
+      body.append("break_minutes", String(breakMinutes));
       if (isCasual) {
         body.append("start_time", d.startTime);
         body.append("end_time", d.endTime);
@@ -272,7 +285,7 @@ export default function MyTasks({ Layout = StaffLayout }) {
 
       setTimesheets(prev => ({ ...prev, [tsKey(a)]: res.timesheet }));
       setReportModalFor(null);
-      setFormData(prev => ({ ...prev, [formKey(a)]: { hours: "", desc: "", file: null } }));
+      setFormData(prev => ({ ...prev, [formKey(a)]: { hours: "", breakMinutes: "0", desc: "", file: null } }));
       showToast("Report submitted!");
     } catch (err) { showToast(err.message || "Failed to submit.", false); }
     finally { setSubmitting(null); }
@@ -975,6 +988,31 @@ function SubmitReportModal({ assignment: a, existing, form, onChange, submitting
                   color:"#1E293B", outline:"none", background:"#FFF", width:"120px", boxSizing:"border-box" }} />
             </div>
           )}
+
+          {/* Round 6, Task 3 — same input style as HOURS WORKED above: a number input, plus
+              preset pills for the common cases. Regular staff get this too (same shared form
+              component), measured against their entered hours instead of a start/end span. */}
+          <div style={{ marginBottom:"16px" }}>
+            <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>BREAK (MINUTES)</label>
+            <div style={{ display:"flex", alignItems:"center", gap:"6px", flexWrap:"wrap" }}>
+              {[0, 15, 30, 45, 60].map(m => (
+                <button key={m} type="button" onClick={() => onChange({ breakMinutes: String(m) })}
+                  style={{
+                    padding:"6px 12px", borderRadius:"100px", fontSize:"13px", fontWeight:"700", cursor:"pointer",
+                    border: `1.5px solid ${String(m) === String(form.breakMinutes) ? "#1E293B" : "#E2E8F0"}`,
+                    background: String(m) === String(form.breakMinutes) ? "#1E293B" : "#FFF",
+                    color: String(m) === String(form.breakMinutes) ? "#FFF" : "#64748B",
+                  }}>
+                  {m === 0 ? "None" : `${m}m`}
+                </button>
+              ))}
+              <input type="number" min="0" step="5" placeholder="Custom"
+                value={[0, 15, 30, 45, 60].includes(Number(form.breakMinutes)) ? "" : (form.breakMinutes ?? "")}
+                onChange={e => onChange({ breakMinutes: e.target.value })}
+                style={{ padding:"6px 10px", border:"1.5px solid #E2E8F0", borderRadius:"9px", fontSize:"13px",
+                  color:"#1E293B", outline:"none", background:"#FFF", width:"80px", boxSizing:"border-box" }} />
+            </div>
+          </div>
 
           <div style={{ marginBottom:"16px" }}>
             <label style={{ display:"block", fontSize:"11px", fontWeight:"700", color:"#94A3B8", marginBottom:"6px", letterSpacing:"0.05em" }}>WHAT DID YOU WORK ON?</label>

@@ -62,7 +62,7 @@ async function computeWorkingHoursReport(branchId, startDateStr, endDateStr) {
   const timesheets = shiftIdsInRange.length > 0
     ? await prisma.timesheets.findMany({
         where: { shift_id: { in: shiftIdsInRange }, log_date: { gte: startDate, lte: endDate } },
-        select: { staff_id: true, log_date: true, hours_worked: true, start_time: true, end_time: true, status: true, shift_id: true },
+        select: { staff_id: true, log_date: true, hours_worked: true, start_time: true, end_time: true, break_minutes: true, status: true, shift_id: true },
       })
     : [];
 
@@ -71,7 +71,7 @@ async function computeWorkingHoursReport(branchId, startDateStr, endDateStr) {
     if (!byStaff.has(staffId)) {
       byStaff.set(staffId, {
         staff_id: staffId, staff_type: staffType, user_id: userId, full_name: fullName,
-        rostered_hours: 0, worked_hours: 0, additional_hours: 0, overtime_hours: 0,
+        rostered_hours: 0, worked_hours: 0, span_hours: 0, break_hours: 0, additional_hours: 0, overtime_hours: 0,
         hours_unknown_count: 0, days_worked: new Set(), pending_count: 0,
         dailyWorked: new Map(), // log_date -> summed worked hours, for the max-hours/day warning
       });
@@ -106,9 +106,14 @@ async function computeWorkingHoursReport(branchId, startDateStr, endDateStr) {
       actualStart: ts.start_time, actualEnd: ts.end_time,
       branchOpenTime: branch?.open_time, branchCloseTime: branch?.close_time,
       hoursWorkedFallback: ts.hours_worked,
+      breakMinutes: ts.break_minutes,
     });
 
     if (metrics.workedHours !== null) row.worked_hours += metrics.workedHours;
+    // Round 6, Task 3: shown alongside paid (worked) hours so the gap between them — the break —
+    // is explicable in the report rather than looking like an arithmetic error.
+    if (metrics.spanHours !== null) row.span_hours += metrics.spanHours;
+    row.break_hours += (ts.break_minutes || 0) / 60;
     if (metrics.additionalHours !== null) row.additional_hours += metrics.additionalHours;
     if (metrics.overtimeHours !== null) row.overtime_hours += metrics.overtimeHours;
     if (metrics.hoursUnknown) row.hours_unknown_count++;
@@ -136,6 +141,8 @@ async function computeWorkingHoursReport(branchId, startDateStr, endDateStr) {
       staff_type: r.staff_type,
       rostered_hours: Math.round(r.rostered_hours * 10) / 10,
       worked_hours: Math.round(r.worked_hours * 10) / 10,
+      span_hours: Math.round(r.span_hours * 10) / 10,
+      break_hours: Math.round(r.break_hours * 10) / 10,
       additional_hours: Math.round(r.additional_hours * 10) / 10,
       overtime_hours: Math.round(r.overtime_hours * 10) / 10,
       hours_partially_unknown: r.hours_unknown_count > 0,
@@ -150,10 +157,12 @@ async function computeWorkingHoursReport(branchId, startDateStr, endDateStr) {
   const totals = rows.reduce((acc, r) => ({
     rostered_hours: acc.rostered_hours + r.rostered_hours,
     worked_hours: acc.worked_hours + r.worked_hours,
+    span_hours: acc.span_hours + r.span_hours,
+    break_hours: acc.break_hours + r.break_hours,
     additional_hours: acc.additional_hours + r.additional_hours,
     overtime_hours: acc.overtime_hours + r.overtime_hours,
     pending_submissions: acc.pending_submissions + r.pending_submissions,
-  }), { rostered_hours: 0, worked_hours: 0, additional_hours: 0, overtime_hours: 0, pending_submissions: 0 });
+  }), { rostered_hours: 0, worked_hours: 0, span_hours: 0, break_hours: 0, additional_hours: 0, overtime_hours: 0, pending_submissions: 0 });
   for (const k of Object.keys(totals)) totals[k] = Math.round(totals[k] * 10) / 10;
 
   return { rows, totals, branch_id: branchId, start_date: startDateStr, end_date: endDateStr };

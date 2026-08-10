@@ -477,6 +477,12 @@ model timesheets {
   // hours_worked keeps working unchanged.
   start_time    DateTime? @db.Time(6)
   end_time      DateTime? @db.Time(6)
+  // Round 6, Task 3: unpaid break within the actual start/end span, minutes. Nullable, no
+  // default/backfill — every existing row reads as null, treated identically to 0 (no break) by
+  // computeHoursMetrics. Only meaningful alongside start_time/end_time; position within the shift
+  // isn't recorded, only length (see hoursMetrics.js's own comment on why overtime is therefore
+  // computed on the raw span, never net of break).
+  break_minutes Int?
   users         users?    @relation(fields: [reviewed_by], references: [user_id], onUpdate: NoAction)
   staff         staff     @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
 }

@@ -110,4 +110,87 @@ describe("submitReport — casual worker actual-hours submission", () => {
       timesheet: expect.objectContaining({ hours_worked: 8, start_time: null, end_time: null }),
     }));
   });
+
+  test("no break_minutes provided → defaults to 0, hours_worked unaffected — the regression guard", async () => {
+    const req = makeReq({
+      shift_id: 38, log_date: "2026-08-07",
+      description: "Covered the evening shift",
+      start_time: "16:00", end_time: "22:00",
+    });
+    const res = makeRes();
+    await submitReport(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true,
+      timesheet: expect.objectContaining({ hours_worked: 6, break_minutes: 0 }),
+    }));
+  });
+
+  test("break_minutes nets out of hours_worked on the start/end path", async () => {
+    const req = makeReq({
+      shift_id: 38, log_date: "2026-08-07",
+      description: "Covered the evening shift",
+      start_time: "16:00", end_time: "22:00", break_minutes: "30",
+    });
+    const res = makeRes();
+    await submitReport(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true,
+      timesheet: expect.objectContaining({ hours_worked: 5.5, break_minutes: 30 }),
+    }));
+  });
+
+  test("break_minutes nets out of hours_worked on the regular-staff plain-hours path too", async () => {
+    const req = makeReq({
+      shift_id: 38, log_date: "2026-08-07",
+      description: "Regular shift", hours_worked: "8", break_minutes: "30",
+    });
+    const res = makeRes();
+    await submitReport(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true,
+      timesheet: expect.objectContaining({ hours_worked: 7.5, break_minutes: 30 }),
+    }));
+  });
+
+  test("break equal to the start/end span is rejected", async () => {
+    const req = makeReq({
+      shift_id: 38, log_date: "2026-08-07",
+      description: "Covered the evening shift",
+      start_time: "16:00", end_time: "22:00", break_minutes: "360",
+    });
+    const res = makeRes();
+    await submitReport(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      message: expect.stringMatching(/break cannot be equal to or longer/i),
+    }));
+  });
+
+  test("break exceeding the plain-hours span is rejected", async () => {
+    const req = makeReq({
+      shift_id: 38, log_date: "2026-08-07",
+      description: "Regular shift", hours_worked: "8", break_minutes: "500",
+    });
+    const res = makeRes();
+    await submitReport(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+  });
+
+  test("negative break_minutes is rejected", async () => {
+    const req = makeReq({
+      shift_id: 38, log_date: "2026-08-07",
+      description: "Regular shift", hours_worked: "8", break_minutes: "-10",
+    });
+    const res = makeRes();
+    await submitReport(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
 });

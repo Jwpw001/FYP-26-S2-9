@@ -145,7 +145,7 @@ function Submissions({ branchId, managerId, showToast }) {
 
         const { data: ts } = await supabase
           .from("timesheets")
-          .select("timesheet_id, staff_id, log_date, hours_worked, description, status, reviewed_at, evidence_path, evidence_name")
+          .select("timesheet_id, staff_id, log_date, hours_worked, break_minutes, description, status, reviewed_at, evidence_path, evidence_name")
           .in("shift_id", shiftIds)
           .order("log_date", { ascending: false });
         if (cancelled) return;
@@ -501,6 +501,9 @@ function DetailPanel({ ts, acting, onDecide, onClose }) {
           <MetaRow icon="📋" label="Shift" value={ts.shiftTitle} />
           <MetaRow icon="📅" label="Date"  value={fmtDate(ts.log_date)} />
           <MetaRow icon="⏱️" label="Hours Logged" value={<span style={{ fontSize:"23px", fontWeight:"800", color:"#059669" }}>{fmtHours(parseFloat(ts.hours_worked || 0))}</span>} />
+          {ts.break_minutes > 0 && (
+            <MetaRow icon="☕" label="Break" value={`${ts.break_minutes} min`} />
+          )}
         </div>
 
         {/* Description */}

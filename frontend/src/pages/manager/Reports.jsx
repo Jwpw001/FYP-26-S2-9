@@ -685,7 +685,9 @@ const WH_COLUMNS = [
   { key: "full_name",              label: "Staff" },
   { key: "staff_type",             label: "Type" },
   { key: "rostered_hours",         label: "Rostered" },
+  { key: "span_hours",             label: "Span" },
   { key: "worked_hours",           label: "Worked" },
+  { key: "break_hours",            label: "Break" },
   { key: "additional_hours",       label: "Additional" },
   { key: "overtime_hours",         label: "Overtime" },
   { key: "days_worked",            label: "Days" },
@@ -772,9 +774,11 @@ function WorkingHoursReportPanel({ branchId }) {
                       <span style={{ fontSize: "17px", fontWeight: "600", padding: "2px 8px", borderRadius: "100px", background: r.staff_type === "regular" ? "#EFF6FF" : "#F5F3FF", color: r.staff_type === "regular" ? "#2563EB" : "#7C3AED", textTransform: "capitalize" }}>{r.staff_type}</span>
                     </td>
                     <td style={{ padding: "12px", textAlign: "center" }}>{r.rostered_hours.toFixed(1)}h</td>
+                    <td style={{ padding: "12px", textAlign: "center", color: "#64748B" }}>{r.span_hours.toFixed(1)}h</td>
                     <td style={{ padding: "12px", textAlign: "center", fontWeight: "700" }}>
                       {r.worked_hours.toFixed(1)}h{r.hours_partially_unknown && <span title="Some submissions have no exact start/end time — figure may be incomplete" style={{ color: "#94A3B8" }}> *</span>}
                     </td>
+                    <td style={{ padding: "12px", textAlign: "center", color: "#64748B" }}>{r.break_hours > 0 ? `${r.break_hours.toFixed(1)}h` : "—"}</td>
                     <td style={{ padding: "12px", textAlign: "center", color: r.additional_hours > 0 ? "#2563EB" : "#CBD5E1", fontWeight: r.additional_hours > 0 ? "700" : "400" }}>{r.additional_hours.toFixed(1)}h</td>
                     <td style={{ padding: "12px", textAlign: "center", color: r.overtime_hours > 0 ? "#DC2626" : "#CBD5E1", fontWeight: r.overtime_hours > 0 ? "700" : "400" }}>{r.overtime_hours.toFixed(1)}h</td>
                     <td style={{ padding: "12px", textAlign: "center" }}>{r.days_worked}</td>
@@ -787,7 +791,9 @@ function WorkingHoursReportPanel({ branchId }) {
                 <tr style={{ borderTop: "2px solid #F1F5F9", fontWeight: "700" }}>
                   <td style={{ padding: "12px" }} colSpan={2}>Branch total</td>
                   <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.rostered_hours.toFixed(1)}h</td>
+                  <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.span_hours.toFixed(1)}h</td>
                   <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.worked_hours.toFixed(1)}h</td>
+                  <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.break_hours.toFixed(1)}h</td>
                   <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.additional_hours.toFixed(1)}h</td>
                   <td style={{ padding: "12px", textAlign: "center" }}>{report.totals.overtime_hours.toFixed(1)}h</td>
                   <td colSpan={3} />
