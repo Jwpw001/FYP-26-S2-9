@@ -303,6 +303,8 @@ export default function AIAssistantWidget() {
   const inputRef       = useRef(null);
   const autoBriefRef   = useRef(false);
   const recognitionRef = useRef(null);
+  const panelRef       = useRef(null);
+  const fabRef         = useRef(null);
 
   // Listen for page-level context broadcast (e.g. ShiftDetail tells us which shift is open)
   useEffect(() => {
@@ -343,6 +345,32 @@ export default function AIAssistantWidget() {
 
   useEffect(() => {
     if (open) { setHasNew(false); setTimeout(() => inputRef.current?.focus(), 200); }
+  }, [open]);
+
+  // Round 6, Task 1 — dismiss like any other transient overlay: click outside, or Escape.
+  // Reuses the exact ref + document "mousedown" pattern SearchableSelect.jsx already uses for its
+  // dropdown, rather than inventing a second approach. The fab is checked separately so a click on
+  // the launcher button itself doesn't both close (via this listener) and reopen (via its own
+  // onClick toggle) in the same tick — that combination is what caused the flicker. Only attached
+  // while open, and the effect's cleanup removes both listeners — nothing lingers once closed.
+  // Never calls clearChat(): closing is purely `setOpen(false)`, so the conversation in state is
+  // untouched and reopening shows exactly what was there before.
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e) {
+      if (panelRef.current?.contains(e.target)) return;
+      if (fabRef.current?.contains(e.target)) return;
+      setOpen(false);
+    }
+    function onKeyDown(e) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -541,6 +569,7 @@ export default function AIAssistantWidget() {
     <>
       {/* FAB */}
       <button
+        ref={fabRef}
         className={`ai-fab${hasNew ? " ai-fab-pulse" : ""}`}
         onClick={() => setOpen((v) => !v)}
         style={{
@@ -576,7 +605,7 @@ export default function AIAssistantWidget() {
 
       {/* Chat panel */}
       {open && (
-        <div className="ai-chat-panel" style={{
+        <div ref={panelRef} className="ai-chat-panel" style={{
           position: "fixed", bottom: 92, right: 28,
           width: 360, maxHeight: 520,
           background: "#fff", borderRadius: 18,
