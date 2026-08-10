@@ -1,6 +1,6 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
-const { notifyUsers } = require("../utils/notify");
+const { notifyUsers, notifyUsersBatched } = require("../utils/notify");
 const { logAudit } = require("../utils/auditLog");
 const logger = require("../config/logger");
 const { parsePagination } = require("../utils/pagination");
@@ -208,6 +208,104 @@ const updateShift = async (req, res) => {
     });
 
     res.json({ success: true, message: "Shift updated successfully", shift });
+  } catch (error) {
+    sendServerError(res, error, req);
+  }
+};
+
+// GET the counts a confirmation dialog needs before committing to a bulk publish — never
+// mutates. Round 6, Task 4b.
+const previewBulkPublish = async (req, res) => {
+  try {
+    const branchId = await getCallerBranchId(req.user.user_id);
+    const shiftIds = (req.body.shift_ids || []).map(Number).filter(Number.isInteger);
+    if (shiftIds.length === 0) return res.status(400).json({ success: false, message: "shift_ids required." });
+
+    const shifts = await prisma.shifts.findMany({
+      where: { shift_id: { in: shiftIds } },
+      include: { shift_tasks: { select: { status: true } }, task_assignments: { where: { staff_id: { not: null } }, include: { staff: { select: { user_id: true } } } } },
+    });
+    const inBranch = shifts.filter(s => !branchId || s.branch_id === branchId);
+    const drafts = inBranch.filter(s => s.status === "draft");
+    const unfilledShiftCount = drafts.filter(s => s.shift_tasks.some(t => t.status === "open")).length;
+    const staffIds = new Set();
+    drafts.forEach(s => s.task_assignments.forEach(a => a.staff?.user_id && staffIds.add(a.staff.user_id)));
+
+    return res.json({
+      success: true,
+      requested_count: shiftIds.length,
+      draft_count: drafts.length,
+      non_draft_count: inBranch.length - drafts.length,
+      unfilled_shift_count: unfilledShiftCount,
+      staff_count: staffIds.size,
+    });
+  } catch (error) {
+    sendServerError(res, error, req);
+  }
+};
+
+// Publishes every DRAFT shift in shift_ids (silently skips any that aren't draft — never touches
+// published/cancelled/completed) and sends exactly ONE notification per affected staff member,
+// regardless of how many of their shifts got published. Reuses the same status-transition +
+// per-staff notification shape as the single-shift path in updateShift above, just batched
+// (Round 6, Task 4b/4c/4d) — this is the one publish path; the frontend's single-shift button
+// now calls PATCH /:id same as before, and this endpoint is purely additive for bulk.
+const publishBulkShifts = async (req, res) => {
+  try {
+    const branchId = await getCallerBranchId(req.user.user_id);
+    const shiftIds = (req.body.shift_ids || []).map(Number).filter(Number.isInteger);
+    if (shiftIds.length === 0) return res.status(400).json({ success: false, message: "shift_ids required." });
+
+    const shifts = await prisma.shifts.findMany({
+      where: { shift_id: { in: shiftIds } },
+      include: { task_assignments: { where: { staff_id: { not: null } }, include: { staff: { select: { user_id: true } } } } },
+    });
+    const inBranch = shifts.filter(s => !branchId || s.branch_id === branchId);
+    const drafts = inBranch.filter(s => s.status === "draft");
+    const skipped = inBranch.length - drafts.length;
+
+    if (drafts.length === 0) {
+      return res.json({ success: true, published_count: 0, skipped_count: skipped, notified_count: 0 });
+    }
+
+    await prisma.shifts.updateMany({ where: { shift_id: { in: drafts.map(s => s.shift_id) } }, data: { status: "published" } });
+
+    // Aggregate per staff member across every shift they're on, so each person gets exactly one
+    // notification row no matter how many of their shifts were just published.
+    const shiftCountByUser = new Map();
+    let earliestDateByUser = new Map();
+    for (const shift of drafts) {
+      const userIds = new Set(shift.task_assignments.map(a => a.staff?.user_id).filter(Boolean));
+      for (const userId of userIds) {
+        shiftCountByUser.set(userId, (shiftCountByUser.get(userId) || 0) + 1);
+        const prev = earliestDateByUser.get(userId);
+        if (!prev || shift.shift_date < prev) earliestDateByUser.set(userId, shift.shift_date);
+      }
+    }
+
+    function weekOfLabel(date) {
+      const d = new Date(date);
+      const day = d.getUTCDay();
+      const monday = new Date(d);
+      monday.setUTCDate(d.getUTCDate() - (day === 0 ? 6 : day - 1));
+      return monday.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+    }
+
+    await notifyUsersBatched([...shiftCountByUser.entries()].map(([recipientId, count]) => ({
+      recipientId,
+      type: "shift_published",
+      title: "Schedule Published",
+      message: `Your schedule for the week of ${weekOfLabel(earliestDateByUser.get(recipientId))} has been published — ${count} shift${count === 1 ? "" : "s"}.`,
+      relatedEntity: "shifts",
+      relatedId: null,
+    })));
+
+    await logAudit({
+      actorId: req.user.user_id, action: "shifts_bulk_published", entity: "shifts", entityId: null,
+      before: null, after: { shift_ids: drafts.map(s => s.shift_id), count: drafts.length },
+    });
+
+    return res.json({ success: true, published_count: drafts.length, skipped_count: skipped, notified_count: shiftCountByUser.size });
   } catch (error) {
     sendServerError(res, error, req);
   }
@@ -1190,4 +1288,4 @@ const previewRoster = async (req, res) => {
   }
 };
 
-module.exports = { getShifts, getShiftById, createShift, updateShift, deleteShift, generateWeeklySchedule, confirmWeeklySchedule, rescheduleStaff, reviewWeeklySchedule, previewRoster };
+module.exports = { getShifts, getShiftById, createShift, updateShift, deleteShift, previewBulkPublish, publishBulkShifts, generateWeeklySchedule, confirmWeeklySchedule, rescheduleStaff, reviewWeeklySchedule, previewRoster };

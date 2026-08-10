@@ -4,7 +4,7 @@ const { getLimits } = require("../utils/planLimits");
 const { logAudit } = require("../utils/auditLog");
 const { offboardStaff } = require("../utils/offboarding");
 const { parsePagination } = require("../utils/pagination");
-const { notifyUsers } = require("../utils/notify");
+const { notifyUsersBatched } = require("../utils/notify");
 
 const sendServerError = require("../utils/sendServerError");
 // Resolves business_id for both business owners and managers
@@ -1295,30 +1295,40 @@ const markDateClosed = async (req, res) => {
       .upsert({ branch_id, holidays, updated_at: new Date().toISOString() }, { onConflict: "branch_id" });
     if (upsertError) throw new Error(upsertError.message);
 
-    // Cancel (never delete) any existing, not-already-cancelled shift on this date and notify
-    // every staff member currently assigned to it.
+    // Cancel (never delete) any existing, not-already-cancelled shift on this date. With shift
+    // periods (Round 6, Task 2), one closed day can mean two or three shifts for the same person
+    // (morning + evening) — notify each affected staff member once, not once per shift, via
+    // notifyUsersBatched (Task 4d).
     const affectedShifts = await prisma.shifts.findMany({
       where: { branch_id, shift_date: new Date(`${date}T00:00:00Z`), status: { not: "cancelled" } },
       include: { task_assignments: { where: { staff_id: { not: null } }, include: { staff: { select: { user_id: true } } } } },
     });
 
-    let notifiedCount = 0;
+    await Promise.all(affectedShifts.map(shift =>
+      prisma.shifts.update({ where: { shift_id: shift.shift_id }, data: { status: "cancelled" } })
+    ));
+
+    const shiftCountByUser = new Map();
     for (const shift of affectedShifts) {
-      await prisma.shifts.update({ where: { shift_id: shift.shift_id }, data: { status: "cancelled" } });
-      const userIds = [...new Set(shift.task_assignments.map(a => a.staff?.user_id).filter(Boolean))];
-      if (userIds.length > 0) {
-        await notifyUsers(userIds, {
-          type: "shift_cancelled",
-          title: "Shift Cancelled",
-          message: `Your shift on ${date} was cancelled — the branch is marked closed${reason ? ` (${reason.trim()})` : ""}.`,
-          relatedEntity: "shifts",
-          relatedId: shift.shift_id,
-        });
-        notifiedCount += userIds.length;
+      const userIds = new Set(shift.task_assignments.map(a => a.staff?.user_id).filter(Boolean));
+      for (const userId of userIds) {
+        shiftCountByUser.set(userId, (shiftCountByUser.get(userId) || 0) + 1);
       }
     }
 
-    return res.json({ success: true, holidays, cancelled_shifts: affectedShifts.length, notified: notifiedCount });
+    const reasonSuffix = reason ? ` (${reason.trim()})` : "";
+    await notifyUsersBatched([...shiftCountByUser.entries()].map(([recipientId, count]) => ({
+      recipientId,
+      type: "shift_cancelled",
+      title: "Shift Cancelled",
+      message: count === 1
+        ? `Your shift on ${date} was cancelled — the branch is marked closed${reasonSuffix}.`
+        : `Your ${count} shifts on ${date} were cancelled — the branch is marked closed${reasonSuffix}.`,
+      relatedEntity: "shifts",
+      relatedId: null, // multiple shifts collapsed into one message — no single shift to link to; resolver falls back to the staff member's shifts list either way
+    })));
+
+    return res.json({ success: true, holidays, cancelled_shifts: affectedShifts.length, notified: shiftCountByUser.size });
   } catch (error) {
     return sendServerError(res, error, req);
   }

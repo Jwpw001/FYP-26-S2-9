@@ -96,6 +96,19 @@ async function generateShiftsForBranch(branchId, startDateStr, endDateStr) {
     (templatesByDow[t.day_of_week] ??= []).push(t);
   }
 
+  // Round 6, Task 4 — was a `shifts.findFirst` per day inside the loop below: one DB round-trip
+  // per date in range even when almost every date is a no-op "already generated" skip. Over the
+  // 56-day rolling horizon that's up to 57 sequential network round-trips (~390ms each observed
+  // against this Supabase region) — 20+ seconds for a call that creates nothing, which is exactly
+  // the kind of "did the button even work?" delay Task 4a exists to fix. One query for the whole
+  // range, checked in-memory in the loop, is behaviourally identical — same skip reasons, same
+  // idempotency — just not re-fetched 57 times.
+  const existingShiftRows = await prisma.shifts.findMany({
+    where: { branch_id: branchId, shift_date: { gte: new Date(`${startDateStr}T00:00:00Z`), lte: new Date(`${endDateStr}T00:00:00Z`) } },
+    select: { shift_id: true, source: true, shift_date: true },
+  });
+  const existingByDate = new Map(existingShiftRows.map(s => [toDateStr(s.shift_date), s]));
+
   const created = [];
   const skipped = [];
 
@@ -124,10 +137,7 @@ async function generateShiftsForBranch(branchId, startDateStr, endDateStr) {
 
     // Never destroy manual work: if ANY shift already exists for this branch+date — generated
     // or manual — leave it alone entirely rather than trying to merge template changes into it.
-    const existing = await prisma.shifts.findFirst({
-      where: { branch_id: branchId, shift_date: new Date(`${dateStr}T00:00:00Z`) },
-      select: { shift_id: true, source: true },
-    });
+    const existing = existingByDate.get(dateStr);
     if (existing) {
       skipped.push({ date: dateStr, reason: existing.source === "generated" ? "already generated" : "a manual shift already exists on this date" });
       cursor.setUTCDate(cursor.getUTCDate() + 1);

@@ -5,7 +5,7 @@ jest.mock("../src/config/prisma", () => ({
   staff: { findMany: jest.fn() },
   off_day_requests: { findMany: jest.fn() },
   public_holidays: { findMany: jest.fn() },
-  shifts: { findFirst: jest.fn(), create: jest.fn() },
+  shifts: { findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn() },
   shift_tasks: { createManyAndReturn: jest.fn(), update: jest.fn() },
   task_assignments: { create: jest.fn() },
 }));
@@ -30,10 +30,13 @@ function setupBaseline({ templates = [], regularStaff = [], offDayRows = [], hol
   prisma.branch_task_templates.findMany.mockResolvedValue(templates);
   prisma.staff.findMany.mockResolvedValue(regularStaff);
   prisma.off_day_requests.findMany.mockResolvedValue(offDayRows);
-  prisma.shifts.findFirst.mockImplementation(({ where }) => {
-    const dateStr = where.shift_date.toISOString().slice(0, 10);
-    return Promise.resolve(existingShiftDates.includes(dateStr) ? { shift_id: 999, source: "generated" } : null);
-  });
+  // Round 6, Task 4: generateShiftsForBranch now fetches every existing shift in the range with
+  // one shifts.findMany call instead of one shifts.findFirst per date (was 57 sequential DB
+  // round-trips for a no-op re-check — see the function's own comment). findFirst is kept mocked
+  // above for any test that still reaches for it directly, but the generator itself no longer does.
+  prisma.shifts.findMany.mockImplementation(() =>
+    Promise.resolve(existingShiftDates.map(dateStr => ({ shift_id: 999, source: "generated", shift_date: new Date(`${dateStr}T00:00:00Z`) })))
+  );
   let nextShiftId = 1;
   prisma.shifts.create.mockImplementation(() => Promise.resolve({ shift_id: nextShiftId++ }));
   let nextTaskId = 1;

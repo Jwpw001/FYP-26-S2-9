@@ -10,6 +10,8 @@ const {
     createShift,
     updateShift,
     deleteShift,
+    previewBulkPublish,
+    publishBulkShifts,
     generateWeeklySchedule,
     confirmWeeklySchedule,
     rescheduleStaff,
@@ -58,6 +60,8 @@ router.post("/confirm-week",   verifyToken, allowRoles(...MANAGER_ONLY), confirm
 router.post("/reschedule-staff", verifyToken, allowRoles(...MANAGER_ONLY), rescheduleStaff);
 router.post("/review-schedule",  verifyToken, allowRoles(...MANAGER_ONLY), reviewWeeklySchedule);
 router.get("/roster-preview",    verifyToken, allowRoles(...MANAGER_ONLY), previewRoster);
+router.post("/publish-bulk/preview", verifyToken, allowRoles(...MANAGER_ONLY), previewBulkPublish);
+router.post("/publish-bulk",         verifyToken, allowRoles(...MANAGER_ONLY), publishBulkShifts);
 
 // ── Shifts ─────────────────────────────────────────────────────────────────────
 

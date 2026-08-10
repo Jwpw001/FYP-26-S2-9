@@ -84,7 +84,6 @@ export default function ShiftsList() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected]     = useState(new Set());
   const [deleting, setDeleting]     = useState(false);
-  const [publishing, setPublishing] = useState(false);
   const [calendarScope, setCalendarScope] = useState("week");
   const [dayOffset, setDayOffset]   = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
@@ -93,11 +92,31 @@ export default function ShiftsList() {
   // scheduler below): fills the rolling horizon from branch_task_templates.
   const [templateGen, setTemplateGen] = useState({ running: false, result: null, error: "" });
 
+  // Round 6, Task 4b/4c — shared by the manual multi-select "Publish" button and the new
+  // "Publish week" button: fetch a preview (counts, unfilled-task warning) first, show a
+  // confirmation, only then commit. confirming holds { shiftIds, preview } while the modal is open.
+  const [bulkPublish, setBulkPublish] = useState({ confirming: null, previewing: false, running: false, result: null, error: "" });
+
+  // Round 6, Task 4a — the calendar previously only fetched shifts once on mount; nothing
+  // refetched after a mutating action (template generation, bulk publish), so the manager's
+  // reasonable conclusion was that nothing happened. Extracted so every mutating action below can
+  // call the same fetch the initial load and the existing krewby-ai-action listener already use.
+  async function refreshShifts() {
+    if (!branchInfo?.branch_id) return;
+    const { data } = await supabase
+      .from("shifts")
+      .select("shift_id, title, shift_date, start_time, end_time, status, branch_id, shift_tasks ( task_id, status )")
+      .eq("branch_id", branchInfo.branch_id)
+      .order("shift_date", { ascending: false });
+    if (data) setShifts(data);
+  }
+
   async function runTemplateGeneration() {
     setTemplateGen({ running: true, result: null, error: "" });
     try {
       const res = await api.post("/api/shifts/generate", {});
       setTemplateGen({ running: false, result: res, error: "" });
+      await refreshShifts();
     } catch (e) {
       setTemplateGen({ running: false, result: null, error: e.message || "Generation failed." });
     }
@@ -170,16 +189,8 @@ export default function ShiftsList() {
   // Re-fetch shifts whenever the AI assistant takes an action (create shift, add task, publish, etc.)
   useEffect(() => {
     if (!branchInfo?.branch_id) return;
-    async function refresh() {
-      const { data } = await supabase
-        .from("shifts")
-        .select("shift_id, title, shift_date, start_time, end_time, status, branch_id, shift_tasks ( task_id, status )")
-        .eq("branch_id", branchInfo.branch_id)
-        .order("shift_date", { ascending: false });
-      if (data) setShifts(data);
-    }
-    window.addEventListener("krewby-ai-action", refresh);
-    return () => window.removeEventListener("krewby-ai-action", refresh);
+    window.addEventListener("krewby-ai-action", refreshShifts);
+    return () => window.removeEventListener("krewby-ai-action", refreshShifts);
   }, [branchInfo]);
 
   function getWeekDates() {
@@ -215,21 +226,45 @@ export default function ShiftsList() {
     }
   }
 
-  async function publishSelected() {
-    const draftIds = shifts.filter(s => selected.has(s.shift_id) && s.status === "draft").map(s => s.shift_id);
-    if (draftIds.length === 0) return;
-    setPublishing(true);
+  // Round 6, Task 4b — one shared bulk-publish path for both the manual multi-select bar and the
+  // "Publish week" button below: fetch counts first (POST .../publish-bulk/preview, read-only),
+  // show a confirmation stating them, only commit on explicit confirm. Reuses the single-shift
+  // publish's underlying status transition + notification shape (updateShift), just batched
+  // server-side — this is the one publish path, not a second one.
+  async function startBulkPublish(shiftIds) {
+    if (shiftIds.length === 0) return;
+    setBulkPublish(prev => ({ ...prev, previewing: true, error: "" }));
     try {
-      const { error } = await supabase.from("shifts").update({ status: "published" }).in("shift_id", draftIds);
-      if (error) throw error;
-      setShifts(prev => prev.map(s => draftIds.includes(s.shift_id) ? { ...s, status: "published" } : s));
+      const preview = await api.post("/api/shifts/publish-bulk/preview", { shift_ids: shiftIds });
+      setBulkPublish(prev => ({ ...prev, previewing: false, confirming: { shiftIds, preview } }));
+    } catch (e) {
+      setBulkPublish(prev => ({ ...prev, previewing: false, error: e.message || "Could not preview publish." }));
+    }
+  }
+
+  async function confirmBulkPublish() {
+    const { shiftIds } = bulkPublish.confirming;
+    setBulkPublish(prev => ({ ...prev, confirming: null, running: true, result: null, error: "" }));
+    try {
+      const result = await api.post("/api/shifts/publish-bulk", { shift_ids: shiftIds });
+      setBulkPublish(prev => ({ ...prev, running: false, result }));
+      await refreshShifts();
       setSelected(new Set());
       setSelectMode(false);
-    } catch (err) {
-      alert("Failed to publish some shifts: " + err.message);
-    } finally {
-      setPublishing(false);
+    } catch (e) {
+      setBulkPublish(prev => ({ ...prev, running: false, error: e.message || "Bulk publish failed." }));
     }
+  }
+
+  function publishSelected() {
+    const draftIds = shifts.filter(s => selected.has(s.shift_id) && s.status === "draft").map(s => s.shift_id);
+    startBulkPublish(draftIds);
+  }
+
+  function publishWeek() {
+    const weekDateStrs = new Set(getWeekDates().map(d => d.toISOString().slice(0, 10)));
+    const draftIds = shifts.filter(s => weekDateStrs.has(s.shift_date?.split("T")[0] ?? s.shift_date) && s.status === "draft").map(s => s.shift_id);
+    startBulkPublish(draftIds);
   }
 
   async function openGenerateConfig(weekDates) {
@@ -516,9 +551,9 @@ export default function ShiftsList() {
               const hasDraft = [...selected].some(id => shifts.find(s => s.shift_id === id)?.status === "draft");
               return (
             <div style={{ display:"flex", gap:"8px", opacity: selected.size > 0 ? 1 : 0.4, pointerEvents: selected.size > 0 ? "auto" : "none" }}>
-              <button onClick={publishSelected} disabled={publishing || !hasDraft}
+              <button onClick={publishSelected} disabled={bulkPublish.previewing || bulkPublish.running || !hasDraft}
                 style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"14.5px", fontWeight:"700", background:"#fff", border:"1px solid #C7D2FE", cursor: hasDraft ? "pointer" : "default", opacity: hasDraft ? 1 : 0.4 }}>
-                {publishing ? "Publishing…" : "Publish"}
+                {bulkPublish.previewing ? "Checking…" : bulkPublish.running ? "Publishing…" : "Publish"}
               </button>
               <button onClick={deleteSelected} disabled={deleting}
                 style={{ padding:"6px 12px", borderRadius:"7px", fontSize:"19.5px", fontWeight:"700", background:"#FEF2F2", color:"#DC2626", border:"1px solid #FECACA", cursor:"pointer" }}>
@@ -549,6 +584,16 @@ export default function ShiftsList() {
                 <Sparkles size={13} /> Generate Week
               </button>
             )}
+            {calendarScope === "week" && shifts.some(s => {
+              const dateStr = s.shift_date?.split("T")[0] ?? s.shift_date;
+              return s.status === "draft" && weekDates.some(d => d.toISOString().slice(0, 10) === dateStr);
+            }) && (
+              <button onClick={publishWeek} disabled={bulkPublish.previewing || bulkPublish.running}
+                title="Publish every draft shift in the currently viewed week"
+                style={{ background:"#1C1B18", color:"#fff", padding:"8px 14px", borderRadius:"9px", fontSize:"20px", fontWeight:"700", border:"none", cursor: bulkPublish.previewing || bulkPublish.running ? "default" : "pointer", display:"flex", alignItems:"center", gap:"6px" }}>
+                <Check size={13} /> {bulkPublish.previewing ? "Checking…" : bulkPublish.running ? "Publishing…" : "Publish Week"}
+              </button>
+            )}
             <button onClick={onNextPeriod}
               style={{ width:"34px", height:"34px", borderRadius:"9px", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"21px", color:"#64748B", transition:"background 0.15s" }}>
               →
@@ -571,6 +616,19 @@ export default function ShiftsList() {
                 ⚠ {templateGen.result.data_gap_staff.map(s => s.full_name || `Staff #${s.staff_id}`).join(", ")} — no contracted days on file, so they weren't auto-scheduled. Set their default work days to include them.
               </p>
             )}
+          </div>
+        )}
+
+        {(bulkPublish.result || bulkPublish.error) && (
+          <div style={{ background: bulkPublish.error ? "#FEF2F2" : "#F0FDF4", border:`1px solid ${bulkPublish.error ? "#FECACA" : "#BBF7D0"}`, borderRadius:"10px", padding:"10px 14px", marginBottom:"14px", fontSize:"19px", color: bulkPublish.error ? "#991B1B" : "#166534" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"10px" }}>
+              <span>
+                {bulkPublish.error
+                  ? bulkPublish.error
+                  : `Published ${bulkPublish.result.published_count} shift${bulkPublish.result.published_count === 1 ? "" : "s"}. ${bulkPublish.result.notified_count} staff member${bulkPublish.result.notified_count === 1 ? "" : "s"} notified.${bulkPublish.result.skipped_count > 0 ? ` ${bulkPublish.result.skipped_count} skipped (already published, cancelled, or completed).` : ""}`}
+              </span>
+              <button onClick={() => setBulkPublish(prev => ({ ...prev, result:null, error:"" }))} style={{ background:"none", border:"none", cursor:"pointer", color:"inherit", display:"flex", flexShrink:0 }}><X size={14} /></button>
+            </div>
           </div>
         )}
 
@@ -855,6 +913,44 @@ export default function ShiftsList() {
           );
         })()}
       </div>
+
+      {/* ── Bulk publish: confirm, stating counts (Round 6, Task 4b) ─────────── */}
+      {bulkPublish.confirming && (() => {
+        const { shiftIds, preview } = bulkPublish.confirming;
+        return (
+          <div style={{ position:"fixed",inset:0,zIndex:999999,background:"rgba(2,6,23,0.55)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px" }}
+            onClick={() => setBulkPublish(prev => ({ ...prev, confirming: null }))}>
+            <div style={{ background:"#fff",borderRadius:"20px",width:"min(94vw,440px)",boxShadow:"0 32px 80px rgba(0,0,0,0.4)",overflow:"hidden",animation:"modalIn 0.2s cubic-bezier(0.34,1.56,0.64,1)",padding:"22px" }}
+              onClick={e => e.stopPropagation()}>
+              <p style={{ fontSize:"22px",fontWeight:"800",color:"#0F172A",margin:0,marginBottom:"8px" }}>
+                Publish {preview.draft_count} shift{preview.draft_count === 1 ? "" : "s"}?
+              </p>
+              <p style={{ fontSize:"20px",color:"#475569",margin:0,marginBottom:preview.unfilled_shift_count > 0 ? "10px" : "18px" }}>
+                {preview.staff_count} staff member{preview.staff_count === 1 ? "" : "s"} will be notified.
+                {preview.non_draft_count > 0 && ` ${preview.non_draft_count} already-published/cancelled shift${preview.non_draft_count === 1 ? "" : "s"} will be skipped.`}
+              </p>
+              {preview.unfilled_shift_count > 0 && (
+                <div style={{ display:"flex",alignItems:"flex-start",gap:"8px",background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:"10px",padding:"10px 12px",marginBottom:"18px" }}>
+                  <AlertTriangle size={16} color="#B45309" style={{ flexShrink:0,marginTop:"2px" }} />
+                  <p style={{ fontSize:"19px",color:"#92400E",margin:0 }}>
+                    {preview.unfilled_shift_count} of {preview.draft_count} shifts have unfilled tasks. You can still publish a partial roster.
+                  </p>
+                </div>
+              )}
+              <div style={{ display:"flex",gap:"8px",justifyContent:"flex-end" }}>
+                <button onClick={() => setBulkPublish(prev => ({ ...prev, confirming: null }))}
+                  style={{ padding:"9px 16px",borderRadius:"9px",border:"1px solid #E2E8F0",background:"#fff",color:"#475569",fontSize:"20px",fontWeight:"700",cursor:"pointer" }}>
+                  Cancel
+                </button>
+                <button onClick={confirmBulkPublish} disabled={preview.draft_count === 0}
+                  style={{ padding:"9px 18px",borderRadius:"9px",border:"none",background: preview.draft_count === 0 ? "#CBD5E1" : "#1C1B18",color:"#fff",fontSize:"20px",fontWeight:"700",cursor: preview.draft_count === 0 ? "default" : "pointer" }}>
+                  Publish
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Weekly AI Review Popup ─────────────────────────────────────────── */}
       {weeklyReviewModal.open && (
