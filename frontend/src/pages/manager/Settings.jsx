@@ -8,20 +8,22 @@ import BranchHolidaySettings from "../../components/BranchHolidaySettings";
 import TaskTemplatesEditor from "../../components/TaskTemplatesEditor";
 import {
   Clock, Calendar, Check, Minus, Plus,
-  Users, Award, TrendingUp, BarChart3, Scale, Loader2, Settings2, Zap, Pencil, X, Save, RotateCcw, Lock,
+  Award, TrendingUp, Scale, Loader2, Settings2, Zap, Pencil, X, Save, RotateCcw, Lock,
 } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// Round 6, Task 10: availability and performance dropped from the model — availability is now a
+// hard gate at match time, performance never had a data source behind it. The underlying weight
+// columns still exist on branch_allocation_preferences (no migration) but this UI no longer
+// reads/writes them; an old row that still has them populated has two extra ignored properties.
 const WEIGHTS = [
-  { key: "weight_availability", label: "Availability", icon: Users,      color: "#2563EB" },
-  { key: "weight_skills",       label: "Skills match", icon: Award,      color: "#7C3AED" },
-  { key: "weight_attendance",   label: "Attendance",   icon: TrendingUp, color: "#059669" },
-  { key: "weight_performance",  label: "Performance",  icon: BarChart3,  color: "#EA580C" },
-  { key: "weight_workload",     label: "Workload",     icon: Scale,      color: "#0891B2" },
+  { key: "weight_skills",     label: "Skills match", icon: Award,      color: "#7C3AED" },
+  { key: "weight_attendance", label: "Attendance",   icon: TrendingUp, color: "#059669" },
+  { key: "weight_workload",   label: "Workload",     icon: Scale,      color: "#0891B2" },
 ];
 
-const ALLOC_DEFAULTS = { weight_availability: 40, weight_skills: 30, weight_attendance: 15, weight_performance: 10, weight_workload: 5 };
+const ALLOC_DEFAULTS = { weight_skills: 50, weight_attendance: 30, weight_workload: 20 };
 
 function DonutChart({ weights, size = 160 }) {
   const total = weights.reduce((s, w) => s + w.value, 0);

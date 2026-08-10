@@ -11,6 +11,7 @@ jest.mock("../src/config/prisma", () => ({
   casual_availability: { findMany: jest.fn() },
   casual_period_availability: { findMany: jest.fn() },
   casual_standing_availability: { findMany: jest.fn() },
+  timesheets: { findMany: jest.fn() },
 }));
 jest.mock("../src/config/supabaseAdmin", () => ({ from: jest.fn() }));
 jest.mock("../src/controllers/taskController", () => ({ checkLaborRules: jest.fn() }));
@@ -34,6 +35,14 @@ function makeRes() {
   res.json = jest.fn(() => res);
   return res;
 }
+
+// task_assignments.findMany is called for two different purposes in autoAssignCasual — same-day
+// double-booking rows (a plain Date equality filter on shifts.shift_date) and, since Round 6 Task
+// 10, past-90-days assignments for the attendance sub-score (a {gte, lt} range filter on the same
+// field). Both go through the single mocked function, so this dispatches on the shape of the
+// `where` clause it was called with rather than call order, which would be fragile.
+let mockSameDayAssignments = [];
+let mockPast90dAssignments = [];
 
 // Configures every dependency autoAssignCasual reaches on the "happy path" up to the candidate
 // loop, shared across all three filter-chain scenarios below. Each test then overrides only the
@@ -79,9 +88,18 @@ function setupBaseline() {
     { staff_id: S1, user_id: U1 },
     { staff_id: S2, user_id: U2 },
   ]);
-  prisma.task_assignments.groupBy.mockResolvedValue([]); // no past assignments
+  prisma.task_assignments.groupBy.mockResolvedValue([]); // no past assignments (workload dimension)
   prisma.casual_period_availability.findMany.mockResolvedValue([]);
   prisma.casual_standing_availability.findMany.mockResolvedValue([]);
+  prisma.timesheets.findMany.mockResolvedValue([]); // no approved timesheets by default
+
+  mockSameDayAssignments = [];
+  mockPast90dAssignments = [];
+  prisma.task_assignments.findMany.mockImplementation(({ where }) => {
+    const isRangeFilter = where?.shifts?.shift_date && typeof where.shifts.shift_date === "object" && !(where.shifts.shift_date instanceof Date);
+    return Promise.resolve(isRangeFilter ? mockPast90dAssignments : mockSameDayAssignments);
+  });
+
   checkLaborRules.mockResolvedValue(null); // passes by default; overridden in the labor-rules test
 }
 
@@ -97,7 +115,6 @@ describe("autoAssignCasual filter chain", () => {
 
   test("candidates with no submitted availability are excluded as unavailable", async () => {
     prisma.casual_availability.findMany.mockResolvedValue([]); // neither worker submitted availability
-    prisma.task_assignments.findMany.mockResolvedValue([]); // no same-day assignments either way
 
     const res = makeRes();
     await autoAssignCasual(makeReq(), res);
@@ -117,10 +134,10 @@ describe("autoAssignCasual filter chain", () => {
       { staff_id: S2, available_from: t("08:00"), available_to: t("18:00") },
     ]);
     // Existing same-day assignment for both, overlapping the 09:00-13:00 task window
-    prisma.task_assignments.findMany.mockResolvedValue([
+    mockSameDayAssignments = [
       { staff_id: S1, shifts: { start_time: t("10:00"), end_time: t("11:00") } },
       { staff_id: S2, shifts: { start_time: t("10:00"), end_time: t("11:00") } },
-    ]);
+    ];
 
     const res = makeRes();
     await autoAssignCasual(makeReq(), res);
@@ -140,7 +157,6 @@ describe("autoAssignCasual filter chain", () => {
       { staff_id: S1, available_from: t("08:00"), available_to: t("18:00") },
       { staff_id: S2, available_from: t("08:00"), available_to: t("18:00") },
     ]);
-    prisma.task_assignments.findMany.mockResolvedValue([]); // not double-booked
     // Only S2 would breach — S1 should win despite otherwise-identical sub-scores.
     checkLaborRules.mockImplementation(async (staffId) =>
       staffId === S2 ? "This would put the staff member over the branch's daily-hours limit." : null
@@ -184,7 +200,6 @@ describe("autoAssignCasual — period-based availability", () => {
       end_time: t("13:00"),
       period_id: PERIOD_ID,
     });
-    prisma.task_assignments.findMany.mockResolvedValue([]); // not double-booked
   });
 
   test("a shift without a period_id ignores period tables entirely and uses the old time-coverage check unchanged", async () => {
@@ -223,9 +238,11 @@ describe("autoAssignCasual — period-based availability", () => {
     const body = res.json.mock.calls[0][0];
     expect(body.success).toBe(true);
     expect(body.assigned.user_id).toBe(U1);
-    // Binary sub-score: a period match scores exactly 1.0, no partial-coverage ranking.
+    // Round 6, Task 10: availability is a gate, not a scored dimension any more — the breakdown
+    // only carries skills/attendance/workload.
     const winnerBreakdown = body.score_breakdown.candidates.find(c => c.user_id === U1);
-    expect(winnerBreakdown.sub_scores.availability).toBe(1);
+    expect(winnerBreakdown.sub_scores.availability).toBeUndefined();
+    expect(Object.keys(winnerBreakdown.sub_scores).sort()).toEqual(["attendance", "skills", "workload"]);
   });
 
   test("explicit weekly rows for OTHER periods do not fall back to the standing pattern — resolution order is exact", async () => {
@@ -274,5 +291,68 @@ describe("autoAssignCasual — period-based availability", () => {
     const body = res.json.mock.calls[0][0];
     expect(body.success).toBe(false);
     expect(body.reason).toMatch(/2 unavailable on Mon/);
+  });
+});
+
+// Round 6, Task 10: rebuilt allocation weights — availability/performance dropped from the
+// score, attendance is now a real approved-timesheets ÷ assignments ratio over the trailing 90
+// days (relative to the shift being filled), workload/skills unchanged.
+describe("autoAssignCasual — attendance sub-score (Round 6, Task 10)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupBaseline();
+    prisma.casual_availability.findMany.mockResolvedValue([
+      { staff_id: S1, available_from: t("08:00"), available_to: t("18:00") },
+      { staff_id: S2, available_from: t("08:00"), available_to: t("18:00") },
+    ]);
+    prisma.users.findUnique.mockResolvedValue({ full_name: "Worker One" });
+    prisma.task_assignments.create.mockResolvedValue({ assignment_id: 42 });
+  });
+
+  test("a candidate with no assignments in the trailing 90 days scores the neutral 0.75, not 0 or 1", async () => {
+    mockPast90dAssignments = []; // neither candidate has any history
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    const s1 = body.score_breakdown.candidates.find(c => c.user_id === U1);
+    const s2 = body.score_breakdown.candidates.find(c => c.user_id === U2);
+    expect(s1.sub_scores.attendance).toBe(0.75);
+    expect(s2.sub_scores.attendance).toBe(0.75);
+  });
+
+  test("attendance is approved timesheets divided by past assignments, and a clean record outranks a spotty one", async () => {
+    // S1: 4 past assignments, all 4 approved -> 1.0. S2: 4 past assignments, only 1 approved -> 0.25.
+    mockPast90dAssignments = [
+      { staff_id: S1, shift_id: 901 }, { staff_id: S1, shift_id: 902 }, { staff_id: S1, shift_id: 903 }, { staff_id: S1, shift_id: 904 },
+      { staff_id: S2, shift_id: 911 }, { staff_id: S2, shift_id: 912 }, { staff_id: S2, shift_id: 913 }, { staff_id: S2, shift_id: 914 },
+    ];
+    prisma.timesheets.findMany.mockResolvedValue([
+      { staff_id: S1, shift_id: 901 }, { staff_id: S1, shift_id: 902 }, { staff_id: S1, shift_id: 903 }, { staff_id: S1, shift_id: 904 },
+      { staff_id: S2, shift_id: 911 },
+    ]);
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    const s1 = body.score_breakdown.candidates.find(c => c.user_id === U1);
+    const s2 = body.score_breakdown.candidates.find(c => c.user_id === U2);
+    expect(s1.sub_scores.attendance).toBe(1);
+    expect(s2.sub_scores.attendance).toBe(0.25);
+    expect(body.assigned.user_id).toBe(U1); // the cleaner attendance record wins
+  });
+
+  test("a pending (not approved) timesheet does not count toward attendance", async () => {
+    mockPast90dAssignments = [{ staff_id: S1, shift_id: 901 }];
+    prisma.timesheets.findMany.mockResolvedValue([]); // approved-only query returns nothing — the row exists but is still "pending"
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    const s1 = body.score_breakdown.candidates.find(c => c.user_id === U1);
+    expect(s1.sub_scores.attendance).toBe(0);
   });
 });

@@ -67,24 +67,26 @@ describe("week-start alignment (UTC, Monday=0)", () => {
   });
 });
 
+// Round 6, Task 10: availability and performance dropped from the model — availability is a
+// hard gate now (never reaches this scoring function), performance had no data source. Only
+// skills/attendance/workload are weighted.
 describe("computeWeightedScore", () => {
-  // Alice: perfect availability fit, no required skill. Bob: loose availability (lots of
-  // slack), holds the required skill.
-  const alice = { availability: 1.0, skills: 0.0, attendance: 0.5, performance: 0.5, workload: 1 };
-  const bob   = { availability: 0.4, skills: 1.0, attendance: 0.5, performance: 0.5, workload: 1 };
+  // Alice: no required skill, decent attendance. Bob: holds the required skill, same attendance.
+  const alice = { skills: 0.0, attendance: 0.5, workload: 1 };
+  const bob   = { skills: 1.0, attendance: 0.5, workload: 1 };
 
-  test("availability-heavy weights favour the tighter availability fit", () => {
-    const weights = { availability: 100, skills: 0, attendance: 0, performance: 0, workload: 0 };
-    expect(computeWeightedScore(alice, weights)).toBeGreaterThan(computeWeightedScore(bob, weights));
-  });
-
-  test("skills-heavy weights favour the skill match, flipping the ranking", () => {
-    const weights = { availability: 0, skills: 100, attendance: 0, performance: 0, workload: 0 };
+  test("skills-heavy weights favour the skill match", () => {
+    const weights = { skills: 100, attendance: 0, workload: 0 };
     expect(computeWeightedScore(bob, weights)).toBeGreaterThan(computeWeightedScore(alice, weights));
   });
 
-  test("default weights (40/30/15/10/5) produce a deterministic, reproducible score", () => {
-    const weights = { availability: 40, skills: 30, attendance: 15, performance: 10, workload: 5 };
-    expect(computeWeightedScore(alice, weights)).toBeCloseTo(40 * 1.0 + 30 * 0 + 15 * 0.5 + 10 * 0.5 + 5 * 1, 5);
+  test("attendance-heavy weights produce a tie when attendance is equal", () => {
+    const weights = { skills: 0, attendance: 100, workload: 0 };
+    expect(computeWeightedScore(bob, weights)).toBe(computeWeightedScore(alice, weights));
+  });
+
+  test("default weights (50/30/20) produce a deterministic, reproducible score", () => {
+    const weights = { skills: 50, attendance: 30, workload: 20 };
+    expect(computeWeightedScore(bob, weights)).toBeCloseTo(50 * 1.0 + 30 * 0.5 + 20 * 1, 5);
   });
 });

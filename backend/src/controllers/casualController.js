@@ -888,20 +888,27 @@ async function autoAssignCasual(req, res) {
     // week_start_date for the shift's week (Mon-aligned), to match casual_availability's granularity
     const shiftWeekStart = getUTCMondayWeekStart(shiftDate);
 
-    // Configurable allocation weights (business owner sets these in Settings; same table
-    // shiftController.js reads for the AI weekly scheduler). Weights are on a 0-100 scale and
-    // sum to 100 by convention, so the composite candidate scores below land in a readable
-    // 0-100 range.
+    // Configurable allocation weights (business owner sets these in Settings — the settings UI
+    // writes to this same branch_allocation_preferences table this reads, confirmed during Round
+    // 6 Task 10; the business-level allocation_preferences table/endpoint still exist but nothing
+    // in the reachable UI writes to them in normal operation, so there's no live divergence to
+    // reconcile). Weights are on a 0-100 scale and sum to 100 by convention.
+    //
+    // Round 6, Task 10: rebuilt to three dimensions — skills, attendance, workload. Availability
+    // is a hard gate (hard filter 1 above), not a weight, so weighting it again here would
+    // double-count the same signal. Performance has no backing data anywhere in the schema and
+    // was always a fixed neutral score that never changed a ranking, so it's dropped rather than
+    // kept as dead weight. weight_availability and weight_performance stay as columns on both
+    // allocation_preferences and branch_allocation_preferences (no schema change, no migration —
+    // an old row still has 5 populated columns) but are simply never read here any more.
     const { data: branchAlloc } = await supabaseAdmin
       .from("branch_allocation_preferences")
       .select("*")
       .eq("branch_id", branch.branch_id)
       .maybeSingle();
-    const wAvail  = branchAlloc?.weight_availability ?? 40;
-    const wSkills = branchAlloc?.weight_skills       ?? 30;
-    const wAttend = branchAlloc?.weight_attendance   ?? 15;
-    const wPerf   = branchAlloc?.weight_performance  ?? 10;
-    const wWork   = branchAlloc?.weight_workload     ?? 5;
+    const wSkills = branchAlloc?.weight_skills     ?? 50;
+    const wAttend = branchAlloc?.weight_attendance ?? 30;
+    const wWork   = branchAlloc?.weight_workload   ?? 20;
 
     // Batched lookups for scoring — fetched for every approved worker up front (not just the
     // eventual winner) so the response can show a full per-candidate breakdown.
@@ -935,32 +942,22 @@ async function autoAssignCasual(req, res) {
       return EXPERIENCE_LEVEL_SCORE[level] ?? 0.7;
     }
 
-    // 0-1 sub-score: how tightly the candidate's declared availability window fits the task's
-    // time window. Every candidate reaching this point already fully covers the task (hard
-    // filter 1 below) — this only ranks *how* generously, so an exact-fit window outranks
-    // someone who's "available all day" for a 1-hour task.
+    // Round 6, Task 10: availability dropped out of the scoring model entirely — it's a hard
+    // gate now (hard filter 1 below), and scoring *how well* someone cleared it (the old
+    // availabilitySubScore, ranking a tight-fit window over "available all day") would just
+    // double-count the same signal a second time. Performance is gone too: no rating/review
+    // table exists anywhere in the schema to back it, and it was always a fixed neutral score
+    // that never once changed a ranking — kept as a slider it would just be a lie about having
+    // real signal behind it. See docs/FUTURE_WORK for both as candidates if that data ever exists.
     //
-    // Round 6, Task 6: only reachable when this shift has no period_id (branch not using shift
-    // periods yet) — kept byte-identical so that path is unaffected. Shifts that DO belong to a
-    // period use periodAvailabilitySubScore below instead: period availability is a tick-box
-    // (in or out), so there's no "how generously" left to rank on — every candidate who passes
-    // the hard filter scores the same 1.0 here, same as the once-planned "no partial availability"
-    // build. Consequence: with periods, this dimension stops discriminating between candidates
-    // (they all tie at 1.0) and the shortlist ordering falls fully on skills/attendance/workload.
-    function availabilitySubScore(availStart, availEnd) {
-      const availDuration = availEnd - availStart;
-      const taskDuration = shiftEnd - shiftStart;
-      if (availDuration <= 0) return 0;
-      return Math.min(1, taskDuration / availDuration);
-    }
-    const PERIOD_AVAILABILITY_SUBSCORE = 1.0;
-
-    // No attendance-quality or performance-rating data exists anywhere in the schema for casual
-    // workers (no attendance model, no rating/review table). Rather than invent a metric, both
-    // dimensions use a fixed neutral score. This applies identically to every candidate, so it
-    // never changes the ranking — it just means the attendance/performance weight sliders have
-    // no real signal behind them yet, until a real data source exists to back them.
-    const NEUTRAL_SUBSCORE = 0.5;
+    // Attendance is now real: approved timesheets ÷ task assignments on this candidate's own
+    // *past* shifts over the trailing 90 days (relative to this shift's date, not "today" — so
+    // generating shifts for a future week scores attendance the same way regardless of when the
+    // manager happens to click the button). A candidate with zero assignments in that window has
+    // no track record to judge — scored 0.75 (deliberately not 0, which would read as "bad", and
+    // not 1, which would read as "perfect": a new/rarely-used casual should neither be penalised
+    // nor outrank someone with a long clean record) — clamped to [0, 1] regardless.
+    const ATTENDANCE_NO_HISTORY_SUBSCORE = 0.75;
 
     // Batched eligibility lookups — one query per data source across all approved workers,
     // instead of the previous per-candidate round trips (staff row, availability,
@@ -976,6 +973,8 @@ async function autoAssignCasual(req, res) {
     // Postgres DATE columns carry no time component, so any UTC-midnight Date for this day
     // matches regardless of exact time-of-day — this is an exact-date filter, not a range.
     const shiftDateOnly = new Date(`${shiftDateStr}T00:00:00.000Z`);
+    const ninetyDaysAgo = new Date(shiftDateOnly);
+    ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90);
 
     // Round 6, Task 6: which availability source to query depends on whether this shift belongs
     // to a shift period. A branch that hasn't set up periods (or has deactivated all of them)
@@ -1047,6 +1046,37 @@ async function autoAssignCasual(req, res) {
     });
     const pastAssignmentsByStaffId = Object.fromEntries(pastAssignmentCounts.map(r => [r.staff_id, r._count.staff_id]));
 
+    // Round 6, Task 10: real attendance. "Past" here means the shift date is strictly before
+    // *this* shift's date (not today's date), so scoring stays reproducible regardless of when a
+    // manager happens to run generation/auto-assign. Two-step because which timesheets count
+    // depends on which shifts turned up in the first query.
+    const pastAssignments90d = await prisma.task_assignments.findMany({
+      where: { staff_id: { in: staffIds }, status: { not: "cancelled" }, shifts: { shift_date: { gte: ninetyDaysAgo, lt: shiftDateOnly } } },
+      select: { staff_id: true, shift_id: true },
+    });
+    const relevantShiftIds = [...new Set(pastAssignments90d.map(a => a.shift_id))];
+    const approvedTimesheets90d = relevantShiftIds.length > 0
+      ? await prisma.timesheets.findMany({
+          where: { staff_id: { in: staffIds }, shift_id: { in: relevantShiftIds }, status: "approved" },
+          select: { staff_id: true, shift_id: true },
+        })
+      : [];
+    const approvedShiftKeySet = new Set(approvedTimesheets90d.map(t => `${t.staff_id}:${t.shift_id}`));
+    const assignmentCountByStaffId = {};
+    const approvedCountByStaffId = {};
+    pastAssignments90d.forEach(a => {
+      assignmentCountByStaffId[a.staff_id] = (assignmentCountByStaffId[a.staff_id] || 0) + 1;
+      if (approvedShiftKeySet.has(`${a.staff_id}:${a.shift_id}`)) {
+        approvedCountByStaffId[a.staff_id] = (approvedCountByStaffId[a.staff_id] || 0) + 1;
+      }
+    });
+    function attendanceSubScore(staffId) {
+      const total = assignmentCountByStaffId[staffId] || 0;
+      if (total === 0) return ATTENDANCE_NO_HISTORY_SUBSCORE;
+      const approved = approvedCountByStaffId[staffId] || 0;
+      return Math.min(1, Math.max(0, approved / total));
+    }
+
     const candidates = [];
     const failReasons = { unavailable: 0, double_booked: 0, labor_rules: 0 };
 
@@ -1054,19 +1084,19 @@ async function autoAssignCasual(req, res) {
       const staffId = staffIdByUserId[cw.user_id];
       if (!staffId) { failReasons.unavailable++; continue; }
 
-      // Hard filter 1: availability for this shift's day. Period-based (binary) when the shift
-      // belongs to a shift period; otherwise the original time-coverage check, unchanged.
-      let availSubScore;
+      // Hard filter 1 (gate, not a score — Round 6, Task 10): availability for this shift's day.
+      // Period-based (binary) when the shift belongs to a shift period; otherwise the original
+      // time-coverage check, unchanged. Passing this filter is all that matters now; how tightly
+      // a candidate's window fit used to feed the score (availabilitySubScore) but that dimension
+      // is gone from the model, so nothing downstream reads *how* someone passed, only that they did.
       if (shiftPeriodId) {
         if (!isAvailableForPeriod(staffId)) { failReasons.unavailable++; continue; }
-        availSubScore = PERIOD_AVAILABILITY_SUBSCORE;
       } else {
         const avail = availByStaffId[staffId];
         if (!avail) { failReasons.unavailable++; continue; }
         const availStart = toMins(avail.available_from);
         const availEnd   = toMins(avail.available_to);
         if (availStart > shiftStart || availEnd < shiftEnd) { failReasons.unavailable++; continue; }
-        availSubScore = availabilitySubScore(availStart, availEnd);
       }
 
       // Hard filter 2: not double-booked on same date with overlapping times
@@ -1093,10 +1123,8 @@ async function autoAssignCasual(req, res) {
         pastAssignments,
         laborWarning,
         subScores: {
-          availability: availSubScore,
           skills: skillsSubScore(cw.user_id),
-          attendance: NEUTRAL_SUBSCORE,
-          performance: NEUTRAL_SUBSCORE,
+          attendance: attendanceSubScore(staffId),
         },
       });
     }
@@ -1127,7 +1155,7 @@ async function autoAssignCasual(req, res) {
     candidates.forEach(c => {
       c.subScores.workload = maxPastAssignments === 0 ? 1 : 1 - c.pastAssignments / maxPastAssignments;
       c.score = computeWeightedScore(c.subScores, {
-        availability: wAvail, skills: wSkills, attendance: wAttend, performance: wPerf, workload: wWork,
+        skills: wSkills, attendance: wAttend, workload: wWork,
       });
       if (c.laborWarning) c.score *= LABOR_WARNING_PENALTY;
     });
@@ -1171,16 +1199,14 @@ async function autoAssignCasual(req, res) {
       // Explainable breakdown for every candidate who passed the hard filters (already sorted
       // best-first), so a demo can show why the winner beat the runners-up.
       score_breakdown: {
-        weights_applied: { availability: wAvail, skills: wSkills, attendance: wAttend, performance: wPerf, workload: wWork },
+        weights_applied: { skills: wSkills, attendance: wAttend, workload: wWork },
         candidates: candidates.map(c => ({
           user_id: c.cw.user_id,
           full_name: nameByUser[c.cw.user_id] || null,
           score: Math.round(c.score * 10) / 10,
           sub_scores: {
-            availability: Math.round(c.subScores.availability * 100) / 100,
             skills: Math.round(c.subScores.skills * 100) / 100,
-            attendance: c.subScores.attendance,
-            performance: c.subScores.performance,
+            attendance: Math.round(c.subScores.attendance * 100) / 100,
             workload: Math.round(c.subScores.workload * 100) / 100,
           },
           // Round 3, Task 5: the labor-rule outcome for this candidate — null when clean, the

@@ -6,7 +6,7 @@ import BusinessOwnerLayout from "../../components/layout/BusinessOwnerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import TaskTemplatesEditor from "../../components/TaskTemplatesEditor";
 import { useGoTo } from "../../components/PageTransition";
-import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star, Settings2, Calendar, Zap, Pencil, X, Save, Loader2, Check, Minus, Scale, Award, TrendingUp, BarChart3, RotateCcw } from "lucide-react";
+import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star, Settings2, Calendar, Zap, Pencil, X, Save, Loader2, Check, Minus, Scale, Award, TrendingUp, RotateCcw } from "lucide-react";
 import { fetchDefaultHolidays } from "../../utils/publicHolidays";
 import BranchHolidaySettings from "../../components/BranchHolidaySettings";
 import UserAvatar from "../../components/UserAvatar";
@@ -28,15 +28,17 @@ if (typeof document !== "undefined" && !document.getElementById("bo-branchdetail
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// Round 6, Task 10: availability and performance dropped from the model — availability is now a
+// hard gate at match time, performance never had a data source behind it. The underlying weight
+// columns still exist on branch_allocation_preferences (no migration) but this UI no longer
+// reads/writes them; an old row that still has them populated has two extra ignored properties.
 const WEIGHTS = [
-  { key: "weight_availability", label: "Availability", icon: Users, color: "#2563EB" },
   { key: "weight_skills", label: "Skills match", icon: Award, color: "#7C3AED" },
   { key: "weight_attendance", label: "Attendance", icon: TrendingUp, color: "#059669" },
-  { key: "weight_performance", label: "Performance", icon: BarChart3, color: "#EA580C" },
   { key: "weight_workload", label: "Workload", icon: Scale, color: "#0891B2" },
 ];
 
-const ALLOC_DEFAULTS = { weight_availability: 40, weight_skills: 30, weight_attendance: 15, weight_performance: 10, weight_workload: 5 };
+const ALLOC_DEFAULTS = { weight_skills: 50, weight_attendance: 30, weight_workload: 20 };
 
 const DEFAULT_BRANCH_SETTINGS = {
   operating_days: [1,1,1,1,1,0,0],
