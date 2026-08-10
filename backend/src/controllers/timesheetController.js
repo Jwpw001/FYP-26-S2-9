@@ -3,6 +3,7 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 const { notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 const { computeHoursMetrics } = require("../utils/hoursMetrics");
 
+const sendServerError = require("../utils/sendServerError");
 const EVIDENCE_BUCKET = "report-evidence";
 const MANAGER_ROLES = ["manager", "business_owner", "system_admin"];
 
@@ -130,7 +131,7 @@ const submitReport = async (req, res) => {
 
     res.json({ success: true, timesheet: result });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -173,7 +174,7 @@ const getEvidenceUrl = async (req, res) => {
 
     res.json({ success: true, url: signed.signedUrl, filename: ts.evidence_name });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 

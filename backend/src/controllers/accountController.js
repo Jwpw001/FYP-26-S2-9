@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 
+const sendServerError = require("../utils/sendServerError");
 const getAccount = async (req, res) => {
     try {
         const dbUser = req.dbUser;
@@ -21,10 +22,7 @@ const getAccount = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        sendServerError(res, error, req);
     }
 };
 
@@ -76,10 +74,7 @@ const updateAccount = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        sendServerError(res, error, req);
     }
 };
 
@@ -97,10 +92,7 @@ const deleteAccount = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        sendServerError(res, error, req);
     }
 };
 
@@ -133,7 +125,7 @@ const getAccountSkills = async (req, res) => {
 
         res.json({ success: true, skills });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        sendServerError(res, error, req);
     }
 };
 
@@ -158,7 +150,7 @@ const getMyBranch = async (req, res) => {
         }
         return res.status(404).json({ success: false, message: "No branch assigned" });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return sendServerError(res, error, req);
     }
 };
 

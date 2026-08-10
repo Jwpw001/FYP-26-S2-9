@@ -5,6 +5,7 @@ const supabaseAuth = require("../config/supabaseAuth");
 const { notifyUsers, getSystemAdminUserIds } = require("../utils/notify");
 const logger = require("../config/logger");
 
+const sendServerError = require("../utils/sendServerError");
 const login = async (req, res) => {
     try {
         const email = req.body.email?.trim().toLowerCase();
@@ -55,10 +56,7 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        return sendServerError(res, error, req);
     }
 };
 
@@ -115,7 +113,7 @@ const register = async (req, res) => {
             user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role, avatar_url: newUser.avatar_url || "/avatars/default.png" },
         });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return sendServerError(res, error, req);
     }
 };
 
@@ -239,7 +237,7 @@ const registerBusiness = async (req, res) => {
             user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role, avatar_url: newUser.avatar_url || "/avatars/default.png" },
         });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return sendServerError(res, error, req);
     }
 };
 
@@ -272,7 +270,7 @@ const forgotPassword = async (req, res) => {
         });
         return res.json({ success: true, message: "If that email exists, a reset link has been sent." });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return sendServerError(res, error, req);
     }
 };
 
@@ -289,7 +287,7 @@ const resetPassword = async (req, res) => {
         if (error) return res.status(400).json({ success: false, message: error.message });
         return res.json({ success: true, message: "Password updated successfully." });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return sendServerError(res, error, req);
     }
 };
 
@@ -377,8 +375,7 @@ const createStaffAccount = async (req, res) => {
 
         return res.status(201).json({ success: true, message: "Staff account created successfully." });
     } catch (error) {
-        (req.log || logger).error({ err: error }, "createStaffAccount error");
-        return res.status(500).json({ success: false, message: error.message });
+        return sendServerError(res, error, req);
     }
 };
 
@@ -418,8 +415,7 @@ const createManagerAccount = async (req, res) => {
             user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role, avatar_url: newUser.avatar_url || "/avatars/default.png" },
         });
     } catch (error) {
-        (req.log || logger).error({ err: error }, "createManagerAccount error");
-        return res.status(500).json({ success: false, message: error.message });
+        return sendServerError(res, error, req);
     }
 };
 

@@ -15,7 +15,7 @@ const getPublicHolidays = async (req, res) => {
     });
     return res.json({ success: true, holidays });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    sendServerError(res, err, req);
   }
 };
 

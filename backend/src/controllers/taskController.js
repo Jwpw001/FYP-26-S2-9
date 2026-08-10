@@ -4,6 +4,7 @@ const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/n
 const { logAudit } = require("../utils/auditLog");
 const logger = require("../config/logger");
 
+const sendServerError = require("../utils/sendServerError");
 // Prisma returns date/time columns as JS Date objects, which Express serializes to full ISO
 // strings (e.g. "1970-01-01T09:00:00.000Z" for a `time` column, "2026-07-18T00:00:00.000Z" for
 // a `date` column). Frontend code was written against Supabase-direct's plain "HH:MM:SS" /
@@ -116,7 +117,7 @@ const getShiftTasks = async (req, res) => {
     });
     res.json({ success: true, tasks });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -151,7 +152,7 @@ const createTask = async (req, res) => {
     });
     res.status(201).json({ success: true, task });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -183,7 +184,7 @@ const updateTask = async (req, res) => {
     });
     res.json({ success: true, task });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -201,7 +202,7 @@ const deleteTask = async (req, res) => {
     await prisma.shift_tasks.delete({ where: { task_id: taskId } });
     res.json({ success: true, message: "Task deleted." });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -284,7 +285,7 @@ const assignStaff = async (req, res) => {
 
     res.status(201).json({ success: true, assignment, warning: laborWarning || null });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -330,7 +331,7 @@ const unassignStaff = async (req, res) => {
 
     res.json({ success: true, message: "Staff unassigned from task." });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -371,7 +372,7 @@ const getMyTasks = async (req, res) => {
 
     res.json({ success: true, assignments: normalized });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -599,8 +600,7 @@ const getStaffRoster = async (req, res) => {
 
     res.json({ success: true, roster });
   } catch (error) {
-    (req.log || logger).error({ err: error }, "[getStaffRoster] error");
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 

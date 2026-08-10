@@ -6,6 +6,7 @@ const dns = require("dns").promises;
 const { sendMail } = require("../utils/mailer");
 const logger = require("../config/logger");
 
+const sendServerError = require("../utils/sendServerError");
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 const ROLE_HIERARCHY = {
@@ -157,8 +158,7 @@ const sendInvitation = async (req, res) => {
 
     return res.status(201).json({ success: true, message: "Invitation sent.", invite_link: inviteLink, code });
   } catch (error) {
-    (req.log || logger).error({ err: error }, "sendInvitation error");
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -173,7 +173,7 @@ const listInvitations = async (req, res) => {
     if (error) throw new Error(error.message);
     return res.json({ success: true, invitations: data || [] });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -198,7 +198,7 @@ const getInvitation = async (req, res) => {
       invitation_code: data.invitation_code,
     }});
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -222,7 +222,7 @@ const getInvitationByCode = async (req, res) => {
       business_id: data.business_id, invitation_code: data.invitation_code,
     }});
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -333,8 +333,7 @@ const acceptInvitation = async (req, res) => {
       user: { user_id: newUser.user_id, full_name: newUser.full_name, email: newUser.email, role: newUser.role },
     });
   } catch (error) {
-    (req.log || logger).error({ err: error }, "acceptInvitation error");
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -345,7 +344,7 @@ const cancelInvitation = async (req, res) => {
     await supabaseAdmin.from("invitations").update({ status: "cancelled" }).eq("id", id).eq("invited_by", req.user.user_id);
     return res.json({ success: true, message: "Invitation cancelled." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -367,7 +366,7 @@ const resendInvitation = async (req, res) => {
     });
     return res.json({ success: true, message: "Invitation resent." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 

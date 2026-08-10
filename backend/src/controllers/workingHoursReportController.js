@@ -2,6 +2,7 @@ const prisma = require("../config/prisma");
 const { verifyBranchAccess } = require("./businessOwnerController");
 const { computeHoursMetrics, toMinutes } = require("../utils/hoursMetrics");
 
+const sendServerError = require("../utils/sendServerError");
 function toDateStr(d) {
   if (!d) return null;
   const s = d instanceof Date ? d.toISOString() : String(d);
@@ -194,7 +195,7 @@ const getWorkingHoursReport = async (req, res) => {
 
     return res.json({ success: true, report_id: saved.report_id, ...report });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 

@@ -3,6 +3,7 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 const generateToken = require("../utils/generateToken");
 const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 const { checkLaborRules } = require("./taskController");
+const sendServerError = require("../utils/sendServerError");
 const {
   toMinutesFromTimeValue,
   doTimeRangesOverlap,
@@ -120,7 +121,7 @@ async function registerCasualWorker(req, res) {
       approval_status: "pending",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -147,7 +148,7 @@ async function getCasualWorkerStatus(req, res) {
 
     return res.json({ success: true, casual_worker: { ...cw, business_name: businessName } });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -171,7 +172,7 @@ async function getMyBranches(req, res) {
 
     return res.json({ success: true, branches: branches || [], approval_status: cw.status });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -185,7 +186,7 @@ async function getPreferences(req, res) {
 
     return res.json({ success: true, preferred_branch_ids: (prefs || []).map(p => p.branch_id) });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -216,7 +217,7 @@ async function setPreferences(req, res) {
 
     return res.json({ success: true, message: "Branch preferences saved.", preferred_branch_ids: branch_ids });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -234,7 +235,7 @@ async function getMyAvailability(req, res) {
       .order("day_of_week");
     return res.json({ success: true, availability: rows || [] });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -259,7 +260,7 @@ async function setMyAvailability(req, res) {
     }
     return res.json({ success: true, message: "Availability saved." });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -330,7 +331,7 @@ async function submitWeeklyAvailability(req, res) {
 
     return res.json({ success: true, message: "Availability submitted." });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -390,7 +391,7 @@ async function getManagerPool(req, res) {
 
     return res.json({ success: true, workers: enriched });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -444,7 +445,7 @@ async function getPool(req, res) {
 
     return res.json({ success: true, workers: enriched, join_code: biz.join_code });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -477,7 +478,7 @@ async function approveWorker(req, res) {
 
     return res.json({ success: true, message: "Worker approved." });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -510,7 +511,7 @@ async function rejectWorker(req, res) {
 
     return res.json({ success: true, message: "Worker rejected." });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -528,7 +529,7 @@ async function getJoinCode(req, res) {
 
     return res.json({ success: true, join_code: biz.join_code });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -842,7 +843,7 @@ async function autoAssignCasual(req, res) {
       },
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 
@@ -858,7 +859,7 @@ async function regenerateJoinCode(req, res) {
 
     return res.json({ success: true, join_code: code });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 }
 

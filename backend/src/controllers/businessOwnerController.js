@@ -6,6 +6,7 @@ const { offboardStaff } = require("../utils/offboarding");
 const { parsePagination } = require("../utils/pagination");
 const { notifyUsers } = require("../utils/notify");
 
+const sendServerError = require("../utils/sendServerError");
 // Resolves business_id for both business owners and managers
 async function resolveBusinessId(user) {
   if (user.role === "business_owner") {
@@ -48,7 +49,7 @@ const getMyBranches = async (req, res) => {
       .order("branch_id");
     return res.json({ success: true, branches: branches || [] });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -117,7 +118,7 @@ const createBranch = async (req, res) => {
 
     return res.status(201).json({ success: true, branch });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -151,7 +152,7 @@ const getAllStaff = async (req, res) => {
     const data = staff.map(s => ({ ...s, branch_name: branchNameById[s.branch_id] }));
     return res.json({ success: true, data, page, limit, total });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -188,7 +189,7 @@ const getAllManagers = async (req, res) => {
 
     return res.json({ success: true, managers });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -212,7 +213,7 @@ const getBranchStaff = async (req, res) => {
     });
     return res.json({ success: true, staff });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -245,7 +246,7 @@ const getBranchManagers = async (req, res) => {
 
     return res.json({ success: true, managers });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -279,7 +280,7 @@ const getManagerDetail = async (req, res) => {
 
     return res.json({ success: true, manager, branch: link.branch, is_primary: link.is_primary });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -302,7 +303,7 @@ const updateManagerDetail = async (req, res) => {
 
     return res.json({ success: true, manager: updated });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -316,7 +317,7 @@ const deleteManagerDetail = async (req, res) => {
     await prisma.users.delete({ where: { user_id } });
     return res.json({ success: true, message: "Manager removed." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -347,7 +348,7 @@ const updateBranch = async (req, res) => {
     if (error) throw new Error(error.message);
     return res.json({ success: true, branch: updated });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -367,7 +368,7 @@ const getRoleTemplates = async (req, res) => {
     if (error) throw new Error(error.message);
     return res.json({ success: true, templates: data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -400,7 +401,7 @@ const upsertRoleTemplates = async (req, res) => {
 
     return res.json({ success: true });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -431,7 +432,7 @@ const getTaskTemplates = async (req, res) => {
     });
     return res.json({ success: true, templates: templates.map(normalizeTemplate) });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -477,7 +478,7 @@ const createTaskTemplate = async (req, res) => {
     });
     return res.status(201).json({ success: true, template: normalizeTemplate(template) });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -522,7 +523,7 @@ const updateTaskTemplate = async (req, res) => {
     });
     return res.json({ success: true, template: normalizeTemplate(template) });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -543,7 +544,7 @@ const deleteTaskTemplate = async (req, res) => {
     await prisma.branch_task_templates.delete({ where: { template_id } });
     return res.json({ success: true });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -581,7 +582,7 @@ const reorderTaskTemplates = async (req, res) => {
     );
     return res.json({ success: true });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -640,7 +641,7 @@ const copyTaskTemplates = async (req, res) => {
 
     return res.json({ success: true, copied: sourceRows.length, target_days: targetDows });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -669,7 +670,7 @@ const deleteBranch = async (req, res) => {
 
     return res.json({ success: true, message: "Branch deleted." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -723,7 +724,7 @@ const getStaffKpi = async (req, res) => {
       kpi: { totalAssigned, approved, rejected, missing, attendanceRate, totalHours: Math.round(totalHours * 10) / 10 },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -746,7 +747,7 @@ const getStaffDetail = async (req, res) => {
       assignedSkillIds: assignedTags.map(t => t.skill_id),
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -792,7 +793,7 @@ const updateStaffDetail = async (req, res) => {
 
     return res.json({ success: true, staff: updated });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -809,7 +810,7 @@ const deleteStaffDetail = async (req, res) => {
 
     return res.json({ success: true, message: "Staff member deleted." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -820,7 +821,7 @@ const getMyBusiness = async (req, res) => {
     if (error) throw new Error(error.message);
     return res.json({ success: true, business: biz || null });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -847,7 +848,7 @@ const updateMyBusinessPlan = async (req, res) => {
 
     return res.json({ success: true, plan: updated.plan });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -871,7 +872,7 @@ const getBranchSkills = async (req, res) => {
       .sort((a, b) => a.name.localeCompare(b.name));
     return res.json({ success: true, skills });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -908,7 +909,7 @@ const createBranchSkill = async (req, res) => {
     const skill = await prisma.skills.findUnique({ where: { skill_id: skid }, select: { skill_id: true, name: true, description: true } });
     return res.status(201).json({ success: true, skill });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -932,7 +933,7 @@ const updateBranchSkill = async (req, res) => {
     const skill = await prisma.skills.update({ where: { skill_id }, data: { name, description: description || null } });
     return res.json({ success: true, skill });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -950,7 +951,7 @@ const deleteBranchSkill = async (req, res) => {
     if (error) throw new Error(error.message);
     return res.json({ success: true, message: "Skill removed from branch." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -979,7 +980,7 @@ const getBusinessStats = async (req, res) => {
       active_invites: inviteCount,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1010,7 +1011,7 @@ const getBusinessSkills = async (req, res) => {
 
     return res.json({ skills, suggestions, industry: biz.industry || "" });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1045,7 +1046,7 @@ const createBusinessSkill = async (req, res) => {
 
     return res.status(201).json({ success: true, skill: { skill_id: role.role_id, name: role.role_name, description: description || "" } });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1088,7 +1089,7 @@ const getBusinessSkillsForAssignment = async (req, res) => {
 
     return res.json({ success: true, skills });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1107,7 +1108,7 @@ const deleteBusinessSkill = async (req, res) => {
 
     return res.json({ success: true, message: "Skill deleted." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1133,7 +1134,7 @@ const getBranchSettings = async (req, res) => {
 
     return res.json({ success: true, settings: mergedSettings, allocation: alloc || null });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1180,7 +1181,7 @@ const updateBranchSettings = async (req, res) => {
 
     return res.json({ success: true, settings: { ...data, open_time: open_time ?? branch.open_time, close_time: close_time ?? branch.close_time } });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1239,7 +1240,7 @@ const markDateClosed = async (req, res) => {
 
     return res.json({ success: true, holidays, cancelled_shifts: affectedShifts.length, notified: notifiedCount });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1267,7 +1268,7 @@ const updateBranchAllocationPrefs = async (req, res) => {
 
     return res.json({ success: true, allocation: data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1283,7 +1284,7 @@ const getBusinessSettings = async (req, res) => {
 
     return res.json({ success: true, settings: settings || null, allocation: prefs || null });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1314,7 +1315,7 @@ const updateBusinessSettings = async (req, res) => {
 
     return res.json({ success: true, settings: data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1333,7 +1334,7 @@ const updateAllocationPrefs = async (req, res) => {
 
     return res.json({ success: true, allocation: data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 
@@ -1365,7 +1366,7 @@ const getBranchSkillsSummary = async (req, res) => {
 
     return res.json({ success: true, branches: result });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 

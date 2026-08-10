@@ -1,6 +1,7 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 
+const sendServerError = require("../utils/sendServerError");
 // ── Staff skill assignment ─────────────────────────────────────────────────────
 
 async function resolveUserId(staff_id) {
@@ -33,7 +34,7 @@ const getStaffSkills = async (req, res) => {
       years_of_experience: r.years_of_experience,
     })).filter(r => r.name);
     res.json({ success: true, skills });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { sendServerError(res, err, req); }
 };
 
 const addStaffSkill = async (req, res) => {
@@ -69,7 +70,7 @@ const addStaffSkill = async (req, res) => {
       name: skillRecord?.name || null,
       experience_level: data.experience_level, years_of_experience: data.years_of_experience,
     }});
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { sendServerError(res, err, req); }
 };
 
 const updateStaffSkill = async (req, res) => {
@@ -89,7 +90,7 @@ const updateStaffSkill = async (req, res) => {
       .eq("skill_id", skill_id);
     if (error) throw error;
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { sendServerError(res, err, req); }
 };
 
 const removeStaffSkill = async (req, res) => {
@@ -104,7 +105,7 @@ const removeStaffSkill = async (req, res) => {
       .eq("skill_id", skill_id);
     if (error) throw error;
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { sendServerError(res, err, req); }
 };
 
 // GET /api/skills/branch/:branch_id — bulk staff→skill assignments for a whole branch
@@ -143,7 +144,7 @@ const getBranchStaffSkills = async (req, res) => {
       .map(r => ({ staff_id: userToStaff[r.user_id], skill_id: r.skill_id, name: nameMap[r.skill_id] || null }))
       .filter(r => r.name);
     res.json({ success: true, skills });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { sendServerError(res, err, req); }
 };
 
 // GET /api/skills/global — returns all global (non-branch-specific) skills as suggestions
@@ -155,7 +156,7 @@ const getGlobalSkills = async (req, res) => {
       select: { skill_id: true, name: true, description: true },
     });
     return res.json({ success: true, skills });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { sendServerError(res, err, req); }
 };
 
 module.exports = {

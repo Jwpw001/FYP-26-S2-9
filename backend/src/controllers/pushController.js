@@ -1,5 +1,6 @@
 const prisma = require("../config/prisma");
 
+const sendServerError = require("../utils/sendServerError");
 // Same device registering again (app reinstall, browser subscription refresh) should update the
 // existing row rather than pile up duplicates — dedup key is the token (expo) or endpoint (web),
 // since neither platform's subscription object has a stable ID we control.
@@ -37,7 +38,7 @@ async function registerPush(req, res) {
 
     return res.json({ success: true, message: "Push subscription registered." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 }
 
@@ -56,7 +57,7 @@ async function unregisterPush(req, res) {
 
     return res.json({ success: true, message: "Push subscription removed." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 }
 

@@ -2,6 +2,7 @@ const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const { offboardStaff } = require("../utils/offboarding");
 
+const sendServerError = require("../utils/sendServerError");
 async function getCallerBranchId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
   if (s?.branch_id) return s.branch_id;
@@ -56,7 +57,7 @@ const getStaff = async (req, res) => {
 
     res.json({ success: true, staff: [...regularStaff, ...casualStaff] });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -79,7 +80,7 @@ const getStaffById = async (req, res) => {
 
     res.json({ success: true, staff });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -98,7 +99,7 @@ const createStaff = async (req, res) => {
     });
     res.status(201).json({ success: true, message: "Staff created successfully", staff });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -125,7 +126,7 @@ const updateStaff = async (req, res) => {
 
     res.json({ success: true, message: "Staff updated successfully", staff });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -142,7 +143,7 @@ const deleteStaff = async (req, res) => {
     await prisma.staff.delete({ where: { staff_id: staffId } });
     res.json({ success: true, message: "Staff deleted successfully" });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 

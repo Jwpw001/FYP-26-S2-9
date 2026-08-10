@@ -2,6 +2,7 @@ const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const logger = require("../config/logger");
 
+const sendServerError = require("../utils/sendServerError");
 // Mon=0…Sun=6 — same convention as branch_settings.operating_days, casual_availability.day_of_week,
 // and branch_task_templates.day_of_week (verified against shiftController.js's existing
 // (getUTCDay()+6)%7 conversion, not assumed).
@@ -241,8 +242,7 @@ const generateShifts = async (req, res) => {
       data_gap_staff: dataGapStaff,
     });
   } catch (error) {
-    logger.error({ err: error }, "[generateShifts] error");
-    return res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error, req);
   }
 };
 

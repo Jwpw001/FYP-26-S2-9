@@ -3,6 +3,7 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 const { parsePagination } = require("../utils/pagination");
 const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 
+const sendServerError = require("../utils/sendServerError");
 async function getCallerBranchId(userId) {
     const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
     if (s?.branch_id) return s.branch_id;
@@ -31,10 +32,7 @@ const getNotifications = async (req, res) => {
         ]);
         res.json({ success: true, data, page, limit, total });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        sendServerError(res, error, req);
     }
 };
 
@@ -60,10 +58,7 @@ const getNotificationById = async (req, res) => {
             notification
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        sendServerError(res, error, req);
     }
 };
 
@@ -104,10 +99,7 @@ const createNotification = async (req, res) => {
             notification
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        sendServerError(res, error, req);
     }
 };
 
@@ -151,10 +143,7 @@ const updateNotification = async (req, res) => {
             notification
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        sendServerError(res, error, req);
     }
 };
 
@@ -184,10 +173,7 @@ const deleteNotification = async (req, res) => {
             message: "Notification deleted successfully"
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        sendServerError(res, error, req);
     }
 };
 
@@ -223,7 +209,7 @@ const notifyMyManagers = async (req, res) => {
 
         res.json({ success: true, notified: managerIds.length });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        sendServerError(res, error, req);
     }
 };
 
@@ -262,7 +248,7 @@ const notifyMyStaff = async (req, res) => {
 
         res.json({ success: true, notification });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        sendServerError(res, error, req);
     }
 };
 

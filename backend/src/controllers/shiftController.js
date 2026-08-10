@@ -79,7 +79,7 @@ const getShifts = async (req, res) => {
     ]);
     res.json({ success: true, data, page, limit, total });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -112,7 +112,7 @@ const getShiftById = async (req, res) => {
 
     res.json({ success: true, shift: normalizeShift(shift) });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -157,7 +157,7 @@ const createShift = async (req, res) => {
     });
     res.status(201).json({ success: true, message: "Shift created successfully", shift });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -221,7 +221,7 @@ const updateShift = async (req, res) => {
 
     res.json({ success: true, message: "Shift updated successfully", shift });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -268,13 +268,14 @@ const deleteShift = async (req, res) => {
 
     res.json({ success: true, message: "Shift deleted successfully" });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
 // ── AI Weekly Schedule ─────────────────────────────────────────────────────────
 
 const OpenAI = require("openai");
+const sendServerError = require("../utils/sendServerError");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const generateWeeklySchedule = async (req, res) => {
@@ -715,8 +716,7 @@ Generate ALL ${totalShifts} shifts now (${shiftsPerDay} per day × ${finalWorkin
 
     return res.json({ success: true, schedule, hasRoleTemplates: dbTemplates.length > 0, missedCasuals, source });
   } catch (err) {
-    (req.log || logger).error({ err }, "generateWeeklySchedule error");
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 };
 
@@ -783,8 +783,7 @@ const confirmWeeklySchedule = async (req, res) => {
 
     return res.json({ success: true, created: created.length });
   } catch (err) {
-    (req.log || logger).error({ err }, "confirmWeeklySchedule error");
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 };
 
@@ -959,8 +958,7 @@ const rescheduleStaff = async (req, res) => {
 
     return res.json({ success: true, schedule: result });
   } catch (err) {
-    (req.log || logger).error({ err }, "rescheduleStaff error");
-    return res.status(500).json({ success: false, message: err.message });
+    return sendServerError(res, err, req);
   }
 };
 
@@ -1043,8 +1041,7 @@ Max 5 flags. Cover: coverage gaps, workload balance, overworked staff, positive 
     const review = JSON.parse(completion.choices[0].message.content);
     return res.json({ success: true, review });
   } catch (err) {
-    (req.log || logger).error({ err }, "reviewWeeklySchedule error");
-    return res.status(500).json({ error: err.message });
+    return sendServerError(res, err, req);
   }
 };
 
@@ -1201,8 +1198,7 @@ const previewRoster = async (req, res) => {
 
     res.json({ success: true, roster });
   } catch (error) {
-    (req.log || logger).error({ err: error }, "[previewRoster] error");
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 

@@ -3,6 +3,7 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 const { logAudit } = require("../utils/auditLog");
 const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
 
+const sendServerError = require("../utils/sendServerError");
 async function getCallerBranchId(userId) {
   const s = await prisma.staff.findFirst({ where: { user_id: userId }, select: { branch_id: true } });
   if (s?.branch_id) return s.branch_id;
@@ -64,7 +65,7 @@ const getAvailability = async (req, res) => {
     const withEntitlement = await attachLeaveEntitlement(availability);
     res.json({ success: true, availability: withEntitlement });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -87,7 +88,7 @@ const getAvailabilityById = async (req, res) => {
     const [withEntitlement] = await attachLeaveEntitlement([availability]);
     res.json({ success: true, availability: withEntitlement });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -152,7 +153,7 @@ const createAvailability = async (req, res) => {
 
     res.status(201).json({ success: true, message: "Availability request created successfully", availability });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -224,7 +225,7 @@ const updateAvailability = async (req, res) => {
 
     res.json({ success: true, message: "Availability request updated successfully", availability });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -255,7 +256,7 @@ const deleteAvailability = async (req, res) => {
 
     res.json({ success: true, message: "Availability request deleted successfully" });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
@@ -276,7 +277,7 @@ const cancelOwnLeave = async (req, res) => {
     await prisma.availability.delete({ where: { request_id: requestId } });
     res.json({ success: true, message: "Leave request cancelled." });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendServerError(res, error, req);
   }
 };
 
