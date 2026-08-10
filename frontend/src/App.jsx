@@ -26,6 +26,7 @@ const StaffList          = lazy(() => import("./pages/manager/StaffList"));
 const StaffProfile       = lazy(() => import("./pages/manager/StaffProfile"));
 const AddStaff           = lazy(() => import("./pages/manager/AddStaff"));
 const ShiftsList         = lazy(() => import("./pages/manager/ShiftsList"));
+const Gaps               = lazy(() => import("./pages/manager/Gaps"));
 const CreateShift        = lazy(() => import("./pages/manager/CreateShift"));
 const ShiftDetail        = lazy(() => import("./pages/manager/ShiftDetail"));
 const AvailabilityLeave  = lazy(() => import("./pages/manager/AvailabilityLeave"));
@@ -181,6 +182,7 @@ function App() {
         <Route path="/manager/staff/new"    element={<PR roles={["manager"]}><AddStaff /></PR>} />
         <Route path="/manager/staff/:id"    element={<PR roles={["manager"]}><StaffProfile /></PR>} />
         <Route path="/manager/shifts"       element={<PR roles={["manager"]}><ShiftsList /></PR>} />
+        <Route path="/manager/gaps"         element={<PR roles={["manager"]}><Gaps /></PR>} />
         <Route path="/manager/shifts/new"   element={<PR roles={["manager"]}><CreateShift /></PR>} />
         <Route path="/manager/shifts/:id"   element={<PR roles={["manager"]}><ShiftDetail /></PR>} />
         <Route path="/manager/availability" element={<PR roles={["manager"]}><AvailabilityLeave /></PR>} />

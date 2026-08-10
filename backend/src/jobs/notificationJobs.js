@@ -2,7 +2,7 @@ const cron = require("node-cron");
 const OpenAI = require("openai");
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
-const { notifyUser } = require("../utils/notify");
+const { notifyUser, notifyUsersBatched, getBranchManagerUserIds } = require("../utils/notify");
 const logger = require("../config/logger");
 const { buildBriefMessages } = require("../services/aiAssistantService");
 
@@ -201,6 +201,91 @@ async function suggestUnderstaffedShifts() {
   }
 }
 
+// Round 6, Task 7b: escalating reminders for tasks still unfilled at exactly 7, 3, and 1 days
+// out — a separate concern from suggestUnderstaffedShifts above (which is an AI "who should I
+// assign" nudge for tomorrow only), sharing the same 23:00 cron slot rather than being folded
+// into it. "Exactly N days out" (not "N days or fewer") so a gap gets one notification per tier
+// as it approaches, not a growing pile of increasingly-redundant reminders every night.
+const GAP_ESCALATION_TIERS = [
+  { daysOut: 7, tone: "informational", notifyOwner: false },
+  { daysOut: 3, tone: "warning", notifyOwner: false },
+  { daysOut: 1, tone: "urgent", notifyOwner: true },
+];
+
+async function escalateUnfilledTasks() {
+  try {
+    // One entry per (recipient, tier/branch) to start — collapsed to one row per recipient below
+    // before it ever reaches notifyUsersBatched, so a manager overseeing several tiers/branches
+    // in the same run still gets exactly one notification, per the round's batching rule.
+    const rawEntries = [];
+
+    for (const tier of GAP_ESCALATION_TIERS) {
+      const targetDate = new Date();
+      targetDate.setUTCHours(0, 0, 0, 0);
+      targetDate.setUTCDate(targetDate.getUTCDate() + tier.daysOut);
+      const nextDay = new Date(targetDate.getTime() + 86400000);
+      const dateStr = targetDate.toISOString().slice(0, 10);
+
+      const openTasks = await prisma.shift_tasks.findMany({
+        where: {
+          status: "open",
+          shifts: { status: { not: "cancelled" }, shift_date: { gte: targetDate, lt: nextDay } },
+        },
+        select: { shifts: { select: { branch_id: true } } },
+      });
+      if (openTasks.length === 0) continue;
+
+      const countByBranch = {};
+      openTasks.forEach(t => {
+        countByBranch[t.shifts.branch_id] = (countByBranch[t.shifts.branch_id] || 0) + 1;
+      });
+
+      for (const [branchIdStr, count] of Object.entries(countByBranch)) {
+        const branchId = Number(branchIdStr);
+        const plural = count !== 1 ? "s" : "";
+        const title =
+          tier.tone === "urgent" ? `Urgent: ${count} unfilled task${plural} tomorrow`
+          : tier.tone === "warning" ? `${count} unfilled task${plural} in 3 days`
+          : `${count} unfilled task${plural} in a week`;
+        const message = `${count} task${plural} still need${count === 1 ? "s" : ""} someone assigned for ${dateStr}. Check the Gaps view to fill them.`;
+
+        const managerIds = await getBranchManagerUserIds(branchId);
+        managerIds.forEach(uid => rawEntries.push({ recipientId: uid, type: "gap_escalation", title, message, relatedEntity: "shift_gaps", relatedId: branchId }));
+
+        if (tier.notifyOwner) {
+          const { data: branch } = await supabaseAdmin.from("branches").select("business_id").eq("branch_id", branchId).maybeSingle();
+          const { data: biz } = branch?.business_id
+            ? await supabaseAdmin.from("businesses").select("owner_id").eq("business_id", branch.business_id).maybeSingle()
+            : { data: null };
+          if (biz?.owner_id) rawEntries.push({ recipientId: biz.owner_id, type: "gap_escalation", title, message, relatedEntity: "shift_gaps", relatedId: branchId });
+        }
+      }
+    }
+
+    if (rawEntries.length === 0) return;
+
+    const byRecipient = {};
+    rawEntries.forEach(e => {
+      if (!byRecipient[e.recipientId]) byRecipient[e.recipientId] = [];
+      byRecipient[e.recipientId].push(e);
+    });
+    const finalEntries = Object.values(byRecipient).map(list => {
+      if (list.length === 1) return list[0];
+      return {
+        recipientId: list[0].recipientId,
+        type: "gap_escalation",
+        title: `${list.length} branches have unfilled tasks coming up`,
+        message: list.map(e => e.message).join(" "),
+        relatedEntity: "shift_gaps",
+        relatedId: list[0].relatedId,
+      };
+    });
+    await notifyUsersBatched(finalEntries);
+  } catch (err) {
+    logger.error({ err }, "[escalateUnfilledTasks] error");
+  }
+}
+
 function startNotificationJobs() {
   // Every Sunday at 18:00 UTC
   cron.schedule("0 18 * * 0", remindMissingAvailability);
@@ -210,6 +295,9 @@ function startNotificationJobs() {
   cron.schedule("0 0 * * 1", sendMondayDigest);
   // Every day at 23:00 UTC (07:00 SGT next day) — staff suggestions for tomorrow's understaffed shifts
   cron.schedule("0 23 * * *", suggestUnderstaffedShifts);
+  // Same slot — gap escalation tiers (Round 6, Task 7b), a separate concern from the AI
+  // suggestion job above.
+  cron.schedule("0 23 * * *", escalateUnfilledTasks);
 }
 
 module.exports = {
@@ -218,4 +306,5 @@ module.exports = {
   remindMissingReports,
   sendMondayDigest,
   suggestUnderstaffedShifts,
+  escalateUnfilledTasks,
 };

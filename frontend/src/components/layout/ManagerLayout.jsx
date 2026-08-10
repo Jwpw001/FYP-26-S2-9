@@ -4,7 +4,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, Mail, Tag, Settings, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, Mail, Tag, Settings, Menu, X, AlertTriangle } from "lucide-react";
 import "./sidebarStyles.js";
 import ProfileModal from "../ProfileModal";
 import UserAvatar from "../UserAvatar";
@@ -13,6 +13,7 @@ const NAV = [
   { label: "Dashboard",    path: "/manager/dashboard",       Icon: LayoutDashboard },
   { label: "Workforce",    path: "/manager/staff",           Icon: Users },
   { label: "Tasks",        path: "/manager/shifts",          Icon: CalendarDays },
+  { label: "Gaps",         path: "/manager/gaps",            Icon: AlertTriangle },
   { label: "Availability", path: "/manager/availability",    Icon: CalendarClock },
   { label: "Timesheet",   path: "/manager/attendance",      Icon: ClipboardCheck },
   { label: "Reports",      path: "/manager/reports",         Icon: BarChart2 },

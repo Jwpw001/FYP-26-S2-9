@@ -376,6 +376,72 @@ const getMyTasks = async (req, res) => {
   }
 };
 
+// ── Gaps view (Round 6, Task 7a) ─────────────────────────────────────────────────
+
+// Urgency buckets for unfilled tasks, in escalating-then-later order. The round spec names four
+// buckets — Tomorrow / This week / Next week / Later — with no fifth bucket for "today". A task
+// whose shift is today is at least as urgent as one tomorrow, so it's folded into the "Tomorrow"
+// bucket rather than invented a new label; this is a deliberate choice, not an oversight.
+function urgencyBucket(shiftDateStr, tomorrowStr, weekEndStr, nextWeekEndStr) {
+  if (shiftDateStr <= tomorrowStr) return "Tomorrow"; // today, overdue, or tomorrow — most urgent tier
+  if (shiftDateStr <= weekEndStr) return "This week";
+  if (shiftDateStr <= nextWeekEndStr) return "Next week";
+  return "Later";
+}
+
+// GET /api/shifts/gaps — every unfilled (status "open") task on an upcoming, non-cancelled shift
+// in the calling manager's branch, grouped by urgency and sorted ascending within each group.
+const getUnfilledTasks = async (req, res) => {
+  try {
+    const branchId = await getCallerBranchId(req.user.user_id);
+    if (!branchId) return res.status(404).json({ success: false, message: "Branch not found." });
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const tomorrowStr = new Date(today.getTime() + 86400000).toISOString().slice(0, 10);
+    // Week boundaries follow the same Mon-Sun convention as branch_settings.operating_days /
+    // casual_availability elsewhere in the app (Mon=0…Sun=6).
+    const dow = (today.getUTCDay() + 6) % 7; // Mon=0…Sun=6
+    const weekEnd = new Date(today.getTime() + (6 - dow) * 86400000);
+    const nextWeekEnd = new Date(weekEnd.getTime() + 7 * 86400000);
+    const weekEndStr = weekEnd.toISOString().slice(0, 10);
+    const nextWeekEndStr = nextWeekEnd.toISOString().slice(0, 10);
+
+    const openTasks = await prisma.shift_tasks.findMany({
+      where: {
+        status: "open",
+        shifts: { branch_id: branchId, status: { not: "cancelled" }, shift_date: { gte: today } },
+      },
+      select: {
+        task_id: true, title: true, skill_id: true, start_time: true, end_time: true,
+        skills: { select: { skill_id: true, name: true } },
+        shifts: { select: { shift_id: true, title: true, shift_date: true, status: true } },
+      },
+      orderBy: [{ shifts: { shift_date: "asc" } }, { start_time: "asc" }],
+    });
+
+    const gaps = openTasks.map(t => {
+      const shiftDateStr = toDateOnly(t.shifts.shift_date);
+      return {
+        task_id: t.task_id,
+        title: t.title,
+        skill: t.skills ? { skill_id: t.skills.skill_id, name: t.skills.name } : null,
+        start_time: toHHMMSS(t.start_time),
+        end_time: toHHMMSS(t.end_time),
+        shift_id: t.shifts.shift_id,
+        shift_title: t.shifts.title,
+        shift_status: t.shifts.status,
+        shift_date: shiftDateStr,
+        urgency: urgencyBucket(shiftDateStr, tomorrowStr, weekEndStr, nextWeekEndStr),
+      };
+    });
+
+    return res.json({ success: true, gaps });
+  } catch (error) {
+    return sendServerError(res, error, req);
+  }
+};
+
 // ── Staff Roster ───────────────────────────────────────────────────────────────
 
 const getStaffRoster = async (req, res) => {
@@ -722,4 +788,4 @@ Respond ONLY with this JSON (no other text):
   }
 };
 
-module.exports = { getShiftTasks, createTask, updateTask, deleteTask, assignStaff, unassignStaff, getMyTasks, getStaffRoster, validateAssignment, checkLaborRules };
+module.exports = { getShiftTasks, createTask, updateTask, deleteTask, assignStaff, unassignStaff, getMyTasks, getUnfilledTasks, getStaffRoster, validateAssignment, checkLaborRules };

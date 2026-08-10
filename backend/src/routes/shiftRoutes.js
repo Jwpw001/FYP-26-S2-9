@@ -22,6 +22,7 @@ const {
     assignStaff,
     unassignStaff,
     getMyTasks,
+    getUnfilledTasks,
     getStaffRoster,
     validateAssignment,
 } = require("../controllers/taskController");
@@ -49,6 +50,7 @@ const MANAGER_ONLY = [ROLES.BRANCH_MANAGER, ROLES.SYSTEM_ADMIN];
 // ── Static routes first (must come before any /:param routes) ─────────────────
 
 router.get("/me/tasks",     verifyToken, allowRoles(...ALL_SHIFT_ROLES), getMyTasks);
+router.get("/gaps",         verifyToken, allowRoles(...MANAGER_ONLY),    getUnfilledTasks);
 router.post("/generate",       verifyToken, allowRoles(...MANAGER_ONLY), generateShifts);
 router.post("/publish-bulk/preview", verifyToken, allowRoles(...MANAGER_ONLY), previewBulkPublish);
 router.post("/publish-bulk",         verifyToken, allowRoles(...MANAGER_ONLY), publishBulkShifts);

@@ -1,9 +1,10 @@
 const prisma = require("../config/prisma");
 const supabaseAdmin = require("../config/supabaseAdmin");
 const generateToken = require("../utils/generateToken");
-const { notifyUser, notifyUsers, getBranchManagerUserIds } = require("../utils/notify");
+const { notifyUser, notifyUsers, notifyUsersBatched, getBranchManagerUserIds } = require("../utils/notify");
 const { checkLaborRules } = require("./taskController");
 const sendServerError = require("../utils/sendServerError");
+const logger = require("../config/logger");
 const {
   toMinutesFromTimeValue,
   doTimeRangesOverlap,
@@ -449,6 +450,41 @@ async function getPeriodAvailability(req, res) {
   }
 }
 
+// Round 6, Task 7c: given a casual's just-saved period picks for a week, find any unfilled
+// (status "open") tasks that fall on one of those periods that week, and notify each affected
+// branch's manager(s) once (batched — one message per manager, even across multiple branches).
+async function notifyManagersOfMatchingGaps({ staffUserId, weekDate, periodIds, weekStartDateStr }) {
+  const weekEnd = new Date(weekDate.getTime() + 7 * 86400000);
+  const matchingTasks = await prisma.shift_tasks.findMany({
+    where: {
+      status: "open",
+      period_id: { in: periodIds },
+      shifts: { status: { not: "cancelled" }, shift_date: { gte: weekDate, lt: weekEnd } },
+    },
+    select: { task_id: true, shifts: { select: { branch_id: true } } },
+  });
+  if (matchingTasks.length === 0) return;
+
+  const countByBranch = {};
+  matchingTasks.forEach(t => {
+    countByBranch[t.shifts.branch_id] = (countByBranch[t.shifts.branch_id] || 0) + 1;
+  });
+
+  const user = await prisma.users.findUnique({ where: { user_id: staffUserId }, select: { full_name: true } });
+  const name = user?.full_name || "A casual worker";
+
+  const entries = [];
+  for (const [branchIdStr, count] of Object.entries(countByBranch)) {
+    const branchId = Number(branchIdStr);
+    const managerIds = await getBranchManagerUserIds(branchId);
+    const plural = count !== 1 ? "s" : "";
+    const title = `${name} is now available for ${count} unfilled task${plural}`;
+    const message = `Week of ${weekStartDateStr}: check the Gaps view to assign them.`;
+    managerIds.forEach(uid => entries.push({ recipientId: uid, type: "casual_matches_gaps", title, message, relatedEntity: "shift_gaps", relatedId: branchId }));
+  }
+  if (entries.length > 0) await notifyUsersBatched(entries);
+}
+
 // GET /api/casual/period-availability/history — recent weeks with an explicit submission, most
 // recent first, so the UI can show "explicitly set" weeks vs weeks silently covered by pattern.
 async function getPeriodAvailabilityHistory(req, res) {
@@ -509,6 +545,20 @@ async function setPeriodAvailability(req, res) {
       await prisma.casual_period_availability.createMany({
         data: cleanIds.map(period_id => ({ staff_id: staffId, week_start_date: weekDate, period_id })),
       });
+    }
+
+    // Round 6, Task 7c: tell the manager(s) when this submission means the casual is now
+    // available for unfilled tasks — informational only, this never auto-assigns anyone
+    // (availability means "could work", not "put me on anything"). Fires whenever the just-saved
+    // state has at least one match; not diffed against what was submitted before, so resaving the
+    // same periods can notify again — a deliberate simplification, not a spec requirement.
+    // Best-effort: a notification failure here must not undo the availability save above.
+    if (cleanIds.length > 0) {
+      try {
+        await notifyManagersOfMatchingGaps({ staffUserId: req.user.user_id, weekDate, periodIds: cleanIds, weekStartDateStr: week_start_date });
+      } catch (notifyErr) {
+        logger.error({ err: notifyErr }, "[setPeriodAvailability] gap-match notification failed");
+      }
     }
 
     return res.json({ success: true, message: "Availability saved.", period_ids: cleanIds });

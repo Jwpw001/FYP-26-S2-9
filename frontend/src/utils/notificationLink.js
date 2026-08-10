@@ -46,6 +46,13 @@ export function resolveNotificationLink({ type, relatedEntity, relatedId }, role
     return null;
   }
 
+  // Round 6, Task 7: gap escalation reminders and "casual now matches unfilled tasks" pings both
+  // point at the gaps view — related_id here is a branch_id, not a per-record deep link.
+  if (relatedEntity === "shift_gaps" || type === "gap_escalation" || type === "casual_matches_gaps") {
+    if (role === "manager") return "/manager/gaps";
+    return null; // business owners are notified at the urgent tier but have no gaps page of their own
+  }
+
   if (relatedEntity === "casual_availability" || type === "availability_reminder") {
     // related_id here is a staff_id, not useful for deep-linking any existing page — list-level.
     if (role === "manager") return "/manager/availability"; // has a Casual Availability tab
