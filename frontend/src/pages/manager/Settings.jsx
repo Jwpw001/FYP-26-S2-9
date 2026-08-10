@@ -3,7 +3,7 @@ import ManagerLayout from "../../components/layout/ManagerLayout";
 import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
-import { SG_HOLIDAYS } from "../../data/sgHolidays";
+import { fetchDefaultHolidays } from "../../utils/publicHolidays";
 import TaskTemplatesEditor from "../../components/TaskTemplatesEditor";
 import {
   Clock, Calendar, Check, Minus, Plus,
@@ -52,12 +52,12 @@ function DonutChart({ weights, size = 160 }) {
   );
 }
 
-function parseSettings(s) {
+function parseSettings(s, defaultHolidays = []) {
   return {
     operating_days: s.operating_days ? s.operating_days.split("").map(Number) : [1,1,1,1,1,0,0],
     open_time:  s.open_time  || "09:00",
     close_time: s.close_time || "18:00",
-    holidays: s.holidays?.length ? s.holidays : SG_HOLIDAYS.map(h => ({ ...h })),
+    holidays: s.holidays?.length ? s.holidays : defaultHolidays,
     work_hours_day:          s.work_hours_day          ?? 8,
     max_work_hours_day:      s.max_work_hours_day      ?? 12,
     max_consecutive_days:    s.max_consecutive_days    ?? 6,
@@ -94,9 +94,10 @@ export default function ManagerSettings() {
       const oid = branchId || await resolveBranchId();
       if (oid) setBranchId(oid);
 
-      const [r, { data: branchRow }] = await Promise.all([
+      const [r, { data: branchRow }, defaultHolidays] = await Promise.all([
         oid ? api.get(`/api/business/branches/${oid}/settings`) : api.get("/api/business/settings"),
         oid ? supabase.from("branches").select("open_time, close_time").eq("branch_id", oid).maybeSingle() : Promise.resolve({ data: null }),
+        fetchDefaultHolidays(),
       ]);
 
       // Merge branch-level open/close times into settings (they live on branches table, not branch_settings)
@@ -105,7 +106,7 @@ export default function ManagerSettings() {
         open_time:  branchRow?.open_time?.slice(0, 5)  || r.settings?.open_time  || "09:00",
         close_time: branchRow?.close_time?.slice(0, 5) || r.settings?.close_time || "18:00",
       };
-      setSettings(parseSettings(merged));
+      setSettings(parseSettings(merged, defaultHolidays));
       const a = r.allocation ? { ...ALLOC_DEFAULTS, ...r.allocation } : { ...ALLOC_DEFAULTS };
       setAlloc(a);
       setSavedAlloc({ ...a });

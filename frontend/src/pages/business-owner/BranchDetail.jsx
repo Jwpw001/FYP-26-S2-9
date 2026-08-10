@@ -7,7 +7,7 @@ import SearchableSelect from "../../components/SearchableSelect";
 import TaskTemplatesEditor from "../../components/TaskTemplatesEditor";
 import { useGoTo } from "../../components/PageTransition";
 import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star, Settings2, Calendar, Zap, Pencil, X, Save, Loader2, Check, Minus, Scale, Award, TrendingUp, BarChart3, RotateCcw } from "lucide-react";
-import { SG_HOLIDAYS } from "../../data/sgHolidays";
+import { fetchDefaultHolidays } from "../../utils/publicHolidays";
 import UserAvatar from "../../components/UserAvatar";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-branchdetail-styles")) {
@@ -39,16 +39,16 @@ const ALLOC_DEFAULTS = { weight_availability: 40, weight_skills: 30, weight_atte
 
 const DEFAULT_BRANCH_SETTINGS = {
   operating_days: [1,1,1,1,1,0,0],
-  holidays: SG_HOLIDAYS.map(h => ({ ...h })),
+  holidays: [],
   work_hours_day: 8, max_work_hours_day: 12,
   max_consecutive_days: 6, allow_overtime: false, min_workers_per_assignment: 1,
   off_days_per_week: 1,
 };
 
-function parseBranchSettings(s) {
+function parseBranchSettings(s, defaultHolidays = []) {
   return {
     operating_days: s.operating_days ? s.operating_days.split("").map(Number) : [1,1,1,1,1,0,0],
-    holidays: s.holidays?.length ? s.holidays : SG_HOLIDAYS.map(h => ({ ...h })),
+    holidays: s.holidays?.length ? s.holidays : defaultHolidays,
     work_hours_day: s.work_hours_day ?? 8,
     max_work_hours_day: s.max_work_hours_day ?? 12,
     max_consecutive_days: s.max_consecutive_days ?? 6,
@@ -196,8 +196,11 @@ export default function BranchDetail() {
   async function fetchBizSettings() {
     setBizSettingsLoading(true);
     try {
-      const data = await api.get(`/api/business/branches/${id}/settings`);
-      const s = data.settings ? parseBranchSettings(data.settings) : { ...DEFAULT_BRANCH_SETTINGS };
+      const [data, defaultHolidays] = await Promise.all([
+        api.get(`/api/business/branches/${id}/settings`),
+        fetchDefaultHolidays(),
+      ]);
+      const s = data.settings ? parseBranchSettings(data.settings, defaultHolidays) : { ...DEFAULT_BRANCH_SETTINGS, holidays: defaultHolidays };
       const a = data.allocation ? { ...ALLOC_DEFAULTS, ...data.allocation } : { ...ALLOC_DEFAULTS };
       setBizSettings(s);
       setSavedBizSettings(JSON.parse(JSON.stringify(s)));

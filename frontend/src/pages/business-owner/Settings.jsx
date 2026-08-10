@@ -5,7 +5,7 @@ import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
-import { SG_HOLIDAYS } from "../../data/sgHolidays";
+import { fetchDefaultHolidays } from "../../utils/publicHolidays";
 import {
   Clock, Calendar, Save, RotateCcw, Check, Minus, Plus,
   Users, Award, TrendingUp, BarChart3, Scale, Loader2, Settings2, Zap, Pencil, X, Building2, CreditCard,
@@ -32,7 +32,7 @@ const ALLOC_DEFAULTS = { weight_availability: 40, weight_skills: 30, weight_atte
 const DEFAULT_SETTINGS = {
   operating_days: [1,1,1,1,1,0,0],
   open_time: "09:00", close_time: "18:00",
-  holidays: SG_HOLIDAYS.map(h => ({ ...h })),
+  holidays: [],
   work_hours_day: 8, max_work_hours_day: 12,
   max_consecutive_days: 6, allow_overtime: false, min_workers_per_assignment: 1,
   treat_public_holidays_as_working: false,
@@ -73,12 +73,12 @@ function DonutChart({ weights, size = 160 }) {
   );
 }
 
-function parseSettings(s) {
+function parseSettings(s, defaultHolidays = []) {
   return {
     operating_days: s.operating_days ? s.operating_days.split("").map(Number) : [1,1,1,1,1,0,0],
     open_time: s.open_time?.slice(0, 5) || "09:00",
     close_time: s.close_time?.slice(0, 5) || "18:00",
-    holidays: s.holidays?.length ? s.holidays : SG_HOLIDAYS.map(h => ({ ...h })),
+    holidays: s.holidays?.length ? s.holidays : defaultHolidays,
     work_hours_day: s.work_hours_day ?? 8,
     max_work_hours_day: s.max_work_hours_day ?? 12,
     max_consecutive_days: s.max_consecutive_days ?? 6,
@@ -133,8 +133,11 @@ export default function BOSettings() {
     setError("");
     setSuccess("");
     try {
-      const r = await api.get(`/api/business/branches/${branchId}/settings`);
-      const s = r.settings ? parseSettings(r.settings) : { ...DEFAULT_SETTINGS };
+      const [r, defaultHolidays] = await Promise.all([
+        api.get(`/api/business/branches/${branchId}/settings`),
+        fetchDefaultHolidays(),
+      ]);
+      const s = r.settings ? parseSettings(r.settings, defaultHolidays) : { ...DEFAULT_SETTINGS, holidays: defaultHolidays };
       const a = r.allocation ? { ...ALLOC_DEFAULTS, ...r.allocation } : { ...ALLOC_DEFAULTS };
       setSettings(s);
       setSavedSettings(JSON.parse(JSON.stringify(s)));

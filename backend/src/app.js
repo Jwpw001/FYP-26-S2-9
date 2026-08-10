@@ -23,6 +23,7 @@ const skillsRoutes = require("./routes/skillsRoutes");
 const casualRoutes = require("./routes/casualRoutes");
 const timesheetRoutes = require("./routes/timesheetRoutes");
 const pushRoutes = require("./routes/pushRoutes");
+const publicHolidayRoutes = require("./routes/publicHolidayRoutes");
 
 const app = express();
 
@@ -102,6 +103,7 @@ app.use("/api/skills", skillsRoutes);
 app.use("/api/casual", casualRoutes);
 app.use("/api/timesheets", timesheetRoutes);
 app.use("/api/push", pushRoutes);
+app.use("/api/public-holidays", publicHolidayRoutes);
 
 app.use(errorHandler);
 

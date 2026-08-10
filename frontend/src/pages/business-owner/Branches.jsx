@@ -5,7 +5,7 @@ import { useGoTo } from "../../components/PageTransition";
 import { api } from "../../lib/api";
 import { Plus, Building2, MapPin, Clock, Check, Calendar, Search, Users, Pencil } from "lucide-react";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
-import { SG_HOLIDAYS } from "../../data/sgHolidays";
+import { fetchDefaultHolidays } from "../../utils/publicHolidays";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-branch-styles")) {
   const style = document.createElement("style");
@@ -31,7 +31,7 @@ const EMPTY_FORM = {
   name: "", address: "",
   open_time: "08:00", close_time: "22:00",
   operating_days: [1,1,1,1,1,0,0],
-  holidays: SG_HOLIDAYS.map(h => ({ ...h })),
+  holidays: [],
   work_hours_day: 8,
   max_work_hours_day: 12,
   max_consecutive_days: 6,
@@ -67,6 +67,7 @@ export default function BOBranches() {
     setStep(1);
     setError("");
     setShowWizard(true);
+    fetchDefaultHolidays().then(holidays => setForm(p => ({ ...p, holidays })));
   }
 
   function closeWizard() {
