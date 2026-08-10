@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { UpgradePlanModal } from "../../components/UpgradePlanModal";
 import { fetchDefaultHolidays } from "../../utils/publicHolidays";
+import BranchHolidaySettings from "../../components/BranchHolidaySettings";
 import {
   Clock, Calendar, Save, RotateCcw, Check, Minus, Plus,
   Users, Award, TrendingUp, BarChart3, Scale, Loader2, Settings2, Zap, Pencil, X, Building2, CreditCard,
@@ -162,26 +163,6 @@ export default function BOSettings() {
     const holidays = [...settings.holidays];
     holidays[i] = { ...holidays[i], enabled: !holidays[i].enabled };
     setS("holidays", holidays);
-  }
-
-  const [closureDate, setClosureDate] = useState("");
-  const [closureReason, setClosureReason] = useState("");
-  const [closureSaving, setClosureSaving] = useState(false);
-  const [closureResult, setClosureResult] = useState("");
-
-  async function markClosed() {
-    if (!closureDate) return;
-    setClosureSaving(true); setError(""); setClosureResult("");
-    try {
-      const r = await api.post(`/api/business/branches/${selectedId}/closures`, { date: closureDate, reason: closureReason });
-      setClosureResult(r.cancelled_shifts > 0
-        ? `Marked closed. ${r.cancelled_shifts} shift(s) cancelled, ${r.notified} staff notified.`
-        : "Marked closed.");
-      setClosureDate(""); setClosureReason("");
-      await loadBranchSettings(selectedId);
-      setTimeout(() => setClosureResult(""), 5000);
-    } catch (err) { setError(err.message); }
-    finally { setClosureSaving(false); }
   }
 
   function cancelSetup() {
@@ -405,55 +386,16 @@ export default function BOSettings() {
 
               {/* Public Holidays */}
               <div style={{ padding: "28px 24px 20px", borderBottom: "1px solid #F1F5F9" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-                  <Calendar size={16} color="#2563EB" />
-                  <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B" }}>Public holidays</h3>
-                  <span style={{ fontSize: "17px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px", background: "#EEF2FF", color: "#4F46E5", border: "1px solid #C7D2FE" }}>
-                    SG 2026
-                  </span>
-                  {!editingSetup && (
-                    <span style={{ fontSize: "17px", color: "#94A3B8", marginLeft: "auto" }}>Edit to change</span>
-                  )}
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "10px", marginBottom: "10px" }}>
-                  <div>
-                    <p style={{ fontSize: "19px", fontWeight: "600", color: "#1E293B" }}>Work through public holidays</p>
-                    <p style={{ fontSize: "17px", color: "#94A3B8", marginTop: "1px" }}>Off by default — generated shifts skip public holidays</p>
-                  </div>
-                  <button type="button" disabled={!editingSetup} onClick={() => editingSetup && setS("treat_public_holidays_as_working", !settings.treat_public_holidays_as_working)}
-                    style={{ width: "40px", height: "22px", borderRadius: "11px", border: "none", background: settings.treat_public_holidays_as_working ? "#2563EB" : "#D1D5DB", cursor: editingSetup ? "pointer" : "default", position: "relative", transition: "background 0.2s", flexShrink: 0, opacity: editingSetup ? 1 : 0.7 }}>
-                    <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#fff", position: "absolute", top: "3px", left: settings.treat_public_holidays_as_working ? "21px" : "3px", transition: "left 0.2s", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
-                  </button>
-                </div>
-
-                <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
-                  <input type="date" value={closureDate} onChange={e => setClosureDate(e.target.value)} style={{ flex: 1, padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "17px" }} />
-                  <input type="text" placeholder="Reason (optional)" value={closureReason} onChange={e => setClosureReason(e.target.value)} style={{ flex: 1, padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "17px" }} />
-                  <button onClick={markClosed} disabled={!closureDate || closureSaving}
-                    style={{ background: "#1E293B", color: "#fff", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "17px", fontWeight: "700", cursor: closureDate ? "pointer" : "default", opacity: closureDate ? 1 : 0.5, whiteSpace: "nowrap" }}>
-                    {closureSaving ? "…" : "Mark closed"}
-                  </button>
-                </div>
-                {closureResult && (
-                  <p style={{ fontSize: "17px", color: "#166534", marginBottom: "10px" }}>{closureResult}</p>
-                )}
-
-                <div style={{ background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "12px", maxHeight: "240px", overflowY: "auto" }}>
-                  {settings.holidays.map((h, i) => (
-                    <div key={h.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: i < settings.holidays.length - 1 ? "1px solid #F1F5F9" : "none" }}>
-                      <div>
-                        <p style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
-                        <p style={{ fontSize: "18px", color: "#94A3B8" }}>{h.date}</p>
-                      </div>
-                      <button type="button" onClick={() => toggleHoliday(i)}
-                        disabled={!editingSetup}
-                        style={{ width: "36px", height: "20px", borderRadius: "10px", border: "none", background: h.enabled ? "#22C55E" : "#D1D5DB", cursor: editingSetup ? "pointer" : "default", position: "relative", transition: "background 0.2s", flexShrink: 0, opacity: editingSetup ? 1 : 0.7 }}>
-                        <div style={{ width: "14px", height: "14px", borderRadius: "50%", background: "#fff", position: "absolute", top: "3px", left: h.enabled ? "19px" : "3px", transition: "left 0.2s", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <BranchHolidaySettings
+                  branchId={selectedId}
+                  holidays={settings.holidays}
+                  treatPublicHolidaysAsWorking={settings.treat_public_holidays_as_working}
+                  onToggleWorking={v => setS("treat_public_holidays_as_working", v)}
+                  onHolidayToggle={i => toggleHoliday(i)}
+                  editable={editingSetup}
+                  editHint="Edit to change"
+                  onClosed={() => loadBranchSettings(selectedId)}
+                />
               </div>
 
               {/* Smart Allocation */}

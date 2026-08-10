@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar } from "lucide-react";
+import { Calendar, Lock } from "lucide-react";
 import { api } from "../lib/api";
 
 // Shared "public holidays" panel: ad-hoc closure marking (POST /branches/:id/closures,
@@ -15,8 +15,10 @@ export default function BranchHolidaySettings({
   onHolidayToggle,   // (index) => void — omit to render the list read-only
   editable = true,   // gates onToggleWorking / onHolidayToggle interactivity
   onClosed,          // () => void — called after a closure is successfully marked, to let the caller refresh
-  yearLabel = "SG 2026",
+  yearLabel,         // omit to derive from the holidays actually shown (falls back to the current year)
   compact = false,
+  readOnlyBadge = false, // shows a "Read only" lock indicator — for surfaces where this whole panel is intentionally not editable (see manager/Settings.jsx's own comment: holidays stay business-owner-managed)
+  editHint,          // optional text shown instead, e.g. "Edit to change", when !editable && !readOnlyBadge
 }) {
   const [closureDate, setClosureDate] = useState("");
   const [closureReason, setClosureReason] = useState("");
@@ -45,14 +47,29 @@ export default function BranchHolidaySettings({
   const f = compact ? { title: "13px", sub: "11px", name: "12px", date: "11px", input: "12px", toggleW: 34, toggleH: 18, dotW: 12, dotH: 12 }
                      : { title: "21px", sub: "17px", name: "20px", date: "18px", input: "17px", toggleW: 40, toggleH: 22, dotW: 16, dotH: 16 };
 
+  // Derived from the holidays actually being shown (they're stored/fetched in ascending date
+  // order) rather than a fixed constant, which used to read "SG 2026" even once 2026 had passed
+  // or a branch's list held a different year's dates.
+  const derivedYear = holidays[0]?.date ? new Date(holidays[0].date).getFullYear() : new Date().getFullYear();
+  const displayYearLabel = yearLabel ?? `SG ${derivedYear}`;
+
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
         <Calendar size={compact ? 14 : 16} color="#2563EB" />
         <h3 style={{ fontSize: f.title, fontWeight: "700", color: "#1E293B" }}>Public holidays</h3>
         <span style={{ fontSize: f.date, fontWeight: "700", padding: "2px 8px", borderRadius: "100px", background: "#EEF2FF", color: "#4F46E5", border: "1px solid #C7D2FE" }}>
-          {yearLabel}
+          {displayYearLabel}
         </span>
+        {readOnlyBadge && (
+          <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "auto" }}>
+            <Lock size={11} color="#CBD5E1" />
+            <span style={{ fontSize: f.date, color: "#CBD5E1", fontWeight: "600" }}>Read only</span>
+          </div>
+        )}
+        {!editable && !readOnlyBadge && editHint && (
+          <span style={{ fontSize: f.date, color: "#94A3B8", marginLeft: "auto" }}>{editHint}</span>
+        )}
       </div>
 
       {onToggleWorking && (

@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { fetchDefaultHolidays } from "../../utils/publicHolidays";
+import BranchHolidaySettings from "../../components/BranchHolidaySettings";
 import TaskTemplatesEditor from "../../components/TaskTemplatesEditor";
 import {
   Clock, Calendar, Check, Minus, Plus,
@@ -144,28 +145,6 @@ export default function ManagerSettings() {
 
   function cancelAlloc() { setAlloc({ ...savedAlloc }); setEditingAlloc(false); setError(""); }
 
-  const [closureDate, setClosureDate] = useState("");
-  const [closureReason, setClosureReason] = useState("");
-  const [closureSaving, setClosureSaving] = useState(false);
-  const [closureResult, setClosureResult] = useState("");
-
-  // Managers can mark a date closed (day-to-day operational calls) even though the rest of
-  // Business setup, including the public-holiday list above, stays business-owner-managed.
-  async function markClosed() {
-    if (!closureDate || !branchId) return;
-    setClosureSaving(true); setError(""); setClosureResult("");
-    try {
-      const r = await api.post(`/api/business/branches/${branchId}/closures`, { date: closureDate, reason: closureReason });
-      setClosureResult(r.cancelled_shifts > 0
-        ? `Marked closed. ${r.cancelled_shifts} shift(s) cancelled, ${r.notified} staff notified.`
-        : "Marked closed.");
-      setClosureDate(""); setClosureReason("");
-      await load();
-      setTimeout(() => setClosureResult(""), 5000);
-    } catch (err) { setError(err.message); }
-    finally { setClosureSaving(false); }
-  }
-
   async function saveAllocation() {
     const total = WEIGHTS.reduce((s, w) => s + (alloc[w.key] || 0), 0);
     if (total !== 100) { setError("Weights must sum to 100%."); return; }
@@ -300,44 +279,18 @@ export default function ManagerSettings() {
         {/* ── RIGHT: Holidays (read-only) + Smart Allocation (editable) ── */}
         <div style={{ width: "420px", flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "#FAFBFE" }}>
 
-          {/* Public Holidays — read-only */}
+          {/* Public Holidays — read-only: the rest of Business Setup on this page (operating
+              days, hours, work rules) is business-owner-managed too; closure marking is the one
+              deliberate day-to-day exception managers get (see markClosed below via onClosed). */}
           <div style={{ padding: "28px 24px 20px", borderBottom: "1px solid #F1F5F9" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-              <Calendar size={16} color="#2563EB" />
-              <h3 style={{ fontSize: "21px", fontWeight: "700", color: "#1E293B" }}>Public holidays</h3>
-              <span style={{ fontSize: "17px", fontWeight: "700", padding: "2px 8px", borderRadius: "100px", background: "#EEF2FF", color: "#4F46E5", border: "1px solid #C7D2FE" }}>SG 2026</span>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "auto" }}>
-                <Lock size={11} color="#CBD5E1" />
-                <span style={{ fontSize: "17px", color: "#CBD5E1", fontWeight: "600" }}>Read only</span>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
-              <input type="date" value={closureDate} onChange={e => setClosureDate(e.target.value)} style={{ flex: 1, padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "17px" }} />
-              <input type="text" placeholder="Reason (optional)" value={closureReason} onChange={e => setClosureReason(e.target.value)} style={{ flex: 1, padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "8px", fontSize: "17px" }} />
-              <button onClick={markClosed} disabled={!closureDate || closureSaving}
-                style={{ background: "#1E293B", color: "#fff", border: "none", borderRadius: "8px", padding: "7px 14px", fontSize: "17px", fontWeight: "700", cursor: closureDate ? "pointer" : "default", opacity: closureDate ? 1 : 0.5, whiteSpace: "nowrap" }}>
-                {closureSaving ? "…" : "Mark closed"}
-              </button>
-            </div>
-            {closureResult && (
-              <p style={{ fontSize: "17px", color: "#166534", marginBottom: "10px" }}>{closureResult}</p>
-            )}
-
             {settings ? (
-              <div style={{ background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "12px", maxHeight: "240px", overflowY: "auto" }}>
-                {settings.holidays.map((h, i) => (
-                  <div key={h.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: i < settings.holidays.length - 1 ? "1px solid #F1F5F9" : "none" }}>
-                    <div>
-                      <p style={{ fontSize: "20px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
-                      <p style={{ fontSize: "18px", color: "#94A3B8" }}>{h.date}</p>
-                    </div>
-                    <div style={{ width: "36px", height: "20px", borderRadius: "10px", background: h.enabled ? "#22C55E" : "#D1D5DB", position: "relative", opacity: 0.6, flexShrink: 0 }}>
-                      <div style={{ width: "14px", height: "14px", borderRadius: "50%", background: "#fff", position: "absolute", top: "3px", left: h.enabled ? "19px" : "3px", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <BranchHolidaySettings
+                branchId={branchId}
+                holidays={settings.holidays}
+                editable={false}
+                readOnlyBadge
+                onClosed={load}
+              />
             ) : (
               <p style={{ fontSize: "19px", color: "#CBD5E1", textAlign: "center", padding: "20px" }}>No holidays data.</p>
             )}
