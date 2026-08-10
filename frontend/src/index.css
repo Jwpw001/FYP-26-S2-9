@@ -260,10 +260,13 @@ html {
 }
 
 /* A two-pane flex row (main content flex:1 + a fixed-width side panel, e.g.
-   420px) has no room for the fixed panel on a phone — flex items don't wrap
-   by default, so the side panel and main content fight for the same space
-   and visibly overlap instead of clipping cleanly. Stack to a single column
-   and let the side panel take its natural full width below 640px.
+   420px) squeezes the flexible pane on anything narrower than a full desktop
+   — flex items don't wrap by default, so the side panel holds its width and
+   the main content gets crushed into whatever's left instead of the row
+   stacking. Stack to a single column below 1024px (matches the breakpoint
+   the same holidays/skills side panel already uses elsewhere as a bottom
+   sheet), well before the squeeze zone, and let the side panel take its
+   natural full width.
    Pairs with .responsive-scroll-shell on the page's outer wrapper: these
    panels are normally height-capped with independent internal scroll
    (siblings inside a fixed-height, overflow:hidden shell), which — once
@@ -272,7 +275,7 @@ html {
    height. flex:none lets each stacked pane size to its own content, and the
    shell needs to become a normal auto-height, page-scrolling container for
    that content to actually be reachable. */
-@media (max-width: 640px) {
+@media (max-width: 1023px) {
   .responsive-flex-stack {
     flex-direction: column !important;
   }

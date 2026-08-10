@@ -58,7 +58,7 @@ export default function BranchHolidaySettings({
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
         <Calendar size={compact ? 14 : 16} color="#2563EB" />
         <h3 style={{ fontSize: f.title, fontWeight: "700", color: "#1E293B" }}>Public holidays</h3>
-        <span style={{ fontSize: f.date, fontWeight: "700", padding: "2px 8px", borderRadius: "100px", background: "#EEF2FF", color: "#4F46E5", border: "1px solid #C7D2FE" }}>
+        <span style={{ fontSize: f.date, fontWeight: "700", padding: "2px 8px", borderRadius: "100px", background: "#EEF2FF", color: "#4F46E5", border: "1px solid #C7D2FE", whiteSpace: "nowrap", flexShrink: 0 }}>
           {displayYearLabel}
         </span>
         {readOnlyBadge && (
@@ -68,7 +68,7 @@ export default function BranchHolidaySettings({
           </div>
         )}
         {!editable && !readOnlyBadge && editHint && (
-          <span style={{ fontSize: f.date, color: "#94A3B8", marginLeft: "auto" }}>{editHint}</span>
+          <span style={{ fontSize: f.date, color: "#94A3B8", marginLeft: "auto", whiteSpace: "nowrap", flexShrink: 0 }}>{editHint}</span>
         )}
       </div>
 
