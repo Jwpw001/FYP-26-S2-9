@@ -46,6 +46,19 @@ describe("computeHoursMetrics — overtime", () => {
     expect(m.workedHours).toBe(15);
   });
 
+  // Round 5, Task 1's own acceptance scenario: a casual worker rostered 17:00-22:00 who
+  // actually worked to 23:30 at a branch closing at 22:00.
+  test("Round 5 Task 1 acceptance scenario: rostered 17:00-22:00, worked to 23:30, branch closes 22:00", () => {
+    const m = computeHoursMetrics({
+      rosteredStart: "17:00", rosteredEnd: "22:00",
+      actualStart: "17:00", actualEnd: "23:30",
+      branchOpenTime: "08:00", branchCloseTime: "22:00",
+    });
+    expect(m.workedHours).toBe(6.5);
+    expect(m.additionalHours).toBe(1.5);
+    expect(m.overtimeHours).toBe(1.5);
+  });
+
   test("null actual start/end → hoursUnknown true, additional/overtime null, worked falls back to hours_worked", () => {
     const m = computeHoursMetrics({ actualStart: null, actualEnd: null, hoursWorkedFallback: 5.5, ...branch });
     expect(m.hoursUnknown).toBe(true);
