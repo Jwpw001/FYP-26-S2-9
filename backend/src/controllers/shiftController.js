@@ -125,23 +125,11 @@ const createShift = async (req, res) => {
     if (callerBranchId && branch_id && branch_id !== callerBranchId)
       return res.status(403).json({ success: false, message: "Cannot create shifts for a different branch." });
 
-    // Validate against operating days
-    if (shift_date) {
-      const resolvedBranchId = branch_id || callerBranchId;
-      const { data: branchSettings } = await supabaseAdmin
-        .from("branch_settings")
-        .select("operating_days")
-        .eq("branch_id", resolvedBranchId)
-        .maybeSingle();
-      if (branchSettings?.operating_days) {
-        // operating_days is a 7-char string "1111100" where index 0 = Monday
-        const dayIndex = (new Date(shift_date + "T12:00:00Z").getUTCDay() + 6) % 7; // Mon=0, Sun=6
-        if (branchSettings.operating_days[dayIndex] === "0") {
-          return res.status(400).json({ success: false, message: "Shifts cannot be created on non-operating days." });
-        }
-      }
-    }
-
+    // Round 5, Task 4: operating_days no longer blocks manual creation here. Every operating day
+    // is now generated automatically (Round 3's automatic shift generation), so a manager reaching
+    // this form is deliberately creating an exception (a closure-day cover shift, a one-off on a
+    // normally-closed day, etc.) — blocking exactly the case manual creation exists for defeated
+    // its own purpose. The frontend still shows a non-blocking explanatory note for the date.
     const shift = await prisma.shifts.create({
       data: {
         branch_id: branch_id || callerBranchId,

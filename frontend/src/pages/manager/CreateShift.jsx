@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import { api } from "../../lib/api";
 import { toTitleCase } from "../../utils/text";
+import { fetchDefaultHolidays } from "../../utils/publicHolidays";
 import ManagerLayout from "../../components/layout/ManagerLayout";
 import SearchableSelect from "../../components/SearchableSelect";
 import { Plus, Trash2, Clock, Calendar, Tag, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
@@ -54,6 +55,7 @@ export default function CreateShift() {
   const [saving, setSaving]             = useState(false);
   const [error, setError]               = useState("");
   const [dateWarning, setDateWarning]   = useState("");
+  const [publicHolidays, setPublicHolidays] = useState([]);
 
   const [form, setForm] = useState({
     title: "", shift_date: searchParams.get("date") || "",
@@ -87,6 +89,12 @@ export default function CreateShift() {
       if (cancelled) return;
       if (od) setBranchHours({ open: od.open_time?.slice(0,5) || null, close: od.close_time?.slice(0,5) || null });
       if (settingsRes?.settings) setBranchSettings(settingsRes.settings);
+
+      // This year and next — covers picking a date shortly after a year boundary without
+      // needing to refetch as the manager types.
+      const y = new Date().getFullYear();
+      const [thisYear, nextYear] = await Promise.all([fetchDefaultHolidays(y), fetchDefaultHolidays(y + 1)]);
+      if (!cancelled) setPublicHolidays([...thisYear, ...nextYear]);
     }
     load();
     return () => { cancelled = true; };
@@ -98,20 +106,20 @@ export default function CreateShift() {
   const timeMin       = !allowOvertime ? (branchHours.open  || undefined) : undefined;
   const timeMax       = !allowOvertime ? (branchHours.close || undefined) : undefined;
 
-  // Round 3, Task 8: the old always-visible day-pill legend is gone (noise now that every
-  // operating day is generated automatically) — this is a single brief, targeted note for the
-  // date actually picked. Two different situations, two different messages: a closure/public
-  // holiday (Task 3) doesn't block creation, just confirms; a non-operating weekday still does
-  // (handleCreateShift's own check, unchanged — that's a structural fact about the branch, not a
-  // soft preference like the labor-rule limits Task 5 loosened) so its note says so upfront
-  // rather than the manager only finding out after clicking Save.
+  // Round 5, Task 4: every operating day is generated automatically now, so reaching this form
+  // at all means a manager is deliberately creating an exception — a closure-day cover shift, a
+  // one-off on a normally-closed day, someone opening specially for a public holiday. None of
+  // that should be blocked; the date field just gets a brief explanatory note so the manager
+  // isn't surprised, the same way a closure/holiday note already worked (Round 3, Task 8).
   function checkDateOperating(dateStr) {
     if (!dateStr || !branchSettings) { setDateWarning(""); return; }
     const holidays = Array.isArray(branchSettings.holidays) ? branchSettings.holidays : [];
     const closed = holidays.find(h => h?.date === dateStr && h?.enabled !== false);
     if (closed) { setDateWarning(`${closed.name || "Marked closed"} — you can still create a shift, just confirming.`); return; }
+    const holiday = publicHolidays.find(h => h.date === dateStr);
+    if (holiday) { setDateWarning(`${holiday.name} is a public holiday — you can still create a shift, just confirming.`); return; }
     const dow = jsDayToMonBased(new Date(dateStr + "T00:00:00").getDay());
-    setDateWarning(!operatingDays[dow] ? `${DAY_FULL[dow]} is not an operating day — shifts can't be created on it.` : "");
+    setDateWarning(!operatingDays[dow] ? `Branch is normally closed on ${DAY_FULL[dow]}s. You can still create a shift.` : "");
   }
 
   function handleDateChange(dateStr) {
@@ -132,12 +140,6 @@ export default function CreateShift() {
     if (!form.end_time)                   { setError("End time is required."); return; }
     if (form.end_time <= form.start_time) { setError("End time must be after start time."); return; }
 
-    if (branchSettings) {
-      const dow = jsDayToMonBased(new Date(form.shift_date + "T00:00:00").getDay());
-      if (!operatingDays[dow]) {
-        setError(`Cannot create a shift on ${DAY_FULL[dow]} — not an operating day.`); return;
-      }
-    }
     if (!allowOvertime) {
       if (branchHours.open  && form.start_time < branchHours.open)  { setError(`Start time before opening (${fmtTime(branchHours.open)}).`); return; }
       if (branchHours.close && form.end_time   > branchHours.close) { setError(`End time after closing (${fmtTime(branchHours.close)}).`); return; }
