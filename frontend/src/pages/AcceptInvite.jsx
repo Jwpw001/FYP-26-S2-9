@@ -38,10 +38,12 @@ export default function AcceptInvite() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  // If already logged in, skip straight to linking
+  const emailMismatch = !!(loggedInUser && invite && loggedInUser.email?.toLowerCase() !== invite.email?.toLowerCase());
+
+  // If already logged in with a matching email, skip straight to linking
   useEffect(() => {
-    if (!loading && invite && loggedInUser) setStep("linking");
-  }, [loading, invite, loggedInUser]);
+    if (!loading && invite && loggedInUser && !emailMismatch) setStep("linking");
+  }, [loading, invite, loggedInUser, emailMismatch]);
 
   async function acceptAsExisting() {
     setSubmitting(true); setFormError("");
@@ -115,8 +117,22 @@ export default function AcceptInvite() {
               )}
             </div>
 
+            {/* Wrong account: logged in, but this invite is for a different email */}
+            {loggedInUser && emailMismatch && (
+              <div style={{ textAlign: "center" }}>
+                <h2 style={s.title}>Wrong Account</h2>
+                <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "20px" }}>
+                  This invitation was sent to <strong>{invite?.email}</strong>, but you're logged in as <strong>{loggedInUser.full_name || loggedInUser.email}</strong>.
+                </p>
+                <button onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("user"); setStep("choose"); }}
+                  style={s.btnPrimary}>
+                  Sign Out & Use a Different Account
+                </button>
+              </div>
+            )}
+
             {/* Step: linking existing user */}
-            {step === "linking" && loggedInUser && (
+            {step === "linking" && loggedInUser && !emailMismatch && (
               <>
                 <h2 style={s.title}>Accept Invitation</h2>
                 <p style={{ fontSize: "20px", color: "#64748B", marginBottom: "20px" }}>

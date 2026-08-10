@@ -187,7 +187,8 @@ const getInvitation = async (req, res) => {
       .eq("token", token)
       .maybeSingle();
     if (error || !data) return res.status(404).json({ success: false, message: "Invitation not found or expired." });
-    if (data.status !== "pending") return res.status(410).json({ success: false, message: "This invitation has already been used or cancelled." });
+    if (data.status === "accepted") return res.status(410).json({ success: false, message: "This invitation has already been accepted." });
+    if (data.status === "cancelled") return res.status(410).json({ success: false, message: "This invitation was cancelled by the sender." });
     if (data.expires_at && new Date(data.expires_at) < new Date()) {
       return res.status(410).json({ success: false, message: "This invitation has expired." });
     }
@@ -234,7 +235,8 @@ const acceptInvitation = async (req, res) => {
     const { data: invite, error: fetchErr } = await supabaseAdmin
       .from("invitations").select("*, branches(name)").eq("token", token).maybeSingle();
     if (fetchErr || !invite) return res.status(404).json({ success: false, message: "Invitation not found." });
-    if (invite.status !== "pending") return res.status(410).json({ success: false, message: "This invitation has already been used." });
+    if (invite.status === "accepted") return res.status(410).json({ success: false, message: "This invitation has already been accepted." });
+    if (invite.status === "cancelled") return res.status(410).json({ success: false, message: "This invitation was cancelled by the sender." });
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
       return res.status(410).json({ success: false, message: "This invitation has expired." });
     }
@@ -252,6 +254,13 @@ const acceptInvitation = async (req, res) => {
 
       const user = await prisma.users.findUnique({ where: { user_id: Number(existing_user_id) } });
       if (!user) return res.status(404).json({ success: false, message: "User not found." });
+
+      // This invitation was addressed to a different email than the logged-in account —
+      // without this check, anyone logged in could accept any invite link they come
+      // across and get their own account promoted/joined to a branch that wasn't theirs.
+      if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
+        return res.status(403).json({ success: false, message: `This invitation was sent to ${invite.email}, but you're logged in as ${user.email}.` });
+      }
 
       // Create staff record if needed
       if (invite.branch_id && ["regular_staff", "casual_staff"].includes(invite.role)) {
