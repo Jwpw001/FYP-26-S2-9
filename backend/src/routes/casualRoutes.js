@@ -10,6 +10,12 @@ const {
   getMyAvailability,
   setMyAvailability,
   submitWeeklyAvailability,
+  getPeriodAvailability,
+  getPeriodAvailabilityHistory,
+  setPeriodAvailability,
+  getStandingAvailability,
+  setStandingAvailability,
+  setWeekAsStandingPattern,
   getManagerPool,
   autoAssignCasual,
   getPool,
@@ -32,6 +38,12 @@ router.put("/preferences",     setPreferences);
 router.get("/availability",        getMyAvailability);
 router.put("/availability",        setMyAvailability);
 router.post("/availability/submit", submitWeeklyAvailability);
+router.get("/period-availability",              getPeriodAvailability);
+router.get("/period-availability/history",      getPeriodAvailabilityHistory);
+router.put("/period-availability",              setPeriodAvailability);
+router.post("/period-availability/set-as-standing", setWeekAsStandingPattern);
+router.get("/standing-availability",            getStandingAvailability);
+router.put("/standing-availability",            setStandingAvailability);
 
 // Manager
 router.get("/manager/pool",        getManagerPool);

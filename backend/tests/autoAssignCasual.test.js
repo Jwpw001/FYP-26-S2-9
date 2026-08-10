@@ -9,6 +9,8 @@ jest.mock("../src/config/prisma", () => ({
   users: { findMany: jest.fn(), findUnique: jest.fn() },
   staff: { findMany: jest.fn() },
   casual_availability: { findMany: jest.fn() },
+  casual_period_availability: { findMany: jest.fn() },
+  casual_standing_availability: { findMany: jest.fn() },
 }));
 jest.mock("../src/config/supabaseAdmin", () => ({ from: jest.fn() }));
 jest.mock("../src/controllers/taskController", () => ({ checkLaborRules: jest.fn() }));
@@ -78,6 +80,8 @@ function setupBaseline() {
     { staff_id: S2, user_id: U2 },
   ]);
   prisma.task_assignments.groupBy.mockResolvedValue([]); // no past assignments
+  prisma.casual_period_availability.findMany.mockResolvedValue([]);
+  prisma.casual_standing_availability.findMany.mockResolvedValue([]);
   checkLaborRules.mockResolvedValue(null); // passes by default; overridden in the labor-rules test
 }
 
@@ -158,5 +162,117 @@ describe("autoAssignCasual filter chain", () => {
     expect(s1.labor_warning).toBeNull();
     expect(s2.labor_warning).toMatch(/daily-hours limit/);
     expect(s2.score).toBeLessThan(s1.score); // penalised, but still present in the breakdown
+  });
+});
+
+// Round 6, Task 6: period-based availability. A shift with a period_id switches the hard
+// filter from casual_availability's time-coverage check to the binary
+// casual_period_availability / casual_standing_availability resolution below — a shift with no
+// period_id (branch not using periods) keeps the exact behaviour covered above.
+describe("autoAssignCasual — period-based availability", () => {
+  const PERIOD_ID = 77;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupBaseline();
+    // This branch's shift belongs to a shift period — switches the resolution path.
+    prisma.shifts.findUnique.mockResolvedValue({
+      shift_id: SHIFT_ID,
+      branch_id: BRANCH_ID,
+      shift_date: new Date("2026-08-10T00:00:00.000Z"), // Monday (day_of_week 0)
+      start_time: t("09:00"),
+      end_time: t("13:00"),
+      period_id: PERIOD_ID,
+    });
+    prisma.task_assignments.findMany.mockResolvedValue([]); // not double-booked
+  });
+
+  test("a shift without a period_id ignores period tables entirely and uses the old time-coverage check unchanged", async () => {
+    prisma.shifts.findUnique.mockResolvedValue({
+      shift_id: SHIFT_ID, branch_id: BRANCH_ID,
+      shift_date: new Date("2026-08-10T00:00:00.000Z"),
+      start_time: t("09:00"), end_time: t("13:00"),
+      period_id: null,
+    });
+    prisma.casual_availability.findMany.mockResolvedValue([
+      { staff_id: S1, available_from: t("08:00"), available_to: t("18:00") },
+    ]);
+    prisma.users.findUnique.mockResolvedValue({ full_name: "Worker One" });
+    prisma.task_assignments.create.mockResolvedValue({ assignment_id: 1 });
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    expect(prisma.casual_period_availability.findMany).not.toHaveBeenCalled();
+    expect(prisma.casual_standing_availability.findMany).not.toHaveBeenCalled();
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(true);
+    expect(body.assigned.user_id).toBe(U1);
+  });
+
+  test("explicit weekly rows: a staff member with an explicit row for this exact period is available", async () => {
+    prisma.casual_period_availability.findMany.mockResolvedValue([
+      { staff_id: S1, period_id: PERIOD_ID },
+    ]);
+    prisma.users.findUnique.mockResolvedValue({ full_name: "Worker One" });
+    prisma.task_assignments.create.mockResolvedValue({ assignment_id: 2 });
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(true);
+    expect(body.assigned.user_id).toBe(U1);
+    // Binary sub-score: a period match scores exactly 1.0, no partial-coverage ranking.
+    const winnerBreakdown = body.score_breakdown.candidates.find(c => c.user_id === U1);
+    expect(winnerBreakdown.sub_scores.availability).toBe(1);
+  });
+
+  test("explicit weekly rows for OTHER periods do not fall back to the standing pattern — resolution order is exact", async () => {
+    const OTHER_PERIOD_ID = 88;
+    // S1 explicitly submitted this week, but only ticked a different period.
+    prisma.casual_period_availability.findMany.mockResolvedValue([
+      { staff_id: S1, period_id: OTHER_PERIOD_ID },
+    ]);
+    // S1 also has a standing pattern that WOULD cover this period/day — must be ignored because
+    // an explicit submission exists for this week at all.
+    prisma.casual_standing_availability.findMany.mockResolvedValue([
+      { staff_id: S1, period_id: PERIOD_ID },
+    ]);
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(false);
+    expect(body.reason).toMatch(/unavailable/);
+  });
+
+  test("no explicit rows this week falls back to the standing pattern for this weekday", async () => {
+    prisma.casual_period_availability.findMany.mockResolvedValue([]); // nothing explicit this week
+    prisma.casual_standing_availability.findMany.mockResolvedValue([
+      { staff_id: S1, period_id: PERIOD_ID }, // (mock already pre-filtered to this weekday)
+    ]);
+    prisma.users.findUnique.mockResolvedValue({ full_name: "Worker One" });
+    prisma.task_assignments.create.mockResolvedValue({ assignment_id: 3 });
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(true);
+    expect(body.assigned.user_id).toBe(U1);
+  });
+
+  test("no explicit rows and no standing pattern excludes the candidate as unavailable", async () => {
+    prisma.casual_period_availability.findMany.mockResolvedValue([]);
+    prisma.casual_standing_availability.findMany.mockResolvedValue([]);
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(false);
+    expect(body.reason).toMatch(/2 unavailable on Mon/);
   });
 });

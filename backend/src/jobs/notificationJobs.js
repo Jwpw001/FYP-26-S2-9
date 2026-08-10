@@ -27,12 +27,16 @@ async function remindMissingAvailability() {
     if (casualStaff.length === 0) return;
 
     const staffIds = casualStaff.map(s => s.staff_id);
-    const { data: submitted } = await supabaseAdmin
-      .from("casual_availability")
-      .select("staff_id")
-      .eq("week_start_date", weekStartStr)
-      .in("staff_id", staffIds);
-    const submittedIds = new Set((submitted || []).map(r => r.staff_id));
+    // Round 6, Task 6: the casual-facing submission UI now writes to casual_period_availability
+    // instead of casual_availability, so "submitted" is checked against the new table — reading
+    // the old one here would report every casual as missing forever, since nothing writes to it
+    // any more.
+    const submitted = await prisma.casual_period_availability.findMany({
+      where: { week_start_date: new Date(`${weekStartStr}T00:00:00.000Z`), staff_id: { in: staffIds } },
+      select: { staff_id: true },
+      distinct: ["staff_id"],
+    });
+    const submittedIds = new Set(submitted.map(r => r.staff_id));
 
     const missing = casualStaff.filter(s => !submittedIds.has(s.staff_id));
     for (const s of missing) {
@@ -41,7 +45,7 @@ async function remindMissingAvailability() {
         type: "availability_reminder",
         title: "Submit Your Availability",
         message: `You haven't submitted your availability for the week of ${weekStartStr} yet. Please submit it soon.`,
-        relatedEntity: "casual_availability",
+        relatedEntity: "casual_period_availability",
         relatedId: s.staff_id,
       });
     }

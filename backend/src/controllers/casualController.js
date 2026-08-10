@@ -336,6 +336,294 @@ async function submitWeeklyAvailability(req, res) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CASUAL WORKER — period-based availability (Round 6, Task 6)
+//
+// Replaces the day×time-range grid above with a day×period grid: a casual ticks the shift
+// periods they can work rather than typing free-form hours. Two tables back this:
+//   - casual_period_availability: explicit picks for one specific week. If a staff member has
+//     ANY row for a week, that week is resolved from these rows alone — a period not ticked is
+//     unavailable, it does not fall through to the standing pattern below.
+//   - casual_standing_availability: a recurring "usually available" pattern (period × weekday),
+//     used only for weeks where the staff member has submitted nothing explicit at all.
+// The old casual_availability/casual_weekly_availability tables and their endpoints above are
+// left in place untouched (existing rows stay as history) — this UI simply stops writing to
+// them going forward.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toHHMM(v) {
+  if (!v) return null;
+  const s = v instanceof Date ? v.toISOString() : String(v);
+  return s.includes("T") ? s.slice(11, 16) : s.slice(0, 5);
+}
+
+// Periods across every branch the casual has marked as preferred (falls back to every branch in
+// their business if they haven't set branch preferences yet, so the grid is never empty).
+async function activePeriodsForCasual(userId, businessId) {
+  const { data: prefs } = await supabaseAdmin
+    .from("casual_branch_preferences")
+    .select("branch_id")
+    .eq("user_id", userId);
+  let branchIds = (prefs || []).map(p => p.branch_id);
+
+  if (branchIds.length === 0) {
+    const { data: branches } = await supabaseAdmin
+      .from("branches")
+      .select("branch_id")
+      .eq("business_id", businessId)
+      .is("deleted_at", null);
+    branchIds = (branches || []).map(b => b.branch_id);
+  }
+  if (branchIds.length === 0) return [];
+
+  const periods = await prisma.branch_shift_periods.findMany({
+    where: { branch_id: { in: branchIds }, is_active: true },
+    select: { period_id: true, branch_id: true, name: true, start_time: true, end_time: true, active_days: true, sort_order: true, branches: { select: { name: true } } },
+    orderBy: [{ branch_id: "asc" }, { sort_order: "asc" }],
+  });
+  return periods.map(p => ({
+    period_id: p.period_id,
+    branch_id: p.branch_id,
+    branch_name: p.branches?.name || null,
+    name: p.name,
+    start_time: toHHMM(p.start_time),
+    end_time: toHHMM(p.end_time),
+    active_days: p.active_days,
+  }));
+}
+
+async function resolveCasualStaff(userId) {
+  const { data: cw } = await supabaseAdmin
+    .from("casual_workers")
+    .select("business_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!cw) return null;
+  const { data: staffRow } = await supabaseAdmin
+    .from("staff")
+    .select("staff_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!staffRow) return null;
+  return { staffId: staffRow.staff_id, businessId: cw.business_id };
+}
+
+// GET /api/casual/period-availability?week_start_date=YYYY-MM-DD
+async function getPeriodAvailability(req, res) {
+  try {
+    const { week_start_date } = req.query;
+    if (!week_start_date) return res.status(400).json({ success: false, message: "week_start_date is required." });
+
+    const resolved = await resolveCasualStaff(req.user.user_id);
+    if (!resolved) return res.status(404).json({ success: false, message: "Casual worker record not found." });
+    const { staffId, businessId } = resolved;
+
+    const periods = await activePeriodsForCasual(req.user.user_id, businessId);
+
+    const [explicitRows, standingRows] = await Promise.all([
+      prisma.casual_period_availability.findMany({
+        where: { staff_id: staffId, week_start_date: new Date(`${week_start_date}T00:00:00.000Z`) },
+        select: { period_id: true },
+      }),
+      prisma.casual_standing_availability.findMany({
+        where: { staff_id: staffId },
+        select: { period_id: true, day_of_week: true },
+      }),
+    ]);
+
+    const standingByPeriod = {};
+    standingRows.forEach(r => {
+      if (!standingByPeriod[r.period_id]) standingByPeriod[r.period_id] = [];
+      standingByPeriod[r.period_id].push(r.day_of_week);
+    });
+
+    return res.json({
+      success: true,
+      week_start_date,
+      periods,
+      explicit_period_ids: explicitRows.map(r => r.period_id),
+      has_explicit_submission: explicitRows.length > 0,
+      standing_by_period: standingByPeriod,
+    });
+  } catch (err) {
+    return sendServerError(res, err, req);
+  }
+}
+
+// GET /api/casual/period-availability/history — recent weeks with an explicit submission, most
+// recent first, so the UI can show "explicitly set" weeks vs weeks silently covered by pattern.
+async function getPeriodAvailabilityHistory(req, res) {
+  try {
+    const resolved = await resolveCasualStaff(req.user.user_id);
+    if (!resolved) return res.status(404).json({ success: false, message: "Casual worker record not found." });
+    const { staffId, businessId } = resolved;
+
+    const periods = await activePeriodsForCasual(req.user.user_id, businessId);
+    const periodById = Object.fromEntries(periods.map(p => [p.period_id, p]));
+
+    const rows = await prisma.casual_period_availability.findMany({
+      where: { staff_id: staffId },
+      select: { week_start_date: true, period_id: true },
+      orderBy: { week_start_date: "desc" },
+    });
+
+    const grouped = {};
+    rows.forEach(r => {
+      const wk = r.week_start_date.toISOString().slice(0, 10);
+      if (!grouped[wk]) grouped[wk] = [];
+      const p = periodById[r.period_id];
+      grouped[wk].push({ period_id: r.period_id, name: p?.name || "Unknown period", branch_name: p?.branch_name || null });
+    });
+
+    const history = Object.entries(grouped)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .slice(0, 12)
+      .map(([week_start_date, periods]) => ({ week_start_date, periods }));
+
+    return res.json({ success: true, history });
+  } catch (err) {
+    return sendServerError(res, err, req);
+  }
+}
+
+// PUT /api/casual/period-availability  body: { week_start_date, period_ids: [1,2,3] }
+async function setPeriodAvailability(req, res) {
+  try {
+    const { week_start_date, period_ids } = req.body;
+    if (!week_start_date || !Array.isArray(period_ids)) {
+      return res.status(400).json({ success: false, message: "week_start_date and period_ids array required." });
+    }
+
+    const resolved = await resolveCasualStaff(req.user.user_id);
+    if (!resolved) return res.status(404).json({ success: false, message: "Casual worker record not found." });
+    const { staffId, businessId } = resolved;
+
+    // Only accept period_ids that actually belong to this casual's business — guards against a
+    // crafted request writing availability against another business's periods.
+    const validPeriods = await activePeriodsForCasual(req.user.user_id, businessId);
+    const validIds = new Set(validPeriods.map(p => p.period_id));
+    const cleanIds = [...new Set(period_ids.map(Number))].filter(id => validIds.has(id));
+
+    const weekDate = new Date(`${week_start_date}T00:00:00.000Z`);
+    await prisma.casual_period_availability.deleteMany({ where: { staff_id: staffId, week_start_date: weekDate } });
+    if (cleanIds.length > 0) {
+      await prisma.casual_period_availability.createMany({
+        data: cleanIds.map(period_id => ({ staff_id: staffId, week_start_date: weekDate, period_id })),
+      });
+    }
+
+    return res.json({ success: true, message: "Availability saved.", period_ids: cleanIds });
+  } catch (err) {
+    return sendServerError(res, err, req);
+  }
+}
+
+// GET /api/casual/standing-availability
+async function getStandingAvailability(req, res) {
+  try {
+    const resolved = await resolveCasualStaff(req.user.user_id);
+    if (!resolved) return res.status(404).json({ success: false, message: "Casual worker record not found." });
+    const { staffId, businessId } = resolved;
+
+    const periods = await activePeriodsForCasual(req.user.user_id, businessId);
+    const standingRows = await prisma.casual_standing_availability.findMany({
+      where: { staff_id: staffId },
+      select: { period_id: true, day_of_week: true },
+    });
+
+    return res.json({
+      success: true,
+      periods,
+      standing: standingRows.map(r => ({ period_id: r.period_id, day_of_week: r.day_of_week })),
+    });
+  } catch (err) {
+    return sendServerError(res, err, req);
+  }
+}
+
+// PUT /api/casual/standing-availability  body: { entries: [{period_id, day_of_week}] }
+async function setStandingAvailability(req, res) {
+  try {
+    const { entries } = req.body;
+    if (!Array.isArray(entries)) {
+      return res.status(400).json({ success: false, message: "entries array required." });
+    }
+
+    const resolved = await resolveCasualStaff(req.user.user_id);
+    if (!resolved) return res.status(404).json({ success: false, message: "Casual worker record not found." });
+    const { staffId, businessId } = resolved;
+
+    const validPeriods = await activePeriodsForCasual(req.user.user_id, businessId);
+    const validIds = new Set(validPeriods.map(p => p.period_id));
+    const seen = new Set();
+    const cleanEntries = [];
+    for (const e of entries) {
+      const periodId = Number(e?.period_id);
+      const dow = Number(e?.day_of_week);
+      if (!validIds.has(periodId) || !Number.isInteger(dow) || dow < 0 || dow > 6) continue;
+      const key = `${periodId}:${dow}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cleanEntries.push({ staff_id: staffId, period_id: periodId, day_of_week: dow });
+    }
+
+    await prisma.casual_standing_availability.deleteMany({ where: { staff_id: staffId } });
+    if (cleanEntries.length > 0) {
+      await prisma.casual_standing_availability.createMany({ data: cleanEntries });
+    }
+
+    return res.json({ success: true, message: "Usual pattern saved.", entries: cleanEntries.map(e => ({ period_id: e.period_id, day_of_week: e.day_of_week })) });
+  } catch (err) {
+    return sendServerError(res, err, req);
+  }
+}
+
+// POST /api/casual/period-availability/set-as-standing  body: { week_start_date }
+// Adopts this week's explicit picks as the recurring pattern: for each period ticked this week,
+// the standing pattern is set to every weekday that period actually runs (branch_shift_periods
+// .active_days) — replacing only the standing rows for those specific periods, leaving any other
+// period's existing standing pattern untouched.
+async function setWeekAsStandingPattern(req, res) {
+  try {
+    const { week_start_date } = req.body;
+    if (!week_start_date) return res.status(400).json({ success: false, message: "week_start_date is required." });
+
+    const resolved = await resolveCasualStaff(req.user.user_id);
+    if (!resolved) return res.status(404).json({ success: false, message: "Casual worker record not found." });
+    const { staffId, businessId } = resolved;
+
+    const weekDate = new Date(`${week_start_date}T00:00:00.000Z`);
+    const explicitRows = await prisma.casual_period_availability.findMany({
+      where: { staff_id: staffId, week_start_date: weekDate },
+      select: { period_id: true },
+    });
+    if (explicitRows.length === 0) {
+      return res.json({ success: true, message: "Nothing set for this week yet — nothing to save as your usual pattern.", entries: [] });
+    }
+
+    const periods = await activePeriodsForCasual(req.user.user_id, businessId);
+    const periodById = Object.fromEntries(periods.map(p => [p.period_id, p]));
+    const explicitIds = explicitRows.map(r => r.period_id).filter(id => periodById[id]);
+
+    await prisma.casual_standing_availability.deleteMany({ where: { staff_id: staffId, period_id: { in: explicitIds } } });
+
+    const newRows = [];
+    explicitIds.forEach(periodId => {
+      const activeDays = periodById[periodId].active_days || "1111111";
+      for (let dow = 0; dow < 7; dow++) {
+        if (activeDays[dow] === "1") newRows.push({ staff_id: staffId, period_id: periodId, day_of_week: dow });
+      }
+    });
+    if (newRows.length > 0) {
+      await prisma.casual_standing_availability.createMany({ data: newRows });
+    }
+
+    return res.json({ success: true, message: "Saved as your usual pattern.", entries: newRows.map(r => ({ period_id: r.period_id, day_of_week: r.day_of_week })) });
+  } catch (err) {
+    return sendServerError(res, err, req);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MANAGER — casual pool for their branch
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -551,7 +839,7 @@ async function autoAssignCasual(req, res) {
     // Get shift details
     const shift = await prisma.shifts.findUnique({
       where: { shift_id: Number(shift_id) },
-      select: { shift_id: true, branch_id: true, shift_date: true, start_time: true, end_time: true },
+      select: { shift_id: true, branch_id: true, shift_date: true, start_time: true, end_time: true, period_id: true },
     });
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found." });
     if (shift.branch_id !== branch.branch_id) return res.status(403).json({ success: false, message: "Access denied." });
@@ -651,12 +939,21 @@ async function autoAssignCasual(req, res) {
     // time window. Every candidate reaching this point already fully covers the task (hard
     // filter 1 below) — this only ranks *how* generously, so an exact-fit window outranks
     // someone who's "available all day" for a 1-hour task.
+    //
+    // Round 6, Task 6: only reachable when this shift has no period_id (branch not using shift
+    // periods yet) — kept byte-identical so that path is unaffected. Shifts that DO belong to a
+    // period use periodAvailabilitySubScore below instead: period availability is a tick-box
+    // (in or out), so there's no "how generously" left to rank on — every candidate who passes
+    // the hard filter scores the same 1.0 here, same as the once-planned "no partial availability"
+    // build. Consequence: with periods, this dimension stops discriminating between candidates
+    // (they all tie at 1.0) and the shortlist ordering falls fully on skills/attendance/workload.
     function availabilitySubScore(availStart, availEnd) {
       const availDuration = availEnd - availStart;
       const taskDuration = shiftEnd - shiftStart;
       if (availDuration <= 0) return 0;
       return Math.min(1, taskDuration / availDuration);
     }
+    const PERIOD_AVAILABILITY_SUBSCORE = 1.0;
 
     // No attendance-quality or performance-rating data exists anywhere in the schema for casual
     // workers (no attendance model, no rating/review table). Rather than invent a metric, both
@@ -680,11 +977,32 @@ async function autoAssignCasual(req, res) {
     // matches regardless of exact time-of-day — this is an exact-date filter, not a range.
     const shiftDateOnly = new Date(`${shiftDateStr}T00:00:00.000Z`);
 
-    const [availRows, sameDayAssignments, pastAssignmentCounts] = await Promise.all([
-      prisma.casual_availability.findMany({
-        where: { staff_id: { in: staffIds }, day_of_week: dayOfWeek, week_start_date: shiftWeekStart },
-        select: { staff_id: true, available_from: true, available_to: true },
-      }),
+    // Round 6, Task 6: which availability source to query depends on whether this shift belongs
+    // to a shift period. A branch that hasn't set up periods (or has deactivated all of them)
+    // produces shifts with period_id === null, and for those the old casual_availability
+    // time-coverage check keeps running completely unchanged — this mirrors the same "no periods
+    // → behaves exactly as today" guarantee Task 2's generator gives, applied here to matching.
+    const shiftPeriodId = shift.period_id;
+
+    const [availRows, periodAvailRows, standingAvailRows, sameDayAssignments, pastAssignmentCounts] = await Promise.all([
+      shiftPeriodId
+        ? Promise.resolve([])
+        : prisma.casual_availability.findMany({
+            where: { staff_id: { in: staffIds }, day_of_week: dayOfWeek, week_start_date: shiftWeekStart },
+            select: { staff_id: true, available_from: true, available_to: true },
+          }),
+      shiftPeriodId
+        ? prisma.casual_period_availability.findMany({
+            where: { staff_id: { in: staffIds }, week_start_date: shiftWeekStart },
+            select: { staff_id: true, period_id: true },
+          })
+        : Promise.resolve([]),
+      shiftPeriodId
+        ? prisma.casual_standing_availability.findMany({
+            where: { staff_id: { in: staffIds }, day_of_week: dayOfWeek },
+            select: { staff_id: true, period_id: true },
+          })
+        : Promise.resolve([]),
       // Only this exact date's assignments — the previous version fetched every assignment a
       // staff member had *ever* had and filtered down to same-day in JS, an unbounded query that
       // grew without limit over the lifetime of the app.
@@ -700,6 +1018,28 @@ async function autoAssignCasual(req, res) {
     ]);
 
     const availByStaffId = Object.fromEntries(availRows.map(a => [a.staff_id, a]));
+
+    // Resolution order (Round 6, Task 6 spec): explicit weekly rows, if any exist for this staff
+    // this week, are used ALONE — a period not among them means unavailable, it does NOT fall
+    // back to the standing pattern. Only a staff member with zero explicit rows this week falls
+    // back to their standing pattern for this weekday.
+    const explicitPeriodsByStaffId = {}; // staff_id -> Set(period_id) — only populated when >=1 row exists
+    periodAvailRows.forEach(r => {
+      if (!explicitPeriodsByStaffId[r.staff_id]) explicitPeriodsByStaffId[r.staff_id] = new Set();
+      explicitPeriodsByStaffId[r.staff_id].add(r.period_id);
+    });
+    const standingPeriodsByStaffId = {}; // staff_id -> Set(period_id) for this exact weekday
+    standingAvailRows.forEach(r => {
+      if (!standingPeriodsByStaffId[r.staff_id]) standingPeriodsByStaffId[r.staff_id] = new Set();
+      standingPeriodsByStaffId[r.staff_id].add(r.period_id);
+    });
+    function isAvailableForPeriod(staffId) {
+      const explicit = explicitPeriodsByStaffId[staffId];
+      if (explicit) return explicit.has(shiftPeriodId);
+      const standing = standingPeriodsByStaffId[staffId];
+      return standing ? standing.has(shiftPeriodId) : false;
+    }
+
     const sameDayAssignmentsByStaffId = {};
     sameDayAssignments.forEach(a => {
       if (!sameDayAssignmentsByStaffId[a.staff_id]) sameDayAssignmentsByStaffId[a.staff_id] = [];
@@ -714,12 +1054,20 @@ async function autoAssignCasual(req, res) {
       const staffId = staffIdByUserId[cw.user_id];
       if (!staffId) { failReasons.unavailable++; continue; }
 
-      // Hard filter 1: weekly availability on this day and time overlaps
-      const avail = availByStaffId[staffId];
-      if (!avail) { failReasons.unavailable++; continue; }
-      const availStart = toMins(avail.available_from);
-      const availEnd   = toMins(avail.available_to);
-      if (availStart > shiftStart || availEnd < shiftEnd) { failReasons.unavailable++; continue; }
+      // Hard filter 1: availability for this shift's day. Period-based (binary) when the shift
+      // belongs to a shift period; otherwise the original time-coverage check, unchanged.
+      let availSubScore;
+      if (shiftPeriodId) {
+        if (!isAvailableForPeriod(staffId)) { failReasons.unavailable++; continue; }
+        availSubScore = PERIOD_AVAILABILITY_SUBSCORE;
+      } else {
+        const avail = availByStaffId[staffId];
+        if (!avail) { failReasons.unavailable++; continue; }
+        const availStart = toMins(avail.available_from);
+        const availEnd   = toMins(avail.available_to);
+        if (availStart > shiftStart || availEnd < shiftEnd) { failReasons.unavailable++; continue; }
+        availSubScore = availabilitySubScore(availStart, availEnd);
+      }
 
       // Hard filter 2: not double-booked on same date with overlapping times
       const doubleBooked = (sameDayAssignmentsByStaffId[staffId] || []).some(s =>
@@ -745,7 +1093,7 @@ async function autoAssignCasual(req, res) {
         pastAssignments,
         laborWarning,
         subScores: {
-          availability: availabilitySubScore(availStart, availEnd),
+          availability: availSubScore,
           skills: skillsSubScore(cw.user_id),
           attendance: NEUTRAL_SUBSCORE,
           performance: NEUTRAL_SUBSCORE,
@@ -872,6 +1220,12 @@ module.exports = {
   getMyAvailability,
   setMyAvailability,
   submitWeeklyAvailability,
+  getPeriodAvailability,
+  getPeriodAvailabilityHistory,
+  setPeriodAvailability,
+  getStandingAvailability,
+  setStandingAvailability,
+  setWeekAsStandingPattern,
   getManagerPool,
   autoAssignCasual,
   getPool,

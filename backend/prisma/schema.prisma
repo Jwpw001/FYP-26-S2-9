@@ -168,8 +168,36 @@ model branch_shift_periods {
   branch_task_templates branch_task_templates[]
   shift_tasks shift_tasks[]
   shifts      shifts[]
+  casual_period_availability   casual_period_availability[]
+  casual_standing_availability casual_standing_availability[]
 
   @@index([branch_id], map: "idx_branch_shift_periods_branch")
+}
+
+model casual_period_availability {
+  id              Int                 @id @default(autoincrement())
+  staff_id        Int
+  week_start_date DateTime            @db.Date
+  period_id       Int
+  created_at      DateTime            @default(now()) @db.Timestamptz(6)
+  staff           staff               @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
+  branch_shift_periods branch_shift_periods @relation(fields: [period_id], references: [period_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([staff_id, week_start_date, period_id])
+  @@index([staff_id, week_start_date], map: "idx_casual_period_availability_staff_week")
+}
+
+model casual_standing_availability {
+  id          Int                 @id @default(autoincrement())
+  staff_id    Int
+  period_id   Int
+  day_of_week Int                 @db.SmallInt
+  created_at  DateTime            @default(now()) @db.Timestamptz(6)
+  staff       staff               @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
+  branch_shift_periods branch_shift_periods @relation(fields: [period_id], references: [period_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([staff_id, period_id, day_of_week])
+  @@index([staff_id], map: "idx_casual_standing_availability_staff")
 }
 
 // Round 3, Task 3: a global reference list of gazetted public holidays, seeded once via
@@ -454,6 +482,8 @@ model staff {
   annual_leave_days_per_year                           Int                   @default(14)
   availability                                         availability[]
   casual_availability                                  casual_availability[]
+  casual_period_availability                           casual_period_availability[]
+  casual_standing_availability                         casual_standing_availability[]
   off_day_requests_off_day_requests_reviewed_byTostaff off_day_requests[]    @relation("off_day_requests_reviewed_byTostaff")
   off_day_requests_off_day_requests_staff_idTostaff    off_day_requests[]    @relation("off_day_requests_staff_idTostaff")
   branches                                             branches?             @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction, map: "staff_outlet_id_fkey")
