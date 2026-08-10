@@ -12,11 +12,6 @@ const {
     deleteShift,
     previewBulkPublish,
     publishBulkShifts,
-    generateWeeklySchedule,
-    confirmWeeklySchedule,
-    rescheduleStaff,
-    reviewWeeklySchedule,
-    previewRoster,
 } = require("../controllers/shiftController");
 
 const {
@@ -54,12 +49,7 @@ const MANAGER_ONLY = [ROLES.BRANCH_MANAGER, ROLES.SYSTEM_ADMIN];
 // ── Static routes first (must come before any /:param routes) ─────────────────
 
 router.get("/me/tasks",     verifyToken, allowRoles(...ALL_SHIFT_ROLES), getMyTasks);
-router.post("/generate-week",  verifyToken, allowRoles(...MANAGER_ONLY), generateWeeklySchedule);
 router.post("/generate",       verifyToken, allowRoles(...MANAGER_ONLY), generateShifts);
-router.post("/confirm-week",   verifyToken, allowRoles(...MANAGER_ONLY), confirmWeeklySchedule);
-router.post("/reschedule-staff", verifyToken, allowRoles(...MANAGER_ONLY), rescheduleStaff);
-router.post("/review-schedule",  verifyToken, allowRoles(...MANAGER_ONLY), reviewWeeklySchedule);
-router.get("/roster-preview",    verifyToken, allowRoles(...MANAGER_ONLY), previewRoster);
 router.post("/publish-bulk/preview", verifyToken, allowRoles(...MANAGER_ONLY), previewBulkPublish);
 router.post("/publish-bulk",         verifyToken, allowRoles(...MANAGER_ONLY), publishBulkShifts);
 
