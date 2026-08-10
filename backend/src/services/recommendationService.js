@@ -92,15 +92,19 @@ async function getShiftRecommendations(shiftId) {
   const userMap = Object.fromEntries((userRows || []).map(u => [u.user_id, u]));
 
   // 3. Load skill tags for all staff
+  // user_skill_tags has no proficiency_level column (that was always experience_level) — this
+  // used to select a nonexistent column, which Supabase/PostgREST rejects outright (42703), so
+  // skillTagRows was always null and every candidate showed "skills: none" to the AI regardless
+  // of what they actually held, and the deterministic fallback below always scored skillsSub 0.
   const { data: skillTagRows } = await supabaseAdmin
     .from("user_skill_tags")
-    .select("user_id, skill_id, proficiency_level, skills(name)")
+    .select("user_id, skill_id, experience_level, skills(name)")
     .in("user_id", userIds);
 
   const skillMap = {};
   (skillTagRows || []).forEach(t => {
     if (!skillMap[t.user_id]) skillMap[t.user_id] = [];
-    skillMap[t.user_id].push({ skill_id: t.skill_id, name: t.skills?.name, proficiency: t.proficiency_level });
+    skillMap[t.user_id].push({ skill_id: t.skill_id, name: t.skills?.name, proficiency: t.experience_level });
   });
 
   // 4. Load approved leave on shift date
@@ -224,7 +228,9 @@ async function getShiftRecommendations(shiftId) {
     const wPerf   = branchAlloc?.weight_performance  ?? 10;
     const wWork   = branchAlloc?.weight_workload     ?? 5;
     const NEUTRAL = 0.5;
-    const EXPERIENCE_SCORE = { junior: 0.5, intermediate: 0.75, senior: 1, expert: 1 };
+    // Same mapping casualController.js's autoAssignCasual scoring already uses for
+    // user_skill_tags.experience_level — kept identical rather than inventing a second one.
+    const EXPERIENCE_SCORE = { junior: 0.6, intermediate: 0.8, senior: 1, expert: 1 };
 
     const staffIds = staffRows.map(s => s.staff_id);
     const pastCounts = staffIds.length > 0
