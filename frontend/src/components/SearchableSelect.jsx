@@ -18,6 +18,11 @@ export default function SearchableSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // Cut-off dropdown fix: an ancestor with `overflow: hidden` (or a short viewport) can clip this
+  // dropdown when it always opens downward — flip it to open upward instead when there isn't
+  // enough room below the trigger. Measured once on open (trigger position doesn't move while a
+  // dropdown from the same trigger is open), not continuously tracked on scroll/resize.
+  const [dropUp, setDropUp] = useState(false);
   const ref = useRef(null);
   const inputRef = useRef(null);
 
@@ -34,7 +39,13 @@ export default function SearchableSelect({
   }, [open]);
 
   useEffect(() => {
-    if (open) { setQuery(""); if (searchable) setTimeout(() => inputRef.current?.focus(), 0); }
+    if (open) {
+      setQuery("");
+      if (searchable) setTimeout(() => inputRef.current?.focus(), 0);
+      const rect = ref.current?.getBoundingClientRect();
+      const estimatedDropdownHeight = 280; // search bar + a handful of options, generous estimate
+      setDropUp(!!rect && window.innerHeight - rect.bottom < estimatedDropdownHeight && rect.top > estimatedDropdownHeight);
+    }
   }, [open, searchable]);
 
   function pick(val) { onChange(val); setOpen(false); setQuery(""); }
@@ -57,7 +68,7 @@ export default function SearchableSelect({
         </div>
       </button>
       {open && (
-        <div style={s.dropdown}>
+        <div style={dropUp ? s.dropdownUp : s.dropdown}>
           {searchable && (
             <div style={s.searchWrap}>
               <Search size={12} color="#94A3B8" />
@@ -93,6 +104,7 @@ export default function SearchableSelect({
 const s = {
   trigger: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", width: "100%", padding: "8px 11px", border: "1.5px solid #E2E8F0", borderRadius: "9px", fontSize: "20px", background: "#FAFAFA", color: "#1C1B18", boxSizing: "border-box", outline: "none", fontFamily: "inherit", cursor: "pointer" },
   dropdown: { position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "#FFF", border: "1.5px solid #E2E8F0", borderRadius: "11px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", zIndex: 100, overflow: "hidden" },
+  dropdownUp: { position: "absolute", bottom: "calc(100% + 4px)", left: 0, right: 0, background: "#FFF", border: "1.5px solid #E2E8F0", borderRadius: "11px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", zIndex: 100, overflow: "hidden" },
   searchWrap: { display: "flex", alignItems: "center", gap: "8px", padding: "7px 10px", borderBottom: "1px solid #F1F5F9" },
   searchInput: { flex: 1, border: "none", outline: "none", fontSize: "19px", color: "#1C1B18", background: "transparent", fontFamily: "inherit" },
   optionList: { maxHeight: "220px", overflowY: "auto" },

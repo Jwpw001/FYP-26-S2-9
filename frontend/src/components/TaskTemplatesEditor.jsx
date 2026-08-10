@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "../lib/api";
 import SearchableSelect from "./SearchableSelect";
 import { Plus, Trash2, Copy, ChevronUp, ChevronDown, X } from "lucide-react";
@@ -7,7 +7,7 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 // Mon=0…Sun=6 — same convention as branch_settings.operating_days and casual_availability.day_of_week.
 const TODAY_DOW = (new Date().getDay() + 6) % 7;
 
-const EMPTY_DRAFT = { title: "", skill_id: "", start_time: "", end_time: "", required_workers: 1, period_id: "" };
+const EMPTY_DRAFT = { title: "", skill_id: "", required_workers: 1, period_ids: [] };
 
 // Shared by business-owner BranchDetail and manager Settings — both roles can edit a branch's
 // task templates (OWNER_OR_MGR on the backend), so the editor itself doesn't distinguish them.
@@ -100,10 +100,8 @@ export default function TaskTemplatesEditor({ branchId, skills = [] }) {
       template_id: row.template_id,
       title: row.title,
       skill_id: row.skill_id || "",
-      start_time: row.start_time ? row.start_time.slice(0, 5) : "",
-      end_time: row.end_time ? row.end_time.slice(0, 5) : "",
       required_workers: row.required_workers,
-      period_id: row.period_id || "",
+      period_ids: row.period_id ? [row.period_id] : [],
     });
   }
 
@@ -113,22 +111,36 @@ export default function TaskTemplatesEditor({ branchId, skills = [] }) {
     setError("");
     setWarning("");
     try {
-      const body = {
+      const baseBody = {
         day_of_week: activeDay,
         title: draft.title.trim(),
         skill_id: draft.skill_id || null,
-        start_time: draft.start_time || null,
-        end_time: draft.end_time || null,
         required_workers: Number(draft.required_workers) || 1,
-        period_id: draft.period_id || null,
       };
-      let res;
-      if (draft.template_id) {
-        res = await api.patch(`/api/business/branches/${branchId}/task-templates/${draft.template_id}`, body);
-      } else {
-        res = await api.post(`/api/business/branches/${branchId}/task-templates`, body);
+      // A task template row only ever carries one period_id — selecting multiple periods here
+      // means "put this task in each of those periods' shifts", so the first selection reuses
+      // this row (a straight update, or the create if it's new) and any additional selections
+      // become new sibling rows, cloned from the same title/skill/workers/day. Same "copy, never
+      // reference" shape the per-day Copy feature already uses elsewhere in this editor.
+      //
+      // The window is no longer a manually-typed value — each row's start/end comes straight
+      // from its OWN period (no period selected -> null, runs the full shift).
+      const periodIds = draft.period_ids?.length > 0 ? draft.period_ids : [null];
+      const warnings = [];
+      for (let i = 0; i < periodIds.length; i++) {
+        const period = periodIds[i] != null ? periodById[periodIds[i]] : null;
+        const body = {
+          ...baseBody,
+          period_id: periodIds[i],
+          start_time: period?.start_time?.slice(0, 5) || null,
+          end_time: period?.end_time?.slice(0, 5) || null,
+        };
+        const res = (i === 0 && draft.template_id)
+          ? await api.patch(`/api/business/branches/${branchId}/task-templates/${draft.template_id}`, body)
+          : await api.post(`/api/business/branches/${branchId}/task-templates`, body);
+        if (res?.warning) warnings.push(res.warning); // advisory only — save already succeeded
       }
-      if (res?.warning) setWarning(res.warning); // advisory only — save already succeeded
+      if (warnings.length > 0) setWarning(warnings.join(" "));
       setDraft(null);
       await load();
     } catch (e) {
@@ -320,7 +332,11 @@ export default function TaskTemplatesEditor({ branchId, skills = [] }) {
       {loading ? (
         <p style={{ fontSize: "13px", color: "#94A3B8" }}>Loading…</p>
       ) : (
-        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px", overflow: "hidden" }}>
+        /* overflow left visible (not "hidden") deliberately — the skill/period pickers below are
+           absolutely-positioned dropdowns that can extend past this card's auto-computed height
+           while editing a row; `overflow: hidden` here was clipping them and making options in
+           the clipped region unclickable. */
+        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "14px" }}>
           {dayRows.length === 0 && !draft && (
             <div style={{ textAlign: "center", padding: "28px" }}>
               <p style={{ fontSize: "13px", color: "#94A3B8" }}>No tasks set for {DAYS[activeDay]}.</p>
@@ -372,28 +388,36 @@ export default function TaskTemplatesEditor({ branchId, skills = [] }) {
 function TemplateDraftRow({ draft, setDraft, skills, activePeriods = [], onSave, onCancel, saving, isNew }) {
   const inputStyle = { width: "100%", padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "7px", fontSize: "13px", boxSizing: "border-box" };
 
-  // Round 6, Task 2: picking a period defaults this task's own start/end to the period's window,
-  // but only when they're not already set — stays editable afterwards, never auto-overwrites a
-  // time the user already typed (e.g. a prep task inside the morning shift running 08:00-10:00,
-  // not the full 08:00-16:00).
-  function onPickPeriod(periodId) {
-    const period = activePeriods.find(p => String(p.period_id) === String(periodId));
-    setDraft(d => ({
-      ...d,
-      period_id: periodId,
-      start_time: d.start_time || period?.start_time?.slice(0, 5) || d.start_time,
-      end_time: d.end_time || period?.end_time?.slice(0, 5) || d.end_time,
-    }));
+  // A task's window is no longer typed in manually — it's just whichever period(s) it belongs
+  // to. Selecting multiple periods fans out into one row per period on save (saveDraft), and
+  // each of those rows takes its own window straight from its own period, not a shared manual
+  // time pair (the old design). A task with no period runs the full shift, same as before.
+  function onTogglePeriod(periodId) {
+    setDraft(d => {
+      const current = d.period_ids || [];
+      const already = current.includes(periodId);
+      const nextIds = already ? current.filter(id => id !== periodId) : [...current, periodId];
+      return { ...d, period_ids: nextIds };
+    });
   }
+  function onSetAllPeriods(allSelected) {
+    setDraft(d => ({ ...d, period_ids: allSelected ? [] : activePeriods.map(p => p.period_id) }));
+  }
+
+  const selectedPeriods = (draft.period_ids || []).map(id => activePeriods.find(p => p.period_id === id)).filter(Boolean);
+  const windowPreview = selectedPeriods.length === 0
+    ? "Full shift (no period)"
+    : selectedPeriods.map(p => `${p.name} ${p.start_time?.slice(0, 5)}–${p.end_time?.slice(0, 5)}`).join(" · ");
 
   return (
     <div style={{ padding: "12px", borderTop: isNew ? "1px solid #F1F5F9" : "none", background: "#FAFBFE" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px", gap: "8px", marginBottom: "8px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 80px", gap: "8px", marginBottom: "6px" }}>
         <input placeholder="Task title" style={inputStyle} value={draft.title} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} />
-        <input type="time" style={inputStyle} value={draft.start_time} onChange={e => setDraft(d => ({ ...d, start_time: e.target.value }))} />
-        <input type="time" style={inputStyle} value={draft.end_time} onChange={e => setDraft(d => ({ ...d, end_time: e.target.value }))} />
         <input type="number" min="1" max="99" style={{ ...inputStyle, textAlign: "center" }} value={draft.required_workers} onChange={e => setDraft(d => ({ ...d, required_workers: e.target.value }))} />
       </div>
+      <p style={{ fontSize: "12px", color: "#64748B", margin: "0 0 8px 2px" }}>
+        Window: <span style={{ fontWeight: "600", color: "#475569" }}>{windowPreview}</span>
+      </p>
       <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
         <div style={{ flex: 1 }}>
           <SearchableSelect
@@ -405,11 +429,11 @@ function TemplateDraftRow({ draft, setDraft, skills, activePeriods = [], onSave,
         </div>
         {activePeriods.length > 0 && (
           <div style={{ flex: 1 }}>
-            <SearchableSelect
-              options={activePeriods.map(p => ({ value: p.period_id, label: p.name }))}
-              value={draft.period_id}
-              onChange={onPickPeriod}
-              placeholder="No period"
+            <PeriodMultiSelect
+              periods={activePeriods}
+              value={draft.period_ids || []}
+              onToggle={onTogglePeriod}
+              onSetAll={onSetAllPeriods}
             />
           </div>
         )}
@@ -420,6 +444,71 @@ function TemplateDraftRow({ draft, setDraft, skills, activePeriods = [], onSave,
           <X size={14} />
         </button>
       </div>
+    </div>
+  );
+}
+
+// A task can now belong to more than one shift period at once (e.g. "Kitchen Prep" runs in both
+// the morning and evening crews) — saveDraft() fans a multi-selection out into one task template
+// row per period. Built as its own checklist rather than reusing SearchableSelect's single-value
+// SearchableSelect, since ticking multiple options and an "All periods" shortcut don't fit that
+// component's single-pick-and-close interaction.
+function PeriodMultiSelect({ periods, value, onToggle, onSetAll }) {
+  const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const rect = ref.current?.getBoundingClientRect();
+    const estimatedDropdownHeight = 240;
+    setDropUp(!!rect && window.innerHeight - rect.bottom < estimatedDropdownHeight && rect.top > estimatedDropdownHeight);
+  }, [open]);
+
+  const allSelected = periods.length > 0 && value.length === periods.length;
+  const label = value.length === 0 ? "No period"
+    : allSelected ? "All periods"
+    : value.length === 1 ? (periods.find(p => p.period_id === value[0])?.name || "1 period")
+    : `${value.length} periods`;
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", width: "100%", padding: "7px 9px", border: "1.5px solid #E2E8F0", borderRadius: "7px", fontSize: "13px", background: "#FFF", color: value.length ? "#1E293B" : "#94A3B8", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit" }}>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+        <ChevronDown size={12} color="#94A3B8" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }} />
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", left: 0, right: 0, zIndex: 100,
+          ...(dropUp ? { bottom: "calc(100% + 4px)" } : { top: "calc(100% + 4px)" }),
+          background: "#FFF", border: "1.5px solid #E2E8F0", borderRadius: "9px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
+          maxHeight: "220px", overflowY: "auto",
+        }}>
+          <div onMouseDown={() => onSetAll(allSelected)}
+            style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", fontSize: "13px", fontWeight: "700", color: "#2563EB", cursor: "pointer", borderBottom: "1px solid #F1F5F9" }}>
+            <input type="checkbox" readOnly checked={allSelected} style={{ pointerEvents: "none" }} />
+            All periods
+          </div>
+          {periods.map(p => {
+            const checked = value.includes(p.period_id);
+            return (
+              <div key={p.period_id} onMouseDown={() => onToggle(p.period_id)}
+                style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", fontSize: "13px", color: checked ? "#1E293B" : "#475569", fontWeight: checked ? "700" : "500", cursor: "pointer" }}>
+                <input type="checkbox" readOnly checked={checked} style={{ pointerEvents: "none" }} />
+                {p.name}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
