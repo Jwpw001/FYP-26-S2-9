@@ -360,6 +360,11 @@ export default function StaffDashboard() {
                 ))}
               </div>
             )}
+
+            <button onClick={() => navigate(onLeave ? "/regular-staff/leave" : "/regular-staff/swaps")}
+              style={{ width: "100%", background: "none", border: "none", marginTop: "12px", padding: "6px", fontSize: "18px", fontWeight: "600", color: "#2563EB", cursor: "pointer", textAlign: "center" }}>
+              View all my requests →
+            </button>
           </div>
 
           {/* Notifications */}
