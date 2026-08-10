@@ -8,6 +8,7 @@ import TaskTemplatesEditor from "../../components/TaskTemplatesEditor";
 import { useGoTo } from "../../components/PageTransition";
 import { Building2, MapPin, Users, ShieldCheck, Clock, Plus, Briefcase, Trash2, Star, Settings2, Calendar, Zap, Pencil, X, Save, Loader2, Check, Minus, Scale, Award, TrendingUp, BarChart3, RotateCcw } from "lucide-react";
 import { fetchDefaultHolidays } from "../../utils/publicHolidays";
+import BranchHolidaySettings from "../../components/BranchHolidaySettings";
 import UserAvatar from "../../components/UserAvatar";
 
 if (typeof document !== "undefined" && !document.getElementById("bo-branchdetail-styles")) {
@@ -43,6 +44,7 @@ const DEFAULT_BRANCH_SETTINGS = {
   work_hours_day: 8, max_work_hours_day: 12,
   max_consecutive_days: 6, allow_overtime: false, min_workers_per_assignment: 1,
   off_days_per_week: 1,
+  treat_public_holidays_as_working: false,
 };
 
 function parseBranchSettings(s, defaultHolidays = []) {
@@ -55,6 +57,7 @@ function parseBranchSettings(s, defaultHolidays = []) {
     allow_overtime: s.allow_overtime ?? false,
     min_workers_per_assignment: s.min_workers_per_assignment ?? 1,
     off_days_per_week: s.off_days_per_week ?? 1,
+    treat_public_holidays_as_working: s.treat_public_holidays_as_working ?? false,
   };
 }
 
@@ -818,21 +821,16 @@ export default function BranchDetail() {
                 </button>
               </div>
 
-              <p style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>Public holidays</p>
-              <div style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", maxHeight: "200px", overflowY: "auto" }}>
-                {bizSettings.holidays.map((h, i) => (
-                  <div key={h.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderBottom: i < bizSettings.holidays.length - 1 ? "1px solid #F1F5F9" : "none" }}>
-                    <div>
-                      <p style={{ fontSize: "12px", fontWeight: "600", color: "#1E293B" }}>{h.name}</p>
-                      <p style={{ fontSize: "11px", color: "#94A3B8" }}>{h.date}</p>
-                    </div>
-                    <button type="button" onClick={() => toggleBizHoliday(i)} disabled={!editingBizSetup}
-                      style={{ width: "34px", height: "18px", borderRadius: "9px", border: "none", background: h.enabled ? "#22C55E" : "#D1D5DB", cursor: editingBizSetup ? "pointer" : "default", position: "relative", transition: "background 0.2s", flexShrink: 0, opacity: editingBizSetup ? 1 : 0.7 }}>
-                      <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: h.enabled ? "19px" : "3px", transition: "left 0.2s", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <BranchHolidaySettings
+                branchId={id}
+                holidays={bizSettings.holidays}
+                treatPublicHolidaysAsWorking={bizSettings.treat_public_holidays_as_working}
+                onToggleWorking={v => setBiz("treat_public_holidays_as_working", v)}
+                onHolidayToggle={toggleBizHoliday}
+                editable={editingBizSetup}
+                onClosed={fetchBizSettings}
+                compact
+              />
             </div>
 
             <div style={{ overflowY: "auto", padding: "24px 20px", background: "#FAFBFE" }}>
