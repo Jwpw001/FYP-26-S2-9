@@ -100,15 +100,29 @@ function BranchCard({ branch, q, onEdit }) {
   );
 }
 
+const INDUSTRY_META = {
+  fnb:    { label: "F&B",    emoji: "🍽️" },
+  clinic: { label: "Clinic", emoji: "🩺" },
+  outlet: { label: "Outlet", emoji: "🛍️" },
+};
+
 function EditSkillsModal({ branch, onClose }) {
   const [skills, setSkills]           = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
+  const [industry, setIndustryState]  = useState(null);
+  const [buckets, setBuckets]         = useState([]);
+  const [reuse, setReuse]             = useState([]);
+  const [catalog, setCatalog]         = useState([]);
+  const [savingIndustry, setSavingIndustry] = useState(false);
   const [loading, setLoading]         = useState(true);
   const [newSkill, setNewSkill]       = useState("");
   const [pendingName, setPendingName] = useState("");
   const [newDesc, setNewDesc]         = useState("");
   const [adding, setAdding]           = useState(false);
   const [deleting, setDeleting]       = useState(null);
+  const [editingSkill, setEditingSkill] = useState(null); // skill_id being edited
+  const [editName, setEditName]       = useState("");
+  const [editDesc, setEditDesc]       = useState("");
+  const [savingEdit, setSavingEdit]   = useState(false);
   const [error, setError]             = useState("");
   const [success, setSuccess]         = useState("");
   const [changed, setChanged]         = useState(false);
@@ -118,17 +132,28 @@ function EditSkillsModal({ branch, onClose }) {
   async function load() {
     setLoading(true);
     try {
-      const [branchRes, globalRes] = await Promise.allSettled([
+      const [branchRes, suggRes] = await Promise.allSettled([
         api.get(`/api/business/branches/${branch.branch_id}/skills`),
-        api.get("/api/skills/global"),
+        api.get(`/api/business/branches/${branch.branch_id}/skill-suggestions`),
       ]);
-      const branchSkills = branchRes.status === "fulfilled" ? (branchRes.value.skills || []) : [];
-      const globalSkills = globalRes.status === "fulfilled" ? (globalRes.value.skills || []) : [];
-      const linkedIds = new Set(branchSkills.map(s => s.skill_id));
-      setSkills(branchSkills);
-      setSuggestions(globalSkills.filter(s => !linkedIds.has(s.skill_id)));
+      setSkills(branchRes.status === "fulfilled" ? (branchRes.value.skills || []) : []);
+      if (suggRes.status === "fulfilled") {
+        setIndustryState(suggRes.value.industry || null);
+        setBuckets(suggRes.value.buckets || []);
+        setReuse(suggRes.value.reuse || []);
+        setCatalog(suggRes.value.catalog || []);
+      }
     } catch { }
     finally { setLoading(false); }
+  }
+
+  async function chooseIndustry(key) {
+    setSavingIndustry(true); setError("");
+    try {
+      await api.put(`/api/business/branches/${branch.branch_id}/settings`, { industry: key });
+      await load();
+    } catch (err) { setError(err.message); }
+    finally { setSavingIndustry(false); }
   }
 
   async function addFromSuggestion(skill_id) {
@@ -139,6 +164,23 @@ function EditSkillsModal({ branch, onClose }) {
       await load();
     } catch (err) { setError(err.message); }
     finally { setAdding(false); }
+  }
+
+  function startEdit(sk) {
+    setEditingSkill(sk.skill_id); setEditName(sk.name); setEditDesc(sk.description || ""); setError("");
+  }
+
+  async function saveEdit() {
+    const n = editName.trim();
+    if (!n) return;
+    setSavingEdit(true); setError("");
+    try {
+      await api.patch(`/api/business/branches/${branch.branch_id}/skills/${editingSkill}`, { name: n, description: editDesc });
+      setEditingSkill(null);
+      setChanged(true);
+      await load();
+    } catch (err) { setError(err.message); }
+    finally { setSavingEdit(false); }
   }
 
   async function addCustomSkill(name, description = "") {
@@ -272,20 +314,46 @@ function EditSkillsModal({ branch, onClose }) {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: "10px" }}>
-                  {skills.map(sk => (
+                  {skills.map(sk => editingSkill === sk.skill_id ? (
+                    <div key={sk.skill_id}
+                      style={{ background: "#EFF6FF", border: "1.5px solid #BFDBFE", borderRadius: "14px", padding: "12px", gridColumn: "1 / -1" }}>
+                      <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Skill name"
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "8px", border: "1.5px solid #BFDBFE", fontSize: "19px", color: "#1E293B", outline: "none", fontFamily: "inherit", background: "#fff", boxSizing: "border-box", marginBottom: "6px" }} />
+                      <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Description (optional)" rows={2}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "8px", border: "1.5px solid #BFDBFE", fontSize: "18px", color: "#1E293B", outline: "none", fontFamily: "inherit", background: "#fff", resize: "none", boxSizing: "border-box", lineHeight: 1.5, marginBottom: "8px" }} />
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button onClick={() => setEditingSkill(null)}
+                          style={{ padding: "6px 14px", borderRadius: "8px", border: "1px solid #BFDBFE", background: "#fff", fontSize: "18px", fontWeight: "600", color: "#64748B", cursor: "pointer" }}>
+                          Cancel
+                        </button>
+                        <button onClick={saveEdit} disabled={savingEdit || !editName.trim()}
+                          style={{ flex: 1, padding: "6px 14px", borderRadius: "8px", border: "none", background: "#3B82F6", color: "#fff", fontSize: "18px", fontWeight: "700", cursor: "pointer", opacity: savingEdit || !editName.trim() ? 0.6 : 1 }}>
+                          {savingEdit ? "Saving…" : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                     <div key={sk.skill_id}
                       style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "14px", padding: "14px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", position: "relative" }}>
                       <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: "#3B82F6", color: "#fff", fontSize: "20px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "8px" }}>
                         {sk.name[0]?.toUpperCase()}
                       </div>
-                      <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B", marginBottom: "4px", lineHeight: 1.3 }}>{sk.name}</p>
+                      <p style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B", marginBottom: "4px", lineHeight: 1.3, paddingRight: "36px" }}>{sk.name}</p>
                       <p style={{ fontSize: "18px", color: "#64748B", lineHeight: 1.5, minHeight: "26px" }}>{sk.description || "—"}</p>
-                      <button onClick={() => removeSkill(sk.skill_id)} disabled={deleting === sk.skill_id}
-                        style={{ position: "absolute", top: "10px", right: "10px", width: "22px", height: "22px", borderRadius: "6px", border: "none", background: "transparent", color: "#CBD5E1", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: deleting === sk.skill_id ? 0.4 : 1 }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#EF4444"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#CBD5E1"; }}>
-                        <X size={12} strokeWidth={2.5} />
-                      </button>
+                      <div style={{ position: "absolute", top: "10px", right: "10px", display: "flex", gap: "2px" }}>
+                        <button onClick={() => startEdit(sk)}
+                          style={{ width: "22px", height: "22px", borderRadius: "6px", border: "none", background: "transparent", color: "#CBD5E1", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#EFF6FF"; e.currentTarget.style.color = "#3B82F6"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#CBD5E1"; }}>
+                          <Pencil size={11} strokeWidth={2.5} />
+                        </button>
+                        <button onClick={() => removeSkill(sk.skill_id)} disabled={deleting === sk.skill_id}
+                          style={{ width: "22px", height: "22px", borderRadius: "6px", border: "none", background: "transparent", color: "#CBD5E1", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: deleting === sk.skill_id ? 0.4 : 1 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#EF4444"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#CBD5E1"; }}>
+                          <X size={12} strokeWidth={2.5} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -299,28 +367,83 @@ function EditSkillsModal({ branch, onClose }) {
               <h4 style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B", marginBottom: "3px" }}>Suggested Skills</h4>
               <p style={{ fontSize: "18px", color: "#94A3B8" }}>Click to add to this branch</p>
             </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
-              {suggestions.length === 0 ? (
+
+            {/* Industry picker — reused for role-tag suggestions, and to switch buckets later */}
+            <div style={{ padding: "12px 14px 0", flexShrink: 0 }}>
+              <p style={{ fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>
+                {industry ? "Branch type" : "What kind of branch is this?"}
+              </p>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                {buckets.map(b => {
+                  const meta = INDUSTRY_META[b.key] || { label: b.label, emoji: "🏷️" };
+                  const isActive = industry === b.key;
+                  return (
+                    <button key={b.key} type="button" onClick={() => !isActive && chooseIndustry(b.key)} disabled={savingIndustry}
+                      style={{ display: "flex", alignItems: "center", gap: "5px", padding: "6px 12px", borderRadius: "100px", border: `1.5px solid ${isActive ? "#3B82F6" : "#E2E8F0"}`, background: isActive ? "#EFF6FF" : "#fff", color: isActive ? "#1D4ED8" : "#475569", fontSize: "18px", fontWeight: "700", cursor: isActive ? "default" : "pointer", opacity: savingIndustry ? 0.6 : 1 }}>
+                      <span>{meta.emoji}</span> {meta.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 12px" }}>
+              {reuse.length === 0 && catalog.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "30px 12px" }}>
-                  <p style={{ fontSize: "19px", color: "#94A3B8" }}>No more suggestions — all added, or type a custom skill.</p>
+                  <p style={{ fontSize: "19px", color: "#94A3B8" }}>
+                    {industry ? "No more suggestions for this branch type — try another one above, or type a custom skill." : "Pick a branch type above for role-tag suggestions, or type a custom skill."}
+                  </p>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {suggestions.map(s => (
-                    <div key={s.skill_id} onClick={() => addFromSuggestion(s.skill_id)}
-                      style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "12px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "8px" }}>
-                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "#F1F5F9", color: "#64748B", fontSize: "19px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          {s.name[0]?.toUpperCase()}
-                        </div>
-                        <p style={{ fontSize: "19px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</p>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", fontSize: "18px", fontWeight: "600", color: "#3B82F6" }}>
-                        <Plus size={11} strokeWidth={2.5} color="#3B82F6" /> Add
+                <>
+                  {reuse.length > 0 && (
+                    <div style={{ marginBottom: catalog.length > 0 ? "18px" : 0 }}>
+                      <p style={{ fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
+                        From your other branches
+                      </p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {reuse.map(s => (
+                          <div key={s.skill_id} onClick={() => addFromSuggestion(s.skill_id)}
+                            style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "12px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "8px" }}>
+                              <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "#F1F5F9", color: "#64748B", fontSize: "19px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                {s.name[0]?.toUpperCase()}
+                              </div>
+                              <p style={{ fontSize: "19px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</p>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", fontSize: "18px", fontWeight: "600", color: "#3B82F6" }}>
+                              <Plus size={11} strokeWidth={2.5} color="#3B82F6" /> Add
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+
+                  {catalog.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: "17px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
+                        Suggested for {(INDUSTRY_META[industry] || {}).label || industry}
+                      </p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {catalog.map(s => (
+                          <div key={s.skill_id} onClick={() => addFromSuggestion(s.skill_id)}
+                            style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "12px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", cursor: "pointer" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "8px" }}>
+                              <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "#F1F5F9", color: "#64748B", fontSize: "19px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                {s.name[0]?.toUpperCase()}
+                              </div>
+                              <p style={{ fontSize: "19px", fontWeight: "700", color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</p>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", fontSize: "18px", fontWeight: "600", color: "#3B82F6" }}>
+                              <Plus size={11} strokeWidth={2.5} color="#3B82F6" /> Add
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

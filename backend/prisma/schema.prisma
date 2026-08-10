@@ -80,6 +80,10 @@ model branch_settings {
   // generally, except Christmas Day specifically").
   treat_public_holidays_as_working Boolean? @default(false)
   business_id                Int?
+  // Picked once via the branch's Skill Tags panel (F&B / Clinic / Outlet, etc.) to filter the
+  // skills.industry_type catalog into a relevant role-tag suggestion list. Per-branch rather than
+  // on `businesses` — a single business can run branches in different industries.
+  industry                   String?     @db.VarChar(30)
   businesses                 businesses? @relation(fields: [business_id], references: [business_id], onDelete: NoAction, onUpdate: NoAction)
   branches                   branches    @relation(fields: [branch_id], references: [branch_id], onDelete: Cascade, onUpdate: NoAction, map: "outlet_settings_outlet_id_fkey")
 }

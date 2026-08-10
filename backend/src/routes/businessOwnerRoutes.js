@@ -3,7 +3,7 @@ const router = express.Router();
 const protect = require("../middleware/authMiddleware");
 const allowRoles = require("../middleware/roleMiddleware");
 const ROLES = require("../constants/roles");
-const { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates, markDateClosed } = require("../controllers/businessOwnerController");
+const { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, getBranchSkillSuggestions, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates, markDateClosed } = require("../controllers/businessOwnerController");
 
 router.use(protect);
 
@@ -37,6 +37,7 @@ router.get("/branch-skills-summary",                   OWNER_OR_MGR, getBranchSk
 router.post("/skills",                                OWNER_OR_MGR, createBusinessSkill);
 router.delete("/skills/:skill_id",                    OWNER_OR_MGR, deleteBusinessSkill);
 router.get("/branches/:branch_id/skills",              OWNER_OR_MGR, getBranchSkills);
+router.get("/branches/:branch_id/skill-suggestions",   OWNER_OR_MGR, getBranchSkillSuggestions);
 router.post("/branches/:branch_id/skills",             OWNER_OR_MGR, createBranchSkill);
 router.patch("/branches/:branch_id/skills/:skill_id",  OWNER_OR_MGR, updateBranchSkill);
 router.delete("/branches/:branch_id/skills/:skill_id", OWNER_OR_MGR, deleteBranchSkill);

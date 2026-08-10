@@ -469,8 +469,14 @@ const createTaskTemplate = async (req, res) => {
         day_of_week: dow,
         title: title.trim(),
         skill_id: skill_id ? Number(skill_id) : null,
-        start_time: start_time ? new Date(`1970-01-01T${start_time}`) : null,
-        end_time: end_time ? new Date(`1970-01-01T${end_time}`) : null,
+        // Explicit UTC (Z) — without it, new Date() parses this as local server time, so the
+        // stored value is offset by whatever the server's zone was on 1970-01-01. For
+        // Asia/Singapore that's historically +7:30 (it only became +8:00 in 1982), so a typed
+        // "08:00" was silently landing in the DB as 00:30 — a 7.5-hour error, not a rounding
+        // quirk. Matches how every other controller in this codebase already builds these
+        // (aiAssistantExecuteController, taskController, shiftController, shiftGenerationController).
+        start_time: start_time ? new Date(`1970-01-01T${start_time}Z`) : null,
+        end_time: end_time ? new Date(`1970-01-01T${end_time}Z`) : null,
         required_workers: Number(required_workers) || 1,
         sort_order: nextSort,
       },
@@ -510,8 +516,8 @@ const updateTaskTemplate = async (req, res) => {
       data.title = title.trim();
     }
     if (skill_id !== undefined) data.skill_id = skill_id ? Number(skill_id) : null;
-    if (start_time !== undefined) data.start_time = start_time ? new Date(`1970-01-01T${start_time}`) : null;
-    if (end_time !== undefined) data.end_time = end_time ? new Date(`1970-01-01T${end_time}`) : null;
+    if (start_time !== undefined) data.start_time = start_time ? new Date(`1970-01-01T${start_time}Z`) : null;
+    if (end_time !== undefined) data.end_time = end_time ? new Date(`1970-01-01T${end_time}Z`) : null;
     if (required_workers !== undefined) data.required_workers = Number(required_workers) || 1;
     if (sort_order !== undefined) data.sort_order = Number(sort_order) || 0;
     if (is_active !== undefined) data.is_active = !!is_active;
@@ -876,6 +882,64 @@ const getBranchSkills = async (req, res) => {
   }
 };
 
+const INDUSTRY_BUCKETS = [
+  { key: "fnb", label: "F&B" },
+  { key: "clinic", label: "Clinic" },
+  { key: "outlet", label: "Outlet" },
+];
+
+// GET /api/business/branches/:branch_id/skill-suggestions
+// Two suggestion sources, ranked ahead of the (unrelated, platform-wide) global catalog that
+// EditSkillsModal used to show undifferentiated:
+//   1. `reuse` — skills this business already uses on its OTHER branches. A skill typed in for
+//      Branch A is a normal business-scoped skill (see createBranchSkill), so it's already
+//      sitting there for Branch B to pick up — this just surfaces it instead of letting it get
+//      lost in an unranked list, the same "recently used / your workspace" pattern as Slack's
+//      recent-emoji picker or GitHub's repo-scoped label suggestions.
+//   2. `catalog` — generic role tags for the branch's chosen industry (skills.is_catalog +
+//      industry_type), once one is picked via PUT .../settings { industry }.
+const getBranchSkillSuggestions = async (req, res) => {
+  try {
+    const branch_id = Number(req.params.branch_id);
+    const biz = await resolveBusinessId(req.user);
+    if (!biz || !(await verifyBranchAccess(req.user, branch_id))) {
+      return res.status(404).json({ success: false, message: "Branch not found." });
+    }
+
+    const { data: settingsRow } = await supabaseAdmin.from("branch_settings").select("industry").eq("branch_id", branch_id).maybeSingle();
+    const industry = settingsRow?.industry || null;
+
+    const { data: linkedRows } = await supabaseAdmin.from("branch_skills").select("skill_id").eq("branch_id", branch_id);
+    const linkedIds = new Set((linkedRows || []).map(r => r.skill_id));
+
+    // deleted_at: branches are soft-deleted (kept for history/audit), so a deleted branch's
+    // branch_skills rows are still in the table — without this filter, skills that only ever
+    // lived on a since-deleted branch would wrongly resurface as "from your other branches".
+    const { data: businessBranches } = await supabaseAdmin.from("branches").select("branch_id").eq("business_id", biz.business_id).is("deleted_at", null);
+    const branchIds = (businessBranches || []).map(b => b.branch_id);
+    const { data: reuseRows } = branchIds.length
+      ? await supabaseAdmin.from("branch_skills").select("skill_id, skills(skill_id, name, description)").in("branch_id", branchIds)
+      : { data: [] };
+    const seenReuse = new Set();
+    const reuse = (reuseRows || [])
+      .map(r => r.skills)
+      .filter(s => s && s.name && !linkedIds.has(s.skill_id) && !seenReuse.has(s.skill_id) && seenReuse.add(s.skill_id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const catalog = industry
+      ? await prisma.skills.findMany({
+          where: { is_catalog: true, industry_type: industry, skill_id: { notIn: [...linkedIds] } },
+          orderBy: { name: "asc" },
+          select: { skill_id: true, name: true, description: true },
+        })
+      : [];
+
+    return res.json({ success: true, industry, buckets: INDUSTRY_BUCKETS, reuse, catalog });
+  } catch (error) {
+    return sendServerError(res, error, req);
+  }
+};
+
 // POST /api/business/branches/:branch_id/skills
 // Body: { skill_id } — link existing global skill
 //    OR { name, description } — create new skill then link
@@ -884,7 +948,8 @@ const createBranchSkill = async (req, res) => {
     const branch_id = Number(req.params.branch_id);
     const { skill_id, name, description } = req.body;
 
-    if (!(await verifyBranchAccess(req.user, branch_id))) {
+    const biz = await resolveBusinessId(req.user);
+    if (!biz || !(await verifyBranchAccess(req.user, branch_id))) {
       return res.status(404).json({ success: false, message: "Branch not found." });
     }
 
@@ -893,11 +958,19 @@ const createBranchSkill = async (req, res) => {
       skid = Number(skill_id);
     } else {
       if (!name?.trim()) return res.status(400).json({ success: false, message: "Skill name is required." });
-      // Reuse an existing global skill with the same name, or create one
-      const existing = await prisma.skills.findFirst({ where: { name: { equals: name.trim(), mode: "insensitive" }, branch_id: null } });
+      // Reuse an existing skill with the same name already owned by this business (any of its
+      // branches) before creating a new one, so the same "Barista" typed for two branches doesn't
+      // fork into two separate skill rows.
+      const existing = await prisma.skills.findFirst({ where: { name: { equals: name.trim(), mode: "insensitive" }, business_id: biz.business_id } });
       skid = existing
         ? existing.skill_id
-        : (await prisma.skills.create({ data: { name: name.trim(), description: description || null, created_by: req.user.user_id } })).skill_id;
+        // business_id scopes this to the owner's own business — without it, every custom skill
+        // any business creates lands in the shared, platform-wide `branch_id: null` catalog
+        // alongside every other tenant's, which is why a skill added for one branch never
+        // usefully "came back" as a suggestion for another branch of the SAME business: it was
+        // there, just buried among everyone else's. business_id also gates updateBranchSkill,
+        // which checks skill ownership before allowing an edit.
+        : (await prisma.skills.create({ data: { name: name.trim(), description: description || null, created_by: req.user.user_id, business_id: biz.business_id } })).skill_id;
     }
 
     const { data: already } = await supabaseAdmin.from("branch_skills").select("id").eq("branch_id", branch_id).eq("skill_id", skid).maybeSingle();
@@ -1067,10 +1140,13 @@ const getBusinessSkillsForAssignment = async (req, res) => {
     } else {
       const biz = await resolveBusinessId(req.user);
       if (!biz) return res.json({ success: true, skills: [] });
+      // deleted_at: branches are soft-deleted — without this, a skill that only ever lived on a
+      // since-deleted branch still shows up here as "assignable" to staff.
       const { data: branches } = await supabaseAdmin
         .from("branches")
         .select("branch_id")
-        .eq("business_id", biz.business_id);
+        .eq("business_id", biz.business_id)
+        .is("deleted_at", null);
       branchIds = (branches || []).map(b => b.branch_id);
     }
 
@@ -1147,10 +1223,13 @@ const updateBranchSettings = async (req, res) => {
     const { data: branch } = await supabaseAdmin.from("branches").select("branch_id, open_time, close_time").eq("branch_id", branch_id).eq("business_id", biz.business_id).maybeSingle();
     if (!branch) return res.status(404).json({ success: false, message: "Branch not found." });
 
-    const { operating_days, open_time, close_time, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment, treat_public_holidays_as_working } = req.body;
+    const { operating_days, open_time, close_time, holidays, work_hours_day, max_work_hours_day, max_consecutive_days, allow_overtime, min_workers_per_assignment, treat_public_holidays_as_working, industry } = req.body;
 
     if (operating_days && !/^[01]{7}$/.test(operating_days)) {
       return res.status(400).json({ success: false, message: "operating_days must be a 7-character string of 0s and 1s." });
+    }
+    if (industry !== undefined && industry !== null && !["fnb", "clinic", "outlet"].includes(industry)) {
+      return res.status(400).json({ success: false, message: "industry must be one of: fnb, clinic, outlet." });
     }
 
     const upsertData = {
@@ -1163,6 +1242,7 @@ const updateBranchSettings = async (req, res) => {
       ...(allow_overtime !== undefined && { allow_overtime }),
       ...(min_workers_per_assignment !== undefined && { min_workers_per_assignment }),
       ...(treat_public_holidays_as_working !== undefined && { treat_public_holidays_as_working: !!treat_public_holidays_as_working }),
+      ...(industry !== undefined && { industry }),
       updated_at: new Date().toISOString(),
     };
 
@@ -1370,4 +1450,4 @@ const getBranchSkillsSummary = async (req, res) => {
   }
 };
 
-module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates, markDateClosed, verifyBranchAccess };
+module.exports = { getMyBranches, createBranch, updateBranch, deleteBranch, getAllStaff, getAllManagers, getBranchStaff, getBranchManagers, getManagerDetail, updateManagerDetail, deleteManagerDetail, getStaffDetail, getStaffKpi, updateStaffDetail, deleteStaffDetail, getMyBusiness, updateMyBusinessPlan, getBranchSkills, getBranchSkillSuggestions, createBranchSkill, updateBranchSkill, deleteBranchSkill, getBusinessStats, getRoleTemplates, upsertRoleTemplates, getBusinessSkills, createBusinessSkill, deleteBusinessSkill, getBusinessSkillsForAssignment, getBranchSkillsSummary, getBusinessSettings, updateBusinessSettings, updateAllocationPrefs, getBranchSettings, updateBranchSettings, updateBranchAllocationPrefs, getTaskTemplates, createTaskTemplate, updateTaskTemplate, deleteTaskTemplate, reorderTaskTemplates, copyTaskTemplates, markDateClosed, verifyBranchAccess };
