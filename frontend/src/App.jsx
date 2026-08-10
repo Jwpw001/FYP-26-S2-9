@@ -1,78 +1,87 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PageTransitionProvider } from "./components/PageTransition";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
-import GetStarted from "./pages/GetStarted";
-import RegisterBusiness from "./pages/RegisterBusiness";
-import CreateAccount from "./pages/CreateAccount";
 import ProtectedRoute from "./components/ProtectedRoute";
-import NotificationsPage from "./components/NotificationsPage";
+
+// Every route below used to be a top-level import, which meant Vite bundled all of them —
+// every business-owner, manager, system-admin, regular-staff, and casual-staff page — into one
+// ~2.1MB (550KB gzipped) chunk that even a casual worker's browser had to download and parse
+// just to see their own 5 pages. lazy() + Suspense splits each into its own chunk, fetched only
+// when that route is actually visited. Home/Login stay eager — they're the first thing almost
+// everyone sees, so there's no benefit to adding a network round-trip before they can render.
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const GetStarted = lazy(() => import("./pages/GetStarted"));
+const RegisterBusiness = lazy(() => import("./pages/RegisterBusiness"));
+const CreateAccount = lazy(() => import("./pages/CreateAccount"));
+const NotificationsPage = lazy(() => import("./components/NotificationsPage"));
 
 // Manager
-import ManagerDashboard   from "./pages/manager/Dashboard";
-import StaffList          from "./pages/manager/StaffList";
-import StaffProfile       from "./pages/manager/StaffProfile";
-import AddStaff           from "./pages/manager/AddStaff";
-import ShiftsList         from "./pages/manager/ShiftsList";
-import CreateShift        from "./pages/manager/CreateShift";
-import ShiftDetail        from "./pages/manager/ShiftDetail";
-import AvailabilityLeave  from "./pages/manager/AvailabilityLeave";
-import Attendance         from "./pages/manager/Attendance";
-import Reports            from "./pages/manager/Reports";
-import ReportHistory      from "./pages/manager/ReportHistory";
-import ManagerNotifications from "./pages/manager/Notifications";
-import SkillSettings       from "./pages/manager/SkillSettings";
-import ManagerSettings     from "./pages/manager/Settings";
-import ManagerCasualPool   from "./pages/manager/CasualPool";
+const ManagerDashboard   = lazy(() => import("./pages/manager/Dashboard"));
+const StaffList          = lazy(() => import("./pages/manager/StaffList"));
+const StaffProfile       = lazy(() => import("./pages/manager/StaffProfile"));
+const AddStaff           = lazy(() => import("./pages/manager/AddStaff"));
+const ShiftsList         = lazy(() => import("./pages/manager/ShiftsList"));
+const CreateShift        = lazy(() => import("./pages/manager/CreateShift"));
+const ShiftDetail        = lazy(() => import("./pages/manager/ShiftDetail"));
+const AvailabilityLeave  = lazy(() => import("./pages/manager/AvailabilityLeave"));
+const Attendance         = lazy(() => import("./pages/manager/Attendance"));
+const Reports            = lazy(() => import("./pages/manager/Reports"));
+const ReportHistory      = lazy(() => import("./pages/manager/ReportHistory"));
+const ManagerNotifications = lazy(() => import("./pages/manager/Notifications"));
+const SkillSettings       = lazy(() => import("./pages/manager/SkillSettings"));
+const ManagerSettings     = lazy(() => import("./pages/manager/Settings"));
+const ManagerCasualPool   = lazy(() => import("./pages/manager/CasualPool"));
+const OMInvitations       = lazy(() => import("./pages/manager/Invitations"));
 
 // System Admin
-import AdminDashboard      from "./pages/system-admin/Dashboard";
-import SkillTags           from "./pages/system-admin/SkillTags";
-import Businesses          from "./pages/system-admin/Businesses";
-import BusinessDetail      from "./pages/system-admin/BusinessDetail";
-import BranchDetail        from "./pages/system-admin/BranchDetail";
-import AdminStaff          from "./pages/system-admin/Staff";
-import AdminStaffDetail    from "./pages/system-admin/StaffDetail";
-import AdminReports        from "./pages/system-admin/Reports";
-import AdminReportHistory  from "./pages/system-admin/ReportHistory";
+const AdminDashboard      = lazy(() => import("./pages/system-admin/Dashboard"));
+const SkillTags           = lazy(() => import("./pages/system-admin/SkillTags"));
+const Businesses          = lazy(() => import("./pages/system-admin/Businesses"));
+const BusinessDetail      = lazy(() => import("./pages/system-admin/BusinessDetail"));
+const BranchDetail        = lazy(() => import("./pages/system-admin/BranchDetail"));
+const AdminStaff          = lazy(() => import("./pages/system-admin/Staff"));
+const AdminStaffDetail    = lazy(() => import("./pages/system-admin/StaffDetail"));
+const AdminReports        = lazy(() => import("./pages/system-admin/Reports"));
+const AdminReportHistory  = lazy(() => import("./pages/system-admin/ReportHistory"));
 
 // Regular Staff
-import StaffDashboard from "./pages/regular-staff/Dashboard";
-import MyShifts       from "./pages/regular-staff/MyShifts";
-import LeaveRequests  from "./pages/regular-staff/LeaveRequests";
-import SwapRequests   from "./pages/regular-staff/SwapRequests";
+const StaffDashboard = lazy(() => import("./pages/regular-staff/Dashboard"));
+const MyShifts       = lazy(() => import("./pages/regular-staff/MyShifts"));
+const LeaveRequests  = lazy(() => import("./pages/regular-staff/LeaveRequests"));
+const SwapRequests   = lazy(() => import("./pages/regular-staff/SwapRequests"));
 
 // Casual Staff
-import CasualDashboard    from "./pages/casual-staff/Dashboard";
-import CasualBranches      from "./pages/casual-staff/Branches";
-import CasualAvailability  from "./pages/casual-staff/Availability";
-import CasualMyShifts      from "./pages/casual-staff/MyShifts";
-import CasualSwapRequests  from "./pages/casual-staff/SwapRequests";
-import RegisterCasual     from "./pages/RegisterCasual";
+const CasualDashboard    = lazy(() => import("./pages/casual-staff/Dashboard"));
+const CasualBranches      = lazy(() => import("./pages/casual-staff/Branches"));
+const CasualAvailability  = lazy(() => import("./pages/casual-staff/Availability"));
+const CasualMyShifts      = lazy(() => import("./pages/casual-staff/MyShifts"));
+const CasualSwapRequests  = lazy(() => import("./pages/casual-staff/SwapRequests"));
+const RegisterCasual     = lazy(() => import("./pages/RegisterCasual"));
 
 // Business Owner
-import BODashboard   from "./pages/business-owner/Dashboard";
-import BOBranches     from "./pages/business-owner/Branches";
-import BOStaff       from "./pages/business-owner/Staff";
-import BOBranchDetail from "./pages/business-owner/BranchDetail";
-import BOStaffDetail  from "./pages/business-owner/StaffDetail";
-import BOManagerDetail from "./pages/business-owner/ManagerDetail";
-import BOInvitations from "./pages/business-owner/Invitations";
-import BOSkills      from "./pages/business-owner/Skills";
-import BOReports        from "./pages/business-owner/Reports";
-import BOReportHistory  from "./pages/business-owner/ReportHistory";
-import BOSettings    from "./pages/business-owner/Settings";
-import BOCasualPool  from "./pages/business-owner/CasualPool";
-import BusinessOwnerLayout from "./components/layout/BusinessOwnerLayout";
-import AcceptInvite  from "./pages/AcceptInvite";
-import JoinByCode    from "./pages/JoinByCode";
-import OMInvitations      from "./pages/manager/Invitations";
+const BODashboard   = lazy(() => import("./pages/business-owner/Dashboard"));
+const BOBranches     = lazy(() => import("./pages/business-owner/Branches"));
+const BOStaff       = lazy(() => import("./pages/business-owner/Staff"));
+const BOBranchDetail = lazy(() => import("./pages/business-owner/BranchDetail"));
+const BOStaffDetail  = lazy(() => import("./pages/business-owner/StaffDetail"));
+const BOManagerDetail = lazy(() => import("./pages/business-owner/ManagerDetail"));
+const BOInvitations = lazy(() => import("./pages/business-owner/Invitations"));
+const BOSkills      = lazy(() => import("./pages/business-owner/Skills"));
+const BOReports        = lazy(() => import("./pages/business-owner/Reports"));
+const BOReportHistory  = lazy(() => import("./pages/business-owner/ReportHistory"));
+const BOSettings    = lazy(() => import("./pages/business-owner/Settings"));
+const BOCasualPool  = lazy(() => import("./pages/business-owner/CasualPool"));
+const AcceptInvite  = lazy(() => import("./pages/AcceptInvite"));
+const JoinByCode    = lazy(() => import("./pages/JoinByCode"));
 
-// Layouts
+// Layouts — kept eager: small, and every logged-in user's first lazy page needs one immediately,
+// so lazy-loading these would just add a second waterfall step on top of the page chunk itself.
+import BusinessOwnerLayout from "./components/layout/BusinessOwnerLayout";
 import StaffLayout   from "./components/layout/StaffLayout";
 import CasualLayout  from "./components/layout/CasualLayout";
 import AdminLayout   from "./components/layout/AdminLayout";
@@ -81,10 +90,45 @@ function PR({ roles, children }) {
   return <ProtectedRoute allowedRoles={roles}>{children}</ProtectedRoute>;
 }
 
+// Matches PageTransitionProvider's own curtain styling so a lazy chunk loading mid-navigation
+// doesn't flash an unstyled blank screen — reads as part of the same transition, not a stall.
+function RouteFallback() {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 99998,
+      background: "linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "18px" }}>
+        <div style={{
+          width: "60px", height: "60px", borderRadius: "16px",
+          background: "#3B82F6", color: "#fff",
+          fontSize: "26px", fontWeight: "800",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 0 0 10px rgba(59,130,246,0.12), 0 0 0 20px rgba(59,130,246,0.06)",
+          letterSpacing: "-0.02em",
+        }}>
+          K
+        </div>
+        <div style={{ display: "flex", gap: "7px" }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              width: "7px", height: "7px", borderRadius: "50%",
+              background: "#60A5FA",
+              animation: `dotPulse 1s ease-in-out ${i * 0.18}s infinite`,
+            }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <PageTransitionProvider>
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
@@ -172,6 +216,7 @@ function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
       </PageTransitionProvider>
     </BrowserRouter>
   );
