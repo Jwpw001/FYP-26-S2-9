@@ -355,4 +355,84 @@ describe("autoAssignCasual — attendance sub-score (Round 6, Task 10)", () => {
     const s1 = body.score_breakdown.candidates.find(c => c.user_id === U1);
     expect(s1.sub_scores.attendance).toBe(0);
   });
+
+  // Round 6, Task 11: exact mid-range ratio, not just the 0/0.25/0.75/1 endpoints already covered
+  // above — 3 approved out of 5 assignments should be precisely 0.6, not rounded to a neighbour.
+  test("attendance is the exact ratio for a mid-range case (3 of 5 approved = 0.6)", async () => {
+    mockPast90dAssignments = [
+      { staff_id: S1, shift_id: 801 }, { staff_id: S1, shift_id: 802 }, { staff_id: S1, shift_id: 803 },
+      { staff_id: S1, shift_id: 804 }, { staff_id: S1, shift_id: 805 },
+    ];
+    prisma.timesheets.findMany.mockResolvedValue([
+      { staff_id: S1, shift_id: 801 }, { staff_id: S1, shift_id: 802 }, { staff_id: S1, shift_id: 803 },
+    ]);
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    const s1 = body.score_breakdown.candidates.find(c => c.user_id === U1);
+    expect(s1.sub_scores.attendance).toBe(0.6);
+  });
+
+  // Skills still discriminates under the rebuilt model — S1 holds the task's required skill at
+  // senior level, S2 doesn't hold it at all, both otherwise identical (same attendance/workload).
+  test("skills still swings the ranking when attendance and workload are tied", async () => {
+    prisma.shift_tasks.findUnique.mockResolvedValue({ title: "Barista", start_time: t("09:00"), end_time: t("13:00"), skill_id: 5 });
+    prisma.user_skill_tags.findMany.mockResolvedValue([
+      { user_id: U1, skill_id: 5, experience_level: "senior" },
+      // U2 has no matching skill tag at all.
+    ]);
+    mockPast90dAssignments = []; // tie: both candidates neutral 0.75 on attendance
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.assigned.user_id).toBe(U1);
+    const s1 = body.score_breakdown.candidates.find(c => c.user_id === U1);
+    const s2 = body.score_breakdown.candidates.find(c => c.user_id === U2);
+    expect(s1.sub_scores.skills).toBe(1);
+    expect(s2.sub_scores.skills).toBe(0);
+    expect(s1.sub_scores.attendance).toBe(s2.sub_scores.attendance); // confirms the win is from skills, not attendance
+  });
+
+  // A branch_allocation_preferences row saved before Round 6, Task 10 still has all 5 old
+  // columns populated (weight_availability, weight_performance included) — scoring must read
+  // only the 3 that matter and ignore the rest without crashing or misreading them.
+  test("an old 5-weight branch_allocation_preferences row doesn't break scoring", async () => {
+    supabaseAdmin.from.mockImplementation((table) => {
+      switch (table) {
+        case "branch_managers":
+          return makeSupabaseChain({ data: { branch_id: BRANCH_ID }, error: null });
+        case "casual_branch_preferences":
+          return makeSupabaseChain({ data: [{ user_id: U1 }, { user_id: U2 }], error: null });
+        case "casual_workers":
+          return makeSupabaseChain({
+            data: [{ id: 1, user_id: U1, status: "approved" }, { id: 2, user_id: U2, status: "approved" }],
+            error: null,
+          });
+        case "branch_allocation_preferences":
+          // Pre-Task-10 row: still has weight_availability/weight_performance set from the old model.
+          return makeSupabaseChain({
+            data: { weight_availability: 40, weight_skills: 30, weight_attendance: 15, weight_performance: 10, weight_workload: 5 },
+            error: null,
+          });
+        default:
+          return makeSupabaseChain({ data: null, error: null });
+      }
+    });
+    mockPast90dAssignments = [];
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(true);
+    // Only the 3 live dimensions come through — the old row's availability/performance columns
+    // are read from the DB row but never surface in the applied weights or any sub-score.
+    expect(body.score_breakdown.weights_applied).toEqual({ skills: 30, attendance: 15, workload: 5 });
+    expect(body.score_breakdown.weights_applied.availability).toBeUndefined();
+    expect(body.score_breakdown.weights_applied.performance).toBeUndefined();
+  });
 });
