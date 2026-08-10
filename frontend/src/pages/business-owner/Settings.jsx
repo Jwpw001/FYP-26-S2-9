@@ -384,7 +384,6 @@ export default function BOSettings() {
                 <NumField label="Standard hours/day" value={settings.work_hours_day} onChange={v => setS("work_hours_day", v)} min={1} max={24} disabled={!editingSetup} />
                 <NumField label="Max hours/day" value={settings.max_work_hours_day} onChange={v => setS("max_work_hours_day", v)} min={1} max={24} disabled={!editingSetup} />
                 <NumField label="Max consecutive days" value={settings.max_consecutive_days} onChange={v => setS("max_consecutive_days", v)} min={1} max={14} disabled={!editingSetup} />
-                <NumField label="Min workers/assignment" value={settings.min_workers_per_assignment} onChange={v => setS("min_workers_per_assignment", v)} min={1} max={50} disabled={!editingSetup} />
               </div>
 
               {/* Overtime Toggle */}

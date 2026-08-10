@@ -171,7 +171,7 @@ export default function CreateShift() {
 
   // ── Step 2: task builder ───────────────────────────────────────────────────
 
-  function addTask()            { setTasks(p => [...p, { title: "", skill_id: "", difficulty: "", start_time: form.start_time, end_time: form.end_time }]); }
+  function addTask()            { setTasks(p => [...p, { title: "", skill_id: "", difficulty: "", start_time: form.start_time, end_time: form.end_time, workers_needed: "1" }]); }
   function removeTask(i)        { setTasks(p => p.filter((_, j) => j !== i)); }
   function updateTask(i, f, v)  { setTasks(p => p.map((t, j) => j === i ? { ...t, [f]: v } : t)); }
 
@@ -185,13 +185,20 @@ export default function CreateShift() {
     setSavingTasks(true); setTaskError("");
     try {
       for (const t of validTasks) {
-        await api.post(`/api/shifts/${createdShift.shift_id}/tasks`, {
+        const payload = {
           title: toTitleCase(t.title.trim()),
           skill_id: t.skill_id ? Number(t.skill_id) : null,
           difficulty: t.difficulty || null,
           start_time: t.start_time || null,
           end_time: t.end_time || null,
-        });
+        };
+        // shift_tasks has no headcount column — a task needing N workers is N separate,
+        // independently-assignable rows, the same way branch_task_templates' required_workers
+        // already gets expanded during automatic generation (shiftGenerationController.js).
+        const workersNeeded = Math.max(1, Number(t.workers_needed) || 1);
+        for (let i = 0; i < workersNeeded; i++) {
+          await api.post(`/api/shifts/${createdShift.shift_id}/tasks`, payload);
+        }
       }
       navigate(`/manager/shifts/${createdShift.shift_id}`);
     } catch (err) {
@@ -344,7 +351,7 @@ export default function CreateShift() {
               {tasks.map((task, idx) => (
                 <div key={idx} style={s.taskRow}>
                   <div style={s.taskNum}>{idx + 1}</div>
-                  <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 150px 130px 95px 95px", gap: "10px", alignItems: "center" }}>
+                  <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 150px 130px 95px 95px 80px", gap: "10px", alignItems: "center" }}>
                     <div>
                       <label style={s.miniLabel}>Task Name *</label>
                       <input style={s.input} placeholder="e.g. Cashier, Barista, Kitchen…"
@@ -379,6 +386,11 @@ export default function CreateShift() {
                       <label style={s.miniLabel}>End (opt.)</label>
                       <input style={s.input} type="time" value={task.end_time}
                         onChange={e => updateTask(idx, "end_time", e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={s.miniLabel}>Workers</label>
+                      <input style={s.input} type="number" min={1} max={50} value={task.workers_needed}
+                        onChange={e => updateTask(idx, "workers_needed", e.target.value)} />
                     </div>
                   </div>
                   {tasks.length > 1 && (

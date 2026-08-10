@@ -807,7 +807,6 @@ export default function BranchDetail() {
                 <NumFieldInline label="Standard hours/day" value={bizSettings.work_hours_day} onChange={v => setBiz("work_hours_day", v)} min={1} max={24} disabled={!editingBizSetup} />
                 <NumFieldInline label="Max hours/day" value={bizSettings.max_work_hours_day} onChange={v => setBiz("max_work_hours_day", v)} min={1} max={24} disabled={!editingBizSetup} />
                 <NumFieldInline label="Max consecutive days" value={bizSettings.max_consecutive_days} onChange={v => setBiz("max_consecutive_days", v)} min={1} max={14} disabled={!editingBizSetup} />
-                <NumFieldInline label="Min workers/assignment" value={bizSettings.min_workers_per_assignment} onChange={v => setBiz("min_workers_per_assignment", v)} min={1} max={50} disabled={!editingBizSetup} />
               </div>
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "10px", marginBottom: "24px" }}>

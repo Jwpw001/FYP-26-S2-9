@@ -65,7 +65,6 @@ export default function StepBusinessSetup({ form, set, setField, error, onNext, 
         <NumberField label="Standard hours/day" value={form.work_hours_day} onChange={v => setField("work_hours_day", v)} min={1} max={24} />
         <NumberField label="Max hours/day" value={form.max_work_hours_day} onChange={v => setField("max_work_hours_day", v)} min={1} max={24} />
         <NumberField label="Max consecutive days" value={form.max_consecutive_days} onChange={v => setField("max_consecutive_days", v)} min={1} max={14} />
-        <NumberField label="Min workers/assignment" value={form.min_workers_per_assignment} onChange={v => setField("min_workers_per_assignment", v)} min={1} max={50} />
       </div>
 
       {/* Overtime Toggle */}

@@ -266,7 +266,6 @@ export default function ManagerSettings() {
                   { label: "Standard hours/day",      value: settings.work_hours_day },
                   { label: "Max hours/day",            value: settings.max_work_hours_day },
                   { label: "Max consecutive days",     value: settings.max_consecutive_days },
-                  { label: "Min workers/assignment",   value: settings.min_workers_per_assignment },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <label style={fieldLabel}>{label}</label>

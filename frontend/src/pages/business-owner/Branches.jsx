@@ -289,7 +289,6 @@ export default function BOBranches() {
                       { label: "Std hours / day", key: "work_hours_day", min: 1, max: 24 },
                       { label: "Max hours / day", key: "max_work_hours_day", min: 1, max: 24 },
                       { label: "Max consecutive days", key: "max_consecutive_days", min: 1, max: 14 },
-                      { label: "Min workers / shift", key: "min_workers_per_assignment", min: 1, max: 50 },
                     ].map(({ label, key, min, max }) => (
                       <div key={key} style={s.fieldGroup}>
                         <label style={s.label}>{label}</label>

@@ -95,7 +95,7 @@ export default function ShiftDetail() {
 
   // ── Add-task form ──────────────────────────────────────────────────────────
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const [taskForm, setTaskForm]         = useState({ title:"", skill_id:"", difficulty:"", start_time:"", end_time:"" });
+  const [taskForm, setTaskForm]         = useState({ title:"", skill_id:"", difficulty:"", start_time:"", end_time:"", workers_needed:"1" });
   const [skillOptions, setSkillOptions] = useState([]);
   const [savingTask, setSavingTask]     = useState(false);
 
@@ -290,18 +290,28 @@ export default function ShiftDetail() {
     if (!taskForm.title.trim()) { showToast("Task title is required.", "error"); return; }
     setSavingTask(true);
     try {
-      const res = await api.post(`/api/shifts/${id}/tasks`, {
-        title:      toTitleCase(taskForm.title.trim()),
+      const title = toTitleCase(taskForm.title.trim());
+      const payload = {
+        title,
         skill_id:   taskForm.skill_id ? Number(taskForm.skill_id) : null,
         difficulty: taskForm.difficulty || null,
         start_time: taskForm.start_time || null,
         end_time:   taskForm.end_time   || null,
-      });
-      if (!res.success) throw new Error(res.message);
+      };
+      // shift_tasks has no headcount column — a task needing N workers is represented as N
+      // separate, independently-assignable task rows, the same way branch_task_templates'
+      // required_workers already gets expanded during automatic generation
+      // (shiftGenerationController.js).
+      const workersNeeded = Math.max(1, Number(taskForm.workers_needed) || 1);
+      let lastRes;
+      for (let i = 0; i < workersNeeded; i++) {
+        lastRes = await api.post(`/api/shifts/${id}/tasks`, payload);
+        if (!lastRes.success) throw new Error(lastRes.message);
+      }
       await reloadTasks();
-      setTaskForm({ title:"", skill_id:"", difficulty:"", start_time:"", end_time:"" });
+      setTaskForm({ title:"", skill_id:"", difficulty:"", start_time:"", end_time:"", workers_needed:"1" });
       setShowTaskForm(false);
-      showToast(`Task "${res.task.title}" added.`);
+      showToast(workersNeeded > 1 ? `Task "${title}" added (${workersNeeded} slots).` : `Task "${lastRes.task.title}" added.`);
     } catch { showToast("Failed to add task.", "error"); }
     finally { setSavingTask(false); }
   }
@@ -551,7 +561,7 @@ export default function ShiftDetail() {
         {showTaskForm && (
           <div style={{background:"#F8FAFC",border:"1.5px solid #BFDBFE",borderRadius:"14px",padding:"20px",marginBottom:"20px"}}>
             <p style={{fontSize:"21px",fontWeight:"700",color:"#1E293B",marginBottom:"16px"}}>New Task</p>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 160px 140px 100px 100px",gap:"12px",marginBottom:"16px"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 160px 140px 100px 100px 90px",gap:"12px",marginBottom:"16px"}}>
               <div>
                 <label style={s.formLabel}>Task Name *</label>
                 <input style={s.formInput} placeholder="e.g. Cashier, Barista…" value={taskForm.title} onChange={e=>setTaskForm(p=>({...p,title:e.target.value}))}/>
@@ -587,6 +597,11 @@ export default function ShiftDetail() {
               <div>
                 <label style={s.formLabel}>End</label>
                 <input style={s.formInput} type="time" value={taskForm.end_time} onChange={e=>setTaskForm(p=>({...p,end_time:e.target.value}))}/>
+              </div>
+              <div>
+                <label style={s.formLabel}>Workers</label>
+                <input style={s.formInput} type="number" min={1} max={50} value={taskForm.workers_needed}
+                  onChange={e=>setTaskForm(p=>({...p,workers_needed:e.target.value}))}/>
               </div>
             </div>
             <button onClick={addTask} disabled={savingTask}
