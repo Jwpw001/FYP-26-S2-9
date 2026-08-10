@@ -40,10 +40,16 @@ async function sendPushToUsers(userIds, { title, message }) {
     logger.error({ err }, "[push] failed to load subscriptions");
     return;
   }
-  if (subs.length === 0) return;
+  if (subs.length === 0) {
+    logger.info({ userIds: ids }, "[push] no subscriptions registered for these recipients — nothing sent");
+    return;
+  }
 
   const expoSubs = subs.filter(s => s.platform === "expo");
   const webSubs = subs.filter(s => s.platform === "web");
+  if (webSubs.length > 0 && !vapidConfigured) {
+    logger.warn({ count: webSubs.length }, "[push] VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY not set — skipping web push entirely");
+  }
 
   await Promise.all([
     sendExpoPushes(expoSubs, { title, message }),
@@ -66,21 +72,28 @@ async function sendExpoPushes(subs, { title, message }) {
   if (messages.length === 0) return;
 
   const deadIds = [];
+  let okCount = 0, errCount = 0;
   for (const chunk of instance.chunkPushNotifications(messages)) {
     try {
       const receipts = await instance.sendPushNotificationsAsync(chunk);
       receipts.forEach((r, i) => {
+        if (r.status === "ok") { okCount++; return; }
+        errCount++;
         // The device uninstalled the app or revoked permission — Expo will never deliver to
         // this token again, so stop trying.
-        if (r.status === "error" && r.details?.error === "DeviceNotRegistered") {
+        if (r.details?.error === "DeviceNotRegistered") {
           const sub = subByToken[chunk[i].to];
           if (sub) deadIds.push(sub.id);
+        } else {
+          logger.warn({ receipt: r }, "[push] expo delivery reported an error for one recipient");
         }
       });
     } catch (err) {
+      errCount += chunk.length;
       logger.error({ err }, "[push] expo send chunk failed");
     }
   }
+  logger.info({ ok: okCount, failed: errCount, staleRemoved: deadIds.length }, "[push] expo send complete");
   if (deadIds.length > 0) {
     await prisma.push_subscriptions.deleteMany({ where: { id: { in: deadIds } } }).catch(() => {});
   }
@@ -91,21 +104,27 @@ async function sendWebPushes(subs, { title, message }) {
 
   const payload = JSON.stringify({ title, body: message || "" });
   const deadIds = [];
+  let okCount = 0, errCount = 0;
   await Promise.all(subs.map(async (s) => {
     const subscription = s.subscription;
     if (!subscription?.endpoint) return;
     try {
-      await webpush.sendNotification(subscription, payload);
+      const res = await webpush.sendNotification(subscription, payload);
+      okCount++;
+      logger.info({ subscriptionId: s.id, statusCode: res.statusCode }, "[push] web push delivered");
     } catch (err) {
+      errCount++;
       // 404/410 = the browser/OS has permanently invalidated this subscription (unsubscribed,
       // uninstalled, storage cleared) — stop trying rather than erroring on every future push.
       if (err.statusCode === 404 || err.statusCode === 410) {
         deadIds.push(s.id);
+        logger.info({ subscriptionId: s.id, statusCode: err.statusCode }, "[push] subscription stale, removing");
       } else {
-        logger.error({ err: err.message, statusCode: err.statusCode }, "[push] web push send failed");
+        logger.error({ subscriptionId: s.id, err: err.message, statusCode: err.statusCode, body: err.body }, "[push] web push send failed");
       }
     }
   }));
+  logger.info({ ok: okCount, failed: errCount, staleRemoved: deadIds.length }, "[push] web push send complete");
   if (deadIds.length > 0) {
     await prisma.push_subscriptions.deleteMany({ where: { id: { in: deadIds } } }).catch(() => {});
   }
