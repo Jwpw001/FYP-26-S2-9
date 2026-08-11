@@ -52,7 +52,7 @@ export default function StaffLayout({ children, title }) {
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
         style={{ ...s.sidebar, width: expanded ? "220px" : "64px" }}>
-        <div style={{ ...s.sidebarTop, padding: "20px 14px 16px" }}>
+        <div style={{ ...s.sidebarTop, padding: "20px 14px 16px", paddingTop: "calc(20px + env(safe-area-inset-top))" }}>
           <Link to="/regular-staff/dashboard" style={s.logoRow}>
             <div style={{ height: "34px", width: "34px", background: "#fff", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <img src="/logo_noText.png" alt="Krewby" style={{ height: "26px", width: "26px", objectFit: "contain", display: "block" }} />
