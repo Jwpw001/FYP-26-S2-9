@@ -17,6 +17,7 @@ const {
   setStandingAvailability,
   setWeekAsStandingPattern,
   getManagerPool,
+  getManagerPeriodAvailability,
   autoAssignCasual,
   getPool,
   approveWorker,
@@ -47,6 +48,7 @@ router.put("/standing-availability",            setStandingAvailability);
 
 // Manager
 router.get("/manager/pool",        getManagerPool);
+router.get("/manager/period-availability", getManagerPeriodAvailability);
 router.post("/manager/auto-assign", autoAssignCasual);
 
 // Business Owner

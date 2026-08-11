@@ -335,18 +335,16 @@ export default function AvailabilityLeave() {
         }
 
         const staffIds = casualStaff.map(s => s.staff_id);
-        const { data: avail } = await supabase
-          .from("casual_availability")
-          .select("availability_id, staff_id, week_start_date, day_of_week, available_from, available_to")
-          .in("staff_id", staffIds)
-          .order("week_start_date", { ascending: false });
+        const staffIdSet = new Set(staffIds);
+        const periodRes = await api.get("/api/casual/manager/period-availability").catch(() => ({ availability: [] }));
+        const avail = (periodRes.availability || []).filter(row => staffIdSet.has(row.staff_id));
 
         const staffMap = {};
         casualStaff.forEach(s => { staffMap[s.staff_id] = s; });
 
         // Group by staff + week
         const grouped = {};
-        (avail || []).forEach(row => {
+        avail.forEach(row => {
           const key = `${row.staff_id}_${row.week_start_date}`;
           if (!grouped[key]) {
             grouped[key] = {
@@ -663,11 +661,11 @@ export default function AvailabilityLeave() {
         date.setDate(date.getDate() + d.day_of_week);
         const dateStr = toDateStr(date);
         byStaff[key].bars.push({
-          id: d.availability_id || `${key}_${dateStr}`, start: dateStr, end: dateStr,
-          label: `${fmtTime(d.available_from?.slice(0,5))}–${fmtTime(d.available_to?.slice(0,5))}`,
-          title: `Available ${fmtTime(d.available_from?.slice(0,5))} – ${fmtTime(d.available_to?.slice(0,5))} on ${fmtDate(dateStr)}`,
+          id: d.availability_id || `${key}_${dateStr}_${d.period_id}`, start: dateStr, end: dateStr,
+          label: d.period_name,
+          title: `Available for ${d.period_name} on ${fmtDate(dateStr)}`,
           bg: "#F0FDF4", color: "#166534", border: "#BBF7D0",
-          onClick: () => setDetailModal({ kind: "casual", data: { name, dateStr, from: d.available_from, to: d.available_to } }),
+          onClick: () => setDetailModal({ kind: "casual", data: { name, dateStr, periodName: d.period_name } }),
         });
       });
     });
@@ -1356,7 +1354,7 @@ function DetailModal({ modal, processing, onClose, onLeaveAction, onSwapAction, 
     title = "Casual Availability";
     meta  = [
       { label: "Date", value: fmtDate(data.dateStr) },
-      { label: "Available", value: `${fmtTime(data.from?.slice(0,5))} – ${fmtTime(data.to?.slice(0,5))}` },
+      { label: "Period", value: data.periodName },
     ];
   }
 
@@ -1652,13 +1650,6 @@ function fmtWeekRange(weekStart) {
   return `${s.toLocaleDateString("en-SG", opts)} – ${e.toLocaleDateString("en-SG", opts)}`;
 }
 
-function fmtTime(t) {
-  if (!t) return "";
-  const [h, m] = t.split(":");
-  const hour = Number(h);
-  return `${hour % 12 || 12}:${m} ${hour >= 12 ? "PM" : "AM"}`;
-}
-
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function CasualAvailCard({ entry }) {
@@ -1685,9 +1676,9 @@ function CasualAvailCard({ entry }) {
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
         {sortedDays.map(row => (
-          <div key={row.availability_id || row.day_of_week} style={{ background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: "8px", padding: "6px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
+          <div key={row.availability_id || `${row.day_of_week}_${row.period_id}`} style={{ background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: "8px", padding: "6px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
             <span style={{ fontSize: "18px", fontWeight: "700", color: "#15803D" }}>{DAY_NAMES[row.day_of_week]}</span>
-            <span style={{ fontSize: "19px", color: "#166534" }}>{fmtTime(row.available_from?.slice(0,5))} – {fmtTime(row.available_to?.slice(0,5))}</span>
+            <span style={{ fontSize: "19px", color: "#166534" }}>{row.period_name}</span>
           </div>
         ))}
       </div>

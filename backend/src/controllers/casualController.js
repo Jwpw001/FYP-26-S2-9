@@ -733,6 +733,71 @@ async function getManagerPool(req, res) {
   }
 }
 
+// GET /api/casual/manager/period-availability — this branch's casual roster's period picks
+// (casual_period_availability), expanded to one entry per (staff, week, day) using each period's
+// active_days so the calendar can render it exactly like the old per-day time-range table did,
+// just showing the period name instead of a time range.
+async function getManagerPeriodAvailability(req, res) {
+  try {
+    const branch = await resolveManagerBranch(req.user.user_id);
+    if (!branch) return res.status(404).json({ success: false, message: "Branch not found for this manager." });
+
+    const { data: prefs } = await supabaseAdmin
+      .from("casual_branch_preferences")
+      .select("user_id")
+      .eq("branch_id", branch.branch_id);
+    const prefUserIds = (prefs || []).map(p => p.user_id);
+    if (prefUserIds.length === 0) return res.json({ success: true, availability: [] });
+
+    const { data: approved } = await supabaseAdmin
+      .from("casual_workers")
+      .select("user_id")
+      .eq("business_id", branch.business_id)
+      .eq("status", "approved")
+      .in("user_id", prefUserIds);
+    const approvedUserIds = (approved || []).map(w => w.user_id);
+    if (approvedUserIds.length === 0) return res.json({ success: true, availability: [] });
+
+    const staffRows = await prisma.staff.findMany({
+      where: { user_id: { in: approvedUserIds }, staff_type: "casual", is_active: true },
+      select: { staff_id: true },
+    });
+    const staffIds = staffRows.map(s => s.staff_id);
+    if (staffIds.length === 0) return res.json({ success: true, availability: [] });
+
+    const rows = await prisma.casual_period_availability.findMany({
+      where: { staff_id: { in: staffIds } },
+      select: {
+        id: true, staff_id: true, week_start_date: true, period_id: true,
+        branch_shift_periods: { select: { name: true, active_days: true } },
+      },
+      orderBy: { week_start_date: "desc" },
+    });
+
+    const availability = [];
+    rows.forEach(r => {
+      const activeDays = r.branch_shift_periods?.active_days || "1111111";
+      const periodName = r.branch_shift_periods?.name || "Period";
+      for (let dow = 0; dow < 7; dow++) {
+        if (activeDays[dow] === "1") {
+          availability.push({
+            availability_id: `${r.id}_${dow}`,
+            staff_id: r.staff_id,
+            week_start_date: r.week_start_date.toISOString().slice(0, 10),
+            day_of_week: dow,
+            period_id: r.period_id,
+            period_name: periodName,
+          });
+        }
+      }
+    });
+
+    return res.json({ success: true, availability });
+  } catch (err) {
+    return sendServerError(res, err, req);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BUSINESS OWNER — pool management
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1303,6 +1368,7 @@ module.exports = {
   setStandingAvailability,
   setWeekAsStandingPattern,
   getManagerPool,
+  getManagerPeriodAvailability,
   autoAssignCasual,
   getPool,
   approveWorker,
