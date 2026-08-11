@@ -16,6 +16,18 @@ function roleLabel(role) {
   return role?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || role;
 }
 
+// A "user" profile can exist in localStorage before the matching auth token has been written
+// (e.g. a flow that persists the profile and the token in separate steps) — accepting an
+// invitation in that window hits the backend's "must be logged in as the account you're linking"
+// check even though the page thinks it's logged in. Require both before submitting.
+function getStoredToken() {
+  try {
+    return localStorage.getItem("token") || JSON.parse(localStorage.getItem("user") || "{}").token || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function JoinByCode() {
   const navigate = useNavigate();
   const loggedInUser = getUser();
@@ -50,9 +62,15 @@ export default function JoinByCode() {
   }
 
   async function acceptAsExisting() {
+    const freshUser = getUser();
+    if (!freshUser || !getStoredToken()) {
+      setFormError("You need to be logged in to use an invitation code.");
+      setTimeout(() => navigate(`/login?redirect=/join-invite`), 1500);
+      return;
+    }
     setSubmitting(true); setFormError("");
     try {
-      const data = await api.post(`/api/invitations/${invite.token}/accept`, { existing_user_id: loggedInUser.user_id });
+      const data = await api.post(`/api/invitations/${invite.token}/accept`, { existing_user_id: freshUser.user_id });
       setUser(data.user);
       localStorage.setItem("token", data.token);
       setStep("done");
