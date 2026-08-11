@@ -6,7 +6,7 @@ import SearchableSelect from "../../components/SearchableSelect";
 import { useGoTo } from "../../components/PageTransition";
 import {
   X, AlertTriangle, Trash2, Calendar, Clock, MapPin,
-  Tag, Check, Users, GripVertical, Search, Pencil,
+  Tag, Check, Users, GripVertical, Search, Pencil, Sparkles,
 } from "lucide-react";
 import { api } from "../../lib/api";
 import { toTitleCase } from "../../utils/text";
@@ -92,6 +92,7 @@ export default function ShiftDetail() {
   const [loading, setLoading]   = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [toast, setToast]       = useState(null);
+  const [autoAssigning, setAutoAssigning] = useState(false);
 
   // ── Add-task form ──────────────────────────────────────────────────────────
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -283,6 +284,36 @@ export default function ShiftDetail() {
       const res = await api.get(`/api/shifts/${id}/staff-roster`);
       if (res.success) setRoster(res.roster || []);
     } catch {}
+  }
+
+  // ── Auto-assign ────────────────────────────────────────────────────────────
+  // Calls the existing weighted allocation endpoint (Skills 50 / Attendance 30 / Workload 20,
+  // branch_allocation_preferences) once per open task — it only assigns one task at a time.
+  async function handleAutoAssign() {
+    const openTasks = tasks.filter(t => t.status === "open");
+    if (openTasks.length === 0) return;
+    setAutoAssigning(true);
+    let assignedCount = 0;
+    const failures = [];
+    for (const task of openTasks) {
+      try {
+        const res = await api.post("/api/casual/manager/auto-assign", { shift_id: Number(id), task_id: task.task_id });
+        if (res.success && res.assigned) assignedCount++;
+        else failures.push(res.reason || res.message || `"${task.title}" — no eligible candidate`);
+      } catch (err) {
+        failures.push(err.message || `"${task.title}" — failed`);
+      }
+    }
+    await reloadTasks();
+    if (rosterOpen) await refreshRoster();
+    setAutoAssigning(false);
+    if (assignedCount > 0 && failures.length === 0) {
+      showToast(`Auto-assigned ${assignedCount} task${assignedCount > 1 ? "s" : ""}.`);
+    } else if (assignedCount > 0) {
+      showToast(`Auto-assigned ${assignedCount} task${assignedCount > 1 ? "s" : ""}; ${failures.length} could not be filled.`, "warning");
+    } else {
+      showToast(`Could not auto-assign: ${failures[0] || "no eligible candidates"}`, "error");
+    }
   }
 
   // ── Add task ───────────────────────────────────────────────────────────────
@@ -541,6 +572,12 @@ export default function ShiftDetail() {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px"}}>
           <h3 style={{...s.sectionTitle,margin:0}}>Tasks ({totalTasks})</h3>
           <div style={{display:"flex",gap:"8px"}}>
+            {canAssign && tasks.some(t=>t.status==="open") && (
+              <button onClick={handleAutoAssign} disabled={autoAssigning}
+                style={{...s.rosterBtn,background:"#7C3AED",color:"#FFF",border:"none",opacity:autoAssigning?0.7:1,cursor:autoAssigning?"default":"pointer"}}>
+                <Sparkles size={13}/> {autoAssigning?"Auto-Assigning…":"Auto-Assign"}
+              </button>
+            )}
             {canAssign && totalTasks>0 && (
               <button onClick={()=>openRoster(null)}
                 style={{...s.rosterBtn,background:rosterOpen?"#EFF6FF":"#2563EB",color:rosterOpen?"#2563EB":"#FFF",border:rosterOpen?"1.5px solid #BFDBFE":"none"}}>
