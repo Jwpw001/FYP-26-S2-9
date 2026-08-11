@@ -798,6 +798,7 @@ export default function AvailabilityLeave() {
                     getStaffName={getStaffName}
                     getStaffEmail={getStaffEmail}
                     getInitial={getInitial}
+                    getStaffAvatar={getStaffAvatar}
                     onAction={handleLeaveAction}
                   />
                 ))}
@@ -1476,7 +1477,7 @@ function EmptyState({ label }) {
   );
 }
 
-function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, onAction }) {
+function LeaveCard({ req, processing, getStaffName, getStaffEmail, getInitial, getStaffAvatar, onAction }) {
   const [hoverApprove, setHoverApprove] = useState(false);
   const [hoverReject, setHoverReject]   = useState(false);
   const name = getStaffName(req);
