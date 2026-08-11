@@ -139,9 +139,14 @@ export default function AdminLayout({ children, title }) {
 const s = {
   shell: { display: "flex", minHeight: "100vh", background: "#F8FAFC" },
   sidebar: {
-    height: "100vh", background: "#0F172A",
+    // `bottom: 0` instead of `height: "100vh"` — on mobile Safari/Chrome, 100vh is measured
+    // against the largest possible viewport (browser chrome collapsed), so a fixed, non-
+    // scrolling sidebar sized that way gets its bottom edge (sign-out button included) pushed
+    // underneath the browser's own address/tab bar whenever that bar is actually visible,
+    // making it unreachable. top:0 + bottom:0 sizes against the real, current viewport instead.
+    background: "#0F172A",
     display: "flex", flexDirection: "column",
-    position: "fixed", top: 0, left: 0, zIndex: 300,
+    position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 300,
     transition: "width 0.25s ease", overflow: "hidden", flexShrink: 0,
   },
   sidebarTop: { padding: "24px 20px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)" },
@@ -169,7 +174,7 @@ const s = {
   },
   navItemActive: { background: "rgba(59,130,246,0.15)", color: "#93C5FD" },
   navIcon: { width: "20px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  sidebarBottom: { padding: "14px 16px", borderTop: "1px solid rgba(255,255,255,0.07)" },
+  sidebarBottom: { padding: "14px 16px", paddingBottom: "max(14px, env(safe-area-inset-bottom))", borderTop: "1px solid rgba(255,255,255,0.07)" },
   userRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" },
   avatar: {
     width: "34px", height: "34px", borderRadius: "50%",

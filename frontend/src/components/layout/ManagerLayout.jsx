@@ -161,15 +161,20 @@ const s = {
   },
 
   /* Sidebar */
+  // `bottom: 0` instead of `height: "100vh"` — 100vh is measured against the largest possible
+  // mobile viewport (browser chrome collapsed), so a fixed, non-scrolling sidebar sized that way
+  // gets its bottom edge (sign-out button included) pushed underneath the browser's own address/
+  // tab bar whenever that bar is actually visible, making it unreachable. top:0 + bottom:0 sizes
+  // against the real, current viewport instead.
   sidebar: {
     width: "64px",
-    height: "100vh",
     background: "#0F172A",
     display: "flex",
     flexDirection: "column",
     position: "fixed",
     top: 0,
     left: 0,
+    bottom: 0,
     zIndex: 300,
     transition: "width 0.25s ease",
     overflow: "hidden",
@@ -241,6 +246,7 @@ const s = {
   /* Sidebar bottom */
   sidebarBottom: {
     padding: "16px",
+    paddingBottom: "max(16px, env(safe-area-inset-bottom))",
     borderTop: "1px solid rgba(255,255,255,0.08)",
   },
   userRow: {

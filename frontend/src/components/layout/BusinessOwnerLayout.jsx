@@ -138,7 +138,12 @@ export default function BusinessOwnerLayout({ children, title }) {
 
 const s = {
   shell: { display: "flex", minHeight: "100vh", background: "#F8FAFC" },
-  sidebar: { height: "100vh", background: "#0F172A", display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, zIndex: 300, transition: "width 0.25s ease", overflow: "hidden", flexShrink: 0 },
+  // `bottom: 0` instead of `height: "100vh"` — 100vh is measured against the largest possible
+  // mobile viewport (browser chrome collapsed), so a fixed, non-scrolling sidebar sized that way
+  // gets its bottom edge (sign-out button included) pushed underneath the browser's own address/
+  // tab bar whenever that bar is actually visible, making it unreachable. top:0 + bottom:0 sizes
+  // against the real, current viewport instead.
+  sidebar: { background: "#0F172A", display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 300, transition: "width 0.25s ease", overflow: "hidden", flexShrink: 0 },
   sidebarTop: { padding: "20px 14px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)" },
   logoRow: { display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" },
   logoBox: { width: "34px", height: "34px", borderRadius: "9px", background: "#3B82F6", color: "#FFF", fontSize: "21px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
@@ -148,7 +153,7 @@ const s = {
   navItem: { display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", borderRadius: "9px", fontSize: "21px", fontWeight: "500", color: "rgba(255,255,255,0.6)", textDecoration: "none", transition: "background 0.15s, color 0.15s" },
   navItemActive: { background: "rgba(59,130,246,0.15)", color: "#93C5FD" },
   navIcon: { width: "20px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  sidebarBottom: { padding: "12px", borderTop: "1px solid rgba(255,255,255,0.08)" },
+  sidebarBottom: { padding: "12px", paddingBottom: "max(12px, env(safe-area-inset-bottom))", borderTop: "1px solid rgba(255,255,255,0.08)" },
   userRow: { display: "flex", alignItems: "center", gap: "10px" },
   avatar: { width: "34px", height: "34px", borderRadius: "50%", background: "#3B82F6", color: "#FFF", fontSize: "21px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   userName: { fontSize: "20px", fontWeight: "600", color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
