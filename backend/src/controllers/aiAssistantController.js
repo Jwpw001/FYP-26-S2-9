@@ -42,36 +42,67 @@ async function chat(req, res) {
       messages,
       tools,
       tool_choice: tools ? "auto" : undefined,
+      // The chat UI confirms one action at a time (a single confirmation card per turn) — asking
+      // for two actions in one message ("assign Mr X and Mr Y") used to make the model emit two
+      // parallel tool calls, whose streamed argument fragments arrived interleaved and got
+      // concatenated into one corrupted buffer below, producing a blank response. Forcing one
+      // tool call per turn keeps the model's behavior matched to what the UI can actually confirm.
+      parallel_tool_calls: tools ? false : undefined,
       max_tokens: 1000,
       temperature: 0.3,
       stream: true,
     });
 
-    let toolCallBuffer = null;
+    // Keyed by each tool call's stream index — OpenAI still sends an index even when
+    // parallel_tool_calls is off, and defensively keying by it (instead of always reading
+    // delta.tool_calls[0]) means a stray parallel call never corrupts another one's buffer.
+    const toolCallBuffers = {};
+    let sawContent = false;
 
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta;
       const finishReason = chunk.choices[0]?.finish_reason;
 
-      // Accumulate tool call chunks
       if (delta?.tool_calls) {
-        if (!toolCallBuffer) toolCallBuffer = { name: "", arguments: "" };
-        toolCallBuffer.name      += delta.tool_calls[0]?.function?.name      || "";
-        toolCallBuffer.arguments += delta.tool_calls[0]?.function?.arguments || "";
+        for (const tc of delta.tool_calls) {
+          const idx = tc.index ?? 0;
+          if (!toolCallBuffers[idx]) toolCallBuffers[idx] = { name: "", arguments: "" };
+          toolCallBuffers[idx].name      += tc.function?.name      || "";
+          toolCallBuffers[idx].arguments += tc.function?.arguments || "";
+        }
       }
 
       // Regular text content
       if (delta?.content) {
+        sawContent = true;
         res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
       }
 
-      // Tool call complete — emit as special event so the frontend can show a confirmation card
-      if (finishReason === "tool_calls" && toolCallBuffer) {
-        try {
-          const args = JSON.parse(toolCallBuffer.arguments);
-          res.write(`data: ${JSON.stringify({ tool_call: { name: toolCallBuffer.name, args } })}\n\n`);
-        } catch (e) {
-          (req.log || logger).error({ err: e }, "[AI] Failed to parse tool call args");
+      // Tool call(s) complete — emit the first as a confirmation card (the only kind of turn the
+      // frontend renders); if the model still returned more than one, say so instead of silently
+      // dropping the rest. If nothing parses and no text was streamed either, fall back to a
+      // user-facing message so the chat bubble never ends up blank.
+      if (finishReason === "tool_calls") {
+        const calls = Object.keys(toolCallBuffers)
+          .sort((a, b) => Number(a) - Number(b))
+          .map(k => toolCallBuffers[k]);
+        let emitted = false;
+        for (const call of calls) {
+          try {
+            const args = JSON.parse(call.arguments);
+            if (!emitted) {
+              res.write(`data: ${JSON.stringify({ tool_call: { name: call.name, args } })}\n\n`);
+              emitted = true;
+              if (calls.length > 1) {
+                res.write(`data: ${JSON.stringify({ content: "\n\n(I can only confirm one action at a time — once you've confirmed this, ask me for the next.)" })}\n\n`);
+              }
+            }
+          } catch (e) {
+            (req.log || logger).error({ err: e }, "[AI] Failed to parse tool call args");
+          }
+        }
+        if (!emitted && !sawContent) {
+          res.write(`data: ${JSON.stringify({ content: "Sorry, I couldn't complete that action — could you try rephrasing, or ask for one thing at a time?" })}\n\n`);
         }
       }
     }
