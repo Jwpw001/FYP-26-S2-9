@@ -263,7 +263,7 @@ export default function Notifications() {
       {/* Toast */}
       {toast && (
         <div style={{
-          position: "fixed", bottom: "28px", right: "28px", zIndex: 9999,
+          position: "fixed", bottom: "100px", right: "28px", zIndex: 9999,
           background: toast.type === "success" ? "#22C55E" : "#EF4444",
           color: "#fff", padding: "12px 20px", borderRadius: "10px",
           fontSize: "21px", fontWeight: "600",

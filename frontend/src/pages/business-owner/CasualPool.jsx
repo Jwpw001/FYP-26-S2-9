@@ -197,7 +197,7 @@ export default function BOCasualPool() {
       </div>
 
       {toast && (
-        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "error" ? "#EF4444" : "#22C55E", color: "#FFF", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
+        <div style={{ position: "fixed", bottom: "100px", right: "28px", zIndex: 9999, background: toast.type === "error" ? "#EF4444" : "#22C55E", color: "#FFF", padding: "12px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
           {toast.msg}
         </div>
       )}

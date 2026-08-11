@@ -465,7 +465,7 @@ export default function ManagerDashboard() {
       </div>
 
       {toast && (
-        <div style={{ position: "fixed", bottom: "28px", right: "28px", zIndex: 9999, background: toast.type === "error" ? "#EF4444" : "#22C55E", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontSize: "21px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,.15)", animation: "toastIn .3s ease both" }}>
+        <div style={{ position: "fixed", bottom: "100px", right: "28px", zIndex: 9999, background: toast.type === "error" ? "#EF4444" : "#22C55E", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontSize: "21px", fontWeight: "600", boxShadow: "0 4px 20px rgba(0,0,0,.15)", animation: "toastIn .3s ease both" }}>
           {toast.msg}
         </div>
       )}
