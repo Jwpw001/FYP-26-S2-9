@@ -213,6 +213,7 @@ button:focus-visible {
    the visible scrolling actually happens on html — so nothing sticks. */
 html {
   overflow-x: hidden;
+  font-size: clamp(14px, 1vw + 0.5rem, 16px);
 }
 
 /* ── Reusable responsive helpers for dashboard page content ──────────────
