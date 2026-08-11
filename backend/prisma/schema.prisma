@@ -175,8 +175,8 @@ model branch_shift_periods {
 }
 
 // OPT 5: day_of_week is nullable and additive — see prisma/seed/casualPeriodAvailabilityDayOfWeek.sql
-// (not yet applied to the database as of this schema edit). NULL keeps the original "available
-// all operating days this week for this period" meaning; 0-6 (Mon=0…Sun=6, same convention as
+// (applied to the database). NULL keeps the original "available all operating days this week for
+// this period" meaning; 0-6 (Mon=0…Sun=6, same convention as
 // casual_standing_availability.day_of_week) narrows that to one specific day. The real uniqueness
 // guard on (staff_id, week_start_date, period_id, day_of_week) uses Postgres 15's
 // UNIQUE ... NULLS NOT DISTINCT, which this declarative @@unique cannot express — the SQL file is

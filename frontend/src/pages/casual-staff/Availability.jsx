@@ -261,52 +261,50 @@ export default function CasualAvailability() {
             {periodsByBranch.map(([branchName, list]) => (
               <div key={branchName} style={{ background: "#FFF", border: "1.5px solid #E2E8F0", borderRadius: "14px", padding: "18px 20px" }}>
                 <h4 style={{ fontSize: "19px", fontWeight: "700", color: "#64748B", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.03em" }}>{branchName}</h4>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "480px" }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: "left", fontSize: "16px", color: "#94A3B8", padding: "6px 8px" }}>Period</th>
-                        {DAY_SHORT.map(d => (
-                          <th key={d} style={{ fontSize: "16px", color: "#94A3B8", padding: "6px 4px", textAlign: "center" }}>{d}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {list.map(p => {
-                        const patternDays = new Set(standingByPeriod[p.period_id] || []);
-                        return (
-                          <tr key={p.period_id}>
-                            <td style={{ fontSize: "18px", fontWeight: "600", color: "#1E293B", padding: "8px", whiteSpace: "nowrap" }}>
-                              {p.name}
-                              <div style={{ fontSize: "14px", fontWeight: "400", color: "#94A3B8" }}>{p.start_time}–{p.end_time}</div>
-                            </td>
-                            {DAY_SHORT.map((d, dow) => {
-                              const runsThisDay = p.active_days?.[dow] === "1";
+                <div className="responsive-hscroll">
+                  <div className="responsive-hscroll-inner" style={{ "--hscroll-min-width": "700px", display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "10px" }}>
+                    {DAY_SHORT.map((d, dow) => {
+                      const dayDate = new Date(weekStart);
+                      dayDate.setDate(weekStart.getDate() + dow);
+                      const isToday = toDateStr(dayDate) === toDateStr(new Date());
+                      const dayPeriods = list.filter(p => p.active_days?.[dow] === "1");
+                      return (
+                        <div key={d} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#94A3B8", letterSpacing: "0.05em" }}>{d.toUpperCase()}</div>
+                            <div style={{ fontSize: "18px", fontWeight: "800", color: isToday ? "#2563EB" : "#1E293B" }}>{dayDate.getDate()}</div>
+                          </div>
+                          {dayPeriods.length === 0 ? (
+                            <div style={{ fontSize: "13px", fontWeight: "600", color: "#CBD5E1", textAlign: "center", padding: "10px 0" }}>OFF</div>
+                          ) : (
+                            dayPeriods.map(p => {
                               const isChecked = checked.has(cellKey(p.period_id, dow));
-                              const patternCovers = !hasExplicit && patternDays.has(dow);
+                              const patternCovers = !hasExplicit && (standingByPeriod[p.period_id] || []).includes(dow);
                               return (
-                                <td key={d} style={{ textAlign: "center", padding: "6px 4px" }}>
-                                  <button
-                                    type="button"
-                                    disabled={!runsThisDay}
-                                    onClick={() => toggle(p.period_id, dow)}
-                                    title={runsThisDay ? `${p.name} — ${d}` : `${p.name} doesn't run on ${d}`}
-                                    style={{
-                                      width: "28px", height: "28px", borderRadius: "6px",
-                                      border: `2px solid ${!runsThisDay ? "#F1F5F9" : isChecked ? "#2563EB" : patternCovers ? "#FDBA74" : "#CBD5E1"}`,
-                                      background: !runsThisDay ? "#F8FAFC" : isChecked ? "#2563EB" : "#FFF",
-                                      cursor: runsThisDay ? "pointer" : "not-allowed",
-                                    }}>
-                                    {isChecked && <Check size={14} color="#FFF" strokeWidth={3} />}
-                                  </button>
-                                </td>
+                                <button
+                                  key={p.period_id}
+                                  type="button"
+                                  onClick={() => toggle(p.period_id, dow)}
+                                  title={`${p.name} — ${d}`}
+                                  style={{
+                                    textAlign: "left", padding: "10px 12px", borderRadius: "10px", cursor: "pointer",
+                                    border: `1.5px solid ${isChecked ? "#2563EB" : patternCovers ? "#FDBA74" : "#E2E8F0"}`,
+                                    background: isChecked ? "#EFF6FF" : patternCovers ? "#FFFBEB" : "#FFF",
+                                    transition: "border-color 0.15s, background 0.15s",
+                                  }}>
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                                    <span style={{ fontSize: "13px", fontWeight: "700", color: "#1E293B" }}>{p.name}</span>
+                                    {isChecked && <Check size={13} color="#2563EB" strokeWidth={3} style={{ flexShrink: 0 }} />}
+                                  </div>
+                                  <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>{p.start_time}–{p.end_time}</div>
+                                </button>
                               );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                            })
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             ))}
