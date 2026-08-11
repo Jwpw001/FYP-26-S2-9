@@ -10,7 +10,7 @@ jest.mock("openai", () => jest.fn().mockImplementation(() => ({ chat: { completi
 
 jest.mock("../src/config/prisma", () => ({
   staff: { findFirst: jest.fn() },
-  shifts: { create: jest.fn() },
+  shifts: { create: jest.fn(), findMany: jest.fn() },
 }));
 jest.mock("../src/config/supabaseAdmin", () => ({ from: jest.fn() }));
 
@@ -31,6 +31,7 @@ describe("createShift — non-operating day", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prisma.staff.findFirst.mockResolvedValue({ branch_id: BRANCH_ID });
+    prisma.shifts.findMany.mockResolvedValue([]); // no overlapping shifts by default
     supabaseAdmin.from.mockImplementation(() => makeSupabaseChain({ data: null, error: null }));
   });
 

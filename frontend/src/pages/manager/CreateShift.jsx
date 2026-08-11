@@ -46,6 +46,7 @@ export default function CreateShift() {
 
   const [step, setStep]               = useState(1);
   const [createdShift, setCreatedShift] = useState(null);
+  const [createWarnings, setCreateWarnings] = useState([]);
 
   // Step 1 state
   const [branchId, setBranchId]         = useState(null);
@@ -162,6 +163,7 @@ export default function CreateShift() {
       });
       if (!res.success) throw new Error(res.message || "Failed to create shift.");
       setCreatedShift(res.shift);
+      setCreateWarnings(res.warnings || []);
       setTasks([{ title: "", skill_id: "", difficulty: "", start_time: form.start_time, end_time: form.end_time }]);
       setStep(2);
     } catch (err) {
@@ -334,6 +336,16 @@ export default function CreateShift() {
             </span>
           </div>
 
+          {createWarnings.length > 0 && (
+            <div style={s.warningBox}>
+              {createWarnings.map((w, i) => (
+                <p key={i} style={{ display: "flex", alignItems: "center", gap: "6px", margin: i > 0 ? "4px 0 0" : 0 }}>
+                  <AlertTriangle size={13} strokeWidth={2} /> {w}
+                </p>
+              ))}
+            </div>
+          )}
+
           <div style={s.card}>
             <div style={{ ...s.cardHead, marginBottom: "6px" }}>
               <div style={{ ...s.cardIcon, background: "#FEF3C7" }}><Tag size={16} color="#D97706" /></div>
@@ -444,6 +456,7 @@ const s = {
   taskSubtitle: { fontSize: "20px", color: "#64748B", marginBottom: "4px" },
   errorBox: { display: "flex", alignItems: "center", gap: "8px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", padding: "10px 14px", borderRadius: "10px", fontSize: "20px", marginBottom: "16px" },
   warningText: { fontSize: "18px", color: "#D97706", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" },
+  warningBox: { background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E", padding: "10px 14px", borderRadius: "10px", fontSize: "20px", marginBottom: "16px" },
   fields: { display: "flex", flexDirection: "column", gap: "14px" },
   label: { display: "block", fontSize: "19px", fontWeight: "600", color: "#64748B", marginBottom: "5px" },
   miniLabel: { display: "block", fontSize: "18px", fontWeight: "600", color: "#94A3B8", marginBottom: "4px" },

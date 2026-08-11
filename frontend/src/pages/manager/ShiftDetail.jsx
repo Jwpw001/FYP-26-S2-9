@@ -391,8 +391,10 @@ export default function ShiftDetail() {
       await refreshRoster();
       // Round 3, Task 5: labor-rule breaches no longer block assignment — the assignment always
       // goes through; a breach just surfaces here as a warning instead, so the manager decides
-      // with the information in front of them rather than fighting the system.
-      if (res.warning) showToast(`${staffName} assigned to "${task.title}" — ${res.warning}`, "warning");
+      // with the information in front of them rather than fighting the system. Double-booking
+      // warnings (res.warnings) are advisory the same way.
+      const allWarnings = [res.warning, ...(res.warnings || [])].filter(Boolean);
+      if (allWarnings.length > 0) showToast(`${staffName} assigned to "${task.title}" — ${allWarnings.join("; ")}`, "warning");
       else showToast(`${staffName} assigned to "${task.title}"`);
       setAiNotes(prev => ({ ...prev, [task.task_id]: { loading: true } }));
       api.post(`/api/shifts/tasks/${task.task_id}/validate-assignment`, { staff_id: Number(staffId), roster })

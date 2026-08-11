@@ -144,7 +144,26 @@ const createShift = async (req, res) => {
         source: "manual",
       },
     });
-    res.status(201).json({ success: true, message: "Shift created successfully", shift });
+
+    // Advisory only — other shifts on the same branch/date whose time window overlaps this one.
+    // Never blocks creation; the manager decides whether the overlap is intentional (e.g. a
+    // handover window or a cover shift).
+    const overlapping = await prisma.shifts.findMany({
+      where: {
+        branch_id: shift.branch_id,
+        shift_date: shift.shift_date,
+        shift_id: { not: shift.shift_id },
+        status: { not: "cancelled" },
+        start_time: { lt: shift.end_time },
+        end_time: { gt: shift.start_time },
+      },
+      select: { title: true, start_time: true, end_time: true },
+    });
+    const warnings = overlapping.map(o =>
+      `Overlaps with existing shift: ${o.title || "Untitled Shift"} ${toHHMMSS(o.start_time)?.slice(0, 5)}–${toHHMMSS(o.end_time)?.slice(0, 5)}`
+    );
+
+    res.status(201).json({ success: true, message: "Shift created successfully", shift, ...(warnings.length > 0 ? { warnings } : {}) });
   } catch (error) {
     sendServerError(res, error, req);
   }

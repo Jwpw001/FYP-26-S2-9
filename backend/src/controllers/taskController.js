@@ -96,6 +96,37 @@ async function checkLaborRules(staffId, shiftId, branchId) {
   return null;
 }
 
+// Double-booking check — Task G2: advisory only, mirrors checkLaborRules above. Does this staff
+// member already have another assignment on this date whose shift time overlaps the shift they
+// were just assigned to? Returns one warning string per overlapping assignment (usually 0 or 1).
+async function checkDoubleBooking(staffId, shiftId, taskId, staffName) {
+  const shift = await prisma.shifts.findUnique({
+    where: { shift_id: shiftId },
+    select: { shift_date: true, start_time: true, end_time: true },
+  });
+  if (!shift) return [];
+
+  const overlapping = await prisma.task_assignments.findMany({
+    where: {
+      staff_id: staffId,
+      task_id: { not: taskId },
+      shifts: {
+        shift_date: shift.shift_date,
+        start_time: { lt: shift.end_time },
+        end_time: { gt: shift.start_time },
+      },
+    },
+    include: {
+      shift_tasks: { select: { title: true } },
+      shifts: { select: { start_time: true, end_time: true } },
+    },
+  });
+
+  return overlapping.map(a =>
+    `${staffName} is already assigned to ${a.shift_tasks?.title || "another task"} on this date (${toHHMMSS(a.shifts.start_time)?.slice(0, 5)}–${toHHMMSS(a.shifts.end_time)?.slice(0, 5)})`
+  );
+}
+
 // ── Tasks ──────────────────────────────────────────────────────────────────────
 
 const getShiftTasks = async (req, res) => {
@@ -283,7 +314,11 @@ const assignStaff = async (req, res) => {
       });
     }
 
-    res.status(201).json({ success: true, assignment, warning: laborWarning || null });
+    const warnings = await checkDoubleBooking(
+      Number(staff_id), task.shift_id, taskId, assignment.staff?.users?.full_name || "This staff member"
+    );
+
+    res.status(201).json({ success: true, assignment, warning: laborWarning || null, ...(warnings.length > 0 ? { warnings } : {}) });
   } catch (error) {
     sendServerError(res, error, req);
   }
@@ -788,4 +823,4 @@ Respond ONLY with this JSON (no other text):
   }
 };
 
-module.exports = { getShiftTasks, createTask, updateTask, deleteTask, assignStaff, unassignStaff, getMyTasks, getUnfilledTasks, getStaffRoster, validateAssignment, checkLaborRules };
+module.exports = { getShiftTasks, createTask, updateTask, deleteTask, assignStaff, unassignStaff, getMyTasks, getUnfilledTasks, getStaffRoster, validateAssignment, checkLaborRules, checkDoubleBooking };
