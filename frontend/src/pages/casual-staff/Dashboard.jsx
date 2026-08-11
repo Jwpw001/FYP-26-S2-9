@@ -23,6 +23,12 @@ function getGreeting() {
   return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
 }
 
+// Same rule MyShifts.jsx uses to decide when a shift moves from "Schedule" to "Reports".
+function shiftEnded(shiftDate, endTime) {
+  if (!shiftDate || !endTime) return false;
+  return new Date() >= new Date(`${shiftDate}T${endTime.slice(0, 5)}:00`);
+}
+
 const DAY_LABELS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
 const DAY_SHORT  = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
@@ -37,6 +43,7 @@ export default function CasualDashboard() {
   const [avail,          setAvail]          = useState([]);   // deduped, for week panel
   const [rawAvail,       setRawAvail]       = useState([]);   // all rows, for calendar dates
   const [monthShifts,    setMonthShifts]    = useState([]);
+  const [reportedShiftIds, setReportedShiftIds] = useState(new Set());
   const [selectedDate,   setSelectedDate]   = useState(new Date().getDate());
 
   const now   = new Date();
@@ -58,7 +65,7 @@ export default function CasualDashboard() {
       if (staffData?.staff_id) {
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
         const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
-        const [{ data: shifts }, { data: availRows }, { data: allMonthShifts }] = await Promise.all([
+        const [{ data: shifts }, { data: availRows }, { data: allMonthShifts }, { data: tsRows }] = await Promise.all([
           supabase.from("task_assignments").select(`
             assignment_id, acknowledged,
             shifts!inner(shift_id, title, shift_date, start_time, end_time, branches(name))
@@ -76,10 +83,12 @@ export default function CasualDashboard() {
           `).eq("staff_id", staffData.staff_id)
             .gte("shifts.shift_date", monthStart)
             .lte("shifts.shift_date", monthEnd),
+          supabase.from("timesheets").select("shift_id").eq("staff_id", staffData.staff_id).not("shift_id", "is", null),
         ]);
         if (!cancelled) {
           setUpcomingShifts((shifts || []).filter(a => a.shifts));
           setMonthShifts((allMonthShifts || []).filter(a => a.shifts));
+          setReportedShiftIds(new Set((tsRows || []).map(r => r.shift_id)));
           setRawAvail(availRows || []);
 
           // Deduped (latest per day_of_week) for the week panel time ranges
@@ -117,6 +126,12 @@ export default function CasualDashboard() {
     availDates.add(dateStr);
     availByDate[dateStr] = r;
   });
+
+  // Ended shifts this month with no timesheet submitted yet — surfaced here so there's a path
+  // from the dashboard straight to submitting hours, instead of only reachable via the Tasks nav.
+  const needsHoursShifts = monthShifts.filter(a =>
+    shiftEnded(a.shifts.shift_date, a.shifts.end_time) && !reportedShiftIds.has(a.shifts.shift_id)
+  );
 
   // Map date string → assignments (with acknowledged) for that date
   const shiftsOnDate = {};
@@ -191,6 +206,25 @@ export default function CasualDashboard() {
             )}
           </div>
         </div>
+
+        {/* Needs Your Hours — ended shifts with no timesheet submitted yet */}
+        {!loading && needsHoursShifts.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap", background: "#FFFBEB", border: "1.5px solid #FDE68A", borderRadius: "14px", padding: "16px 20px" }}>
+            <div style={{ flex: 1, minWidth: "220px" }}>
+              <p style={{ fontSize: "21px", fontWeight: "700", color: "#92400E", margin: "0 0 2px" }}>
+                {needsHoursShifts.length} shift{needsHoursShifts.length !== 1 ? "s" : ""} need{needsHoursShifts.length === 1 ? "s" : ""} your hours
+              </p>
+              <p style={{ fontSize: "19px", color: "#B45309", margin: 0 }}>
+                {needsHoursShifts.slice(0, 3).map(a => a.shifts.title || "Shift").join(", ")}
+                {needsHoursShifts.length > 3 ? `, +${needsHoursShifts.length - 3} more` : ""}
+              </p>
+            </div>
+            <button onClick={() => navigate("/casual-staff/shifts?tab=reports")}
+              style={{ background: "#D97706", color: "#fff", border: "none", borderRadius: "9px", padding: "10px 18px", fontSize: "20px", fontWeight: "700", cursor: "pointer", flexShrink: 0 }}>
+              Submit Hours
+            </button>
+          </div>
+        )}
 
         {/* Calendar + This Week's Hours */}
         <div className="responsive-stack-2col" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "18px" }}>
@@ -330,7 +364,8 @@ export default function CasualDashboard() {
                   const sh = a.shifts;
                   const d = new Date(sh.shift_date + "T12:00:00Z");
                   return (
-                    <div key={a.assignment_id} style={{ display: "flex", alignItems: "center", gap: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "10px", padding: "11px 14px" }}>
+                    <div key={a.assignment_id} onClick={() => navigate("/casual-staff/shifts")}
+                      style={{ display: "flex", alignItems: "center", gap: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "10px", padding: "11px 14px", cursor: "pointer" }}>
                       <div style={{ width: "42px", height: "42px", borderRadius: "9px", background: "#DCFCE7", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <span style={{ fontSize: "17px", fontWeight: "800", color: "#16A34A", lineHeight: 1 }}>{d.toLocaleDateString("en-US", { month: "short" }).toUpperCase()}</span>
                         <span style={{ fontSize: "22px", fontWeight: "800", color: "#166534", lineHeight: 1 }}>{d.getUTCDate()}</span>

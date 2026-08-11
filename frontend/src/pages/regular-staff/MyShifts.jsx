@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { api } from "../../lib/api";
@@ -118,12 +119,15 @@ export default function MyTasks({ Layout = StaffLayout }) {
   // keep the existing plain-hours flow unchanged, per the task's own instruction not to add a
   // new obligation for them.
   const isCasual = user?.role === "casual_staff";
+  const [searchParams] = useSearchParams();
 
   const [staffId,    setStaffId]    = useState(null);
   const [shifts,     setShifts]     = useState([]);
   const [timesheets, setTimesheets] = useState({});
   const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState("schedule"); // "schedule" | "reports"
+  // Deep-linkable via ?tab=reports (e.g. the Dashboard's "needs your hours" widget) so a manager
+  // or staff member can land directly on the tab they need instead of always starting on Schedule.
+  const [tab,        setTab]        = useState(searchParams.get("tab") === "reports" ? "reports" : "schedule"); // "schedule" | "reports"
   const [reportModalFor, setReportModalFor] = useState(null); // the assignment being reported, or null
   const [formData,   setFormData]   = useState({});
   const [submitting, setSubmitting] = useState(null);
