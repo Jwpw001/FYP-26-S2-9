@@ -15,6 +15,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: #F7F6F3;
   color: #1C1B18;
+  /* Fallback for any page without its own fixed/sticky header handling —
+     0 on non-notch devices, so this is a no-op everywhere else. */
+  padding-top: env(safe-area-inset-top);
 }
 
 button {

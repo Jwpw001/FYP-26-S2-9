@@ -159,7 +159,7 @@ const s = {
   userName: { fontSize: "20px", fontWeight: "600", color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   userRole: { fontSize: "18px", color: "rgba(255,255,255,0.45)", marginTop: "1px" },
   main: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0, marginLeft: "64px" },
-  topbar: { height: "60px", background: "#FFFFFF", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", padding: "0 28px", gap: "16px", position: "sticky", top: 0, zIndex: 100 },
+  topbar: { height: "calc(60px + env(safe-area-inset-top))", background: "#FFFFFF", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", padding: "0 28px", gap: "16px", position: "sticky", top: 0, zIndex: 100, paddingTop: "calc(0px + env(safe-area-inset-top))" },
   pageTitle: { fontSize: "22px", fontWeight: "700", color: "#1E293B" },
   hamburgerBtn: { background: "none", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center", color: "#1E293B", marginRight: "4px", flexShrink: 0 },
   content: { flex: 1, padding: "28px", boxSizing: "border-box" },

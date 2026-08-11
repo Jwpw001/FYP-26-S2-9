@@ -185,9 +185,10 @@ const s = {
   userRole: { fontSize: "18px", color: "rgba(255,255,255,0.35)", marginTop: "1px" },
   main: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0, marginLeft: "64px" },
   topbar: {
-    height: "58px", background: "#FFFFFF", borderBottom: "1px solid #E2E8F0",
+    height: "calc(58px + env(safe-area-inset-top))", background: "#FFFFFF", borderBottom: "1px solid #E2E8F0",
     display: "flex", alignItems: "center", padding: "0 24px", gap: "14px",
     position: "sticky", top: 0, zIndex: 100,
+    paddingTop: "calc(0px + env(safe-area-inset-top))",
   },
   pageTitle: { fontSize: "21px", fontWeight: "700", color: "#0F172A" },
   hamburgerBtn: { background: "none", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center", color: "#0F172A", marginRight: "4px", flexShrink: 0 },

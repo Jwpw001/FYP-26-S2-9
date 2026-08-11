@@ -66,7 +66,6 @@ export default function StaffDashboard() {
   const [notifications,  setNotifications]  = useState([]);
   const [unreadCount,    setUnreadCount]    = useState(0);
   const [approvalTab,    setApprovalTab]    = useState("leave");
-  const [formOpen,       setFormOpen]       = useState(false);
   const [acked,          setAcked]          = useState({});
   const [weekDays,       setWeekDays]       = useState([]);
   const [selectedDay,    setSelectedDay]    = useState(null);
@@ -312,30 +311,11 @@ export default function StaffDashboard() {
                   );
                 })}
               </div>
-              <button onClick={() => setFormOpen(p => !p)}
+              <button onClick={() => navigate(onLeave ? "/regular-staff/leave" : "/regular-staff/swaps")}
                 style={{ background: "none", border: "none", fontSize: "19.5px", fontWeight: "700", color: "#F97316", cursor: "pointer" }}>
-                {formOpen ? "− Cancel" : "+ New Request"}
+                + New Request
               </button>
             </div>
-
-            {formOpen && (
-              <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: "10px", padding: "12px", marginBottom: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                <div style={{ fontSize: "19px", color: "#9A3412", fontWeight: "600" }}>New {onLeave ? "leave" : "swap"} request</div>
-                <div style={{ background: "#fff", border: "1px solid #FDBA74", borderRadius: "7px", padding: "8px 10px", fontSize: "19.5px", color: "#94A3B8" }}>
-                  Select dates and reason...
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button onClick={() => { setFormOpen(false); navigate(onLeave ? "/regular-staff/leave" : "/regular-staff/swaps"); }}
-                    style={{ flex: 1, background: "#F97316", color: "#fff", border: "none", borderRadius: "7px", padding: "7px", fontSize: "19px", fontWeight: "700", cursor: "pointer" }}>
-                    Submit
-                  </button>
-                  <button onClick={() => setFormOpen(false)}
-                    style={{ flex: 1, background: "#fff", color: "#9A3412", border: "1px solid #FDBA74", borderRadius: "7px", padding: "7px", fontSize: "19px", fontWeight: "700", cursor: "pointer" }}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
 
             {loading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>

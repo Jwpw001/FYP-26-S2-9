@@ -12,6 +12,7 @@ jest.mock("../src/config/prisma", () => ({
   casual_period_availability: { findMany: jest.fn() },
   casual_standing_availability: { findMany: jest.fn() },
   timesheets: { findMany: jest.fn() },
+  availability: { findMany: jest.fn() },
 }));
 jest.mock("../src/config/supabaseAdmin", () => ({ from: jest.fn() }));
 jest.mock("../src/controllers/taskController", () => ({ checkLaborRules: jest.fn() }));
@@ -92,6 +93,7 @@ function setupBaseline() {
   prisma.casual_period_availability.findMany.mockResolvedValue([]);
   prisma.casual_standing_availability.findMany.mockResolvedValue([]);
   prisma.timesheets.findMany.mockResolvedValue([]); // no approved timesheets by default
+  prisma.availability.findMany.mockResolvedValue([]); // nobody on approved leave by default
 
   mockSameDayAssignments = [];
   mockPast90dAssignments = [];
@@ -126,6 +128,42 @@ describe("autoAssignCasual filter chain", () => {
     expect(body.reason).not.toMatch(/already booked/);
     expect(body.reason).not.toMatch(/labor limits/);
     expect(checkLaborRules).not.toHaveBeenCalled(); // never reached hard filter 3
+  });
+
+  // BUG 3: approved leave overlapping the shift date is a hard exclude, checked before scoring —
+  // same gate pattern as the double-booking check below.
+  test("candidates with approved leave covering the shift date are excluded even though they're available", async () => {
+    prisma.casual_availability.findMany.mockResolvedValue([
+      { staff_id: S1, available_from: t("08:00"), available_to: t("18:00") },
+      { staff_id: S2, available_from: t("08:00"), available_to: t("18:00") },
+    ]);
+    prisma.availability.findMany.mockResolvedValue([{ staff_id: S1 }]); // S1 on approved leave
+
+    prisma.users.findUnique.mockResolvedValue({ full_name: "Worker Two" });
+    prisma.task_assignments.create.mockResolvedValue({ assignment_id: 42 });
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(true);
+    expect(body.assigned.user_id).toBe(U2); // S1/U1 excluded despite being otherwise available
+  });
+
+  test("all candidates on approved leave produces a flagged 'no eligible workers' response", async () => {
+    prisma.casual_availability.findMany.mockResolvedValue([
+      { staff_id: S1, available_from: t("08:00"), available_to: t("18:00") },
+      { staff_id: S2, available_from: t("08:00"), available_to: t("18:00") },
+    ]);
+    prisma.availability.findMany.mockResolvedValue([{ staff_id: S1 }, { staff_id: S2 }]);
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(false);
+    expect(body.flagged).toBe(true);
+    expect(body.reason).toMatch(/2 on approved leave/);
   });
 
   test("candidates whose availability fully covers the task but who are double-booked are excluded", async () => {

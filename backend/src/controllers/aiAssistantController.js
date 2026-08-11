@@ -1,8 +1,48 @@
 const OpenAI = require("openai");
 const { buildMessages, buildBriefMessages, TOOLS } = require("../services/aiAssistantService");
+const { runTool } = require("./aiAssistantExecuteController");
 const logger = require("../config/logger");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// A pair of ids (staff_id/task_id, a shift_id, a leave request_id...) that would otherwise let
+// the model re-issue the exact same mutation twice within one bulk run — e.g. re-assigning a
+// staff member to a task it already just assigned them to because the DB write hadn't made it
+// back into context yet. Returns null for tools with no natural identity to dedupe on
+// (create_draft_shift, add_task_to_shift) — two shifts with the same title are legitimately
+// different actions, not a repeat.
+function bulkDedupKey(name, args) {
+  if (name === "assign_staff_to_task") return `assign:${args?.staff_id}:${args?.task_id}`;
+  if (name === "publish_shift") return `publish:${args?.shift_id}`;
+  if (name === "set_staff_active") return `active:${args?.staff_id}:${args?.is_active}`;
+  if (name === "approve_leave" || name === "reject_leave") return `${name}:${args?.request_id}`;
+  return null;
+}
+
+function trackBulkOutcome(summary, name, args, result) {
+  if (name === "assign_staff_to_task") {
+    if (result.success) { summary.assignedCount++; summary.taskIds.add(args?.task_id); }
+    else summary.failedTasks.push(`${args?.task_name || "a task"} (${result.message})`);
+  } else if (name === "publish_shift") {
+    if (result.success) summary.publishedCount++;
+  }
+}
+
+// Deterministic fallback so a bulk run can never end in a blank bubble — used only when the
+// model's own closing turn produced no text of its own to summarize what it just did.
+function buildBulkSummary(summary) {
+  const taskCount = summary.taskIds.size;
+  const parts = [
+    `Assigned ${summary.assignedCount} staff across ${taskCount} task${taskCount === 1 ? "" : "s"}.`,
+    `${summary.publishedCount} shift${summary.publishedCount === 1 ? "" : "s"} published.`,
+  ];
+  parts.push(
+    summary.failedTasks.length > 0
+      ? `${summary.failedTasks.length} task${summary.failedTasks.length === 1 ? "" : "s"} could not be filled: ${summary.failedTasks.join(", ")}.`
+      : `0 tasks could not be filled.`
+  );
+  return parts.join(" ");
+}
 
 async function chat(req, res) {
   try {
@@ -37,74 +77,136 @@ async function chat(req, res) {
     // Only managers get action tools (business owners are read-only for now)
     const tools = role === "manager" ? TOOLS : undefined;
 
-    const stream = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages,
-      tools,
-      tool_choice: tools ? "auto" : undefined,
-      // The chat UI confirms one action at a time (a single confirmation card per turn) — asking
-      // for two actions in one message ("assign Mr X and Mr Y") used to make the model emit two
-      // parallel tool calls, whose streamed argument fragments arrived interleaved and got
-      // concatenated into one corrupted buffer below, producing a blank response. Forcing one
-      // tool call per turn keeps the model's behavior matched to what the UI can actually confirm.
-      parallel_tool_calls: tools ? false : undefined,
-      max_tokens: 1000,
-      temperature: 0.3,
-      stream: true,
-    });
+    // Bulk mode: once the model states its scope in prose before calling a tool (the system
+    // prompt's bulk-instruction rule), each subsequent tool call in this request is executed
+    // immediately server-side and its result fed back to the model for the next turn, instead of
+    // stopping to wait for a frontend confirm click. A single, undescribed tool call (the normal
+    // "approve this one leave request" case) is left completely alone — still one confirmation
+    // card, exactly as before — so this only changes behavior for requests the model itself
+    // recognized as a multi-step bulk job.
+    let bulkMode = false;
+    const dedupSeen = new Set();
+    const bulkSummary = { assignedCount: 0, taskIds: new Set(), publishedCount: 0, failedTasks: [] };
+    let sawContentEver = false;
+    let emittedToolCallCard = false;
 
-    // Keyed by each tool call's stream index — OpenAI still sends an index even when
-    // parallel_tool_calls is off, and defensively keying by it (instead of always reading
-    // delta.tool_calls[0]) means a stray parallel call never corrupts another one's buffer.
-    const toolCallBuffers = {};
-    let sawContent = false;
+    const MAX_TURNS = 12; // guards against a runaway loop if the model never stops calling tools
+    for (let turn = 0; turn < MAX_TURNS; turn++) {
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        tools,
+        tool_choice: tools ? "auto" : undefined,
+        // Two tool calls arriving in the SAME streamed turn interleave their argument fragments
+        // into one corrupted buffer (see toolCallBuffers below) — parallel calls are still off for
+        // that reason. Bulk mode instead gets its multiple actions from multiple SEQUENTIAL turns
+        // of this loop, each with exactly one tool call, which streams cleanly.
+        parallel_tool_calls: tools ? false : undefined,
+        max_tokens: 1000,
+        temperature: 0.3,
+        stream: true,
+      });
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta;
-      const finishReason = chunk.choices[0]?.finish_reason;
+      // Keyed by each tool call's stream index — OpenAI still sends an index even when
+      // parallel_tool_calls is off, and defensively keying by it (instead of always reading
+      // delta.tool_calls[0]) means a stray parallel call never corrupts another one's buffer.
+      const toolCallBuffers = {};
+      let sawContentThisTurn = false;
+      let turnText = "";
+      let finishReason = null;
 
-      if (delta?.tool_calls) {
-        for (const tc of delta.tool_calls) {
-          const idx = tc.index ?? 0;
-          if (!toolCallBuffers[idx]) toolCallBuffers[idx] = { name: "", arguments: "" };
-          toolCallBuffers[idx].name      += tc.function?.name      || "";
-          toolCallBuffers[idx].arguments += tc.function?.arguments || "";
-        }
-      }
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+        finishReason = chunk.choices[0]?.finish_reason || finishReason;
 
-      // Regular text content
-      if (delta?.content) {
-        sawContent = true;
-        res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
-      }
-
-      // Tool call(s) complete — emit the first as a confirmation card (the only kind of turn the
-      // frontend renders); if the model still returned more than one, say so instead of silently
-      // dropping the rest. If nothing parses and no text was streamed either, fall back to a
-      // user-facing message so the chat bubble never ends up blank.
-      if (finishReason === "tool_calls") {
-        const calls = Object.keys(toolCallBuffers)
-          .sort((a, b) => Number(a) - Number(b))
-          .map(k => toolCallBuffers[k]);
-        let emitted = false;
-        for (const call of calls) {
-          try {
-            const args = JSON.parse(call.arguments);
-            if (!emitted) {
-              res.write(`data: ${JSON.stringify({ tool_call: { name: call.name, args } })}\n\n`);
-              emitted = true;
-              if (calls.length > 1) {
-                res.write(`data: ${JSON.stringify({ content: "\n\n(I can only confirm one action at a time — once you've confirmed this, ask me for the next.)" })}\n\n`);
-              }
-            }
-          } catch (e) {
-            (req.log || logger).error({ err: e }, "[AI] Failed to parse tool call args");
+        if (delta?.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index ?? 0;
+            if (!toolCallBuffers[idx]) toolCallBuffers[idx] = { name: "", arguments: "" };
+            toolCallBuffers[idx].name      += tc.function?.name      || "";
+            toolCallBuffers[idx].arguments += tc.function?.arguments || "";
           }
         }
-        if (!emitted && !sawContent) {
-          res.write(`data: ${JSON.stringify({ content: "Sorry, I couldn't complete that action — could you try rephrasing, or ask for one thing at a time?" })}\n\n`);
+
+        // Regular text content
+        if (delta?.content) {
+          sawContentThisTurn = true;
+          sawContentEver = true;
+          turnText += delta.content;
+          res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
         }
       }
+
+      if (finishReason !== "tool_calls") {
+        // Natural stop — the model is done. In bulk mode this closing turn is expected to contain
+        // its own wrap-up ("Assigned 3 staff... "); if it came back empty, synthesize the required
+        // summary so the chat bubble is never blank.
+        if (bulkMode && !sawContentThisTurn) {
+          res.write(`data: ${JSON.stringify({ content: buildBulkSummary(bulkSummary) })}\n\n`);
+        } else if (!bulkMode && !emittedToolCallCard && !sawContentEver) {
+          res.write(`data: ${JSON.stringify({ content: "Sorry, I couldn't complete that action — could you try rephrasing, or ask for one thing at a time?" })}\n\n`);
+        }
+        break;
+      }
+
+      // finishReason === "tool_calls"
+      const calls = Object.keys(toolCallBuffers)
+        .sort((a, b) => Number(a) - Number(b))
+        .map(k => toolCallBuffers[k]);
+      const call = calls[0];
+      if (!call) break;
+
+      let args;
+      try {
+        args = JSON.parse(call.arguments);
+      } catch (e) {
+        (req.log || logger).error({ err: e }, "[AI] Failed to parse tool call args");
+        if (!sawContentEver) {
+          res.write(`data: ${JSON.stringify({ content: "Sorry, I couldn't complete that action — could you try rephrasing, or ask for one thing at a time?" })}\n\n`);
+        }
+        break;
+      }
+
+      // Bulk mode is decided once, from the very first tool call: did the model state its scope
+      // in prose first (per the system prompt's bulk-instruction rule)? A plain "approve_leave"
+      // call with no preceding text is the normal single-action case, handled exactly as before.
+      if (turn === 0 && sawContentThisTurn) bulkMode = true;
+
+      if (calls.length > 1 && !bulkMode) {
+        res.write(`data: ${JSON.stringify({ content: "\n\n(I can only confirm one action at a time — once you've confirmed this, ask me for the next.)" })}\n\n`);
+      }
+
+      if (!bulkMode) {
+        // Exactly the original behavior: hand the single action to the frontend as a confirmation
+        // card and stop — the manager clicks Confirm, which hits /execute separately.
+        res.write(`data: ${JSON.stringify({ tool_call: { name: call.name, args } })}\n\n`);
+        emittedToolCallCard = true;
+        break;
+      }
+
+      // Bulk mode: run the tool immediately, skipping anything already done earlier this turn.
+      const dedupKey = bulkDedupKey(call.name, args);
+      let toolResultMessage;
+      if (dedupKey && dedupSeen.has(dedupKey)) {
+        toolResultMessage = `Already handled earlier in this request — skipped repeating it.`;
+      } else {
+        if (dedupKey) dedupSeen.add(dedupKey);
+        const result = await runTool(call.name, args, userId, role);
+        toolResultMessage = result.message;
+        trackBulkOutcome(bulkSummary, call.name, args, result);
+        res.write(`data: ${JSON.stringify({ content: `\n✓ ${result.message}` })}\n\n`);
+        sawContentEver = true;
+      }
+
+      // Feed the call and its result back so the model can decide the next step.
+      const callId = `call_${turn}`;
+      messages.push({
+        role: "assistant",
+        content: turnText || null,
+        tool_calls: [{ id: callId, type: "function", function: { name: call.name, arguments: call.arguments } }],
+      });
+      messages.push({ role: "tool", tool_call_id: callId, content: toolResultMessage });
+      // Loop continues to the next turn.
     }
 
     res.write("data: [DONE]\n\n");

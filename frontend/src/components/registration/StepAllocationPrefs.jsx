@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Award, TrendingUp, BarChart3, Scale, Check, RotateCcw, Minus, Plus } from "lucide-react";
+import { Award, TrendingUp, Scale, Check, RotateCcw, Minus, Plus } from "lucide-react";
 
 if (typeof document !== "undefined" && !document.getElementById("reg-alloc-kf")) {
   const s = document.createElement("style");
@@ -16,14 +16,12 @@ if (typeof document !== "undefined" && !document.getElementById("reg-alloc-kf"))
 }
 
 const WEIGHTS = [
-  { key: "weight_availability", label: "Availability", icon: Users, color: "#2563EB" },
   { key: "weight_skills", label: "Skills match", icon: Award, color: "#7C3AED" },
   { key: "weight_attendance", label: "Attendance", icon: TrendingUp, color: "#059669" },
-  { key: "weight_performance", label: "Performance", icon: BarChart3, color: "#EA580C" },
   { key: "weight_workload", label: "Workload", icon: Scale, color: "#0891B2" },
 ];
 
-const DEFAULTS = { weight_availability: 40, weight_skills: 30, weight_attendance: 15, weight_performance: 10, weight_workload: 5 };
+const DEFAULTS = { weight_skills: 50, weight_attendance: 30, weight_workload: 20 };
 
 function DonutChart({ weights, size = 200 }) {
   const total = weights.reduce((s, w) => s + w.value, 0);

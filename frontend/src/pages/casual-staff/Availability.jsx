@@ -55,16 +55,7 @@ function Shimmer({ w = "100%", h = "16px", r = "8px" }) {
   return <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear" }} />;
 }
 
-function DayDots({ activeDays, size = 6 }) {
-  return (
-    <div style={{ display: "flex", gap: "3px" }}>
-      {DAY_SHORT.map((d, i) => (
-        <div key={d} title={d}
-          style={{ width: `${size}px`, height: `${size}px`, borderRadius: "50%", background: activeDays?.[i] === "1" ? "#2563EB" : "#E2E8F0" }} />
-      ))}
-    </div>
-  );
-}
+function cellKey(periodId, dow) { return `${periodId}:${dow}`; }
 
 export default function CasualAvailability() {
   // Default: show next week so the user plans ahead
@@ -96,16 +87,33 @@ export default function CasualAvailability() {
     setLoadingWeek(true);
     try {
       const res = await api.get(`/api/casual/period-availability?week_start_date=${weekStartStr}`);
-      setPeriods(res.periods || []);
+      const periodsRes = res.periods || [];
+      setPeriods(periodsRes);
       setHasExplicit(!!res.has_explicit_submission);
       setStandingByPeriod(res.standing_by_period || {});
+
+      const activeDaysOf = Object.fromEntries(periodsRes.map(p => [p.period_id, p.active_days || "0000000"]));
       if (res.has_explicit_submission) {
-        setChecked(new Set(res.explicit_period_ids || []));
+        // day_of_week === null means "whole week" for that period (rows written before OPT 5, or
+        // resubmitted via the legacy period_ids shape) — shown as every operating day checked.
+        const next = new Set();
+        (res.explicit_entries || []).forEach(({ period_id, day_of_week }) => {
+          if (day_of_week === null || day_of_week === undefined) {
+            const days = activeDaysOf[period_id] || "0000000";
+            for (let d = 0; d < 7; d++) if (days[d] === "1") next.add(cellKey(period_id, d));
+          } else {
+            next.add(cellKey(period_id, day_of_week));
+          }
+        });
+        setChecked(next);
       } else {
-        // Nothing explicit yet — pre-check whatever the standing pattern covers on any day, as a
-        // starting point the worker can accept or adjust before submitting.
-        const covered = Object.keys(res.standing_by_period || {}).map(Number);
-        setChecked(new Set(covered));
+        // Nothing explicit yet — pre-check whatever the standing pattern covers, as a starting
+        // point the worker can accept or adjust before submitting.
+        const next = new Set();
+        Object.entries(res.standing_by_period || {}).forEach(([periodId, days]) => {
+          days.forEach(d => next.add(cellKey(Number(periodId), d)));
+        });
+        setChecked(next);
       }
       setSaved(false);
     } catch {
@@ -140,10 +148,11 @@ export default function CasualAvailability() {
     return Object.entries(grouped);
   }, [periods]);
 
-  function toggle(periodId) {
+  function toggle(periodId, dow) {
+    const key = cellKey(periodId, dow);
     setChecked(prev => {
       const next = new Set(prev);
-      if (next.has(periodId)) next.delete(periodId); else next.add(periodId);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
     setSaved(false);
@@ -152,7 +161,18 @@ export default function CasualAvailability() {
   async function submit() {
     setSaving(true);
     try {
-      await api.put("/api/casual/period-availability", { week_start_date: weekStartStr, period_ids: [...checked] });
+      // One entry per period with the specific days checked for it — the grid always submits
+      // explicit days (never a bare "whole week" period), even if every operating day ends up
+      // checked; the backend still accepts the legacy whole-week shape for older submissions.
+      const byPeriod = new Map();
+      checked.forEach(key => {
+        const [periodId, dow] = key.split(":").map(Number);
+        if (!byPeriod.has(periodId)) byPeriod.set(periodId, []);
+        byPeriod.get(periodId).push(dow);
+      });
+      const periodsPayload = [...byPeriod.entries()].map(([period_id, days]) => ({ period_id, days }));
+
+      await api.put("/api/casual/period-availability", { week_start_date: weekStartStr, periods: periodsPayload });
       setSaved(true);
       setHasExplicit(true);
       showToast("Availability saved.");
@@ -189,7 +209,7 @@ export default function CasualAvailability() {
           <div>
             <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Weekly Availability</h2>
             <p style={{ fontSize: "20px", color: "#64748B", marginTop: "3px" }}>
-              Tick the shift periods you can work, then submit for your manager to review.
+              Tick the specific days you can work each period, then submit for your manager to review.
             </p>
           </div>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -227,7 +247,7 @@ export default function CasualAvailability() {
           </span>
         </div>
 
-        {/* ── Period grid, grouped by branch ──────────────────────────── */}
+        {/* ── Period × day grid, grouped by branch ────────────────────── */}
         {loadingWeek ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
             {[1, 2].map(i => <Shimmer key={i} h="100px" r="14px" />)}
@@ -241,27 +261,52 @@ export default function CasualAvailability() {
             {periodsByBranch.map(([branchName, list]) => (
               <div key={branchName} style={{ background: "#FFF", border: "1.5px solid #E2E8F0", borderRadius: "14px", padding: "18px 20px" }}>
                 <h4 style={{ fontSize: "19px", fontWeight: "700", color: "#64748B", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.03em" }}>{branchName}</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {list.map(p => {
-                    const isChecked = checked.has(p.period_id);
-                    const patternCovers = (standingByPeriod[p.period_id] || []).length > 0;
-                    return (
-                      <label key={p.period_id} onClick={() => toggle(p.period_id)}
-                        style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 14px", borderRadius: "10px", border: `2px solid ${isChecked ? "#2563EB" : "#E2E8F0"}`, background: isChecked ? "#EFF6FF" : "#FFF", cursor: "pointer", transition: "all 0.15s" }}>
-                        <div style={{ width: "22px", height: "22px", borderRadius: "6px", border: `2px solid ${isChecked ? "#2563EB" : "#CBD5E1"}`, background: isChecked ? "#2563EB" : "#FFF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          {isChecked && <Check size={14} color="#FFF" strokeWidth={3} />}
-                        </div>
-                        <div style={{ flex: 1, minWidth: "160px" }}>
-                          <div style={{ fontSize: "20px", fontWeight: "700", color: "#1E293B" }}>{p.name}</div>
-                          <div style={{ fontSize: "17px", color: "#64748B" }}>{p.start_time}–{p.end_time}</div>
-                        </div>
-                        <DayDots activeDays={p.active_days} />
-                        {!hasExplicit && patternCovers && (
-                          <span style={{ fontSize: "15px", fontWeight: "600", color: "#B45309", background: "#FEF3C7", borderRadius: "6px", padding: "2px 8px", whiteSpace: "nowrap" }}>usual</span>
-                        )}
-                      </label>
-                    );
-                  })}
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "480px" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left", fontSize: "16px", color: "#94A3B8", padding: "6px 8px" }}>Period</th>
+                        {DAY_SHORT.map(d => (
+                          <th key={d} style={{ fontSize: "16px", color: "#94A3B8", padding: "6px 4px", textAlign: "center" }}>{d}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {list.map(p => {
+                        const patternDays = new Set(standingByPeriod[p.period_id] || []);
+                        return (
+                          <tr key={p.period_id}>
+                            <td style={{ fontSize: "18px", fontWeight: "600", color: "#1E293B", padding: "8px", whiteSpace: "nowrap" }}>
+                              {p.name}
+                              <div style={{ fontSize: "14px", fontWeight: "400", color: "#94A3B8" }}>{p.start_time}–{p.end_time}</div>
+                            </td>
+                            {DAY_SHORT.map((d, dow) => {
+                              const runsThisDay = p.active_days?.[dow] === "1";
+                              const isChecked = checked.has(cellKey(p.period_id, dow));
+                              const patternCovers = !hasExplicit && patternDays.has(dow);
+                              return (
+                                <td key={d} style={{ textAlign: "center", padding: "6px 4px" }}>
+                                  <button
+                                    type="button"
+                                    disabled={!runsThisDay}
+                                    onClick={() => toggle(p.period_id, dow)}
+                                    title={runsThisDay ? `${p.name} — ${d}` : `${p.name} doesn't run on ${d}`}
+                                    style={{
+                                      width: "28px", height: "28px", borderRadius: "6px",
+                                      border: `2px solid ${!runsThisDay ? "#F1F5F9" : isChecked ? "#2563EB" : patternCovers ? "#FDBA74" : "#CBD5E1"}`,
+                                      background: !runsThisDay ? "#F8FAFC" : isChecked ? "#2563EB" : "#FFF",
+                                      cursor: runsThisDay ? "pointer" : "not-allowed",
+                                    }}>
+                                    {isChecked && <Check size={14} color="#FFF" strokeWidth={3} />}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             ))}
@@ -273,8 +318,8 @@ export default function CasualAvailability() {
           <Clock size={15} color={setCount > 0 ? "#2563EB" : "#94A3B8"} style={{ flexShrink: 0 }} />
           <span style={{ fontSize: "20px", fontWeight: "600", color: setCount > 0 ? "#1E40AF" : "#94A3B8" }}>
             {setCount === 0
-              ? "No periods selected — tick any period above."
-              : `${setCount} period${setCount !== 1 ? "s" : ""} selected for this week`}
+              ? "No days selected — tick any cell in the grid above."
+              : `${setCount} day${setCount !== 1 ? "s" : ""} selected for this week`}
           </span>
           {hasExplicit && (
             <button onClick={setAsUsualPattern} disabled={savingPattern}

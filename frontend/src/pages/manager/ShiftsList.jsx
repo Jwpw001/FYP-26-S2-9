@@ -604,7 +604,7 @@ export default function ShiftsList() {
                         const isSelected = selected.has(shift.shift_id);
                         const initials = (shift.title||"S").slice(0,2).toUpperCase();
                         const tasks = shift.shift_tasks || [];
-                        const doneTasks = tasks.filter(t => t.status==="done").length;
+                        const filledTasks = tasks.filter(t => t.status==="assigned"||t.status==="done").length;
                         return (
                           <div key={shift.shift_id}
                             onClick={() => selectMode ? toggleSelect(shift.shift_id) : goTo(`/manager/shifts/${shift.shift_id}`)}
@@ -630,9 +630,9 @@ export default function ShiftsList() {
                             <div style={{ fontSize:"17.5px", fontWeight:"600", color:"#4B5563", marginTop:"6px" }}>{toHHMM(shift.start_time)} – {toHHMM(shift.end_time)}</div>
                             {tasks.length > 0 && (
                               <div style={{ marginTop:"7px" }}>
-                                <div style={{ fontSize:"16px", fontWeight:"700", color:"#64748B", marginBottom:"3px" }}>{doneTasks}/{tasks.length} done</div>
+                                <div style={{ fontSize:"16px", fontWeight:"700", color:"#64748B", marginBottom:"3px" }}>{filledTasks}/{tasks.length} filled</div>
                                 <div style={{ height:"4px", borderRadius:"2px", background:"#E2E8F0", overflow:"hidden" }}>
-                                  <div style={{ height:"100%", width:`${tasks.length>0?Math.round(doneTasks/tasks.length*100):0}%`, background:c.dot }} />
+                                  <div style={{ height:"100%", width:`${tasks.length>0?Math.round(filledTasks/tasks.length*100):0}%`, background:c.dot }} />
                                 </div>
                               </div>
                             )}
@@ -711,7 +711,7 @@ export default function ShiftsList() {
                       const leftPx = sm/60*HOUR_W;
                       const topPx = lane*(LANE_H+LANE_GAP);
                       const tasks = sh.shift_tasks || [];
-                      const doneTasks = tasks.filter(t=>t.status==="done").length;
+                      const filledTasks = tasks.filter(t=>t.status==="assigned"||t.status==="done").length;
                       return (
                         <div key={sh.shift_id}
                           onClick={() => goTo(`/manager/shifts/${sh.shift_id}`)}
@@ -724,7 +724,7 @@ export default function ShiftsList() {
                           <div style={{ fontSize:"19px", fontWeight:"700", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", marginTop:"2px", color:"#1E293B" }}>{sh.title || "Shift"}</div>
                           <div style={{ fontSize:"17.5px", color:"#64748B", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{toHHMM(sh.start_time)} – {toHHMM(sh.end_time)}</div>
                           {tasks.length > 0 && (
-                            <div style={{ fontSize:"17px", fontWeight:"700", color:"#64748B", marginTop:"3px" }}>{doneTasks}/{tasks.length} tasks</div>
+                            <div style={{ fontSize:"17px", fontWeight:"700", color:"#64748B", marginTop:"3px" }}>{filledTasks}/{tasks.length} filled</div>
                           )}
                         </div>
                       );

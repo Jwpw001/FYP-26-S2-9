@@ -423,7 +423,7 @@ async function getPeriodAvailability(req, res) {
     const [explicitRows, standingRows] = await Promise.all([
       prisma.casual_period_availability.findMany({
         where: { staff_id: staffId, week_start_date: new Date(`${week_start_date}T00:00:00.000Z`) },
-        select: { period_id: true },
+        select: { period_id: true, day_of_week: true },
       }),
       prisma.casual_standing_availability.findMany({
         where: { staff_id: staffId },
@@ -441,7 +441,10 @@ async function getPeriodAvailability(req, res) {
       success: true,
       week_start_date,
       periods,
-      explicit_period_ids: explicitRows.map(r => r.period_id),
+      explicit_period_ids: [...new Set(explicitRows.map(r => r.period_id))],
+      // OPT 5: per (period_id, day_of_week) rows so the grid can pre-fill exact cells —
+      // day_of_week null means "whole week" for that period (the pre-OPT-5 row shape).
+      explicit_entries: explicitRows.map(r => ({ period_id: r.period_id, day_of_week: r.day_of_week })),
       has_explicit_submission: explicitRows.length > 0,
       standing_by_period: standingByPeriod,
     });
@@ -521,12 +524,18 @@ async function getPeriodAvailabilityHistory(req, res) {
   }
 }
 
-// PUT /api/casual/period-availability  body: { week_start_date, period_ids: [1,2,3] }
+// PUT /api/casual/period-availability
+// body: { week_start_date, period_ids: [1,2,3] }                          — legacy: whole week per period
+//    or: { week_start_date, periods: [{ period_id, days: [0,2] }, { period_id }] } — OPT 5: optional
+//        per-day picks; a period entry with no (or empty) `days` still means "whole week", same as
+//        listing it in the legacy period_ids.
 async function setPeriodAvailability(req, res) {
   try {
-    const { week_start_date, period_ids } = req.body;
-    if (!week_start_date || !Array.isArray(period_ids)) {
-      return res.status(400).json({ success: false, message: "week_start_date and period_ids array required." });
+    const { week_start_date, period_ids, periods: periodEntries } = req.body;
+    const hasLegacyShape = Array.isArray(period_ids);
+    const hasNewShape = Array.isArray(periodEntries);
+    if (!week_start_date || (!hasLegacyShape && !hasNewShape)) {
+      return res.status(400).json({ success: false, message: "week_start_date and period_ids (or periods) array required." });
     }
 
     const resolved = await resolveCasualStaff(req.user.user_id);
@@ -537,14 +546,34 @@ async function setPeriodAvailability(req, res) {
     // crafted request writing availability against another business's periods.
     const validPeriods = await activePeriodsForCasual(req.user.user_id, businessId);
     const validIds = new Set(validPeriods.map(p => p.period_id));
-    const cleanIds = [...new Set(period_ids.map(Number))].filter(id => validIds.has(id));
 
+    // Normalize both request shapes into one list of { period_id, days } before validating.
+    const rawEntries = hasNewShape
+      ? periodEntries.map(e => ({ period_id: Number(e.period_id), days: Array.isArray(e.days) ? e.days : [] }))
+      : period_ids.map(id => ({ period_id: Number(id), days: [] }));
+
+    const entriesByPeriod = new Map(); // period_id -> Set(day_of_week) ; empty Set = whole week
+    for (const e of rawEntries) {
+      if (!validIds.has(e.period_id)) continue;
+      const days = e.days.map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
+      if (!entriesByPeriod.has(e.period_id)) entriesByPeriod.set(e.period_id, new Set());
+      days.forEach(d => entriesByPeriod.get(e.period_id).add(d));
+    }
+    const cleanIds = [...entriesByPeriod.keys()];
     const weekDate = new Date(`${week_start_date}T00:00:00.000Z`);
+
+    const rows = [];
+    for (const [period_id, daySet] of entriesByPeriod) {
+      if (daySet.size === 0) {
+        rows.push({ staff_id: staffId, week_start_date: weekDate, period_id });
+      } else {
+        daySet.forEach(day_of_week => rows.push({ staff_id: staffId, week_start_date: weekDate, period_id, day_of_week }));
+      }
+    }
+
     await prisma.casual_period_availability.deleteMany({ where: { staff_id: staffId, week_start_date: weekDate } });
-    if (cleanIds.length > 0) {
-      await prisma.casual_period_availability.createMany({
-        data: cleanIds.map(period_id => ({ staff_id: staffId, week_start_date: weekDate, period_id })),
-      });
+    if (rows.length > 0) {
+      await prisma.casual_period_availability.createMany({ data: rows });
     }
 
     // Round 6, Task 7c: tell the manager(s) when this submission means the casual is now
@@ -1098,7 +1127,7 @@ async function autoAssignCasual(req, res) {
     // → behaves exactly as today" guarantee Task 2's generator gives, applied here to matching.
     const shiftPeriodId = shift.period_id;
 
-    const [availRows, periodAvailRows, standingAvailRows, sameDayAssignments, pastAssignmentCounts] = await Promise.all([
+    const [availRows, periodAvailRows, standingAvailRows, sameDayAssignments, pastAssignmentCounts, leaveRows] = await Promise.all([
       shiftPeriodId
         ? Promise.resolve([])
         : prisma.casual_availability.findMany({
@@ -1129,9 +1158,16 @@ async function autoAssignCasual(req, res) {
         where: { staff_id: { in: staffIds }, status: { not: "cancelled" } },
         _count: { staff_id: true },
       }),
+      // Approved leave overlapping the shift date — hard exclude, same gate pattern as
+      // double-booking below (Hard filter 2).
+      prisma.availability.findMany({
+        where: { staff_id: { in: staffIds }, status: "approved", start_date: { lte: shiftDateOnly }, end_date: { gte: shiftDateOnly } },
+        select: { staff_id: true },
+      }),
     ]);
 
     const availByStaffId = Object.fromEntries(availRows.map(a => [a.staff_id, a]));
+    const onLeaveStaffIds = new Set(leaveRows.map(l => l.staff_id));
 
     // Resolution order (Round 6, Task 6 spec): explicit weekly rows, if any exist for this staff
     // this week, are used ALONE — a period not among them means unavailable, it does NOT fall
@@ -1193,11 +1229,15 @@ async function autoAssignCasual(req, res) {
     }
 
     const candidates = [];
-    const failReasons = { unavailable: 0, double_booked: 0, labor_rules: 0 };
+    const failReasons = { unavailable: 0, double_booked: 0, labor_rules: 0, on_leave: 0 };
 
     for (const cw of approvedWorkers) {
       const staffId = staffIdByUserId[cw.user_id];
       if (!staffId) { failReasons.unavailable++; continue; }
+
+      // Hard filter 0: approved leave covering this shift's date. Checked before availability/
+      // scoring — a candidate on approved leave is excluded outright, not merely scored lower.
+      if (onLeaveStaffIds.has(staffId)) { failReasons.on_leave++; continue; }
 
       // Hard filter 1 (gate, not a score — Round 6, Task 10): availability for this shift's day.
       // Period-based (binary) when the shift belongs to a shift period; otherwise the original
@@ -1249,6 +1289,7 @@ async function autoAssignCasual(req, res) {
       // score penalty below, not a filter) — any candidate who only breaches labor rules is
       // still in `candidates`, so reaching zero can only mean unavailable/double_booked.
       const parts = [];
+      if (failReasons.on_leave > 0) parts.push(`${failReasons.on_leave} on approved leave`);
       if (failReasons.unavailable > 0) parts.push(`${failReasons.unavailable} unavailable on ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][dayOfWeek]}`);
       if (failReasons.double_booked > 0) parts.push(`${failReasons.double_booked} already booked at this time`);
       return res.json({

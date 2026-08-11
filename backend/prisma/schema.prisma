@@ -174,16 +174,25 @@ model branch_shift_periods {
   @@index([branch_id], map: "idx_branch_shift_periods_branch")
 }
 
+// OPT 5: day_of_week is nullable and additive — see prisma/seed/casualPeriodAvailabilityDayOfWeek.sql
+// (not yet applied to the database as of this schema edit). NULL keeps the original "available
+// all operating days this week for this period" meaning; 0-6 (Mon=0…Sun=6, same convention as
+// casual_standing_availability.day_of_week) narrows that to one specific day. The real uniqueness
+// guard on (staff_id, week_start_date, period_id, day_of_week) uses Postgres 15's
+// UNIQUE ... NULLS NOT DISTINCT, which this declarative @@unique cannot express — the SQL file is
+// the source of truth for that constraint; this attribute just keeps Prisma's own duplicate-input
+// checks (e.g. createMany) aligned with it.
 model casual_period_availability {
   id              Int                 @id @default(autoincrement())
   staff_id        Int
   week_start_date DateTime            @db.Date
   period_id       Int
+  day_of_week     Int?                @db.SmallInt
   created_at      DateTime            @default(now()) @db.Timestamptz(6)
   staff           staff               @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
   branch_shift_periods branch_shift_periods @relation(fields: [period_id], references: [period_id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([staff_id, week_start_date, period_id])
+  @@unique([staff_id, week_start_date, period_id, day_of_week])
   @@index([staff_id, week_start_date], map: "idx_casual_period_availability_staff_week")
 }
 

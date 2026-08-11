@@ -306,7 +306,7 @@ const s = {
     marginLeft: "64px",
   },
   topbar: {
-    height: "60px",
+    height: "calc(60px + env(safe-area-inset-top))",
     background: "#FFFFFF",
     borderBottom: "1px solid #E5E2DC",
     display: "flex",
@@ -316,6 +316,7 @@ const s = {
     position: "sticky",
     top: 0,
     zIndex: 100,
+    paddingTop: "calc(0px + env(safe-area-inset-top))",
   },
   hamburgerBtn: {
     background: "none",

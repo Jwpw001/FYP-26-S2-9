@@ -194,15 +194,17 @@ export default function Home() {
 
       {/* ── NAV ──────────────────────────────────────────── */}
       <div style={{ height: 66 }} />
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 200, height: 66, display: "flex", alignItems: "center", padding: "0 64px", background: "rgba(247,250,253,0.92)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${C.border}`, boxSizing: "border-box" }}>
+      <nav className="home-navbar" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 200, height: 66, display: "flex", alignItems: "center", padding: "0 64px", background: "rgba(247,250,253,0.92)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${C.border}`, boxSizing: "border-box" }}>
         <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 800, fontSize: 22, letterSpacing: "-.022em", color: C.ink, textDecoration: "none" }}>
           <img src="/logo_noText.png" alt="Krewby" style={{ width: 30, height: 30, objectFit: "contain", borderRadius: 7 }} />
           Krewby
         </a>
-        <NavHeader
-          items={["Features", "Who it's for", "How it works", "FAQ"]}
-          onSelect={label => scroll({ "Features": "features", "Who it's for": "roles", "How it works": "how", "FAQ": "faq" }[label])}
-        />
+        <div className="home-nav-links">
+          <NavHeader
+            items={["Features", "Who it's for", "How it works", "FAQ"]}
+            onSelect={label => scroll({ "Features": "features", "Who it's for": "roles", "How it works": "how", "FAQ": "faq" }[label])}
+          />
+        </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
           {!user && (
             <button style={{ fontSize: 20.5, fontWeight: 600, color: C.ink2, padding: "8px 12px", background: "none", border: "none", cursor: "pointer" }} onClick={() => goTo("/get-started")}>

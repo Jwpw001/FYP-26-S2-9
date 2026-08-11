@@ -21,10 +21,13 @@ const login = async (req, res) => {
             });
         }
 
-        if (!user.is_active) {
-            return res.status(403).json({
+        const staff = await prisma.staff.findFirst({ where: { user_id: user.user_id }, select: { is_active: true } });
+        const isActive = staff ? staff.is_active !== false : user.is_active;
+
+        if (!isActive) {
+            return res.status(401).json({
                 success: false,
-                message: "Your account has been deactivated. Please contact your administrator."
+                message: "Account is deactivated. Contact your manager."
             });
         }
 
