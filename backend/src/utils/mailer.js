@@ -1,45 +1,35 @@
-const nodemailer = require("nodemailer");
-const logger = require("../config/logger");
+const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 
-let transporter = null;
-function getTransporter() {
-  if (transporter) return transporter;
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) return null;
-  transporter = nodemailer.createTransport({
-    service: "gmail",
+const CLIENT_ID = process.env.GMAIL_CLIENT_ID;
+const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
+const REFRESH_TOKEN = process.env.GMAIL_REFRESH_TOKEN;
+const GMAIL_USER = 'krewbyadmin@gmail.com';
+
+async function sendMail({ to, subject, html }) {
+  const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, 'https://oauth2.googleapis.com/token');
+  oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+
+  const accessToken = await oauth2Client.getAccessToken();
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
     auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
+      type: 'OAuth2',
+      user: GMAIL_USER,
+      clientId: CLIENT_ID,
+      clientSecret: CLIENT_SECRET,
+      refreshToken: REFRESH_TOKEN,
+      accessToken: accessToken.token,
     },
   });
-  return transporter;
-}
 
-// Sends via a dedicated Gmail account's SMTP relay (a workaround for not having a
-// domain-verified transactional email provider). Falls back to logging the email content
-// to the console if GMAIL_USER/GMAIL_APP_PASSWORD aren't configured, so local dev and any
-// environment without credentials set still runs without crashing.
-async function sendMail({ to, subject, html }) {
-  const t = getTransporter();
-  if (!t) {
-    // Dev-only fallback (no GMAIL_USER/GMAIL_APP_PASSWORD configured) — intentionally logs the
-    // full email body, including any reset/invite link, so a developer without real credentials
-    // configured can still read and use it locally. Never reached once real credentials are set.
-    logger.info({ to, subject, html }, "[EMAIL - DEV] no mail transport configured, logging instead");
-    return { sent: false, dev: true };
-  }
-  try {
-    await t.sendMail({
-      from: `Krewby <${process.env.GMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    });
-    return { sent: true };
-  } catch (err) {
-    logger.error({ err }, "[mailer] sendMail failed");
-    return { sent: false, error: err.message };
-  }
+  await transporter.sendMail({
+    from: `Krewby <${GMAIL_USER}>`,
+    to,
+    subject,
+    html,
+  });
 }
 
 module.exports = { sendMail };
