@@ -33,12 +33,22 @@ export default function ManagerLayout({ children, title }) {
 
   useEffect(() => {
     if (!user?.user_id) return;
-    supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("recipient_id", user.user_id)
-      .eq("is_read", false)
-      .then(({ count }) => setUnread(count || 0));
+    function fetchUnread() {
+      supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("recipient_id", user.user_id)
+        .eq("is_read", false)
+        .then(({ count }) => setUnread(count || 0));
+    }
+    fetchUnread();
+    // The layout mounts once per session (persistent across route changes within this role), so
+    // without polling the badge only ever reflects whatever was unread at initial page load —
+    // a notification arriving from another user's action (e.g. a casual submitting availability)
+    // never shows up until a hard refresh. 30s balances staying current against re-querying too
+    // often on a page most managers keep open all day.
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
   }, [user?.user_id]);
 
   useEffect(() => { setOpen(false); }, [location.pathname]);

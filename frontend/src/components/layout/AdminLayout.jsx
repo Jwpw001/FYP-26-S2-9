@@ -27,9 +27,16 @@ export default function AdminLayout({ children, title }) {
 
   useEffect(() => {
     if (!user?.user_id) return;
-    supabase.from("notifications").select("*", { count: "exact", head: true })
-      .eq("recipient_id", user.user_id).eq("is_read", false)
-      .then(({ count }) => setUnread(count || 0));
+    function fetchUnread() {
+      supabase.from("notifications").select("*", { count: "exact", head: true })
+        .eq("recipient_id", user.user_id).eq("is_read", false)
+        .then(({ count }) => setUnread(count || 0));
+    }
+    fetchUnread();
+    // Without polling the badge only reflects whatever was unread at initial page load — a
+    // notification from another user's action never shows up until a hard refresh.
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
   }, [user?.user_id]);
 
   useEffect(() => { setMobileNavOpen(false); }, [location.pathname]);
