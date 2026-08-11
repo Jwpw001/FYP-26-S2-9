@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { getUser } from "../../utils/auth";
 import ManagerLayout from "../../components/layout/ManagerLayout";
-import { Bell, ClipboardList, Calendar, CheckCircle, RefreshCw, FileText, CalendarClock, UserCheck, CalendarX } from "lucide-react";
+import { Bell, BellOff, ClipboardList, Calendar, CheckCircle, RefreshCw, FileText, CalendarClock, UserCheck, CalendarX } from "lucide-react";
 import { resolveNotificationLink } from "../../utils/notificationLink";
+import { isPushSupported, isSubscribed, subscribeToPush, unsubscribeFromPush } from "../../lib/push";
 
 // ── Module-level keyframe injection ──────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("mgr-notif-styles")) {
@@ -69,10 +70,37 @@ export default function Notifications() {
   const [loading, setLoading]             = useState(true);
   const [tab, setTab]                     = useState("all"); // "all" | "unread"
   const [toast, setToast]                 = useState(null);
+  const [pushOn, setPushOn]               = useState(false);
+  const [pushBusy, setPushBusy]           = useState(false);
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  }
+
+  useEffect(() => {
+    if (!isPushSupported()) return;
+    isSubscribed().then(setPushOn);
+  }, []);
+
+  async function togglePush() {
+    if (pushBusy) return;
+    setPushBusy(true);
+    try {
+      if (pushOn) {
+        await unsubscribeFromPush();
+        setPushOn(false);
+        showToast("Push notifications turned off.");
+      } else {
+        await subscribeToPush();
+        setPushOn(true);
+        showToast("Push notifications turned on.");
+      }
+    } catch (err) {
+      showToast(err.message || "Couldn't update push notifications.", "error");
+    } finally {
+      setPushBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -127,26 +155,42 @@ export default function Notifications() {
       <div style={{ animation: "pageIn 0.4s ease both" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "24px" }}>
           <div>
             <h2 style={{ fontSize: "25px", fontWeight: "800", color: "#1E293B" }}>Notifications</h2>
             <p style={{ fontSize: "20px", color: "#64748B", marginTop: "2px" }}>
               {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
             </p>
           </div>
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllRead}
-              style={{
-                background: "#EFF6FF", border: "1px solid #BFDBFE",
-                borderRadius: "9px", padding: "8px 16px",
-                fontSize: "20px", fontWeight: "600", color: "#1D4ED8",
-                cursor: "pointer",
-              }}
-            >
-              Mark all as read
-            </button>
-          )}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+            {isPushSupported() && (
+              <button onClick={togglePush} disabled={pushBusy}
+                style={{
+                  display: "flex", alignItems: "center", gap: "6px",
+                  background: pushOn ? "#EFF6FF" : "#F8FAFC",
+                  border: `1px solid ${pushOn ? "#BFDBFE" : "#E2E8F0"}`,
+                  borderRadius: "9px", padding: "8px 16px", fontSize: "20px", fontWeight: "600",
+                  color: pushOn ? "#1D4ED8" : "#64748B", cursor: pushBusy ? "default" : "pointer",
+                  opacity: pushBusy ? 0.6 : 1,
+                }}>
+                {pushOn ? <Bell size={16} /> : <BellOff size={16} />}
+                {pushOn ? "Push on" : "Enable push"}
+              </button>
+            )}
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllRead}
+                style={{
+                  background: "#EFF6FF", border: "1px solid #BFDBFE",
+                  borderRadius: "9px", padding: "8px 16px",
+                  fontSize: "20px", fontWeight: "600", color: "#1D4ED8",
+                  cursor: "pointer",
+                }}
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter tabs */}

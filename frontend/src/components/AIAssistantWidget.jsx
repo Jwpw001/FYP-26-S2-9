@@ -281,7 +281,7 @@ export default function AIAssistantWidget() {
   const suggestions = SUGGESTIONS[role] || SUGGESTIONS.manager;
   const welcomeMsg  = WELCOME_BY_ROLE[role] || WELCOME;
   const storageKey  = `krewby_ai_chat_${user?.user_id || "guest"}`;
-  const briefedKey  = `krewby_ai_briefed_${user?.user_id || "guest"}`;
+  const canBrief    = ["manager", "business_owner"].includes(role); // staff get read-only context, no brief
 
   const [open,       setOpen]       = useState(false);
   const [pageContext, setPageContext] = useState(null);
@@ -301,7 +301,6 @@ export default function AIAssistantWidget() {
   const [isListening, setIsListening] = useState(false);
   const bottomRef      = useRef(null);
   const inputRef       = useRef(null);
-  const autoBriefRef   = useRef(false);
   const recognitionRef = useRef(null);
   const panelRef       = useRef(null);
   const fabRef         = useRef(null);
@@ -318,17 +317,9 @@ export default function AIAssistantWidget() {
     try { localStorage.setItem(storageKey, JSON.stringify(messages)); } catch {}
   }, [messages, storageKey]);
 
-  // Auto-brief: on first open of the session with a fresh chat, fetch a proactive brief (managers/BOs only)
-  useEffect(() => {
-    if (!open) return;
-    if (autoBriefRef.current) return;
-    if (messages.length !== 1) return;                          // only on fresh chat
-    if (!["manager", "business_owner"].includes(role)) return;  // staff get read-only context, no proactive brief
-    try { if (sessionStorage.getItem(briefedKey)) return; } catch {}
-
-    autoBriefRef.current = true;
-    try { sessionStorage.setItem(briefedKey, "1"); } catch {}
-
+  // Brief is user-triggered only (the "Brief me" shortcut in the header) — no auto-fetch on open.
+  function runBrief() {
+    if (loading) return;
     setLoading(true);
     fetch(`${BASE_URL}/api/ai-assistant/brief`, {
       headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
@@ -341,7 +332,7 @@ export default function AIAssistantWidget() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [open, briefedKey, role]); // messages.length intentionally omitted — we only want this on mount
+  }
 
   useEffect(() => {
     if (open) { setHasNew(false); setTimeout(() => inputRef.current?.focus(), 200); }
@@ -380,10 +371,8 @@ export default function AIAssistantWidget() {
   const clearChat = useCallback(() => {
     const fresh = [{ role: "assistant", content: welcomeMsg }];
     setMessages(fresh);
-    autoBriefRef.current = false;
-    try { sessionStorage.removeItem(briefedKey); } catch {}
     try { localStorage.setItem(storageKey, JSON.stringify(fresh)); } catch {}
-  }, [storageKey, briefedKey]);
+  }, [storageKey, welcomeMsg]);
 
   async function handleConfirm(index) {
     const msg = messages[index];
@@ -630,18 +619,35 @@ export default function AIAssistantWidget() {
                 {role === "manager" ? "Action-capable · Powered by GPT-4o mini" : "Read-only · Powered by GPT-4o mini"}
               </div>
             </div>
-            <button
-              onClick={clearChat}
-              title="Clear chat"
-              style={{
-                background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 8,
-                padding: "5px 8px", cursor: "pointer",
-                fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.85)",
-                letterSpacing: "0.03em",
-              }}
-            >
-              Clear
-            </button>
+            <div style={{ display: "flex", gap: 6 }}>
+              {canBrief && (
+                <button
+                  onClick={runBrief}
+                  disabled={loading}
+                  title="Get a proactive brief"
+                  style={{
+                    background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 8,
+                    padding: "5px 8px", cursor: loading ? "default" : "pointer",
+                    fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.85)",
+                    letterSpacing: "0.03em", opacity: loading ? 0.6 : 1,
+                  }}
+                >
+                  Brief me
+                </button>
+              )}
+              <button
+                onClick={clearChat}
+                title="Clear chat"
+                style={{
+                  background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 8,
+                  padding: "5px 8px", cursor: "pointer",
+                  fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.85)",
+                  letterSpacing: "0.03em",
+                }}
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
           {/* Messages */}

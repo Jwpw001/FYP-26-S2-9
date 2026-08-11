@@ -219,7 +219,7 @@ export default function Home() {
       </nav>
 
       {/* ── HERO ─────────────────────────────────────────── */}
-      <section style={{ background: C.surface, padding: "84px 64px 0", textAlign: "center", overflow: "hidden" }}>
+      <section className="home-section" style={{ background: C.surface, padding: "84px 64px 0", textAlign: "center", overflow: "hidden" }}>
         <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: C.brand, background: C.brandDim, border: `1px solid ${C.brandBdr}`, padding: "5px 14px", borderRadius: 100, marginBottom: 24 }}>
           Workforce Management Platform
         </div>
@@ -237,8 +237,12 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Product preview */}
-        <div style={{ maxWidth: 980, margin: "0 auto", borderRadius: "14px 14px 0 0", border: `1px solid ${C.border}`, borderBottom: "none", overflow: "hidden", boxShadow: "0 8px 40px rgba(15,23,42,.1),0 2px 8px rgba(15,23,42,.06)" }}>
+        {/* Product preview — a detailed desktop-dashboard mockup with fixed-pixel internals
+            (Gantt bars, sidebar icons, etc.) that has no meaningful "collapsed" mobile layout;
+            scrolling it horizontally at its natural width keeps it legible instead of squishing
+            everything into a phone-width sliver. */}
+        <div className="responsive-hscroll" style={{ maxWidth: 980, margin: "0 auto" }}>
+        <div className="responsive-hscroll-inner" style={{ "--hscroll-min-width": "780px", borderRadius: "14px 14px 0 0", border: `1px solid ${C.border}`, borderBottom: "none", overflow: "hidden", boxShadow: "0 8px 40px rgba(15,23,42,.1),0 2px 8px rgba(15,23,42,.06)" }}>
           {/* Browser chrome */}
           <div style={{ background: "#1E293B", padding: "11px 16px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #334155" }}>
             <div style={{ display: "flex", gap: 6 }}>
@@ -349,10 +353,11 @@ export default function Home() {
             </div>
           </div>
         </div>
+        </div>
       </section>
 
       {/* ── LOGOS ────────────────────────────────────────── */}
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "52px 64px" }}>
+      <div className="home-section" style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "52px 64px" }}>
         <p style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: C.ink3, textAlign: "center", margin: "0 0 22px" }}>Trusted by operations teams at</p>
         <div style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap" }}>
           {["[ logo ]","[ logo ]","[ logo ]","[ logo ]","[ logo ]"].map((l,i) => (
@@ -362,7 +367,7 @@ export default function Home() {
       </div>
 
       {/* ── STATS ────────────────────────────────────────── */}
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "26px 64px" }}>
+      <div className="home-section" style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "26px 64px" }}>
         <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap" }}>
           {[["100+","Shifts managed"],["5","User role types"],["Real-time","Attendance sync"],["1-click","Branch management"]].map(([n,l],i,arr) => (
             <div key={l} style={{ textAlign: "center", padding: "0 44px", borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
@@ -387,7 +392,7 @@ export default function Home() {
       </div>
 
       {/* ── PROBLEM / SOLUTION ───────────────────────────── */}
-      <section style={{ padding: "100px 64px" }}>
+      <section className="home-section" style={{ padding: "100px 64px" }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 56 }}>
             <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>The Problem</div>
@@ -395,7 +400,7 @@ export default function Home() {
             <p style={{ maxWidth: 540, margin: "0 auto" }}>Most businesses still run on WhatsApp groups, paper rosters, and spreadsheets — and it shows.</p>
           </div>
         </Reveal>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22, maxWidth: 940, margin: "0 auto" }}>
+        <div className="home-grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22, maxWidth: 940, margin: "0 auto" }}>
           <Reveal>
             <div style={{ borderRadius: 16, padding: 32, background: C.surface2, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 20, fontWeight: 700, color: C.ink2, marginBottom: 22 }}>Without Krewby</div>
@@ -420,7 +425,7 @@ export default function Home() {
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────── */}
-      <section id="features" style={{ padding: "100px 64px", background: C.surface2, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+      <section id="features" className="home-features" style={{ padding: "100px 64px", background: C.surface2, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 56 }}>
             <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>Product</div>
@@ -438,7 +443,7 @@ export default function Home() {
       </section>
 
       {/* ── ROLES ────────────────────────────────────────── */}
-      <section id="roles" style={{ padding: "100px 64px", borderTop: `1px solid ${C.border}` }}>
+      <section id="roles" className="home-section" style={{ padding: "100px 64px", borderTop: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>Who It's For</div>
@@ -467,7 +472,7 @@ export default function Home() {
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────── */}
-      <section id="how" style={{ padding: "100px 64px", background: C.surface2, borderTop: `1px solid ${C.border}` }}>
+      <section id="how" className="home-section" style={{ padding: "100px 64px", background: C.surface2, borderTop: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>How It Works</div>
@@ -488,14 +493,14 @@ export default function Home() {
       </section>
 
       {/* ── PRICING ──────────────────────────────────────── */}
-      <section id="pricing" style={{ padding: "100px 64px", borderTop: `1px solid ${C.border}` }}>
+      <section id="pricing" className="home-section" style={{ padding: "100px 64px", borderTop: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>Pricing</div>
             <h2 style={{ fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 800, letterSpacing: "-.03em", margin: 0 }}>Simple, per-branch pricing</h2>
           </div>
         </Reveal>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, maxWidth: 960, margin: "0 auto" }}>
+        <div className="home-pricing-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, maxWidth: 960, margin: "0 auto" }}>
           {PRICING.map((plan) => (
             <div key={plan.name} style={{ position: "relative", border: `2px solid ${plan.popular ? plan.accent : C.border}`, borderRadius: 18, background: plan.popular ? plan.accentLight : C.surface, padding: "28px 24px", boxShadow: plan.popular ? `0 0 0 4px ${plan.accent}18, 0 8px 24px ${plan.accent}14` : "0 1px 4px rgba(0,0,0,.04)" }}>
               {plan.popular && (
@@ -530,7 +535,7 @@ export default function Home() {
       </section>
 
       {/* ── TESTIMONIAL ──────────────────────────────────── */}
-      <section style={{ padding: "100px 64px", background: C.surface2, borderTop: `1px solid ${C.border}`, textAlign: "center" }}>
+      <section className="home-section" style={{ padding: "100px 64px", background: C.surface2, borderTop: `1px solid ${C.border}`, textAlign: "center" }}>
         <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 28 }}>Customer Story</div>
         <Reveal>
           <p style={{ fontSize: "clamp(17px,2.5vw,23px)", fontWeight: 500, lineHeight: 1.55, maxWidth: 720, margin: "0 auto 28px", color: C.ink, letterSpacing: "-.01em" }}>
@@ -547,7 +552,7 @@ export default function Home() {
       </section>
 
       {/* ── FAQ ──────────────────────────────────────────── */}
-      <section id="faq" style={{ padding: "100px 64px", borderTop: `1px solid ${C.border}` }}>
+      <section id="faq" className="home-section" style={{ padding: "100px 64px", borderTop: `1px solid ${C.border}` }}>
         <Reveal>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <div style={{ display: "inline-block", fontSize: 18, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.ink3, marginBottom: 11 }}>FAQ</div>
@@ -564,7 +569,7 @@ export default function Home() {
       </section>
 
       {/* ── CTA ──────────────────────────────────────────── */}
-      <section style={{ padding: "96px 64px", background: C.brand, textAlign: "center" }}>
+      <section className="home-section" style={{ padding: "96px 64px", background: C.brand, textAlign: "center" }}>
         <Reveal>
           <h2 style={{ fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 800, letterSpacing: "-.03em", color: "#fff", margin: "0 0 14px" }}>See your whole workforce in one view.</h2>
           <p style={{ fontSize: 21, color: "rgba(255,255,255,.75)", maxWidth: 460, margin: "0 auto 32px" }}>Join businesses already using Krewby to plan smarter, track better, and stress less.</p>
@@ -575,8 +580,8 @@ export default function Home() {
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────── */}
-      <footer style={{ padding: "72px 64px 44px", borderTop: `1px solid ${C.border}`, background: C.surface }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 40, maxWidth: 1100, margin: "0 auto 48px" }}>
+      <footer className="home-footer" style={{ padding: "72px 64px 44px", borderTop: `1px solid ${C.border}`, background: C.surface }}>
+        <div className="home-footer-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 40, maxWidth: 1100, margin: "0 auto 48px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
               <img src="/logo_noText.png" alt="Krewby" style={{ width: 28, height: 28, objectFit: "contain", borderRadius: 6 }} />

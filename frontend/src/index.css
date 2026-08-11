@@ -80,8 +80,36 @@ button:focus-visible {
   }
   .home-footer {
     padding: 24px 20px !important;
-    flex-direction: column !important;
     text-align: center;
+  }
+  /* Every other landing-page section shares the same 64px horizontal padding as .home-features
+     above but wasn't wired to it — on a ~375px phone that alone leaves ~250px for content before
+     any of the fixed-width grids below even come into play. Longhand + !important here beats the
+     inline shorthand's left/right component while leaving its own top/bottom untouched. */
+  .home-section {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  /* Problem/solution ("Without Krewby" / "With Krewby") and pricing are both hard-coded to a
+     fixed column count with no fallback — two/three columns of padded cards in ~335px collapses
+     to unreadable slivers instead of wrapping. */
+  .home-grid-2col {
+    grid-template-columns: 1fr !important;
+  }
+  .home-pricing-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Footer is 4 fixed grid columns (2fr 1fr 1fr 1fr) — same problem, one column reads top to
+     bottom instead of four illegibly thin ones. */
+  .home-footer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+    text-align: center;
+  }
+  .home-footer-grid > div:first-child {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
   }
 }
 
