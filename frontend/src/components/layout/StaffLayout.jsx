@@ -7,6 +7,7 @@ import AIAssistantWidget from "../AIAssistantWidget";
 import { LayoutDashboard, CalendarDays, UmbrellaOff, ArrowLeftRight, Menu, X } from "lucide-react";
 import "./sidebarStyles.js";
 import UserAvatar from "../UserAvatar";
+import AvatarPicker from "../AvatarPicker";
 
 const NAV = [
   { label: "Dashboard",     path: "/regular-staff/dashboard", Icon: LayoutDashboard },
@@ -22,6 +23,7 @@ export default function StaffLayout({ children, title }) {
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -81,7 +83,10 @@ export default function StaffLayout({ children, title }) {
         </nav>
         <div style={{ ...s.sidebarBottom, padding: "12px" }}>
           <div style={{ ...s.userRow, marginBottom: "10px", width: "100%" }}>
-            <UserAvatar name={user?.full_name || "S"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
+            <button onClick={() => setShowAvatarPicker(true)} title="Change avatar"
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", lineHeight: 0, flexShrink: 0 }}>
+              <UserAvatar name={user?.full_name || "S"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
+            </button>
             <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Worker"}</p>
               <p style={s.userRole}>Regular Worker</p>
@@ -134,6 +139,7 @@ export default function StaffLayout({ children, title }) {
         </header>
         <div className="dash-content" style={s.content}>{children}</div>
       </div>
+      {showAvatarPicker && <AvatarPicker currentAvatar={user?.avatar_url || "/avatars/default.png"} onClose={() => setShowAvatarPicker(false)} />}
     </div>
   );
 }

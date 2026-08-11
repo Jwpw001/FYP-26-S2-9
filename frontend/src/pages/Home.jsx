@@ -356,16 +356,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── LOGOS ────────────────────────────────────────── */}
-      <div className="home-section" style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "52px 64px" }}>
-        <p style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: C.ink3, textAlign: "center", margin: "0 0 22px" }}>Trusted by operations teams at</p>
-        <div style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap" }}>
-          {["[ logo ]","[ logo ]","[ logo ]","[ logo ]","[ logo ]"].map((l,i) => (
-            <span key={i} style={{ fontFamily: "ui-monospace,monospace", fontSize: 18.5, color: C.ink3, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 22px" }}>{l}</span>
-          ))}
-        </div>
-      </div>
-
       {/* ── STATS ────────────────────────────────────────── */}
       <div className="home-section" style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "26px 64px" }}>
         <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap" }}>

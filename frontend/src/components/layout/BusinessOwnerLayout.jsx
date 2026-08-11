@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { LayoutDashboard, Building2, Users, UserPlus, BarChart2, Tag, Settings2, Menu, X } from "lucide-react";
 import AIAssistantWidget from "../AIAssistantWidget";
 import UserAvatar from "../UserAvatar";
+import AvatarPicker from "../AvatarPicker";
 
 const NAV = [
   { label: "Dashboard",   path: "/business-owner/dashboard",    Icon: LayoutDashboard },
@@ -31,6 +32,7 @@ export default function BusinessOwnerLayout({ children, title }) {
   const [unread, setUnread] = useState(0);
   const [plan, setPlan] = useState(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -105,7 +107,10 @@ export default function BusinessOwnerLayout({ children, title }) {
           )}
 
           <div style={{ ...s.userRow, marginBottom: "10px", width: "100%" }}>
-            <UserAvatar name={user?.full_name || "B"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
+            <button onClick={() => setShowAvatarPicker(true)} title="Change avatar"
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", lineHeight: 0, flexShrink: 0 }}>
+              <UserAvatar name={user?.full_name || "B"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
+            </button>
             <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s, max-width 0.25s", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Business Owner"}</p>
               <p style={s.userRole}>Business Owner</p>
@@ -139,6 +144,7 @@ export default function BusinessOwnerLayout({ children, title }) {
         </header>
         <div className="dash-content" style={s.content}>{children}</div>
       </div>
+      {showAvatarPicker && <AvatarPicker currentAvatar={user?.avatar_url || "/avatars/default.png"} onClose={() => setShowAvatarPicker(false)} />}
     </div>
   );
 }
