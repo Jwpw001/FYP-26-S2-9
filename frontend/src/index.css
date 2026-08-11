@@ -199,22 +199,14 @@ button:focus-visible {
   }
 }
 
-/* AI assistant floating button + chat panel — fixed size/position is fine on desktop's spare
-   corner space, but on a phone it collides with page content (fixed corner offset, page content
-   reflows to fill that same corner) and the chat panel (360px wide, right:28) doesn't fit at all
-   on anything narrower than ~420px. */
+/* AI assistant trigger now lives inline in the topbar (sized like the notification bell), so it
+   no longer needs its own corner sizing/positioning on mobile. The dropdown panel (360px wide,
+   right:16) still doesn't fit on anything narrower than ~420px, so it goes full-width there. */
 @media (max-width: 640px) {
-  .ai-fab {
-    width: 46px !important;
-    height: 46px !important;
-    bottom: 16px !important;
-    right: 16px !important;
-  }
   .ai-chat-panel {
     width: calc(100vw - 32px) !important;
     right: 16px !important;
     left: 16px !important;
-    bottom: 70px !important;
     max-height: 65vh !important;
   }
 }

@@ -5,8 +5,8 @@ if (typeof document !== "undefined" && !document.getElementById("ai-widget-style
   const s = document.createElement("style");
   s.id = "ai-widget-styles";
   s.textContent = `
-    @keyframes aiSlideUp {
-      from { opacity: 0; transform: translateY(24px) scale(0.96); }
+    @keyframes aiSlideDown {
+      from { opacity: 0; transform: translateY(-12px) scale(0.97); }
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
     @keyframes aiBounceIn {
@@ -556,52 +556,50 @@ export default function AIAssistantWidget() {
 
   return (
     <>
-      {/* FAB */}
+      {/* Trigger — an inline topbar icon button (rendered beside the notification bell by each
+          layout) rather than a floating corner FAB, so it never covers page content or toasts. */}
       <button
         ref={fabRef}
         className={`ai-fab${hasNew ? " ai-fab-pulse" : ""}`}
         onClick={() => setOpen((v) => !v)}
         style={{
-          position: "fixed", bottom: 28, right: 28,
-          width: 54, height: 54, borderRadius: "50%",
-          background: open ? "#475569" : `linear-gradient(135deg, ${ACCENT}, #8B5CF6)`,
-          border: "none", cursor: "pointer",
+          position: "relative",
+          background: open ? "#EFF6FF" : "none",
+          border: open ? "1.5px solid #BFDBFE" : "1px solid transparent",
+          borderRadius: "10px", padding: "7px 9px", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 20px rgba(99,102,241,0.45)",
-          transition: "background 0.2s, transform 0.15s",
-          zIndex: 9999,
-          animation: "aiBounceIn 0.4s ease both",
+          transition: "all 0.15s",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
         title="AI Workforce Assistant"
       >
         {open ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={open ? "#2563EB" : "#64748B"} strokeWidth="2.5" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         ) : (
-          <img src="/chatbot.png" alt="AI Assistant" width={32} height={32} style={{ objectFit: "contain", display: "block" }} />
+          <img src="/chatbot.png" alt="AI Assistant" width={20} height={20} style={{ objectFit: "contain", display: "block", borderRadius: "50%" }} />
         )}
         {hasNew && (
           <span style={{
-            position: "absolute", top: 3, right: 3,
-            width: 10, height: 10, borderRadius: "50%",
-            background: "#F43F5E", border: "2px solid #fff",
+            position: "absolute", top: 2, right: 2,
+            width: 9, height: 9, borderRadius: "50%",
+            background: "#F43F5E", border: "1.5px solid #fff",
           }} />
         )}
       </button>
 
-      {/* Chat panel */}
+      {/* Chat panel — opens downward from the topbar instead of upward from a corner FAB.
+          calc() clears the topbar regardless of its safe-area-inset-top growth on notched
+          phones (same reasoning as the topbar padding fix). */}
       {open && (
         <div ref={panelRef} className="ai-chat-panel" style={{
-          position: "fixed", bottom: 92, right: 28,
+          position: "fixed", top: "calc(70px + env(safe-area-inset-top))", right: 16,
           width: 360, maxHeight: 520,
           background: "#fff", borderRadius: 18,
           boxShadow: "0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)",
           display: "flex", flexDirection: "column",
           zIndex: 9998,
-          animation: "aiSlideUp 0.28s ease both",
+          animation: "aiSlideDown 0.22s ease both",
           overflow: "hidden",
           border: "1px solid #E2E8F0",
         }}>

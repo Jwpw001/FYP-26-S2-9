@@ -5,7 +5,6 @@ import { supabase } from "../../lib/supabaseClient";
 import SignOutButton from "../SignOutButton";
 import { LayoutDashboard, Building2, Users, Tag, BarChart2, Menu, X } from "lucide-react"; // nav icons
 import "./sidebarStyles.js";
-import ProfileModal from "../ProfileModal";
 import UserAvatar from "../UserAvatar";
 
 const NAV = [
@@ -21,7 +20,6 @@ export default function AdminLayout({ children, title }) {
   const location = useLocation();
   const user = getUser();
   const [expanded, setExpanded] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
   const [unread, setUnread] = useState(0);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -82,14 +80,13 @@ export default function AdminLayout({ children, title }) {
         </nav>
 
         <div style={{ ...s.sidebarBottom, padding: "12px" }}>
-          <button onClick={() => setShowProfile(true)} title="View profile"
-            style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
+          <div style={{ ...s.userRow, marginBottom: "10px", width: "100%" }}>
             <UserAvatar name={user?.full_name || "A"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
             <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Admin"}</p>
               <p style={s.userRole}>System Administrator</p>
             </div>
-          </button>
+          </div>
           <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
             <SignOutButton />
           </div>
@@ -138,7 +135,6 @@ export default function AdminLayout({ children, title }) {
         </header>
         <div className="dash-content" style={s.content}>{children}</div>
       </div>
-      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { getUser } from "../../utils/auth";
 import AIAssistantWidget from "../AIAssistantWidget";
 import { LayoutDashboard, Users, CalendarDays, CalendarClock, ClipboardCheck, BarChart2, Mail, Tag, Settings, Menu, X, AlertTriangle } from "lucide-react";
 import "./sidebarStyles.js";
-import ProfileModal from "../ProfileModal";
 import UserAvatar from "../UserAvatar";
 
 const NAV = [
@@ -29,7 +28,6 @@ export default function ManagerLayout({ children, title }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(0);
-  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -95,14 +93,13 @@ export default function ManagerLayout({ children, title }) {
         </nav>
 
         <div style={{ ...s.sidebarBottom, padding: "12px" }}>
-          <button onClick={() => setShowProfile(true)} title="View profile"
-            style={{ ...s.userRow, marginBottom: "10px", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
+          <div style={{ ...s.userRow, marginBottom: "10px", width: "100%" }}>
             <UserAvatar name={user?.full_name || "M"} avatar_url={user?.avatar_url || "/avatars/default.png"} size={34} />
             <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? "140px" : "0px", transition: "opacity 0.25s ease, max-width 0.25s ease", overflow: "hidden" }}>
               <p style={s.userName}>{user?.full_name || "Manager"}</p>
               <p style={s.userRole}>Manager</p>
             </div>
-          </button>
+          </div>
           <div className="dash-sidebar-label" style={{ opacity: expanded ? 1 : 0, maxHeight: expanded ? "40px" : "0px", transition: "opacity 0.25s ease, max-height 0.25s ease", overflow: "hidden" }}>
             <SignOutButton />
           </div>
@@ -123,6 +120,7 @@ export default function ManagerLayout({ children, title }) {
           </button>
           <h1 style={s.pageTitle}>{title}</h1>
           <div style={{ flex: 1 }} />
+          <AIAssistantWidget />
           {/* Notification bell */}
           <button
             onClick={() => navigate("/manager/notifications")}
@@ -157,8 +155,6 @@ export default function ManagerLayout({ children, title }) {
           {children}
         </div>
       </div>
-      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
-      <AIAssistantWidget />
     </div>
   );
 }
