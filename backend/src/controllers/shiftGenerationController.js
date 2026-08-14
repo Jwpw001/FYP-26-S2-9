@@ -4,6 +4,8 @@ const logger = require("../config/logger");
 
 const sendServerError = require("../utils/sendServerError");
 const { toMinutes } = require("../utils/hoursMetrics");
+const { getUTCMondayWeekStart } = require("../utils/scheduling");
+const { contractedHoursPerWeek } = require("../utils/contractedHours");
 // Mon=0…Sun=6 — same convention as branch_settings.operating_days, casual_availability.day_of_week,
 // and branch_task_templates.day_of_week (verified against shiftController.js's existing
 // (getUTCDay()+6)%7 conversion, not assumed).
@@ -27,6 +29,297 @@ async function getCallerBranchId(userId) {
 // today doesn't need to "catch up" across months of future shifts it never touched.
 const ROLLING_HORIZON_DAYS = 56;
 
+// A template's required_workers is a headcount, but shift_tasks/task_assignments is a strict
+// 1-task-1-person model everywhere else in the app (see taskController.js assignStaff's "One
+// task = one person" check). Rather than changing that model, required_workers > 1 is expanded
+// into that many identical task rows, each independently assignable — headcount 3 on "Cashier"
+// becomes three separate "Cashier" tasks a manager (or casual allocation) fills one at a time.
+// Returns bare task descriptors (no shift_id yet — this runs during planning, before any shift
+// has been created; the write phase stamps shift_id on once the real rows exist).
+function expandTaskRows(dayTemplates, periodId) {
+  const rows = [];
+  for (const t of dayTemplates) {
+    const copies = Math.max(1, t.required_workers || 1);
+    for (let i = 0; i < copies; i++) {
+      rows.push({
+        title: t.title,
+        skill_id: t.skill_id,
+        start_time: t.start_time,
+        end_time: t.end_time,
+        status: "open",
+        period_id: periodId,
+      });
+    }
+  }
+  return rows;
+}
+
+// Round 7, P1/P2 — planning: walk the date range and decide every shift, task, and regular-staff
+// placement to create, entirely in memory. No database access here at all (that's the point —
+// see buildGenerationPlan's caller for why). Returns { plannedShifts, created, skipped,
+// autoPopulated }; the write phase below turns plannedShifts into the actual INSERTs.
+//
+// hoursByStaffWeek is mutated in place as placements are decided (Round 7, P2 point 4:
+// "recompute shortfall as you place... inside the planning phase") — it's seeded by the caller
+// with hours each eligible staff member already has rostered this horizon's week(s), and every
+// placement made here adds that shift's hours on top, so a placement on Monday lowers that
+// person's priority for Wednesday of the same week.
+function buildGenerationPlan({
+  startDateStr, endDateStr, branch, branchId,
+  templatesByDow, activePeriods, eligibleRegularStaff, offDaySet,
+  closedDates, operatingDays, existingByDate, existingByDatePeriod,
+  hoursByStaffWeek,
+}) {
+  const created = [];
+  const skipped = [];
+  const plannedShifts = [];
+  const autoPopulatedByDate = {}; // dateStr -> assigned_count, summed across that day's shift(s)
+
+  // Task 7: place contracted regular staff onto today's open tasks. Simple placement, not
+  // skill-matched scoring — that precision is reserved for casual allocation per the brief's
+  // own distinction ("regular staff are populated, casual workers are allocated"). Round 7, P2:
+  // eligible staff (contracted this weekday, no approved off-day covering this date, not already
+  // placed elsewhere today — see placedToday below) are now ordered by DESCENDING shortfall
+  // (contracted hours this week minus hours already rostered this week), so whoever is furthest
+  // below contract picks first — previously this was prisma.staff.findMany's arbitrary return
+  // order (no orderBy), so nothing tracked who'd actually been given hours. Ties (equal shortfall,
+  // including two staff with none rostered yet) break on staff_id ascending, deterministically —
+  // matching the existing attendance-scoring reproducibility guarantee elsewhere in the app.
+  // Leftover tasks (more open tasks than eligible staff, or staff already placedToday) are exactly
+  // what's left for casual allocation to target, unchanged from before.
+  function planRegularStaffPlacement(plannedShift, todaysEligibleStaff, placedToday, dateObj) {
+    const weekStart = toDateStr(getUTCMondayWeekStart(dateObj));
+    const openTaskIndexes = plannedShift.tasks.map((_, i) => i);
+    const shiftHours = Math.max(0, (plannedShift.data.end_time.getTime() - plannedShift.data.start_time.getTime()) / 3600000);
+
+    const ordered = todaysEligibleStaff
+      .filter(s => !placedToday.has(s.staff_id))
+      .map(s => ({
+        staff_id: s.staff_id,
+        shortfall: s.contracted_hours_per_week - (hoursByStaffWeek[s.staff_id]?.[weekStart] || 0),
+      }))
+      .sort((a, b) => (b.shortfall - a.shortfall) || (a.staff_id - b.staff_id));
+
+    let placedCount = 0;
+    for (const candidate of ordered) {
+      const taskIndex = openTaskIndexes.shift();
+      if (taskIndex === undefined) break; // more contracted staff than open tasks today — nothing left to place them on
+      plannedShift.placements.push({ taskIndex, staff_id: candidate.staff_id });
+      placedToday.add(candidate.staff_id); // Round 6: see the "two periods in one day" decision below
+      if (!hoursByStaffWeek[candidate.staff_id]) hoursByStaffWeek[candidate.staff_id] = {};
+      hoursByStaffWeek[candidate.staff_id][weekStart] = (hoursByStaffWeek[candidate.staff_id][weekStart] || 0) + shiftHours;
+      placedCount++;
+    }
+    return placedCount;
+  }
+
+  const cursor = new Date(`${startDateStr}T00:00:00Z`);
+  const end = new Date(`${endDateStr}T00:00:00Z`);
+  while (cursor <= end) {
+    const dateStr = toDateStr(cursor);
+    const dow = dowMonday0(cursor);
+
+    if (operatingDays[dow] === "0") {
+      skipped.push({ date: dateStr, reason: "non-operating day" });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      continue;
+    }
+    if (closedDates.has(dateStr)) {
+      skipped.push({ date: dateStr, reason: "marked closed / public holiday" });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      continue;
+    }
+    const dayTemplates = templatesByDow[dow] || [];
+    if (dayTemplates.length === 0) {
+      skipped.push({ date: dateStr, reason: "no task templates set for this weekday" });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      continue;
+    }
+
+    const todaysEligibleStaff = eligibleRegularStaff.filter(s =>
+      s.default_work_days[dow] === "1" && !offDaySet.has(`${s.staff_id}:${dateStr}`)
+    );
+
+    if (activePeriods.length === 0) {
+      // ── Unchanged from pre-Round-6: one shift per operating day, covering branch operating
+      // hours, containing every one of today's templates. This is the regression guarantee — a
+      // branch with no periods (or, before the backfill runs, every existing branch) must behave
+      // exactly as it did before this round. ──
+      const existing = existingByDate.get(dateStr);
+      if (existing) {
+        skipped.push({ date: dateStr, reason: existing.source === "generated" ? "already generated" : "a manual shift already exists on this date" });
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+        continue;
+      }
+
+      const plannedShift = {
+        data: {
+          branch_id: branchId,
+          shift_date: new Date(`${dateStr}T00:00:00Z`),
+          start_time: branch?.open_time || new Date("1970-01-01T09:00:00Z"),
+          end_time: branch?.close_time || new Date("1970-01-01T18:00:00Z"),
+          status: "draft",
+          shift_type: "regular",
+          source: "generated",
+        },
+        tasks: expandTaskRows(dayTemplates, null),
+        placements: [],
+      };
+
+      const placedToday = new Set();
+      const placedCount = planRegularStaffPlacement(plannedShift, todaysEligibleStaff, placedToday, cursor);
+      if (placedCount > 0) autoPopulatedByDate[dateStr] = (autoPopulatedByDate[dateStr] || 0) + placedCount;
+
+      plannedShifts.push(plannedShift);
+      created.push(dateStr);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      continue;
+    }
+
+    // ── Branch has periods: one shift per period active today, plus one fallback shift for any
+    // templates with no period assigned. ──
+    const templatesByPeriod = new Map(); // period_id (or "null") -> templates[]
+    for (const t of dayTemplates) {
+      const key = t.period_id ?? "null";
+      if (!templatesByPeriod.has(key)) templatesByPeriod.set(key, []);
+      templatesByPeriod.get(key).push(t);
+    }
+
+    const placedToday = new Set(); // Round 6 decision: a regular staff member is placed into AT
+    // MOST ONE shift per day, even if their contracted weekday has two active periods (e.g.
+    // Morning + Evening). Placing them in both would silently double-book one person across two
+    // separate crews on the same day, which the round's own brief calls "probably wrong" — this
+    // makes that call explicit and consistent: first period (by sort_order) with an open task
+    // wins, shared across every period-shift created for this date via this one Set.
+    let dayPlacedCount = 0;
+
+    const periodsToday = activePeriods.filter(p => p.active_days?.[dow] === "1");
+    for (const period of periodsToday) {
+      const periodTemplates = templatesByPeriod.get(period.period_id) || [];
+      if (periodTemplates.length === 0) continue; // nothing assigned to this period today — no empty shift, same "don't generate a pointless shift" rule as the no-templates day-level skip above
+
+      const existing = existingByDatePeriod.get(`${dateStr}:${period.period_id}`);
+      if (existing) {
+        skipped.push({ date: dateStr, reason: `"${period.name}" ${existing.source === "generated" ? "already generated" : "a manual shift already exists for this period"}` });
+        continue;
+      }
+
+      // Overnight periods (end <= start, e.g. 16:00-00:00): the rest of this schema doesn't
+      // support a shift crossing midnight (shift_date is a single DATE, start/end are TIME-only
+      // columns with no day component) — same constraint shift creation elsewhere already
+      // enforces. Rather than inventing partial next-day support here, the honest behaviour is:
+      // the generated shift ends at 23:59:59 on the period's own day. A period like "Evening
+      // 16:00-00:00" therefore generates a 16:00-23:59:59 shift, not a true midnight crossing.
+      const startMin = toMinutes(period.start_time);
+      const endMin = toMinutes(period.end_time);
+      const isOvernight = startMin !== null && endMin !== null && endMin <= startMin;
+      const periodEndTime = isOvernight ? new Date("1970-01-01T23:59:59Z") : period.end_time;
+
+      const plannedShift = {
+        data: {
+          branch_id: branchId,
+          shift_date: new Date(`${dateStr}T00:00:00Z`),
+          title: period.name,
+          start_time: period.start_time,
+          end_time: periodEndTime,
+          status: "draft",
+          shift_type: "regular",
+          source: "generated",
+          period_id: period.period_id,
+        },
+        tasks: expandTaskRows(periodTemplates, period.period_id),
+        placements: [],
+      };
+
+      const placedCount = planRegularStaffPlacement(plannedShift, todaysEligibleStaff, placedToday, cursor);
+      dayPlacedCount += placedCount;
+
+      plannedShifts.push(plannedShift);
+      created.push(`${dateStr} (${period.name})`);
+    }
+
+    // Templates with no period_id, on a branch that DOES have periods: one additional shift
+    // covering the branch's own operating hours, same as the no-periods path's shift shape —
+    // reported explicitly via created/skipped, never silently dropped.
+    const nullTemplates = templatesByPeriod.get("null") || [];
+    if (nullTemplates.length > 0) {
+      const existing = existingByDatePeriod.get(`${dateStr}:null`);
+      if (existing) {
+        skipped.push({ date: dateStr, reason: `unassigned tasks: ${existing.source === "generated" ? "already generated" : "a manual shift already exists"}` });
+      } else {
+        const plannedShift = {
+          data: {
+            branch_id: branchId,
+            shift_date: new Date(`${dateStr}T00:00:00Z`),
+            start_time: branch?.open_time || new Date("1970-01-01T09:00:00Z"),
+            end_time: branch?.close_time || new Date("1970-01-01T18:00:00Z"),
+            status: "draft",
+            shift_type: "regular",
+            source: "generated",
+            period_id: null,
+          },
+          tasks: expandTaskRows(nullTemplates, null),
+          placements: [],
+        };
+        const placedCount = planRegularStaffPlacement(plannedShift, todaysEligibleStaff, placedToday, cursor);
+        dayPlacedCount += placedCount;
+        plannedShifts.push(plannedShift);
+        created.push(`${dateStr} (unassigned tasks)`);
+      }
+    }
+
+    if (dayPlacedCount > 0) autoPopulatedByDate[dateStr] = (autoPopulatedByDate[dateStr] || 0) + dayPlacedCount;
+
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  const autoPopulated = Object.entries(autoPopulatedByDate).map(([date, assigned_count]) => ({ date, assigned_count }));
+  return { plannedShifts, created, skipped, autoPopulated };
+}
+
+// Round 7, P1 — write: turns a completed plan into exactly 4 round trips regardless of how many
+// shifts/tasks/placements it contains (previously: one shifts.create + one
+// shift_tasks.createManyAndReturn PER SHIFT, plus one task_assignments.create + one
+// shift_tasks.update PER PLACED STAFF MEMBER — see this function's own comment history below for
+// the ~390ms/round-trip measurement that made this worth fixing). Wrapped in a transaction so a
+// mid-write failure can't leave half a horizon generated — matching the pre-existing idempotency
+// guarantee (a partial write here would otherwise "poison" a re-run: dates already partially
+// written would look like duplicates, not like the failure they actually were).
+async function writeGenerationPlan(plannedShifts) {
+  if (plannedShifts.length === 0) return;
+
+  await prisma.$transaction(async (tx) => {
+    const createdShiftRows = await tx.shifts.createManyAndReturn({ data: plannedShifts.map(p => p.data) });
+
+    const allTaskRows = [];
+    const taskOffsetByShiftIndex = [];
+    plannedShifts.forEach((p, i) => {
+      taskOffsetByShiftIndex.push(allTaskRows.length);
+      const shiftId = createdShiftRows[i].shift_id;
+      p.tasks.forEach(t => allTaskRows.push({ ...t, shift_id: shiftId }));
+    });
+    const createdTaskRows = allTaskRows.length > 0 ? await tx.shift_tasks.createManyAndReturn({ data: allTaskRows }) : [];
+
+    const assignmentRows = [];
+    plannedShifts.forEach((p, i) => {
+      const shiftId = createdShiftRows[i].shift_id;
+      const offset = taskOffsetByShiftIndex[i];
+      p.placements.forEach(placement => {
+        const taskRow = createdTaskRows[offset + placement.taskIndex];
+        assignmentRows.push({ task_id: taskRow.task_id, shift_id: shiftId, staff_id: placement.staff_id, status: "assigned" });
+      });
+    });
+
+    if (assignmentRows.length > 0) {
+      await tx.task_assignments.createMany({ data: assignmentRows });
+      await tx.shift_tasks.updateMany({
+        where: { task_id: { in: assignmentRows.map(a => a.task_id) } },
+        data: { status: "assigned" },
+      });
+    }
+  });
+}
+
 // Core generation routine — for one branch, over [startDateStr, endDateStr] inclusive (both
 // "YYYY-MM-DD"), creates one shift per operating day and copies that day's active task
 // templates into shift_tasks.
@@ -40,6 +333,14 @@ const ROLLING_HORIZON_DAYS = 56;
 // Idempotent: a date that already has a shift (generated or manual) is skipped, never duplicated
 // or modified. Every skip is reported with a reason so a manager can see why a date has no
 // generated shift instead of silently wondering.
+//
+// Round 7, P1: restructured into three phases — fetch everything planning needs (below), plan
+// entirely in memory (buildGenerationPlan), then write everything in one transaction
+// (writeGenerationPlan). Query count is now constant regardless of the horizon length or roster
+// size (see tests/shiftGeneration.test.js's query-count assertion) instead of growing with both —
+// over the 56-day rolling horizon with several active periods per day and a normal regular-staff
+// roster, the old per-shift/per-placement round trips were easily 800-1000 sequential DB calls at
+// ~390ms each against this Supabase region: several minutes of wall-clock for one button press.
 async function generateShiftsForBranch(branchId, startDateStr, endDateStr) {
   const [branchSettings, branch, templates, regularStaff] = await Promise.all([
     prisma.branch_settings.findUnique({ where: { branch_id: branchId } }),
@@ -52,7 +353,12 @@ async function generateShiftsForBranch(branchId, startDateStr, endDateStr) {
   ]);
 
   const staffMissingWorkDays = regularStaff.filter(s => !s.default_work_days).map(s => s.staff_id);
-  const eligibleRegularStaff = regularStaff.filter(s => s.default_work_days);
+  // Round 7, P2: contracted_hours_per_week computed once per staff member up front (pure,
+  // schema-free — see utils/contractedHours.js) rather than re-derived per placement.
+  const workHoursPerDay = branchSettings?.work_hours_day ?? 8;
+  const eligibleRegularStaff = regularStaff
+    .filter(s => s.default_work_days)
+    .map(s => ({ ...s, contracted_hours_per_week: contractedHoursPerWeek(s.default_work_days, workHoursPerDay) }));
 
   // Approved off-day requests for these staff anywhere in the generation range, so each day's
   // pass can just check a Set instead of a query per staff per day.
@@ -67,8 +373,35 @@ async function generateShiftsForBranch(branchId, startDateStr, endDateStr) {
       })
     : [];
   const offDaySet = new Set(offDayRows.map(r => `${r.staff_id}:${toDateStr(r.requested_date)}`));
-  const autoPopulated = []; // { date, assigned_count }
   const dataGaps = staffMissingWorkDays.length > 0 ? { staff_ids: staffMissingWorkDays } : null;
+
+  // Round 7, P2: seed hoursByStaffWeek with hours each eligible staff member already has
+  // rostered in this horizon's week(s) — whole-week-aligned (Monday of the horizon's first week
+  // through the Sunday of its last) so a horizon starting mid-week still sees that week's earlier
+  // days, and shortfall on day 1 of the run is accurate rather than assuming a clean slate.
+  // buildGenerationPlan mutates this map further as it decides new placements.
+  const hoursByStaffWeek = {};
+  if (eligibleRegularStaff.length > 0) {
+    const rangeStart = getUTCMondayWeekStart(new Date(`${startDateStr}T00:00:00Z`));
+    const rangeEndExclusive = getUTCMondayWeekStart(new Date(`${endDateStr}T00:00:00Z`));
+    rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 7);
+    const existingAssignments = await prisma.task_assignments.findMany({
+      where: {
+        staff_id: { in: eligibleRegularStaff.map(s => s.staff_id) },
+        shifts: { shift_date: { gte: rangeStart, lt: rangeEndExclusive } },
+      },
+      select: { staff_id: true, shifts: { select: { shift_date: true, start_time: true, end_time: true } } },
+    });
+    existingAssignments.forEach(a => {
+      if (!a.shifts) return;
+      const weekStart = toDateStr(getUTCMondayWeekStart(new Date(a.shifts.shift_date)));
+      // Hours contributed by an assignment = its shift's own (end_time − start_time), matching
+      // the existing "Hours this week" convention in taskController.js's getStaffRoster.
+      const hrs = Math.max(0, (new Date(a.shifts.end_time) - new Date(a.shifts.start_time)) / 3600000);
+      if (!hoursByStaffWeek[a.staff_id]) hoursByStaffWeek[a.staff_id] = {};
+      hoursByStaffWeek[a.staff_id][weekStart] = (hoursByStaffWeek[a.staff_id][weekStart] || 0) + hrs;
+    });
+  }
 
   const operatingDays = branchSettings?.operating_days || "1111100";
   // holidays entries are { date: "YYYY-MM-DD", name, enabled, reason? } — see
@@ -126,217 +459,16 @@ async function generateShiftsForBranch(branchId, startDateStr, endDateStr) {
   // period assigned.
   const existingByDatePeriod = new Map(existingShiftRows.map(s => [`${toDateStr(s.shift_date)}:${s.period_id ?? "null"}`, s]));
 
-  const created = [];
-  const skipped = [];
+  const plan = buildGenerationPlan({
+    startDateStr, endDateStr, branch, branchId,
+    templatesByDow, activePeriods, eligibleRegularStaff, offDaySet,
+    closedDates, operatingDays, existingByDate, existingByDatePeriod,
+    hoursByStaffWeek,
+  });
 
-  // A template's required_workers is a headcount, but shift_tasks/task_assignments is a strict
-  // 1-task-1-person model everywhere else in the app (see taskController.js assignStaff's "One
-  // task = one person" check). Rather than changing that model, required_workers > 1 is expanded
-  // into that many identical task rows, each independently assignable — headcount 3 on "Cashier"
-  // becomes three separate "Cashier" tasks a manager (or casual allocation) fills one at a time.
-  function expandTaskRows(shiftId, dayTemplates, periodId) {
-    const rows = [];
-    for (const t of dayTemplates) {
-      const copies = Math.max(1, t.required_workers || 1);
-      for (let i = 0; i < copies; i++) {
-        rows.push({
-          shift_id: shiftId,
-          title: t.title,
-          skill_id: t.skill_id,
-          start_time: t.start_time,
-          end_time: t.end_time,
-          status: "open",
-          period_id: periodId,
-        });
-      }
-    }
-    return rows;
-  }
+  await writeGenerationPlan(plan.plannedShifts);
 
-  // Task 7: place contracted regular staff onto today's open tasks. Simple placement, not
-  // skill-matched scoring — that precision is reserved for casual allocation per the brief's
-  // own distinction ("regular staff are populated, casual workers are allocated"). Each eligible
-  // staff member (contracted this weekday, no approved off-day covering this date, not already
-  // placed elsewhere today — see placedToday below) fills one open task in whatever order the
-  // tasks were generated; leftover tasks (more tasks than eligible staff) are exactly what's left
-  // for casual allocation to target.
-  async function populateRegularStaff(shiftId, createdTasks, todaysEligibleStaff, placedToday) {
-    const openTasks = [...createdTasks];
-    let placedCount = 0;
-    for (const s of todaysEligibleStaff) {
-      if (placedToday.has(s.staff_id)) continue; // Round 6: see the "two periods in one day" decision below
-      const task = openTasks.shift();
-      if (!task) break; // more contracted staff than open tasks today — nothing left to place them on
-      await prisma.task_assignments.create({
-        data: { task_id: task.task_id, shift_id: shiftId, staff_id: s.staff_id, status: "assigned" },
-      });
-      await prisma.shift_tasks.update({ where: { task_id: task.task_id }, data: { status: "assigned" } });
-      placedToday.add(s.staff_id);
-      placedCount++;
-    }
-    return placedCount;
-  }
-
-  const cursor = new Date(`${startDateStr}T00:00:00Z`);
-  const end = new Date(`${endDateStr}T00:00:00Z`);
-  while (cursor <= end) {
-    const dateStr = toDateStr(cursor);
-    const dow = dowMonday0(cursor);
-
-    if (operatingDays[dow] === "0") {
-      skipped.push({ date: dateStr, reason: "non-operating day" });
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-      continue;
-    }
-    if (closedDates.has(dateStr)) {
-      skipped.push({ date: dateStr, reason: "marked closed / public holiday" });
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-      continue;
-    }
-    const dayTemplates = templatesByDow[dow] || [];
-    if (dayTemplates.length === 0) {
-      skipped.push({ date: dateStr, reason: "no task templates set for this weekday" });
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-      continue;
-    }
-
-    const todaysEligibleStaff = eligibleRegularStaff.filter(s =>
-      s.default_work_days[dow] === "1" && !offDaySet.has(`${s.staff_id}:${dateStr}`)
-    );
-
-    if (activePeriods.length === 0) {
-      // ── Unchanged from pre-Round-6: one shift per operating day, covering branch operating
-      // hours, containing every one of today's templates. This is the regression guarantee — a
-      // branch with no periods (or, before the backfill runs, every existing branch) must behave
-      // exactly as it did before this round. ──
-      const existing = existingByDate.get(dateStr);
-      if (existing) {
-        skipped.push({ date: dateStr, reason: existing.source === "generated" ? "already generated" : "a manual shift already exists on this date" });
-        cursor.setUTCDate(cursor.getUTCDate() + 1);
-        continue;
-      }
-
-      const shift = await prisma.shifts.create({
-        data: {
-          branch_id: branchId,
-          shift_date: new Date(`${dateStr}T00:00:00Z`),
-          start_time: branch?.open_time || new Date("1970-01-01T09:00:00Z"),
-          end_time: branch?.close_time || new Date("1970-01-01T18:00:00Z"),
-          status: "draft",
-          shift_type: "regular",
-          source: "generated",
-        },
-      });
-
-      const taskRows = expandTaskRows(shift.shift_id, dayTemplates, null);
-      const createdTasks = taskRows.length > 0 ? await prisma.shift_tasks.createManyAndReturn({ data: taskRows }) : [];
-
-      const placedToday = new Set();
-      const placedCount = await populateRegularStaff(shift.shift_id, createdTasks, todaysEligibleStaff, placedToday);
-      if (placedCount > 0) autoPopulated.push({ date: dateStr, assigned_count: placedCount });
-
-      created.push(dateStr);
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-      continue;
-    }
-
-    // ── Branch has periods: one shift per period active today, plus one fallback shift for any
-    // templates with no period assigned. ──
-    const templatesByPeriod = new Map(); // period_id (or "null") -> templates[]
-    for (const t of dayTemplates) {
-      const key = t.period_id ?? "null";
-      if (!templatesByPeriod.has(key)) templatesByPeriod.set(key, []);
-      templatesByPeriod.get(key).push(t);
-    }
-
-    const placedToday = new Set(); // Round 6 decision: a regular staff member is placed into AT
-    // MOST ONE shift per day, even if their contracted weekday has two active periods (e.g.
-    // Morning + Evening). Placing them in both would silently double-book one person across two
-    // separate crews on the same day, which the round's own brief calls "probably wrong" — this
-    // makes that call explicit and consistent: first period (by sort_order) with an open task
-    // wins, shared across every period-shift created for this date via this one Set.
-    let dayPlacedCount = 0;
-
-    const periodsToday = activePeriods.filter(p => p.active_days?.[dow] === "1");
-    for (const period of periodsToday) {
-      const periodTemplates = templatesByPeriod.get(period.period_id) || [];
-      if (periodTemplates.length === 0) continue; // nothing assigned to this period today — no empty shift, same "don't generate a pointless shift" rule as the no-templates day-level skip above
-
-      const existing = existingByDatePeriod.get(`${dateStr}:${period.period_id}`);
-      if (existing) {
-        skipped.push({ date: dateStr, reason: `"${period.name}" ${existing.source === "generated" ? "already generated" : "a manual shift already exists for this period"}` });
-        continue;
-      }
-
-      // Overnight periods (end <= start, e.g. 16:00-00:00): the rest of this schema doesn't
-      // support a shift crossing midnight (shift_date is a single DATE, start/end are TIME-only
-      // columns with no day component) — same constraint shift creation elsewhere already
-      // enforces. Rather than inventing partial next-day support here, the honest behaviour is:
-      // the generated shift ends at 23:59:59 on the period's own day. A period like "Evening
-      // 16:00-00:00" therefore generates a 16:00-23:59:59 shift, not a true midnight crossing.
-      const startMin = toMinutes(period.start_time);
-      const endMin = toMinutes(period.end_time);
-      const isOvernight = startMin !== null && endMin !== null && endMin <= startMin;
-      const periodEndTime = isOvernight ? new Date("1970-01-01T23:59:59Z") : period.end_time;
-
-      const shift = await prisma.shifts.create({
-        data: {
-          branch_id: branchId,
-          shift_date: new Date(`${dateStr}T00:00:00Z`),
-          title: period.name,
-          start_time: period.start_time,
-          end_time: periodEndTime,
-          status: "draft",
-          shift_type: "regular",
-          source: "generated",
-          period_id: period.period_id,
-        },
-      });
-
-      const taskRows = expandTaskRows(shift.shift_id, periodTemplates, period.period_id);
-      const createdTasks = taskRows.length > 0 ? await prisma.shift_tasks.createManyAndReturn({ data: taskRows }) : [];
-
-      const placedCount = await populateRegularStaff(shift.shift_id, createdTasks, todaysEligibleStaff, placedToday);
-      dayPlacedCount += placedCount;
-
-      created.push(`${dateStr} (${period.name})`);
-    }
-
-    // Templates with no period_id, on a branch that DOES have periods: one additional shift
-    // covering the branch's own operating hours, same as the no-periods path's shift shape —
-    // reported explicitly via created/skipped, never silently dropped.
-    const nullTemplates = templatesByPeriod.get("null") || [];
-    if (nullTemplates.length > 0) {
-      const existing = existingByDatePeriod.get(`${dateStr}:null`);
-      if (existing) {
-        skipped.push({ date: dateStr, reason: `unassigned tasks: ${existing.source === "generated" ? "already generated" : "a manual shift already exists"}` });
-      } else {
-        const shift = await prisma.shifts.create({
-          data: {
-            branch_id: branchId,
-            shift_date: new Date(`${dateStr}T00:00:00Z`),
-            start_time: branch?.open_time || new Date("1970-01-01T09:00:00Z"),
-            end_time: branch?.close_time || new Date("1970-01-01T18:00:00Z"),
-            status: "draft",
-            shift_type: "regular",
-            source: "generated",
-            period_id: null,
-          },
-        });
-        const taskRows = expandTaskRows(shift.shift_id, nullTemplates, null);
-        const createdTasks = taskRows.length > 0 ? await prisma.shift_tasks.createManyAndReturn({ data: taskRows }) : [];
-        const placedCount = await populateRegularStaff(shift.shift_id, createdTasks, todaysEligibleStaff, placedToday);
-        dayPlacedCount += placedCount;
-        created.push(`${dateStr} (unassigned tasks)`);
-      }
-    }
-
-    if (dayPlacedCount > 0) autoPopulated.push({ date: dateStr, assigned_count: dayPlacedCount });
-
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-
-  return { created, skipped, autoPopulated, dataGaps };
+  return { created: plan.created, skipped: plan.skipped, autoPopulated: plan.autoPopulated, dataGaps };
 }
 
 // POST /api/shifts/generate  body: { start_date?, end_date? } (both "YYYY-MM-DD")

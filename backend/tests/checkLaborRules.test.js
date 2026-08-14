@@ -104,3 +104,44 @@ describe("checkLaborRules", () => {
     expect(result).toBeNull();
   });
 });
+
+// Round 7, P1 finding T-02: a caller checking many candidates against the same shift/branch
+// (casualController.js's autoAssignCasual) can supply everything checkLaborRules would otherwise
+// fetch itself, so repeated calls in a candidate loop cost zero DB round trips instead of two
+// each. This is the mechanism the N+1 fix actually relies on — prove it directly rather than only
+// through the mocked-out assertions in autoAssignCasual.test.js.
+describe("checkLaborRules — prefetched data path (no DB calls)", () => {
+  const targetShiftId = 1;
+  const staffId = 100;
+  const branchId = 9;
+
+  test("supplying shift, settings, and otherAssignmentsByStaffId makes zero DB calls", async () => {
+    const shift = { shift_date: new Date("2026-08-10T00:00:00.000Z"), start_time: t("09:00"), end_time: t("15:00") };
+    const result = await checkLaborRules(staffId, targetShiftId, branchId, {
+      shift,
+      settings: { max_work_hours_day: 12, max_consecutive_days: 6, allow_overtime: false },
+      otherAssignmentsByStaffId: {
+        [staffId]: [{ shifts: { shift_date: new Date("2026-08-10T00:00:00.000Z"), start_time: t("00:00"), end_time: t("08:00") } }],
+      },
+    });
+
+    expect(prisma.shifts.findUnique).not.toHaveBeenCalled();
+    expect(prisma.task_assignments.findMany).not.toHaveBeenCalled();
+    expect(supabaseAdmin.from).not.toHaveBeenCalled();
+    // Same data as the "exceeds max_work_hours_day" test above (6h + 8h = 14h > 12h) — proves the
+    // prefetched path still evaluates the rule correctly, not just that it skips fetching.
+    expect(result).toMatch(/12h\/day limit/);
+  });
+
+  test("a staff member absent from otherAssignmentsByStaffId is treated as having no other assignments", async () => {
+    const shift = { shift_date: new Date("2026-08-10T00:00:00.000Z"), start_time: t("09:00"), end_time: t("13:00") };
+    const result = await checkLaborRules(staffId, targetShiftId, branchId, {
+      shift,
+      settings: { max_work_hours_day: 12, max_consecutive_days: 6, allow_overtime: false },
+      otherAssignmentsByStaffId: {}, // this staff member has no key at all
+    });
+
+    expect(prisma.task_assignments.findMany).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+});

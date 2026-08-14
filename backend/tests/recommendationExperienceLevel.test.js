@@ -11,7 +11,9 @@ jest.mock("openai", () => {
   }));
 });
 jest.mock("../src/config/prisma", () => ({
-  task_assignments: { groupBy: jest.fn().mockResolvedValue([]) },
+  // findMany: F2's computeShortfallByStaffId (regularStaffShortfall.js) queries this to seed
+  // hours-already-rostered-this-week for the ranking's short-of-contract tier.
+  task_assignments: { groupBy: jest.fn().mockResolvedValue([]), findMany: jest.fn().mockResolvedValue([]) },
 }));
 jest.mock("../src/config/supabaseAdmin", () => ({ from: jest.fn() }));
 
@@ -74,6 +76,8 @@ function setup() {
         return makeSupabaseChain({ data: [], error: null });
       case "branch_allocation_preferences":
         return makeSupabaseChain({ data: null, error: null });
+      case "branch_settings":
+        return makeSupabaseChain({ data: { work_hours_day: 8 }, error: null });
       default:
         return makeSupabaseChain({ data: [], error: null });
     }

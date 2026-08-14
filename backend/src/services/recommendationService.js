@@ -2,6 +2,7 @@ const supabaseAdmin = require("../config/supabaseAdmin");
 const prisma = require("../config/prisma");
 const OpenAI = require("openai");
 const logger = require("../config/logger");
+const { computeShortfallByStaffId } = require("./regularStaffShortfall");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -90,6 +91,26 @@ async function getShiftRecommendations(shiftId) {
     .in("user_id", userIds);
 
   const userMap = Object.fromEntries((userRows || []).map(u => [u.user_id, u]));
+
+  // F2: regular staff below their contracted hours this week must not be ranked below a casual
+  // for the same task — same requirement casualController.js's auto-assign gate enforces as a
+  // hard refusal, but recommendations only ever suggest candidates for a manager to review, so
+  // this is a ranking bias (short regulars form a priority tier below), not an exclusion of
+  // casuals. Reuses the same shared helper as the gate so the two surfaces can't quietly disagree
+  // on what "short" means.
+  const { data: branchSettingsForShortfall } = await supabaseAdmin
+    .from("branch_settings")
+    .select("work_hours_day")
+    .eq("branch_id", shift.branch_id)
+    .maybeSingle();
+  const shortfallByStaffId = await computeShortfallByStaffId({
+    staffRows: staffRows.filter(s => s.staff_type === "regular"),
+    referenceDate: new Date(shift.shift_date),
+    workHoursPerDay: branchSettingsForShortfall?.work_hours_day ?? 8,
+  });
+  function isShortOfContract(staffId) {
+    return (shortfallByStaffId.get(staffId)?.shortfallHours || 0) > 0;
+  }
 
   // 3. Load skill tags for all staff
   // user_skill_tags has no proficiency_level column (that was always experience_level) — this
@@ -186,7 +207,15 @@ async function getShiftRecommendations(shiftId) {
         } else {
           // Regular staff: check default_work_days bitmask (Mon=0...Sun=6)
           const bitmask = s.default_work_days || "1111100";
-          availability = bitmask[dayOfWeek] === "1" ? "available (regular work day)" : "not a regular work day";
+          if (bitmask[dayOfWeek] !== "1") {
+            availability = "not a regular work day";
+          } else if (isShortOfContract(s.staff_id)) {
+            // F2: surfaced to the AI explicitly — see the prompt's priority instruction below —
+            // since the model has no other way to know this candidate needs these hours.
+            availability = "available (regular work day) — BELOW contracted hours this week, needs priority over casual staff";
+          } else {
+            availability = "available (regular work day)";
+          }
         }
 
         return {
@@ -284,8 +313,14 @@ async function getShiftRecommendations(shiftId) {
 
           return { staff_id: s.staff_id, name: user.full_name || user.email, score, lowConfidence, hasSkill };
         })
-        .filter(Boolean)
-        .sort((a, b) => b.score - a.score)
+        .filter(Boolean);
+
+      // F2: short-of-contract regulars form a priority tier above everyone else, each tier still
+      // ordered by the existing score — so a strong-skill-match casual can't outrank a regular
+      // who still needs these hours, without discarding the rest of the scoring model.
+      const shortRegularTier = scored.filter(c => isShortOfContract(c.staff_id)).sort((a, b) => b.score - a.score);
+      const restTier = scored.filter(c => !isShortOfContract(c.staff_id)).sort((a, b) => b.score - a.score);
+      const ranked = [...shortRegularTier, ...restTier]
         .slice(0, 3)
         .map(c => ({
           staff_id: c.staff_id,
@@ -293,10 +328,12 @@ async function getShiftRecommendations(shiftId) {
           confidence: c.lowConfidence ? "low" : (c.score >= 75 ? "high" : c.score >= 50 ? "medium" : "low"),
           reason: c.lowConfidence
             ? "Deterministic fallback: available window doesn't fully cover this task's hours, so flagged low confidence."
-            : `Deterministic fallback: ranked by availability, skill match and workload${c.hasSkill ? " (holds the required skill)" : ""}.`,
+            : isShortOfContract(c.staff_id)
+              ? `Deterministic fallback: below contracted hours this week — prioritised over casual candidates for this task${c.hasSkill ? " (also holds the required skill)" : ""}.`
+              : `Deterministic fallback: ranked by availability, skill match and workload${c.hasSkill ? " (holds the required skill)" : ""}.`,
         }));
 
-      return { role_id: t.task_id, role_name: t.title, suggestions: scored };
+      return { role_id: t.task_id, role_name: t.title, suggestions: ranked };
     });
   }
 
@@ -312,9 +349,10 @@ ${tasksContext.map(t => `Task "${t.title}" [ID:${t.task_id}]:\n${buildStaffConte
 
 For each task, recommend the best staff. Prioritise, in order:
 1. Staff who are available (not on leave, not double-booked). Treat "DOES NOT fully cover this task's hours" as a hard warning — only suggest that person at "low" confidence and say so in the reason, even if their skills are a good match.
-2. Staff with the required skill, favouring higher proficiency in that skill
-3. Staff with more years of experience and a higher experience level
-4. Regular staff over casual for critical tasks
+2. A regular staff member flagged "BELOW contracted hours this week, needs priority over casual staff" must be ranked above every casual candidate for that task, even one with a better skill match — they need these hours to meet their contract, and this outranks skill/experience below.
+3. Staff with the required skill, favouring higher proficiency in that skill
+4. Staff with more years of experience and a higher experience level
+5. Regular staff over casual for critical tasks, as a tiebreaker when nothing above decides it
 
 Respond ONLY with valid JSON in this exact format:
 {

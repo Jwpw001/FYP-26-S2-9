@@ -100,6 +100,10 @@ function BranchCard({ branch, q, onEdit }) {
   );
 }
 
+// P3, Category B: the "outlet" key/label pair here is the retail-industry type (same three
+// values as the backend's INDUSTRY_BUCKETS), not the pre-rename Outlet-Manager actor name. The
+// displayed label "Outlet" is UI copy — left unchanged; renaming it to "Retail" is a product
+// decision, not a stale-reference cleanup, so it isn't done here.
 const INDUSTRY_META = {
   fnb:    { label: "F&B",    emoji: "🍽️" },
   clinic: { label: "Clinic", emoji: "🩺" },
