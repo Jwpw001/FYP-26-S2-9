@@ -182,25 +182,22 @@ export default function ManagerDashboard() {
         // Leave requests
         const staffIds = allStaff.map(s => s.staff_id);
         if (staffIds.length > 0) {
-          const userIds = allStaff.map(s => s.user_id).filter(Boolean);
-          // Build lookup: user_id → full_name from allStaff (avoids fragile PostgREST nested joins)
-          const userNameMap = {};
-          allStaff.forEach(s => { if (s.user_id) userNameMap[s.user_id] = s.users?.full_name || "Staff"; });
+          // Build staff_id → full_name map (avoids fragile PostgREST nested joins)
+          const staffNameMap = {};
+          allStaff.forEach(s => { staffNameMap[s.staff_id] = s.users?.full_name || "Staff"; });
 
           const [{ data: leaves }, { data: swaps }] = await Promise.all([
             supabase.from("availability")
               .select("request_id, staff_id, start_date, end_date")
               .eq("status","pending").in("staff_id", staffIds).limit(5),
-            userIds.length > 0
-              ? supabase.from("swap_requests")
-                  .select("swap_id, requester_id, status")
-                  .eq("status","pending").in("requester_id", userIds).limit(5)
-              : { data: [] },
+            // swap_requests.requester_id stores staff.staff_id (see SwapRequests.jsx's insert),
+            // not users.user_id — was filtered against a list of user_ids here, which never
+            // matches staff_id's independent auto-increment sequence except by coincidence, so
+            // pending swap requests never showed up on this dashboard.
+            supabase.from("swap_requests")
+              .select("swap_id, requester_id, status")
+              .eq("status","pending").in("requester_id", staffIds).limit(5),
           ]);
-
-          // Build staff_id → full_name map for leave
-          const staffNameMap = {};
-          allStaff.forEach(s => { staffNameMap[s.staff_id] = s.users?.full_name || "Staff"; });
 
           if (!cancelled) {
             setLeaveItems((leaves || []).map(l => ({
@@ -210,7 +207,7 @@ export default function ManagerDashboard() {
             })));
             setSwapItems((swaps || []).map(s => ({
               id: s.swap_id,
-              name: userNameMap[s.requester_id] || "Staff",
+              name: staffNameMap[s.requester_id] || "Staff",
               range: "Swap request",
             })));
           }
