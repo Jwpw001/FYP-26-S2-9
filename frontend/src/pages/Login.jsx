@@ -122,13 +122,19 @@ export default function Login() {
       // profile object itself, unused everywhere it's read (role checks, JSX display) and
       // redundant with what setSession already stores. response.user is the profile as-is.
       const profile = response.user;
+      // Establish the session unconditionally, before deciding where to route — every successful
+      // login response has a valid token regardless of role. This used to happen after the
+      // pending-role branch's early return, so a pending user reaching the "enter your
+      // invitation code" screen below had no token stored anywhere: handleCodeSubmit's accept
+      // request always ran unauthenticated, 401ing with "must be logged in as the account you're
+      // linking" no matter how correct a code they entered.
+      setSession({ user: profile, token: response.token });
       const route = ROLE_ROUTES[profile.role];
       if (!route) {
         if (profile.role === "pending") { setPendingUser(profile); return; }
         setError("Your account role is not yet configured. Please contact your administrator.");
         return;
       }
-      setSession({ user: profile, token: response.token });
       goTo(redirectTo || route);
     } catch (err) {
       const msg = err?.message || "";
@@ -152,18 +158,15 @@ export default function Login() {
     e.preventDefault();
     setCodeLoading(true); setCodeError("");
     try {
-      const BASE = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${BASE}/api/invitations/check-code/${encodeURIComponent(inviteCode)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Invalid code");
+      // Was two hand-rolled fetch() calls that never set an Authorization header at all — every
+      // request api.js makes attaches the stored token automatically (see lib/api.js's
+      // getToken()); a raw fetch() bypasses that entirely regardless of what's in localStorage.
+      // acceptInvitation's guard correctly rejects an unauthenticated request, so this always
+      // 401'd with "must be logged in as the account you're linking", independent of whether a
+      // session was ever established (see handleLogin's fix above for the other half of this).
+      const data = await api.get(`/api/invitations/check-code/${encodeURIComponent(inviteCode)}`);
       const invite = data.invitation;
-      const acceptRes = await fetch(`${BASE}/api/invitations/${invite.token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ existing_user_id: pendingUser.user_id }),
-      });
-      const acceptData = await acceptRes.json();
-      if (!acceptRes.ok) throw new Error(acceptData.message || "Failed to accept invitation");
+      const acceptData = await api.post(`/api/invitations/${invite.token}/accept`, { existing_user_id: pendingUser.user_id });
       setSession({ user: acceptData.user, token: acceptData.token });
       setCodeSuccess(true);
       setTimeout(() => goTo(ROLE_ROUTES[acceptData.user.role] || "/"), 1500);
