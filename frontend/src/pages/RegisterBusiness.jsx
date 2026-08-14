@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGoTo } from "../components/PageTransition";
 import { api } from "../lib/api";
-import { setUser } from "../utils/auth";
+import { setSession } from "../utils/auth";
 import { Check } from "lucide-react";
 import StepBusinessInfo from "../components/registration/StepBusinessInfo";
 import StepAccountCreate from "../components/registration/StepAccountCreate";
@@ -56,7 +56,11 @@ export default function RegisterBusiness() {
     try {
       const res = await api.post("/api/auth/register-business", payload);
       if (res.success) {
-        setUser({ ...res.user, token: res.token });
+        // B1: was setUser({ ...res.user, token: res.token }) — nested the token inside the
+        // stored user object with no top-level localStorage "token" key. Only worked because
+        // api.js's getToken() falls back to reading user.token when "token" isn't set directly;
+        // setSession writes both the correct, unified way (see utils/auth.js).
+        setSession({ user: res.user, token: res.token });
         goTo("/business-owner/dashboard");
       } else {
         setError(res.message || "Registration failed.");

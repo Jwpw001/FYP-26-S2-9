@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getUser, setUser } from "../utils/auth";
+import { getUser, setSession } from "../utils/auth";
 import { api } from "../lib/api";
 import { X, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
@@ -49,9 +49,8 @@ export default function AcceptInvite() {
     setSubmitting(true); setFormError("");
     try {
       const data = await api.post(`/api/invitations/${token}/accept`, { existing_user_id: loggedInUser.user_id });
-      // Update stored user with potentially new role/token
-      setUser(data.user);
-      localStorage.setItem("token", data.token);
+      // Update stored session with potentially new role/token
+      setSession({ user: data.user, token: data.token });
       setDone(true);
       setTimeout(() => navigate(DASHBOARD[data.user.role] || "/"), 1800);
     } catch (err) {
@@ -67,8 +66,7 @@ export default function AcceptInvite() {
     setSubmitting(true); setFormError("");
     try {
       const data = await api.post(`/api/invitations/${token}/accept`, { full_name: form.full_name, username: form.username, password: form.password });
-      setUser(data.user);
-      localStorage.setItem("token", data.token);
+      setSession({ user: data.user, token: data.token });
       setDone(true);
       setTimeout(() => navigate(DASHBOARD[data.user.role] || "/"), 1800);
     } catch (err) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGoTo } from "../components/PageTransition";
 import { api } from "../lib/api";
+import { setSession } from "../utils/auth";
 import { PenLine, Briefcase, Key, CheckCircle2 } from "lucide-react";
 
 function Field({ label, id, type = "text", value, onChange, placeholder, half }) {
@@ -65,6 +66,12 @@ export default function CreateAccount() {
         password: form.password,
       });
       if (res.success) {
+        // B1: the actual bug — this page discarded the token/user the backend already returned,
+        // so signup left the browser unauthenticated. A stale token from earlier testing (or
+        // none at all) was still whatever api.js sent on the next request, so accepting an
+        // invitation immediately after signing up 401'd ("must be logged in as the account
+        // you're linking") even though the account genuinely was just created.
+        setSession({ user: res.user, token: res.token });
         setDone(true);
       } else {
         setError(res.message || "Registration failed.");

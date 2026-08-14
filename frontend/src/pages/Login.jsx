@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useGoTo } from "../components/PageTransition";
 import { api } from "../lib/api";
-import { setUser, getUser } from "../utils/auth";
+import { setSession, getUser } from "../utils/auth";
 import { supabase } from "../lib/supabaseClient";
 
 const ROLE_ROUTES = {
@@ -118,15 +118,17 @@ export default function Login() {
         email: form.email.trim().toLowerCase(),
         password: form.password,
       });
-      const profile = { ...response.user, token: response.token };
+      // B1: was { ...response.user, token: response.token } — nested the token inside the
+      // profile object itself, unused everywhere it's read (role checks, JSX display) and
+      // redundant with what setSession already stores. response.user is the profile as-is.
+      const profile = response.user;
       const route = ROLE_ROUTES[profile.role];
       if (!route) {
         if (profile.role === "pending") { setPendingUser(profile); return; }
         setError("Your account role is not yet configured. Please contact your administrator.");
         return;
       }
-      setUser(profile);
-      localStorage.setItem("token", response.token);
+      setSession({ user: profile, token: response.token });
       goTo(redirectTo || route);
     } catch (err) {
       const msg = err?.message || "";
@@ -162,8 +164,7 @@ export default function Login() {
       });
       const acceptData = await acceptRes.json();
       if (!acceptRes.ok) throw new Error(acceptData.message || "Failed to accept invitation");
-      setUser(acceptData.user);
-      localStorage.setItem("token", acceptData.token);
+      setSession({ user: acceptData.user, token: acceptData.token });
       setCodeSuccess(true);
       setTimeout(() => goTo(ROLE_ROUTES[acceptData.user.role] || "/"), 1500);
     } catch (err) {

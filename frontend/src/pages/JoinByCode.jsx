@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { getUser, setUser } from "../utils/auth";
+import { getUser, setSession } from "../utils/auth";
 import { api } from "../lib/api";
 import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 
@@ -71,8 +71,7 @@ export default function JoinByCode() {
     setSubmitting(true); setFormError("");
     try {
       const data = await api.post(`/api/invitations/${invite.token}/accept`, { existing_user_id: freshUser.user_id });
-      setUser(data.user);
-      localStorage.setItem("token", data.token);
+      setSession({ user: data.user, token: data.token });
       setStep("done");
       setTimeout(() => navigate(DASHBOARD[data.user.role] || "/"), 1800);
     } catch (err) {
@@ -88,8 +87,7 @@ export default function JoinByCode() {
     setSubmitting(true); setFormError("");
     try {
       const data = await api.post(`/api/invitations/${invite.token}/accept`, { full_name: form.full_name, username: form.username, password: form.password });
-      setUser(data.user);
-      localStorage.setItem("token", data.token);
+      setSession({ user: data.user, token: data.token });
       setStep("done");
       setTimeout(() => navigate(DASHBOARD[data.user.role] || "/"), 1800);
     } catch (err) {

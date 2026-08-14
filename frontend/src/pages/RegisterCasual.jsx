@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { api } from "../lib/api";
-import { setUser } from "../utils/auth";
+import { setSession } from "../utils/auth";
 
 export default function RegisterCasual() {
   const navigate = useNavigate();
@@ -29,8 +29,7 @@ export default function RegisterCasual() {
     setLoading(true);
     try {
       const data = await api.post("/api/casual/register", form);
-      localStorage.setItem("token", data.token);
-      setUser(data.user);
+      setSession({ user: data.user, token: data.token });
       setSuccess(true);
     } catch (err) {
       setError(err.message || "Registration failed.");
