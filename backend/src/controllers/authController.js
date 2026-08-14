@@ -250,10 +250,19 @@ const forgotPassword = async (req, res) => {
         if (!email) return res.status(400).json({ success: false, message: "Email is required." });
 
         const { sendMail } = require("../utils/mailer");
+        // B2: was process.env.FRONTEND_URL || "http://localhost:5173" — the same bug as
+        // invitationController.js's invite links (FRONTEND_URL is a comma-separated CORS
+        // allowlist, not a single link-building origin — see config/publicAppUrl.js). This is
+        // the more likely explanation for the UR-05 password-recovery test cases sitting Blocked
+        // than "SMTP unavailable": sendMail here goes over the Gmail API via HTTPS
+        // (utils/mailer.js), not SMTP, and it's the exact same sendMail the invitation email that
+        // DID arrive in testing used — so if the reset email arrives at all, this broken link is
+        // what actually blocks the case, not mail delivery.
+        const PUBLIC_APP_URL = require("../config/publicAppUrl");
         const { data, error } = await supabaseAdmin.auth.admin.generateLink({
             type: "recovery",
             email,
-            options: { redirectTo: `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password` },
+            options: { redirectTo: `${PUBLIC_APP_URL}/reset-password` },
         });
         if (error) {
             (req.log || logger).error({ err: error }, "[forgotPassword] generateLink failed");

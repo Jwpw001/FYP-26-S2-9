@@ -90,6 +90,26 @@ PORT=3001
 `VITE_API_URL` below expects for local development. The deployed
 backend runs on Render.)
 
+Optional, only needed once you're not just running everything on
+localhost:
+
+```env
+FRONTEND_URL=https://your-deployed-frontend.vercel.app
+PUBLIC_APP_URL=https://your-deployed-frontend.vercel.app
+```
+
+These look like the same thing and are not — `FRONTEND_URL` is a
+**comma-separated CORS allowlist** (`app.js` splits it on `,`; add
+your production domain plus any specific preview URLs here), while
+`PUBLIC_APP_URL` is the **single origin** used to build links that get
+emailed to users (invitations, password reset). Putting a
+comma-separated value in `PUBLIC_APP_URL`, or expecting `FRONTEND_URL`
+alone to work for both, is exactly the bug this split exists to
+prevent. Both fall back to `http://localhost:5173` if unset, which is
+correct for local dev but wrong in production — `PUBLIC_APP_URL`
+missing in production logs a startup warning rather than failing
+silently.
+
 ## Run Prisma
 
 ```bash

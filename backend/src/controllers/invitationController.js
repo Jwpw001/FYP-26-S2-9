@@ -7,7 +7,10 @@ const { sendMail } = require("../utils/mailer");
 const logger = require("../config/logger");
 
 const sendServerError = require("../utils/sendServerError");
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+// B2: was process.env.FRONTEND_URL || "http://localhost:5173" — FRONTEND_URL is a
+// comma-separated CORS allowlist (app.js), not a single link-building origin; see
+// config/publicAppUrl.js for why that mismatch broke every link built from it.
+const PUBLIC_APP_URL = require("../config/publicAppUrl");
 
 const ROLE_HIERARCHY = {
   system_admin:        5,
@@ -63,7 +66,7 @@ async function sendInviteEmail({ to, inviterName, roleName, branchName, inviteLi
         <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px;text-align:center;margin-bottom:24px;">
           <p style="font-size:12px;color:#64748B;margin-bottom:6px;">Or join using this invitation code:</p>
           <p style="font-size:28px;font-weight:800;color:#0F172A;letter-spacing:0.1em;">${code}</p>
-          <p style="font-size:12px;color:#94A3B8;">Go to <strong>${FRONTEND_URL}/join-invite</strong> and enter the code</p>
+          <p style="font-size:12px;color:#94A3B8;">Go to <strong>${PUBLIC_APP_URL}/join-invite</strong> and enter the code</p>
         </div>
         <p style="font-size:12px;color:#94A3B8;text-align:center;">This invitation expires in 7 days. If you didn't expect this, you can ignore this email.</p>
       </div>
@@ -151,7 +154,7 @@ const sendInvitation = async (req, res) => {
     });
     if (error) throw new Error(error.message);
 
-    const inviteLink = `${FRONTEND_URL}/invite/${token}`;
+    const inviteLink = `${PUBLIC_APP_URL}/invite/${token}`;
     const roleName = ROLE_LABELS[role] || role;
 
     await sendInviteEmail({ to: email, inviterName, roleName, branchName, inviteLink, code });
@@ -358,7 +361,7 @@ const resendInvitation = async (req, res) => {
     if (invite.status !== "pending") return res.status(400).json({ success: false, message: "Can only resend pending invitations." });
 
     const senderUser = await prisma.users.findUnique({ where: { user_id: req.user.user_id }, select: { full_name: true } });
-    const inviteLink = `${FRONTEND_URL}/invite/${invite.token}`;
+    const inviteLink = `${PUBLIC_APP_URL}/invite/${invite.token}`;
     await sendInviteEmail({
       to: invite.email, inviterName: senderUser?.full_name || "Someone",
       roleName: ROLE_LABELS[invite.role] || invite.role,
