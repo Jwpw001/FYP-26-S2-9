@@ -15,6 +15,7 @@ function makeSupabaseChain(result) {
     is: jest.fn(() => chain),
     insert: jest.fn(() => chain),
     update: jest.fn(() => chain),
+    upsert: jest.fn(() => chain),
     maybeSingle: jest.fn(() => Promise.resolve(result)),
     single: jest.fn(() => Promise.resolve(result)),
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),

@@ -1519,7 +1519,13 @@ const updateBranchAllocationPrefs = async (req, res) => {
     if (!branch) return res.status(404).json({ success: false, message: "Branch not found." });
 
     const { weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload } = req.body;
-    const total = (weight_availability || 0) + (weight_skills || 0) + (weight_attendance || 0) + (weight_performance || 0) + (weight_workload || 0);
+    // Round 6, Task 10 rebuilt scoring to three dimensions (skills, attendance, workload) — see
+    // casualController.js/recommendationService.js. weight_availability/weight_performance are
+    // legacy columns kept only so an old row still round-trips its other values; the current UI
+    // (business-owner/manager Settings, BranchDetail) never edits or sends them, so requiring
+    // them to also contribute to this sum broke every save from that UI even at a genuine 100%
+    // split across the three dimensions it actually controls.
+    const total = (weight_skills || 0) + (weight_attendance || 0) + (weight_workload || 0);
     if (total !== 100) return res.status(400).json({ success: false, message: "Allocation weights must sum to 100." });
 
     const upsertData = {
@@ -1590,7 +1596,8 @@ const updateAllocationPrefs = async (req, res) => {
     if (!biz) return res.status(404).json({ success: false, message: "Business not found." });
 
     const { weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload } = req.body;
-    const total = (weight_availability || 0) + (weight_skills || 0) + (weight_attendance || 0) + (weight_performance || 0) + (weight_workload || 0);
+    // See updateBranchAllocationPrefs's identical comment above — same fix, same reason.
+    const total = (weight_skills || 0) + (weight_attendance || 0) + (weight_workload || 0);
     if (total !== 100) return res.status(400).json({ success: false, message: "Allocation weights must sum to 100." });
 
     const updates = { weight_availability, weight_skills, weight_attendance, weight_performance, weight_workload };

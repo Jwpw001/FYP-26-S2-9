@@ -143,8 +143,14 @@ const registerBusiness = async (req, res) => {
         }
 
         if (allocation_preferences) {
-            const { weight_availability = 40, weight_skills = 30, weight_attendance = 15, weight_performance = 10, weight_workload = 5 } = allocation_preferences;
-            if (weight_availability + weight_skills + weight_attendance + weight_performance + weight_workload !== 100) {
+            // Round 6, Task 10 rebuilt scoring to three dimensions (skills, attendance,
+            // workload) — see businessOwnerController.js's updateBranchAllocationPrefs for the
+            // same fix on the settings-save path. weight_availability/weight_performance are
+            // legacy columns no longer read by scoring and never sent by the current UI, so
+            // requiring them in this sum meant a genuine 100% split across the three dimensions
+            // that matter still failed.
+            const { weight_skills = 30, weight_attendance = 15, weight_workload = 5 } = allocation_preferences;
+            if (weight_skills + weight_attendance + weight_workload !== 100) {
                 return res.status(400).json({ success: false, message: "Allocation weights must sum to 100." });
             }
         }
