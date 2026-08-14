@@ -1052,6 +1052,9 @@ const getBranchSkills = async (req, res) => {
   }
 };
 
+// P3, Category B: "outlet" is an industry-type value (retail store), not the pre-rename
+// Outlet-Manager actor name — kept as-is; see schema.prisma's branches.location_type comment for
+// why "branch" would be the wrong replacement and what a real rename ("retail") would require.
 const INDUSTRY_BUCKETS = [
   { key: "fnb", label: "F&B" },
   { key: "clinic", label: "Clinic" },
@@ -1398,6 +1401,8 @@ const updateBranchSettings = async (req, res) => {
     if (operating_days && !/^[01]{7}$/.test(operating_days)) {
       return res.status(400).json({ success: false, message: "operating_days must be a 7-character string of 0s and 1s." });
     }
+    // P3, Category B: "outlet" is the retail-industry value here, same meaning as
+    // branches.location_type's default — not the pre-rename actor name. Kept as-is.
     if (industry !== undefined && industry !== null && !["fnb", "clinic", "outlet"].includes(industry)) {
       return res.status(400).json({ success: false, message: "industry must be one of: fnb, clinic, outlet." });
     }

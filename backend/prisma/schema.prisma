@@ -1,3 +1,13 @@
+// P3, Category A: every `map: "outlet_..."` constraint/index name below (outlet_managers_pkey,
+// outlet_settings_outlet_id_key, outlets_pkey, idx_shifts_outlet_date, staff_outlet_id_fkey, and
+// the rest) is a REAL constraint/index name already live in Postgres, predating the
+// Outlet → Branch rename. Editing the `map:` string alone would not rename anything in the
+// database — it would just make Prisma disagree with what's actually there, and the next
+// `migrate` would report drift. Renaming them for real needs an explicit
+// `ALTER TABLE ... RENAME CONSTRAINT` / `ALTER INDEX ... RENAME TO` migration for each one, with
+// every `map:` updated to match in the same commit. Deliberately not doing that here: renaming a
+// live constraint/index has no functional benefit, and doing it "half" (schema only, or SQL only)
+// is worse than doing neither. These names are retained on purpose, not missed.
 generator client {
   provider = "prisma-client-js"
 }
@@ -251,6 +261,12 @@ model branches {
   business_id               Int?
   open_time                 DateTime?                   @default(dbgenerated("'08:00:00'::time without time zone")) @db.Time(6)
   close_time                DateTime?                   @default(dbgenerated("'22:00:00'::time without time zone")) @db.Time(6)
+  // P3, Category B: "outlet" here is one of three industry types (fnb | clinic | outlet, meaning
+  // a retail store) — a genuinely different meaning from the pre-rename Outlet-Manager actor name
+  // that Category A's constraint names refer to. Replacing it with "branch" would be wrong (a
+  // branch is a location, this is an industry); the correct value if this ever gets renamed is
+  // "retail", which needs a data migration (UPDATE existing rows) and a validation-allowlist
+  // change in businessOwnerController.js — not done here, kept as-is.
   location_type             String                      @default("outlet") @db.VarChar(50)
   working_days              Int                         @default(7)
   deleted_at                DateTime?                   @db.Timestamptz(6)
@@ -283,6 +299,13 @@ model businesses {
   website                String?                 @db.VarChar(255)
   plan                   String                  @default("free") @db.VarChar(20)
   scheduling_mode        String                  @default("shift") @db.VarChar(20)
+  // P3 finding — a fourth, previously unlisted meaning of "outlet": a per-business customizable
+  // display noun for what this business calls its locations (same idea as staff_label defaulting
+  // to "Staff"), NOT a constraint name (Category A) or the industry-type value (Category B).
+  // Currently dead — no controller or frontend/mobile code reads or writes location_label at all,
+  // so its default of "Outlet" is never actually displayed anywhere today. Left as-is: whether to
+  // wire it up, rename its default, or drop the unused column is a product decision, not a stale
+  // reference to clean up.
   location_label         String                  @default("Outlet") @db.VarChar(50)
   staff_label            String                  @default("Staff") @db.VarChar(50)
   join_code              String?                 @unique @db.VarChar(12)
