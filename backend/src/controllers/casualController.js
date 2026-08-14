@@ -1057,7 +1057,7 @@ async function autoAssignCasual(req, res) {
     // Batched lookups for scoring — fetched for every approved worker up front (not just the
     // eventual winner) so the response can show a full per-candidate breakdown.
     const approvedUserIds = approvedWorkers.map(w => w.user_id);
-    const [skillTagRows, userRows] = await Promise.all([
+    const [skillTagRows, userRows, laborSettingsResult] = await Promise.all([
       prisma.user_skill_tags.findMany({
         where: { user_id: { in: approvedUserIds } },
         select: { user_id: true, skill_id: true, experience_level: true },
@@ -1066,7 +1066,13 @@ async function autoAssignCasual(req, res) {
         where: { user_id: { in: approvedUserIds } },
         select: { user_id: true, full_name: true },
       }),
+      // Round 7, P1 finding T-02: fetched once for the whole candidate pool (same branch, same
+      // shift, every candidate) instead of once per candidate inside checkLaborRules — see the
+      // batched task_assignments query below and where laborSettings/otherAssignmentsByStaffId
+      // get handed to checkLaborRules in the candidate loop.
+      supabaseAdmin.from("branch_settings").select("max_work_hours_day, max_consecutive_days, allow_overtime").eq("branch_id", branch.branch_id).maybeSingle(),
     ]);
+    const laborSettings = laborSettingsResult?.data || null;
     const skillTagsByUser = {};
     skillTagRows.forEach(t => {
       if (!skillTagsByUser[t.user_id]) skillTagsByUser[t.user_id] = [];
@@ -1127,7 +1133,16 @@ async function autoAssignCasual(req, res) {
     // → behaves exactly as today" guarantee Task 2's generator gives, applied here to matching.
     const shiftPeriodId = shift.period_id;
 
-    const [availRows, periodAvailRows, standingAvailRows, sameDayAssignments, pastAssignmentCounts, leaveRows] = await Promise.all([
+    // Round 7, P1 finding T-02: bounded the same way checkLaborRules now bounds its own
+    // fallback query (see taskController.js) — `maxConsec` days either side of this shift is
+    // enough to determine whether the consecutive-day rule is breached, and fetching it once for
+    // every candidate here (instead of once per candidate inside checkLaborRules) is what makes
+    // the query count independent of the candidate pool size.
+    const maxConsecForWindow = laborSettings?.max_consecutive_days || 6;
+    const laborWindowStart = new Date(shiftDateOnly.getTime() - maxConsecForWindow * 86400000);
+    const laborWindowEnd = new Date(shiftDateOnly.getTime() + maxConsecForWindow * 86400000);
+
+    const [availRows, periodAvailRows, standingAvailRows, sameDayAssignments, pastAssignmentCounts, leaveRows, laborRuleAssignments] = await Promise.all([
       shiftPeriodId
         ? Promise.resolve([])
         : prisma.casual_availability.findMany({
@@ -1164,7 +1179,16 @@ async function autoAssignCasual(req, res) {
         where: { staff_id: { in: staffIds }, status: "approved", start_date: { lte: shiftDateOnly }, end_date: { gte: shiftDateOnly } },
         select: { staff_id: true },
       }),
+      prisma.task_assignments.findMany({
+        where: { staff_id: { in: staffIds }, shift_id: { not: Number(shift_id) }, shifts: { shift_date: { gte: laborWindowStart, lte: laborWindowEnd } } },
+        select: { staff_id: true, shifts: { select: { shift_date: true, start_time: true, end_time: true } } },
+      }),
     ]);
+    const otherAssignmentsByStaffId = {};
+    laborRuleAssignments.forEach(a => {
+      if (!otherAssignmentsByStaffId[a.staff_id]) otherAssignmentsByStaffId[a.staff_id] = [];
+      otherAssignmentsByStaffId[a.staff_id].push(a);
+    });
 
     const availByStaffId = Object.fromEntries(availRows.map(a => [a.staff_id, a]));
     const onLeaveStaffIds = new Set(leaveRows.map(l => l.staff_id));
@@ -1262,11 +1286,15 @@ async function autoAssignCasual(req, res) {
 
       // Round 3, Task 5: branch labor rules (max daily hours, max consecutive working days) are
       // now a SOFT signal, not a hard filter — the same check assignStaff uses for manual
-      // assignment (checkLaborRules is shared, unmodified logic from taskController.js), but a
-      // breach here only ranks the candidate lower via laborPenalty below, applied after
+      // assignment (checkLaborRules is shared, unmodified rule logic from taskController.js), but
+      // a breach here only ranks the candidate lower via laborPenalty below, applied after
       // weighted scoring. failReasons.labor_rules is kept for the score_breakdown / empty-result
-      // messaging below, now meaning "would breach" rather than "excluded".
-      const laborWarning = await checkLaborRules(staffId, Number(shift_id), branch.branch_id);
+      // messaging below, now meaning "would breach" rather than "excluded". Round 7, P1 finding
+      // T-02: shift/settings/otherAssignments are prefetched once above for the whole candidate
+      // pool (see laborSettings/otherAssignmentsByStaffId), so this call does no DB round trip.
+      const laborWarning = await checkLaborRules(staffId, Number(shift_id), branch.branch_id, {
+        shift, settings: laborSettings, otherAssignmentsByStaffId,
+      });
       if (laborWarning) failReasons.labor_rules++;
 
       // Passed the remaining hard filters — gather the raw signal needed for weighted scoring.

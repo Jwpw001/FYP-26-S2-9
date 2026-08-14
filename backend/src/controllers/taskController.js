@@ -45,18 +45,28 @@ function toMinsFromISO(t) {
 
 // Returns an error message if assigning `staffId` to `shiftId` would violate the branch's
 // max daily hours or max consecutive working days — null if the assignment is fine.
-async function checkLaborRules(staffId, shiftId, branchId) {
-  const shift = await prisma.shifts.findUnique({
+//
+// `prefetched` (Round 7, P1 finding T-02) lets a caller checking many candidates against the
+// SAME shift/branch — casualController.js's autoAssignCasual candidate loop — supply the shift,
+// branch_settings, and a { [staffId]: otherAssignments[] } map it already fetched once for every
+// candidate, so this function does zero DB round trips per call instead of two. Omitted (the
+// single-candidate caller below, assignStaff) falls back to fetching them itself, unchanged.
+async function checkLaborRules(staffId, shiftId, branchId, prefetched = {}) {
+  const shift = prefetched.shift ?? await prisma.shifts.findUnique({
     where: { shift_id: shiftId },
     select: { shift_date: true, start_time: true, end_time: true },
   });
   if (!shift) return null;
 
-  const { data: settings } = await supabaseAdmin
-    .from("branch_settings")
-    .select("max_work_hours_day, max_consecutive_days, allow_overtime")
-    .eq("branch_id", branchId)
-    .maybeSingle();
+  let settings = prefetched.settings;
+  if (settings === undefined) {
+    const result = await supabaseAdmin
+      .from("branch_settings")
+      .select("max_work_hours_day, max_consecutive_days, allow_overtime")
+      .eq("branch_id", branchId)
+      .maybeSingle();
+    settings = result.data;
+  }
   if (!settings) return null;
 
   const maxHours  = settings.max_work_hours_day || 12;
@@ -64,10 +74,25 @@ async function checkLaborRules(staffId, shiftId, branchId) {
   const allowOT   = settings.allow_overtime ?? false;
   const shiftDateStr = new Date(shift.shift_date).toISOString().slice(0, 10);
 
-  const otherAssignments = await prisma.task_assignments.findMany({
-    where: { staff_id: staffId, shift_id: { not: shiftId } },
-    include: { shifts: { select: { shift_date: true, start_time: true, end_time: true } } },
-  });
+  let otherAssignments;
+  if (prefetched.otherAssignmentsByStaffId) {
+    otherAssignments = prefetched.otherAssignmentsByStaffId[staffId] || [];
+  } else {
+    // Bounded to `maxConsec` days either side of the target shift (previously unbounded — every
+    // assignment a staff member had ever had, growing without limit over the lifetime of the
+    // app). A consecutive-day run only needs to reach maxConsec+1 to violate the rule, and days
+    // further out than maxConsec on either side can't change that pass/fail outcome, so this
+    // window is provably sufficient for the rule check (the reported day-count in a genuinely
+    // pathological run far longer than the window could undercount, but the violation itself,
+    // and every real-world case, is unaffected).
+    const shiftDateMs = new Date(`${shiftDateStr}T00:00:00Z`).getTime();
+    const windowStart = new Date(shiftDateMs - maxConsec * 86400000);
+    const windowEnd = new Date(shiftDateMs + maxConsec * 86400000);
+    otherAssignments = await prisma.task_assignments.findMany({
+      where: { staff_id: staffId, shift_id: { not: shiftId }, shifts: { shift_date: { gte: windowStart, lte: windowEnd } } },
+      include: { shifts: { select: { shift_date: true, start_time: true, end_time: true } } },
+    });
+  }
 
   if (!allowOT) {
     const sameDayHours = otherAssignments
