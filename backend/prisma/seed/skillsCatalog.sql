@@ -9,6 +9,9 @@
 -- distinct NULLs as non-conflicting, so ON CONFLICT can't be used here), so this guards
 -- duplication with a WHERE NOT EXISTS check per row instead. Running this twice is harmless.
 
+-- P3, Category B: 'outlet' below is the retail-industry tag (same three values as
+-- branches.location_type/businessOwnerController.js's INDUSTRY_BUCKETS), not the pre-rename
+-- Outlet-Manager actor name — kept as-is.
 INSERT INTO "skills" ("name", "description", "industry_type", "is_catalog", "branch_id", "business_id")
 SELECT v.name, v.description, v.industry_type, true, NULL, NULL
 FROM (VALUES

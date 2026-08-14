@@ -64,7 +64,7 @@ export default function MyShifts() {
           <View style={{ flex: 1 }}>
             <Text style={s.shiftTitle}>{item.shifts?.title || "Shift"}</Text>
             <Text style={s.shiftSub}>{fmtTime(item.shifts?.start_time)} – {fmtTime(item.shifts?.end_time)}</Text>
-            {item.shifts?.branches?.name && <Text style={s.outlet}>📍 {item.shifts.branches.name}</Text>}
+            {item.shifts?.branches?.name && <Text style={s.branchName}>📍 {item.shifts.branches.name}</Text>}
           </View>
           <Badge label={item.shifts?.status} variant={item.shifts?.status} />
         </View>
@@ -137,7 +137,7 @@ const s = StyleSheet.create({
   dateMon: { fontSize: 10, color: "#64748B", fontWeight: "600" },
   shiftTitle: { fontSize: 14, fontWeight: "700", color: "#1E293B" },
   shiftSub: { fontSize: 12, color: "#64748B", marginTop: 2 },
-  outlet: { fontSize: 11, color: "#64748B", marginTop: 3 },
+  branchName: { fontSize: 11, color: "#64748B", marginTop: 3 },
   attendRow: { flexDirection: "row", gap: 14, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#F1F5F9" },
   attendText: { fontSize: 12, color: "#475569", fontWeight: "600" },
   ackBanner: { backgroundColor: "#FFFBEB", borderRadius: 8, padding: 6, marginTop: 8 },
