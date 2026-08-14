@@ -131,7 +131,18 @@ export default function Login() {
       setSession({ user: profile, token: response.token });
       const route = ROLE_ROUTES[profile.role];
       if (!route) {
-        if (profile.role === "pending") { setPendingUser(profile); return; }
+        if (profile.role === "pending") {
+          // Arrived here via AcceptInvite.jsx's "Log In with Existing Account" link, which sets
+          // redirect=/invite/:token — that page already has the invite's branch/role context and
+          // will auto-detect the now-logged-in matching-email user (see its own useEffect), so
+          // send them straight back there instead of the generic "enter your code" screen below.
+          // Without this, a pending user who clicked a real invite link, then logged in, was
+          // dropped into the same manual code-entry flow as someone who never had a link at all
+          // — discarding the token they already had and making them retype the code by hand.
+          if (redirectTo && redirectTo.startsWith("/invite/")) { goTo(redirectTo); return; }
+          setPendingUser(profile);
+          return;
+        }
         setError("Your account role is not yet configured. Please contact your administrator.");
         return;
       }
