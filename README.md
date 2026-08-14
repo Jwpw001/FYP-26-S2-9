@@ -11,7 +11,7 @@ Business → Branch → Shift → Task structures, built for CSIT-26-S2-04
 # Features
 
 - Five roles with role-scoped dashboards: `system_admin`, `business_owner`,
-  `manager`, `regular_staff`, `casual_staff`
+  `branch_manager`, `regular_staff`, `casual_staff`
 - Automatic shift generation from per-weekday task templates, with manual
   creation for exceptions (closures, one-off cover shifts)
 - Branch closures and public holidays (with a `treat_public_holidays_as_working`
@@ -19,7 +19,7 @@ Business → Branch → Shift → Task structures, built for CSIT-26-S2-04
 - Deterministic + AI-assisted casual worker auto-assignment, with a
   configurable weighting model (availability, skills, attendance, performance,
   workload)
-- Timesheets with actual worked/additional/overtime hours, manager
+- Timesheets with actual worked/additional/overtime hours, branch manager
   approve/reject, and a working-hours report
 - Leave, off-day, and swap requests with approval workflows
 - Role-aware in-app notifications plus web push (VAPID) and Expo push
@@ -202,13 +202,13 @@ public.users
 ```txt
 system_admin
 business_owner
-manager
+branch_manager
 regular_staff
 casual_staff
 ```
 
 `business_owner` owns one or more businesses, each with one or more
-branches. `manager` is scoped to a single branch. `regular_staff`
+branches. `branch_manager` is scoped to a single branch. `regular_staff`
 belong to a branch; `casual_staff` belong to a business and express
 branch preferences rather than being fixed to one branch.
 
