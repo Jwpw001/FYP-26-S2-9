@@ -559,6 +559,22 @@ model task_assignments {
   staff                                                          staff?          @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
   shift_tasks                                                    shift_tasks     @relation(fields: [task_id], references: [task_id], onDelete: Cascade, onUpdate: NoAction)
 
+  // Round 7, F3 — correction: a composite (staff_id, shift_id) index was evaluated twice for the
+  // query shapes actually used against this table (getStaffRoster's exact shift_id + staff_id-IN
+  // lookup, checkLaborRules' staff_id + shift_id<>X lookup, and the windowed staff_id-IN join to
+  // shifts used by casualController.js and checkLaborRules' own fallback query). The first
+  // benchmark measured this against a hand-written synthetic `shifts` table with NO index at all,
+  // which doesn't match production (shifts really does have idx_shifts_outlet_date on
+  // (branch_id, shift_date)) — that benchmark's conclusion about a "missing index on
+  // shifts.shift_date" was wrong, an artefact of the synthetic table, not a real finding.
+  // Re-run against a database built from this repo's actual migrations (100k task_assignments /
+  // 20k shifts / 800 staff): the composite index still made no measurable difference to any of
+  // the three shapes (largest case ~15.7ms unindexed vs ~15.6ms indexed, noise). The real
+  // bottleneck in the windowed-join shape is that idx_shifts_outlet_date can't help a query that
+  // filters shifts by date only — its leading column is branch_id. Adding a branch_id filter to
+  // that query brought it to ~0.6ms using the EXISTING index, no schema change needed — confirmed,
+  // not applied (out of scope for this benchmark; the query itself wasn't part of what F3 asked
+  // to fix). Conclusion stands either way: no composite index added here.
   @@index([shift_id], map: "idx_task_assignments_shift")
   @@index([staff_id], map: "idx_task_assignments_staff")
 }
