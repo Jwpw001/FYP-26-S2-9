@@ -47,7 +47,15 @@ function timeToPct(startStr, endStr) {
   if (!startStr || !endStr) return 0;
   const [sh, sm] = startStr.split(":").map(Number);
   const [eh, em] = endStr.split(":").map(Number);
-  const dur = (eh + em / 60) - (sh + sm / 60);
+  // Clamp both ends to the chart's own [GANTT_START, GANTT_END] window before measuring duration
+  // — a shift's raw end_time can be later than 10pm (an overnight period's shift is generated
+  // ending at 23:59:59, see shiftGenerationController.js), and using the raw time here produced a
+  // bar whose left% + width% exceeded 100%, overflowing past the card's right edge since nothing
+  // clips it. Matches timeToLeft's existing clamp; a shift that runs past 10pm now visually ends
+  // at the chart's own right edge instead of spilling past it.
+  const start = Math.max(GANTT_START, Math.min(GANTT_END, sh + sm / 60));
+  const end   = Math.max(GANTT_START, Math.min(GANTT_END, eh + em / 60));
+  const dur = Math.max(0, end - start);
   return Math.max(2, (dur / GANTT_HOURS) * 100);
 }
 
