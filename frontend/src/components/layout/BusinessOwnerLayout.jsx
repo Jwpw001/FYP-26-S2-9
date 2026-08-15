@@ -12,6 +12,7 @@ const NAV = [
   { label: "Dashboard",   path: "/business-owner/dashboard",    Icon: LayoutDashboard },
   { label: "Branches",    path: "/business-owner/branches",      Icon: Building2 },
   { label: "Workforce",    path: "/business-owner/staff",        Icon: Users },
+  { label: "Casual Pool", path: "/business-owner/casual",       Icon: UserPlus },
   { label: "Invitations", path: "/business-owner/invitations",  Icon: UserPlus },
   { label: "Skill Tags",  path: "/business-owner/skills",       Icon: Tag },
   { label: "Reports",     path: "/business-owner/reports",      Icon: BarChart2 },
