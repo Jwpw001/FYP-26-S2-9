@@ -6,7 +6,12 @@ node_modules/
 
 # build
 dist/
+dist2/
+dist3/
 build/
+
+# expo
+.expo/
 
 # test coverage
 coverage/
