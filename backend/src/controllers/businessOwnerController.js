@@ -101,8 +101,8 @@ const createBranch = async (req, res) => {
     // Seed default allocation preferences so branch settings page always has a row to update
     await supabaseAdmin.from("branch_allocation_preferences").insert({
       branch_id: branch.branch_id,
-      weight_availability: 40, weight_skills: 30, weight_attendance: 15,
-      weight_performance: 10, weight_workload: 5,
+      weight_availability: 40, weight_skills: 50, weight_attendance: 30,
+      weight_performance: 10, weight_workload: 20,
     });
 
     if (Array.isArray(role_templates) && role_templates.length > 0) {

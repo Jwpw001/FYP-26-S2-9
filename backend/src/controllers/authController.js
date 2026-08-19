@@ -215,8 +215,8 @@ const registerBusiness = async (req, res) => {
             }
 
             const prefDefaults = {
-                weight_availability: 40, weight_skills: 30, weight_attendance: 15,
-                weight_performance: 10, weight_workload: 5,
+                weight_availability: 40, weight_skills: 50, weight_attendance: 30,
+                weight_performance: 10, weight_workload: 20,
             };
             const prefRow = { business_id: businessId, ...prefDefaults, ...(allocation_preferences || {}) };
             const { error: prefErr } = await supabaseAdmin.from("allocation_preferences").insert(prefRow);

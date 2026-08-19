@@ -32,7 +32,7 @@ async function getShiftRecommendations(shiftId) {
   // 1. Load shift + open tasks
   const { data: shift } = await supabaseAdmin
     .from("shifts")
-    .select("shift_id, title, shift_date, start_time, end_time, branch_id, branches(name, open_time, close_time)")
+    .select("shift_id, title, shift_date, start_time, end_time, branch_id, period_id, branches(name, open_time, close_time)")
     .eq("shift_id", shiftId)
     .single();
 
@@ -62,7 +62,7 @@ async function getShiftRecommendations(shiftId) {
   // branch as a preference, regardless of which branch their staff row was created under.
   const { data: regularStaffRows } = await supabaseAdmin
     .from("staff")
-    .select("staff_id, user_id, staff_type, default_work_days, experience_level, years_of_experience")
+    .select("staff_id, user_id, staff_type, default_work_days, exp_level")
     .eq("branch_id", shift.branch_id)
     .eq("staff_type", "regular")
     .eq("is_active", true);
@@ -76,7 +76,7 @@ async function getShiftRecommendations(shiftId) {
   const { data: casualStaffRows } = preferredUserIds.length > 0
     ? await supabaseAdmin
         .from("staff")
-        .select("staff_id, user_id, staff_type, default_work_days, experience_level, years_of_experience")
+        .select("staff_id, user_id, staff_type, default_work_days, exp_level")
         .in("user_id", preferredUserIds)
         .eq("staff_type", "casual")
         .eq("is_active", true)
@@ -162,8 +162,36 @@ async function getShiftRecommendations(shiftId) {
   const weekStartStr = weekStart.toISOString().split("T")[0];
 
   const casualStaffIds = staffRows.filter(s => s.staff_type === "casual").map(s => s.staff_id);
+  const shiftPeriodId = shift.period_id;
   let casualAvailMap = {};
-  if (casualStaffIds.length > 0) {
+  // Same resolution order as casualController.js's autoAssignCasual (Round 6, Task 6): a period
+  // exists on this shift, so casual availability comes from casual_period_availability (explicit
+  // picks for this exact week) if the staff member has any rows for the week, else from their
+  // casual_standing_availability ("usual pattern") for this weekday. The legacy time-range
+  // casual_availability table below is only still queried/used for branches with no shift periods
+  // configured — the current Availability UI no longer writes to it.
+  const explicitPeriodsByStaffId = {};
+  const standingPeriodsByStaffId = {};
+  if (casualStaffIds.length > 0 && shiftPeriodId) {
+    const [periodAvailRows, standingAvailRows] = await Promise.all([
+      prisma.casual_period_availability.findMany({
+        where: { staff_id: { in: casualStaffIds }, week_start_date: new Date(`${weekStartStr}T00:00:00.000Z`) },
+        select: { staff_id: true, period_id: true },
+      }),
+      prisma.casual_standing_availability.findMany({
+        where: { staff_id: { in: casualStaffIds }, day_of_week: dayOfWeek },
+        select: { staff_id: true, period_id: true },
+      }),
+    ]);
+    periodAvailRows.forEach(r => {
+      if (!explicitPeriodsByStaffId[r.staff_id]) explicitPeriodsByStaffId[r.staff_id] = new Set();
+      explicitPeriodsByStaffId[r.staff_id].add(r.period_id);
+    });
+    standingAvailRows.forEach(r => {
+      if (!standingPeriodsByStaffId[r.staff_id]) standingPeriodsByStaffId[r.staff_id] = new Set();
+      standingPeriodsByStaffId[r.staff_id].add(r.period_id);
+    });
+  } else if (casualStaffIds.length > 0) {
     const { data: availRows, error: availErr } = await supabaseAdmin
       .from("casual_availability")
       .select("staff_id, available_from, available_to")
@@ -172,6 +200,12 @@ async function getShiftRecommendations(shiftId) {
       .eq("day_of_week", dayOfWeek);
     if (availErr) logger.error({ err: availErr }, "casual_availability query failed");
     (availRows || []).forEach(a => { casualAvailMap[a.staff_id] = a; });
+  }
+  function isAvailableForPeriod(staffId) {
+    const explicit = explicitPeriodsByStaffId[staffId];
+    if (explicit) return explicit.has(shiftPeriodId);
+    const standing = standingPeriodsByStaffId[staffId];
+    return standing ? standing.has(shiftPeriodId) : false;
   }
 
   // 7. Build staff context for AI, per task (a casual may cover one task's time but not another's)
@@ -194,15 +228,21 @@ async function getShiftRecommendations(shiftId) {
         if (onLeave) availability = "on approved leave";
         else if (doubleBooked) availability = "already assigned to another shift this day";
         else if (s.staff_type === "casual") {
-          const av = casualAvailMap[s.staff_id];
-          if (av) {
-            const covers = fullyCovers(av.available_from, av.available_to, rangeStart, rangeEnd);
-            const window = `${toHHMM(av.available_from)}–${toHHMM(av.available_to)}`;
-            availability = covers
-              ? `available ${window} (covers this task's hours)`
-              : `available ${window} — DOES NOT fully cover this task's hours (${toHHMM(rangeStart)}–${toHHMM(rangeEnd)})`;
+          if (shiftPeriodId) {
+            availability = isAvailableForPeriod(s.staff_id)
+              ? "available for this shift's period (via weekly submission or usual pattern)"
+              : "not available for this shift's period";
           } else {
-            availability = "no availability submitted for this day";
+            const av = casualAvailMap[s.staff_id];
+            if (av) {
+              const covers = fullyCovers(av.available_from, av.available_to, rangeStart, rangeEnd);
+              const window = `${toHHMM(av.available_from)}–${toHHMM(av.available_to)}`;
+              availability = covers
+                ? `available ${window} (covers this task's hours)`
+                : `available ${window} — DOES NOT fully cover this task's hours (${toHHMM(rangeStart)}–${toHHMM(rangeEnd)})`;
+            } else {
+              availability = "no availability submitted for this day";
+            }
           }
         } else {
           // Regular staff: check default_work_days bitmask (Mon=0...Sun=6)
@@ -223,8 +263,7 @@ async function getShiftRecommendations(shiftId) {
           name: user.full_name || user.email,
           type: s.staff_type,
           skills,
-          experience_level: s.experience_level || "unspecified",
-          years_of_experience: s.years_of_experience ?? "unspecified",
+          experience_level: s.exp_level || "unspecified",
           availability,
         };
       })
@@ -287,10 +326,14 @@ async function getShiftRecommendations(shiftId) {
           let availSub = 1;
           let lowConfidence = false;
           if (s.staff_type === "casual") {
-            const av = casualAvailMap[s.staff_id];
-            if (!av) return null; // no availability submitted — not a real candidate
-            const covers = fullyCovers(av.available_from, av.available_to, rangeStart, rangeEnd);
-            if (!covers) { availSub = 0.3; lowConfidence = true; }
+            if (shiftPeriodId) {
+              if (!isAvailableForPeriod(s.staff_id)) return null; // not available for this period — not a real candidate
+            } else {
+              const av = casualAvailMap[s.staff_id];
+              if (!av) return null; // no availability submitted — not a real candidate
+              const covers = fullyCovers(av.available_from, av.available_to, rangeStart, rangeEnd);
+              if (!covers) { availSub = 0.3; lowConfidence = true; }
+            }
           } else {
             const bitmask = s.default_work_days || "1111100";
             if (bitmask[dayOfWeek] !== "1") return null; // not a regular work day
@@ -345,13 +388,13 @@ TASKS NEEDING STAFF (one person per task):
 ${tasksContext.map(t => `- [ID:${t.task_id}] "${t.title}" ${t.start_time}–${t.end_time} (requires skill: ${t.required_skill || "any"}${t.difficulty ? `, difficulty: ${t.difficulty}` : ""})`).join("\n")}
 
 AVAILABLE STAFF PER TASK:
-${tasksContext.map(t => `Task "${t.title}" [ID:${t.task_id}]:\n${buildStaffContext(t).map(s => `  - [ID:${s.staff_id}] ${s.name} | Type: ${s.type} | Skills: ${s.skills} | Experience: ${s.experience_level}, ${s.years_of_experience} yrs | Status: ${s.availability}`).join("\n")}`).join("\n\n")}
+${tasksContext.map(t => `Task "${t.title}" [ID:${t.task_id}]:\n${buildStaffContext(t).map(s => `  - [ID:${s.staff_id}] ${s.name} | Type: ${s.type} | Skills: ${s.skills} | Experience: ${s.experience_level} | Status: ${s.availability}`).join("\n")}`).join("\n\n")}
 
 For each task, recommend the best staff. Prioritise, in order:
 1. Staff who are available (not on leave, not double-booked). Treat "DOES NOT fully cover this task's hours" as a hard warning — only suggest that person at "low" confidence and say so in the reason, even if their skills are a good match.
 2. A regular staff member flagged "BELOW contracted hours this week, needs priority over casual staff" must be ranked above every casual candidate for that task, even one with a better skill match — they need these hours to meet their contract, and this outranks skill/experience below.
 3. Staff with the required skill, favouring higher proficiency in that skill
-4. Staff with more years of experience and a higher experience level
+4. Staff with a higher experience level
 5. Regular staff over casual for critical tasks, as a tiebreaker when nothing above decides it
 
 Respond ONLY with valid JSON in this exact format:

@@ -509,7 +509,7 @@ const getStaffRoster = async (req, res) => {
     const shiftId = Number(req.params.shiftId);
     const shift = await prisma.shifts.findUnique({
       where: { shift_id: shiftId },
-      select: { shift_date: true, branch_id: true, start_time: true, end_time: true },
+      select: { shift_date: true, branch_id: true, start_time: true, end_time: true, period_id: true },
     });
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found" });
 
@@ -546,16 +546,18 @@ const getStaffRoster = async (req, res) => {
     const staffList = [...regularStaff, ...casualStaff];
     const filtered = staffList.filter(s => s.users?.role !== "manager");
 
-    // staff.experience_level isn't declared in schema.prisma (only the legacy, never-populated
-    // exp_level is), so Prisma silently omits it — fetch it directly via supabaseAdmin instead.
+    // The staff table's real per-staff-member column is exp_level, not experience_level (that
+    // name only exists on user_skill_tags, a different, per-skill field) — selecting
+    // "experience_level" here always 42703'd against a live DB and silently returned no rows, so
+    // expLevelByStaffId was always empty and every candidate showed as unrated.
     const { data: expLevelRows } = await supabaseAdmin
       .from("staff")
-      .select("staff_id, experience_level")
+      .select("staff_id, exp_level")
       .in("staff_id", filtered.map(s => s.staff_id));
-    const expLevelByStaffId = Object.fromEntries((expLevelRows || []).map(r => [r.staff_id, r.experience_level]));
+    const expLevelByStaffId = Object.fromEntries((expLevelRows || []).map(r => [r.staff_id, r.exp_level]));
 
     const EXP_RANK = { junior: 1, mid: 2, senior: 3, expert: 4 };
-    // staff.experience_level uses a 3-tier scale (beginner/intermediate/expert); map onto the
+    // staff.exp_level uses a 3-tier scale (beginner/intermediate/expert); map onto the
     // 4-tier task-difficulty scale used above.
     const EXP_LEVEL_MAP = { beginner: "junior", intermediate: "mid", expert: "expert" };
     const mapExpLevel = s => EXP_LEVEL_MAP[expLevelByStaffId[s.staff_id]] || null;
@@ -680,7 +682,42 @@ const getStaffRoster = async (req, res) => {
     shiftWeekStart.setUTCDate(shiftWeekStart.getUTCDate() - shiftDow);
     const casualIds  = filtered.filter(s => s.staff_type === "casual").map(s => s.staff_id);
     const casualAvailMap = {}; // staff_id -> { from: "HH:MM"|null, to: "HH:MM"|null }
-    if (casualIds.length > 0) {
+    // Round 6, Task 6 moved casual availability to a period-based system (casual_period_availability
+    // for explicit weekly picks, casual_standing_availability as the "usual pattern" fallback when
+    // nothing's been explicitly submitted for the week) — the current Availability UI no longer
+    // writes to the legacy time-range casual_availability table queried below, so a shift with a
+    // period only resolves correctly through the new tables. Branches with no periods configured
+    // (shift.period_id null) keep the old table/behaviour unchanged.
+    const shiftPeriodId = shift.period_id;
+    const casualPeriodMatchMap = {}; // staff_id -> boolean, only populated when shiftPeriodId is set
+    if (casualIds.length > 0 && shiftPeriodId) {
+      const [explicitRows, standingRows] = await Promise.all([
+        prisma.casual_period_availability.findMany({
+          where: { staff_id: { in: casualIds }, week_start_date: shiftWeekStart },
+          select: { staff_id: true, period_id: true },
+        }),
+        prisma.casual_standing_availability.findMany({
+          where: { staff_id: { in: casualIds }, day_of_week: shiftDow },
+          select: { staff_id: true, period_id: true },
+        }),
+      ]);
+      const explicitPeriodsByStaffId = {};
+      explicitRows.forEach(r => {
+        if (!explicitPeriodsByStaffId[r.staff_id]) explicitPeriodsByStaffId[r.staff_id] = new Set();
+        explicitPeriodsByStaffId[r.staff_id].add(r.period_id);
+      });
+      const standingPeriodsByStaffId = {};
+      standingRows.forEach(r => {
+        if (!standingPeriodsByStaffId[r.staff_id]) standingPeriodsByStaffId[r.staff_id] = new Set();
+        standingPeriodsByStaffId[r.staff_id].add(r.period_id);
+      });
+      casualIds.forEach(staffId => {
+        const explicit = explicitPeriodsByStaffId[staffId];
+        casualPeriodMatchMap[staffId] = explicit
+          ? explicit.has(shiftPeriodId)
+          : (standingPeriodsByStaffId[staffId]?.has(shiftPeriodId) || false);
+      });
+    } else if (casualIds.length > 0) {
       const avail = await prisma.casual_availability.findMany({
         where: { staff_id: { in: casualIds }, day_of_week: shiftDow, week_start_date: shiftWeekStart },
         select: { staff_id: true, available_from: true, available_to: true },
@@ -713,6 +750,7 @@ const getStaffRoster = async (req, res) => {
       hours_this_week:       Math.round((hoursMap[s.staff_id] || 0) * 10) / 10,
       casual_available_today: (() => {
         if (s.staff_type !== "casual") return null;
+        if (shiftPeriodId) return casualPeriodMatchMap[s.staff_id] || false;
         const avail = casualAvailMap[s.staff_id];
         if (!avail) return false; // no declaration for this week/day
         const { from, to } = avail;
@@ -774,7 +812,10 @@ const validateAssignment = async (req, res) => {
     }
     function availLabel(r) {
       if (r.staff_type !== "casual") return null;
-      if (!r.casual_available_today) return "no availability declared for this day";
+      if (!r.casual_available_today) return "not available for this shift's period";
+      // Period-based availability (the current system) has no specific time window — a period
+      // match is binary, so casual_avail_from/to are null here and there's nothing to declare.
+      if (!r.casual_avail_from && !r.casual_avail_to) return "available for this shift's period (via weekly submission or usual pattern)";
       const covers = casualCoversTask(r);
       return `declared ${r.casual_avail_from||"?"}–${r.casual_avail_to||"?"}${covers ? " (covers task)" : " (does NOT cover task hours)"}`;
     }
