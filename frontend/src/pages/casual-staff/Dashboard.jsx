@@ -70,7 +70,7 @@ export default function CasualDashboard() {
             assignment_id, acknowledged,
             shifts!inner(shift_id, title, shift_date, start_time, end_time, branches(name))
           `).eq("staff_id", staffData.staff_id).gte("shifts.shift_date", today)
-            .order("shifts.shift_date", { referencedTable: "shifts", ascending: true }).limit(5),
+            .order("shift_date", { referencedTable: "shifts", ascending: true }).limit(5),
           supabase.from("casual_availability")
             .select("day_of_week, available_from, available_to, week_start_date")
             .eq("staff_id", staffData.staff_id)

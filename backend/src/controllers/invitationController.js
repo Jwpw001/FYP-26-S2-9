@@ -157,9 +157,24 @@ const sendInvitation = async (req, res) => {
     const inviteLink = `${PUBLIC_APP_URL}/invite/${token}`;
     const roleName = ROLE_LABELS[role] || role;
 
-    await sendInviteEmail({ to: email, inviterName, roleName, branchName, inviteLink, code });
+    // The invitation row above is already committed and its code is already valid/usable — don't
+    // let a mail-delivery hiccup (e.g. an expired OAuth token) take down the whole request and
+    // strand the sender without even the code to share manually.
+    let emailSent = true;
+    try {
+      await sendInviteEmail({ to: email, inviterName, roleName, branchName, inviteLink, code });
+    } catch (mailErr) {
+      emailSent = false;
+      (req.log || logger).error({ err: mailErr }, "[sendInvitation] email delivery failed");
+    }
 
-    return res.status(201).json({ success: true, message: "Invitation sent.", invite_link: inviteLink, code });
+    return res.status(201).json({
+      success: true,
+      message: emailSent ? "Invitation sent." : "Invitation created, but the email couldn't be delivered — share the code below manually.",
+      email_sent: emailSent,
+      invite_link: inviteLink,
+      code,
+    });
   } catch (error) {
     return sendServerError(res, error, req);
   }
@@ -362,12 +377,17 @@ const resendInvitation = async (req, res) => {
 
     const senderUser = await prisma.users.findUnique({ where: { user_id: req.user.user_id }, select: { full_name: true } });
     const inviteLink = `${PUBLIC_APP_URL}/invite/${invite.token}`;
-    await sendInviteEmail({
-      to: invite.email, inviterName: senderUser?.full_name || "Someone",
-      roleName: ROLE_LABELS[invite.role] || invite.role,
-      branchName: invite.branches?.name || "", inviteLink, code: invite.invitation_code,
-    });
-    return res.json({ success: true, message: "Invitation resent." });
+    try {
+      await sendInviteEmail({
+        to: invite.email, inviterName: senderUser?.full_name || "Someone",
+        roleName: ROLE_LABELS[invite.role] || invite.role,
+        branchName: invite.branches?.name || "", inviteLink, code: invite.invitation_code,
+      });
+    } catch (mailErr) {
+      (req.log || logger).error({ err: mailErr }, "[resendInvitation] email delivery failed");
+      return res.json({ success: true, email_sent: false, message: "Couldn't deliver the email — share the code manually.", code: invite.invitation_code });
+    }
+    return res.json({ success: true, email_sent: true, message: "Invitation resent." });
   } catch (error) {
     return sendServerError(res, error, req);
   }
