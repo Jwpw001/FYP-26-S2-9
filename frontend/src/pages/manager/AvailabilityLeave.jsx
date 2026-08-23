@@ -537,35 +537,37 @@ export default function AvailabilityLeave() {
 
       if (!assignRow) throw new Error("Original assignment not found");
 
-      // 1. Delete ALL assignments on this exact shift+task slot (the requester's original
-      //    assignment plus any stale cover assignments from previous swap approvals that were
-      //    never cleaned up when the requester was manually re-assigned back).
-      await supabase.from("task_assignments")
-        .delete()
-        .eq("shift_id", assignRow.shift_id)
-        .eq("task_id", assignRow.task_id);
+      // 1. Remove any stale cover assignment the picked staff already has on this shift (a
+      //    different task) — genuinely safe to delete, it's not what this swap_request's own FK
+      //    points at. Best-effort: if it fails (e.g. that specific row is itself pinned by some
+      //    other swap_request's target_assign_id), don't let a rare leftover block this approval.
+      try {
+        await supabase.from("task_assignments")
+          .delete()
+          .eq("shift_id", assignRow.shift_id)
+          .eq("staff_id", Number(pickedStaffId));
+      } catch { /* non-critical cleanup */ }
 
-      // 2. Also remove any stale cover assignment the picked staff has on this shift (different task)
-      await supabase.from("task_assignments")
-        .delete()
-        .eq("shift_id", assignRow.shift_id)
-        .eq("staff_id", Number(pickedStaffId));
-
-      // 3. Create new assignment for the cover staff (is_cover=true enables future auto-cleanup)
-      const { data: newAssign, error: insertErr } = await supabase.from("task_assignments").insert({
-        shift_id: assignRow.shift_id,
-        task_id: assignRow.task_id,
+      // 2. Swap the occupant of the requester's own assignment slot IN PLACE, rather than
+      //    deleting it and inserting a new row. swap_requests.requester_assign is a NOT NULL FK
+      //    straight at this exact assignment_id (ON DELETE NO ACTION) — deleting it while this
+      //    swap_request still exists always violates that constraint. Every previous approval
+      //    silently failed on that delete (its error was never checked) and left BOTH the
+      //    original requester and the new cover assigned to the same task simultaneously.
+      //    Updating staff_id on the same row keeps the FK valid and needs no change anywhere else
+      //    that reads task_assignments, since exactly one row for this task still exists.
+      const { error: updateErr } = await supabase.from("task_assignments").update({
         staff_id: Number(pickedStaffId),
-        status: "assigned",
         is_cover: true,
-      }).select("assignment_id").single();
-      if (insertErr) throw insertErr;
+        acknowledged: false,
+      }).eq("assignment_id", assignRow.assignment_id);
+      if (updateErr) throw updateErr;
 
-      // 4. Update swap request status (save target_assign_id so future cleanup can find it by ID)
+      // 3. Update swap request status — target_assign_id is the same row, now under new staff_id.
       await supabase.from("swap_requests").update({
         status: "approved",
         target_staff_id: Number(pickedStaffId),
-        target_assign_id: newAssign?.assignment_id || null,
+        target_assign_id: assignRow.assignment_id,
         manager_id: userId,
         manager_decided_at: new Date().toISOString(),
       }).eq("swap_id", sw.swap_id);

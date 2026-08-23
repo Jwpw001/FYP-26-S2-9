@@ -148,6 +148,14 @@ export default function Login() {
       }
       goTo(redirectTo || route);
     } catch (err) {
+      // supabase.auth.signInWithPassword() above already succeeded by the time any of this can
+      // throw — Supabase Auth has no concept of this app's own staff.is_active flag, so it has no
+      // reason to refuse a deactivated user. That leaves a fully live Supabase session sitting in
+      // localStorage even though the screen below shows a rejection, and every page in this app
+      // that talks to Supabase directly (not through the backend's own token-gated API) neither
+      // knows nor cares that the /api/auth/login call that follows just failed. Signing back out
+      // here is what actually revokes access, not the error message on screen.
+      await supabase.auth.signOut().catch(() => {});
       const msg = err?.message || "";
       setError(
         msg === "Failed to fetch"

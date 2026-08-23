@@ -30,15 +30,30 @@ async function offboardStaff(staffId, actorUserId) {
     return { unassignedCount: 0 };
   }
 
-  const assignmentIds = futureAssignments.map(a => a.assignment_id);
-  const taskIds = futureAssignments.map(a => a.task_id);
-
-  await prisma.task_assignments.deleteMany({ where: { assignment_id: { in: assignmentIds } } });
-  await prisma.shift_tasks.updateMany({ where: { task_id: { in: taskIds } }, data: { status: "open" } });
+  // Deleted one at a time rather than a single deleteMany: an assignment that's ever been
+  // involved in a swap request (swap_requests.requester_assign/target_assign_id, both a NOT
+  // NULL/ON DELETE NO ACTION FK straight at assignment_id) can't be deleted at all, and a single
+  // batch delete containing even one such row fails the whole statement — silently leaving the
+  // staff member deactivated (that update already committed above, in updateStaff) but still
+  // assigned to every one of their future shifts, with the manager seeing a raw DB error instead
+  // of any indication of what actually happened. Isolating each delete means the normal case
+  // (no swap history) still cleans up everything, and the rare blocked one is skipped rather than
+  // taking the rest down with it.
+  const removed = [];
+  for (const a of futureAssignments) {
+    try {
+      await prisma.task_assignments.delete({ where: { assignment_id: a.assignment_id } });
+      removed.push(a);
+    } catch { /* referenced by a swap_requests row — leave this one assigned, see comment above */ }
+  }
+  if (removed.length > 0) {
+    await prisma.shift_tasks.updateMany({ where: { task_id: { in: removed.map(a => a.task_id) } }, data: { status: "open" } });
+  }
+  const skippedCount = futureAssignments.length - removed.length;
 
   // Group by branch so each branch's managers get one consolidated notification, not one per shift.
   const byBranch = {};
-  futureAssignments.forEach(a => {
+  removed.forEach(a => {
     const branchId = a.shifts?.branch_id;
     if (!branchId) return;
     if (!byBranch[branchId]) byBranch[branchId] = [];
@@ -56,7 +71,8 @@ async function offboardStaff(staffId, actorUserId) {
     await notifyUsers(managerIds, {
       type: "staff_offboarded",
       title: "Staff Deactivated — Shifts Need Coverage",
-      message: `${staffName} was deactivated and has been removed from ${rows.length} upcoming shift${rows.length !== 1 ? "s" : ""}. Please assign replacement coverage.`,
+      message: `${staffName} was deactivated and has been removed from ${rows.length} upcoming shift${rows.length !== 1 ? "s" : ""}. Please assign replacement coverage.`
+        + (skippedCount > 0 ? ` ${skippedCount} other shift${skippedCount !== 1 ? "s" : ""} couldn't be auto-removed due to swap history — please check manually.` : ""),
       relatedEntity: "staff",
       relatedId: staffId,
     });
@@ -68,10 +84,10 @@ async function offboardStaff(staffId, actorUserId) {
     entity: "staff",
     entityId: staffId,
     before: { is_active: true },
-    after: { is_active: false, shifts_unassigned: futureAssignments.length },
+    after: { is_active: false, shifts_unassigned: removed.length, shifts_skipped: skippedCount },
   });
 
-  return { unassignedCount: futureAssignments.length };
+  return { unassignedCount: removed.length, skippedCount };
 }
 
 module.exports = { offboardStaff };
