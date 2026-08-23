@@ -126,6 +126,14 @@ const createShift = async (req, res) => {
     if (callerBranchId && branch_id && branch_id !== callerBranchId)
       return res.status(403).json({ success: false, message: "Cannot create shifts for a different branch." });
 
+    // This schema has no support for a shift crossing midnight (shift_date is a single DATE,
+    // start/end are TIME-only columns with no day component — see shiftGenerationController.js's
+    // own comment on the same constraint). end_time <= start_time silently produces a
+    // zero/negative-duration shift rather than an error, which is worse than just rejecting it.
+    if (start_time && end_time && end_time <= start_time) {
+      return res.status(400).json({ success: false, message: "End time must be after start time." });
+    }
+
     // Round 5, Task 4: operating_days no longer blocks manual creation here. Every operating day
     // is now generated automatically (Round 3's automatic shift generation), so a manager reaching
     // this form is deliberately creating an exception (a closure-day cover shift, a one-off on a
@@ -180,6 +188,15 @@ const updateShift = async (req, res) => {
       return res.status(403).json({ success: false, message: "Access denied." });
 
     const { branch_id, title, shift_date, start_time, end_time, status } = req.body;
+
+    // Same "no midnight-crossing shifts" constraint as createShift — a partial update might only
+    // touch one of the two times, so fall back to the existing value for whichever wasn't sent.
+    const effectiveStart = start_time || toHHMMSS(existing.start_time)?.slice(0, 5);
+    const effectiveEnd = end_time || toHHMMSS(existing.end_time)?.slice(0, 5);
+    if (effectiveStart && effectiveEnd && effectiveEnd <= effectiveStart) {
+      return res.status(400).json({ success: false, message: "End time must be after start time." });
+    }
+
     const shift = await prisma.shifts.update({
       where: { shift_id: shiftId },
       data: {

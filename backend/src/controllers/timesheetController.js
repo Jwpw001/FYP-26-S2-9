@@ -73,6 +73,20 @@ const submitReport = async (req, res) => {
 
     const shiftId = shift_id ? Number(shift_id) : null;
 
+    // Nothing here previously checked that the submitter was actually assigned to this shift —
+    // shift_id came straight from the request body and was trusted outright, so anyone could
+    // submit hours (and evidence) against a shift they were never rostered on. Reports feed
+    // approval and, eventually, payroll, so this is a hard check, not advisory.
+    if (shiftId) {
+      const ownAssignment = await prisma.task_assignments.findFirst({
+        where: { staff_id: staffRow.staff_id, shift_id: shiftId },
+        select: { assignment_id: true },
+      });
+      if (!ownAssignment) {
+        return res.status(403).json({ success: false, message: "You aren't assigned to this shift." });
+      }
+    }
+
     // A report already exists for this shift (e.g. rejected and being resubmitted) — update it
     const { data: existing } = await supabaseAdmin
       .from("timesheets")

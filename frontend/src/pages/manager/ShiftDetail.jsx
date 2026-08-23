@@ -150,6 +150,10 @@ export default function ShiftDetail() {
 
   async function saveEditShift() {
     if (!editShiftForm.title.trim()) { showToast("Title is required.", "error"); return; }
+    if (editShiftForm.start_time && editShiftForm.end_time && editShiftForm.end_time <= editShiftForm.start_time) {
+      showToast("End time must be after start time.", "error");
+      return;
+    }
     setSavingShiftEdit(true);
     try {
       const title = toTitleCase(editShiftForm.title.trim());

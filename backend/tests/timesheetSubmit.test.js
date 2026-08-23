@@ -6,6 +6,7 @@ const { makeSupabaseChain } = require("./helpers/supabaseChain");
 jest.mock("../src/config/prisma", () => ({
   staff: { findFirst: jest.fn(), findUnique: jest.fn() },
   shifts: { findUnique: jest.fn() },
+  task_assignments: { findFirst: jest.fn() },
 }));
 jest.mock("../src/config/supabaseAdmin", () => ({ from: jest.fn(), storage: { from: jest.fn() } }));
 jest.mock("../src/utils/notify", () => ({
@@ -36,6 +37,7 @@ describe("submitReport — casual worker actual-hours submission", () => {
     prisma.staff.findFirst.mockResolvedValue({ staff_id: STAFF_ID });
     prisma.staff.findUnique.mockResolvedValue({ users: { full_name: "Neymar" } });
     prisma.shifts.findUnique.mockResolvedValue({ branch_id: 2, title: "Cybersecurity" });
+    prisma.task_assignments.findFirst.mockResolvedValue({ assignment_id: 1 }); // submitter is assigned to the shift by default
 
     supabaseAdmin.from.mockImplementation((table) => {
       if (table === "timesheets") {
@@ -192,5 +194,32 @@ describe("submitReport — casual worker actual-hours submission", () => {
     await submitReport(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  test("a staff member with no assignment on the given shift is rejected outright", async () => {
+    prisma.task_assignments.findFirst.mockResolvedValue(null); // never assigned to shift 38
+    const req = makeReq({
+      shift_id: 38, log_date: "2026-08-07",
+      description: "I was totally there", hours_worked: "8",
+    });
+    const res = makeRes();
+    await submitReport(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      message: expect.stringMatching(/aren't assigned/i),
+    }));
+  });
+
+  test("a submission with no shift_id at all skips the assignment check entirely", async () => {
+    const req = makeReq({
+      log_date: "2026-08-07", description: "Ad-hoc hours", hours_worked: "3",
+    });
+    const res = makeRes();
+    await submitReport(req, res);
+
+    expect(prisma.task_assignments.findFirst).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
 });

@@ -298,6 +298,24 @@ export default function AvailabilityLeave() {
     setProcessing(null);
     if (error) { showToast("Failed to update.", "error"); return; }
     setOffDays(prev => prev.map(r => r.id === id ? { ...r, status: action, reviewed_at: new Date().toISOString() } : r));
+
+    // Same reasoning as leave approval: an approved off day means this staff member isn't
+    // expected to show up, so any shift assignment they already have on that date needs to be
+    // removed and the task reopened rather than left stuck showing "assigned" with nobody on it.
+    if (action === "approved" && req?.staff_id) {
+      const { data: ownAssignments } = await supabase
+        .from("task_assignments")
+        .select("assignment_id, task_id, shifts!inner(shift_date)")
+        .eq("staff_id", req.staff_id)
+        .eq("shifts.shift_date", req.requested_date);
+      if (ownAssignments && ownAssignments.length > 0) {
+        const assignmentIds = ownAssignments.map(a => a.assignment_id);
+        const taskIds = ownAssignments.map(a => a.task_id);
+        await supabase.from("task_assignments").delete().in("assignment_id", assignmentIds);
+        await supabase.from("shift_tasks").update({ status: "open" }).in("task_id", taskIds);
+      }
+    }
+
     showToast(action === "approved" ? "Off day approved." : "Off day rejected.");
 
     if (req?.staff?.user_id) {
@@ -379,22 +397,22 @@ export default function AvailabilityLeave() {
         reviewed_at: new Date().toISOString(),
       }).eq("request_id", requestId);
 
-      // If approved, remove shift assignments that fall within the leave period
+      // If approved, remove this staff member's own shift assignments that fall within the leave
+      // period, and reopen the tasks those assignments freed up so they show as needing coverage
+      // again instead of sitting stuck at "assigned" with nobody actually on them.
       if (action === "approved" && req) {
-        // Step 1: get all shift_ids in the leave date range
-        const { data: shiftsInRange } = await supabase
-          .from("shifts")
-          .select("shift_id")
-          .gte("shift_date", req.start_date)
-          .lte("shift_date", req.end_date);
+        const { data: ownAssignments } = await supabase
+          .from("task_assignments")
+          .select("assignment_id, task_id, shifts!inner(shift_date)")
+          .eq("staff_id", req.staff_id)
+          .gte("shifts.shift_date", req.start_date)
+          .lte("shifts.shift_date", req.end_date);
 
-        if (shiftsInRange && shiftsInRange.length > 0) {
-          const shiftIds = shiftsInRange.map(s => s.shift_id);
-          // Step 2: delete assignments for this staff in those shifts
-          await supabase.from("task_assignments")
-            .delete()
-            .eq("staff_id", req.staff_id)
-            .in("shift_id", shiftIds);
+        if (ownAssignments && ownAssignments.length > 0) {
+          const assignmentIds = ownAssignments.map(a => a.assignment_id);
+          const taskIds = ownAssignments.map(a => a.task_id);
+          await supabase.from("task_assignments").delete().in("assignment_id", assignmentIds);
+          await supabase.from("shift_tasks").update({ status: "open" }).in("task_id", taskIds);
         }
       }
 
