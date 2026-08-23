@@ -1207,25 +1207,25 @@ async function autoAssignCasual(req, res) {
     const laborWindowStart = new Date(shiftDateOnly.getTime() - maxConsecForWindow * 86400000);
     const laborWindowEnd = new Date(shiftDateOnly.getTime() + maxConsecForWindow * 86400000);
 
+    // A period-less shift (manual creation with a custom time window not tied to one of the
+    // branch's configured periods) used to only ever check the legacy casual_availability table
+    // — dead since the Availability UI moved to the period-based system, so every casual showed
+    // unavailable regardless of what they'd actually set. Now also resolved from the same
+    // explicit/standing period data, by checking whether any of the staff member's available
+    // periods' own time window covers this shift's time range (queried below via periodsById).
     const [availRows, periodAvailRows, standingAvailRows, sameDayAssignments, pastAssignmentCounts, leaveRows, laborRuleAssignments] = await Promise.all([
-      shiftPeriodId
-        ? Promise.resolve([])
-        : prisma.casual_availability.findMany({
-            where: { staff_id: { in: staffIds }, day_of_week: dayOfWeek, week_start_date: shiftWeekStart },
-            select: { staff_id: true, available_from: true, available_to: true },
-          }),
-      shiftPeriodId
-        ? prisma.casual_period_availability.findMany({
-            where: { staff_id: { in: staffIds }, week_start_date: shiftWeekStart },
-            select: { staff_id: true, period_id: true },
-          })
-        : Promise.resolve([]),
-      shiftPeriodId
-        ? prisma.casual_standing_availability.findMany({
-            where: { staff_id: { in: staffIds }, day_of_week: dayOfWeek },
-            select: { staff_id: true, period_id: true },
-          })
-        : Promise.resolve([]),
+      prisma.casual_availability.findMany({
+        where: { staff_id: { in: staffIds }, day_of_week: dayOfWeek, week_start_date: shiftWeekStart },
+        select: { staff_id: true, available_from: true, available_to: true },
+      }),
+      prisma.casual_period_availability.findMany({
+        where: { staff_id: { in: staffIds }, week_start_date: shiftWeekStart },
+        select: { staff_id: true, period_id: true },
+      }),
+      prisma.casual_standing_availability.findMany({
+        where: { staff_id: { in: staffIds }, day_of_week: dayOfWeek },
+        select: { staff_id: true, period_id: true },
+      }),
       // Only this exact date's assignments — the previous version fetched every assignment a
       // staff member had *ever* had and filtered down to same-day in JS, an unbounded query that
       // grew without limit over the lifetime of the app.
@@ -1272,11 +1272,30 @@ async function autoAssignCasual(req, res) {
       if (!standingPeriodsByStaffId[r.staff_id]) standingPeriodsByStaffId[r.staff_id] = new Set();
       standingPeriodsByStaffId[r.staff_id].add(r.period_id);
     });
-    function isAvailableForPeriod(staffId) {
+    function resolvedPeriodIdsForStaff(staffId) {
       const explicit = explicitPeriodsByStaffId[staffId];
-      if (explicit) return explicit.has(shiftPeriodId);
-      const standing = standingPeriodsByStaffId[staffId];
-      return standing ? standing.has(shiftPeriodId) : false;
+      if (explicit) return explicit;
+      return standingPeriodsByStaffId[staffId] || new Set();
+    }
+    function isAvailableForPeriod(staffId) {
+      return resolvedPeriodIdsForStaff(staffId).has(shiftPeriodId);
+    }
+    // For a period-less shift, there's no period_id to match directly — instead check whether
+    // any of the staff member's available periods (same explicit-then-standing resolution) has
+    // its own time window covering this shift's actual start/end.
+    const branchPeriods = shiftPeriodId ? [] : await prisma.branch_shift_periods.findMany({
+      where: { branch_id: branch.branch_id, is_active: true },
+      select: { period_id: true, start_time: true, end_time: true },
+    });
+    const periodWindowById = Object.fromEntries(
+      branchPeriods.map(p => [p.period_id, { start: toMins(p.start_time), end: toMins(p.end_time) }])
+    );
+    function isAvailableByTimeCoverage(staffId) {
+      for (const periodId of resolvedPeriodIdsForStaff(staffId)) {
+        const window = periodWindowById[periodId];
+        if (window && window.start <= shiftStart && window.end >= shiftEnd) return true;
+      }
+      return false;
     }
 
     const sameDayAssignmentsByStaffId = {};
@@ -1329,18 +1348,21 @@ async function autoAssignCasual(req, res) {
       if (onLeaveStaffIds.has(staffId)) { failReasons.on_leave++; continue; }
 
       // Hard filter 1 (gate, not a score — Round 6, Task 10): availability for this shift's day.
-      // Period-based (binary) when the shift belongs to a shift period; otherwise the original
-      // time-coverage check, unchanged. Passing this filter is all that matters now; how tightly
-      // a candidate's window fit used to feed the score (availabilitySubScore) but that dimension
-      // is gone from the model, so nothing downstream reads *how* someone passed, only that they did.
+      // Period-based (binary) when the shift belongs to a shift period. For a period-less shift
+      // (manual creation with a custom time window), check both sources: the legacy time-range
+      // table (for branches that never moved to periods) OR whether any of the candidate's
+      // available periods' own window covers this shift's time — the current Availability UI
+      // only ever writes to the period-based tables, so relying on the legacy table alone left
+      // every casual permanently "unavailable" for any manually-created, period-less shift.
+      // Passing this filter is all that matters now; how tightly a candidate's window fit used to
+      // feed the score (availabilitySubScore) but that dimension is gone from the model, so
+      // nothing downstream reads *how* someone passed, only that they did.
       if (shiftPeriodId) {
         if (!isAvailableForPeriod(staffId)) { failReasons.unavailable++; continue; }
       } else {
         const avail = availByStaffId[staffId];
-        if (!avail) { failReasons.unavailable++; continue; }
-        const availStart = toMins(avail.available_from);
-        const availEnd   = toMins(avail.available_to);
-        if (availStart > shiftStart || availEnd < shiftEnd) { failReasons.unavailable++; continue; }
+        const legacyCovers = avail && toMins(avail.available_from) <= shiftStart && toMins(avail.available_to) >= shiftEnd;
+        if (!legacyCovers && !isAvailableByTimeCoverage(staffId)) { failReasons.unavailable++; continue; }
       }
 
       // Hard filter 2: not double-booked on same date with overlapping times

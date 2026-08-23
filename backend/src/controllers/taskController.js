@@ -685,13 +685,16 @@ const getStaffRoster = async (req, res) => {
     // Round 6, Task 6 moved casual availability to a period-based system (casual_period_availability
     // for explicit weekly picks, casual_standing_availability as the "usual pattern" fallback when
     // nothing's been explicitly submitted for the week) — the current Availability UI no longer
-    // writes to the legacy time-range casual_availability table queried below, so a shift with a
-    // period only resolves correctly through the new tables. Branches with no periods configured
-    // (shift.period_id null) keep the old table/behaviour unchanged.
+    // writes to the legacy time-range casual_availability table. Both sources are always checked
+    // now: a period-less shift (manual creation with a custom time window) used to only ever check
+    // the legacy table, which left every casual permanently unavailable since nobody has rows
+    // there any more — it now also resolves via isAvailableByTimeCoverage below.
     const shiftPeriodId = shift.period_id;
-    const casualPeriodMatchMap = {}; // staff_id -> boolean, only populated when shiftPeriodId is set
-    if (casualIds.length > 0 && shiftPeriodId) {
-      const [explicitRows, standingRows] = await Promise.all([
+    const casualPeriodMatchMap = {}; // staff_id -> boolean, populated whenever shiftPeriodId is set
+    const explicitPeriodsByStaffId = {};
+    const standingPeriodsByStaffId = {};
+    if (casualIds.length > 0) {
+      const [explicitRows, standingRows, avail] = await Promise.all([
         prisma.casual_period_availability.findMany({
           where: { staff_id: { in: casualIds }, week_start_date: shiftWeekStart },
           select: { staff_id: true, period_id: true },
@@ -700,28 +703,27 @@ const getStaffRoster = async (req, res) => {
           where: { staff_id: { in: casualIds }, day_of_week: shiftDow },
           select: { staff_id: true, period_id: true },
         }),
+        shiftPeriodId ? Promise.resolve([]) : prisma.casual_availability.findMany({
+          where: { staff_id: { in: casualIds }, day_of_week: shiftDow, week_start_date: shiftWeekStart },
+          select: { staff_id: true, available_from: true, available_to: true },
+        }),
       ]);
-      const explicitPeriodsByStaffId = {};
       explicitRows.forEach(r => {
         if (!explicitPeriodsByStaffId[r.staff_id]) explicitPeriodsByStaffId[r.staff_id] = new Set();
         explicitPeriodsByStaffId[r.staff_id].add(r.period_id);
       });
-      const standingPeriodsByStaffId = {};
       standingRows.forEach(r => {
         if (!standingPeriodsByStaffId[r.staff_id]) standingPeriodsByStaffId[r.staff_id] = new Set();
         standingPeriodsByStaffId[r.staff_id].add(r.period_id);
       });
-      casualIds.forEach(staffId => {
-        const explicit = explicitPeriodsByStaffId[staffId];
-        casualPeriodMatchMap[staffId] = explicit
-          ? explicit.has(shiftPeriodId)
-          : (standingPeriodsByStaffId[staffId]?.has(shiftPeriodId) || false);
-      });
-    } else if (casualIds.length > 0) {
-      const avail = await prisma.casual_availability.findMany({
-        where: { staff_id: { in: casualIds }, day_of_week: shiftDow, week_start_date: shiftWeekStart },
-        select: { staff_id: true, available_from: true, available_to: true },
-      });
+      if (shiftPeriodId) {
+        casualIds.forEach(staffId => {
+          const explicit = explicitPeriodsByStaffId[staffId];
+          casualPeriodMatchMap[staffId] = explicit
+            ? explicit.has(shiftPeriodId)
+            : (standingPeriodsByStaffId[staffId]?.has(shiftPeriodId) || false);
+        });
+      }
       avail.forEach(a => {
         casualAvailMap[a.staff_id] = {
           from: a.available_from ? new Date(a.available_from).toISOString().slice(11, 16) : null,
@@ -732,6 +734,28 @@ const getStaffRoster = async (req, res) => {
 
     const shiftStartHH = new Date(shift.start_time).toISOString().slice(11, 16);
     const shiftEndHH   = new Date(shift.end_time).toISOString().slice(11, 16);
+
+    // For a period-less shift: does any of the staff member's available periods' own time window
+    // (fetched from the branch's actual period configuration) cover this shift's own hours?
+    let periodWindowByStaffAvailable = {};
+    if (!shiftPeriodId && casualIds.length > 0) {
+      const branchPeriods = await prisma.branch_shift_periods.findMany({
+        where: { branch_id: branchId, is_active: true },
+        select: { period_id: true, start_time: true, end_time: true },
+      });
+      const toHHMM = v => v ? new Date(v).toISOString().slice(11, 16) : null;
+      const periodWindowById = Object.fromEntries(
+        branchPeriods.map(p => [p.period_id, { start: toHHMM(p.start_time), end: toHHMM(p.end_time) }])
+      );
+      casualIds.forEach(staffId => {
+        const explicit = explicitPeriodsByStaffId[staffId];
+        const resolved = explicit || standingPeriodsByStaffId[staffId] || new Set();
+        periodWindowByStaffAvailable[staffId] = [...resolved].some(periodId => {
+          const w = periodWindowById[periodId];
+          return w && w.start && w.end && w.start <= shiftStartHH && w.end >= shiftEndHH;
+        });
+      });
+    }
 
     const roster = filtered.map(s => ({
       staff_id:              s.staff_id,
@@ -752,11 +776,13 @@ const getStaffRoster = async (req, res) => {
         if (s.staff_type !== "casual") return null;
         if (shiftPeriodId) return casualPeriodMatchMap[s.staff_id] || false;
         const avail = casualAvailMap[s.staff_id];
-        if (!avail) return false; // no declaration for this week/day
-        const { from, to } = avail;
-        if (!from && !to) return true; // declared with no specific times = available all day
-        // Declared window must cover the entire shift (start at or before shift start, end at or after shift end)
-        return !!from && !!to && from <= shiftStartHH && to >= shiftEndHH;
+        if (avail) {
+          const { from, to } = avail;
+          if (!from && !to) return true; // declared with no specific times = available all day
+          // Declared window must cover the entire shift (start at or before shift start, end at or after shift end)
+          if (!!from && !!to && from <= shiftStartHH && to >= shiftEndHH) return true;
+        }
+        return periodWindowByStaffAvailable[s.staff_id] || false;
       })(),
       casual_avail_from:      s.staff_type === "casual" ? (casualAvailMap[s.staff_id]?.from ?? null) : null,
       casual_avail_to:        s.staff_type === "casual" ? (casualAvailMap[s.staff_id]?.to ?? null) : null,

@@ -12,6 +12,9 @@ jest.mock("openai", () => {
 });
 jest.mock("../src/config/prisma", () => ({
   task_assignments: { groupBy: jest.fn().mockResolvedValue([]), findMany: jest.fn() },
+  casual_period_availability: { findMany: jest.fn().mockResolvedValue([]) },
+  casual_standing_availability: { findMany: jest.fn().mockResolvedValue([]) },
+  branch_shift_periods: { findMany: jest.fn().mockResolvedValue([]) },
 }));
 jest.mock("../src/config/supabaseAdmin", () => ({ from: jest.fn() }));
 

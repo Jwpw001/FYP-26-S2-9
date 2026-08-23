@@ -11,6 +11,7 @@ jest.mock("../src/config/prisma", () => ({
   casual_availability: { findMany: jest.fn() },
   casual_period_availability: { findMany: jest.fn() },
   casual_standing_availability: { findMany: jest.fn() },
+  branch_shift_periods: { findMany: jest.fn() },
   timesheets: { findMany: jest.fn() },
   availability: { findMany: jest.fn() },
 }));
@@ -92,6 +93,7 @@ function setupBaseline() {
   prisma.task_assignments.groupBy.mockResolvedValue([]); // no past assignments (workload dimension)
   prisma.casual_period_availability.findMany.mockResolvedValue([]);
   prisma.casual_standing_availability.findMany.mockResolvedValue([]);
+  prisma.branch_shift_periods.findMany.mockResolvedValue([]); // no periods configured by default
   prisma.timesheets.findMany.mockResolvedValue([]); // no approved timesheets by default
   prisma.availability.findMany.mockResolvedValue([]); // nobody on approved leave by default
 
@@ -240,7 +242,7 @@ describe("autoAssignCasual — period-based availability", () => {
     });
   });
 
-  test("a shift without a period_id ignores period tables entirely and uses the old time-coverage check unchanged", async () => {
+  test("a shift without a period_id still resolves via the legacy time-coverage table when that's what covers the candidate", async () => {
     prisma.shifts.findUnique.mockResolvedValue({
       shift_id: SHIFT_ID, branch_id: BRANCH_ID,
       shift_date: new Date("2026-08-10T00:00:00.000Z"),
@@ -256,11 +258,59 @@ describe("autoAssignCasual — period-based availability", () => {
     const res = makeRes();
     await autoAssignCasual(makeReq(), res);
 
-    expect(prisma.casual_period_availability.findMany).not.toHaveBeenCalled();
-    expect(prisma.casual_standing_availability.findMany).not.toHaveBeenCalled();
     const body = res.json.mock.calls[0][0];
     expect(body.success).toBe(true);
     expect(body.assigned.user_id).toBe(U1);
+  });
+
+  test("a shift without a period_id falls back to the period-based tables when the legacy table has nothing — a candidate whose standing pattern covers this shift's time window is available", async () => {
+    // The legacy table this shift would otherwise check is empty for everyone — matches reality
+    // for any staff member who only ever used the current, period-based Availability page.
+    prisma.shifts.findUnique.mockResolvedValue({
+      shift_id: SHIFT_ID, branch_id: BRANCH_ID,
+      shift_date: new Date("2026-08-10T00:00:00.000Z"), // Monday
+      start_time: t("09:00"), end_time: t("13:00"),
+      period_id: null,
+    });
+    prisma.casual_availability.findMany.mockResolvedValue([]); // nobody has legacy rows
+    prisma.branch_shift_periods.findMany.mockResolvedValue([
+      { period_id: PERIOD_ID, start_time: t("08:00"), end_time: t("18:00") }, // covers 09:00-13:00
+    ]);
+    prisma.casual_standing_availability.findMany.mockResolvedValue([
+      { staff_id: S1, period_id: PERIOD_ID },
+    ]);
+    prisma.users.findUnique.mockResolvedValue({ full_name: "Worker One" });
+    prisma.task_assignments.create.mockResolvedValue({ assignment_id: 1 });
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(true);
+    expect(body.assigned.user_id).toBe(U1);
+  });
+
+  test("a shift without a period_id excludes a candidate whose available period's window doesn't cover the shift's hours", async () => {
+    prisma.shifts.findUnique.mockResolvedValue({
+      shift_id: SHIFT_ID, branch_id: BRANCH_ID,
+      shift_date: new Date("2026-08-10T00:00:00.000Z"),
+      start_time: t("09:00"), end_time: t("13:00"),
+      period_id: null,
+    });
+    prisma.casual_availability.findMany.mockResolvedValue([]);
+    prisma.branch_shift_periods.findMany.mockResolvedValue([
+      { period_id: PERIOD_ID, start_time: t("10:00"), end_time: t("13:00") }, // starts after 09:00 — doesn't cover
+    ]);
+    prisma.casual_standing_availability.findMany.mockResolvedValue([
+      { staff_id: S1, period_id: PERIOD_ID },
+    ]);
+
+    const res = makeRes();
+    await autoAssignCasual(makeReq(), res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.success).toBe(false);
+    expect(body.reason).toMatch(/unavailable/);
   });
 
   test("explicit weekly rows: a staff member with an explicit row for this exact period is available", async () => {

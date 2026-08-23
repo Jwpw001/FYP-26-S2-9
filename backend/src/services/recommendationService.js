@@ -168,12 +168,14 @@ async function getShiftRecommendations(shiftId) {
   // exists on this shift, so casual availability comes from casual_period_availability (explicit
   // picks for this exact week) if the staff member has any rows for the week, else from their
   // casual_standing_availability ("usual pattern") for this weekday. The legacy time-range
-  // casual_availability table below is only still queried/used for branches with no shift periods
-  // configured — the current Availability UI no longer writes to it.
+  // casual_availability table is also always checked — for a period-less shift (manual creation
+  // with a custom time window) that's the ONLY source that used to be checked, which left every
+  // casual permanently unavailable since the current Availability UI never writes to it; now a
+  // period-less shift also resolves via isAvailableByTimeCoverage below.
   const explicitPeriodsByStaffId = {};
   const standingPeriodsByStaffId = {};
-  if (casualStaffIds.length > 0 && shiftPeriodId) {
-    const [periodAvailRows, standingAvailRows] = await Promise.all([
+  if (casualStaffIds.length > 0) {
+    const [periodAvailRows, standingAvailRows, availRows] = await Promise.all([
       prisma.casual_period_availability.findMany({
         where: { staff_id: { in: casualStaffIds }, week_start_date: new Date(`${weekStartStr}T00:00:00.000Z`) },
         select: { staff_id: true, period_id: true },
@@ -182,6 +184,13 @@ async function getShiftRecommendations(shiftId) {
         where: { staff_id: { in: casualStaffIds }, day_of_week: dayOfWeek },
         select: { staff_id: true, period_id: true },
       }),
+      shiftPeriodId ? Promise.resolve([]) : supabaseAdmin
+        .from("casual_availability")
+        .select("staff_id, available_from, available_to")
+        .in("staff_id", casualStaffIds)
+        .eq("week_start_date", weekStartStr)
+        .eq("day_of_week", dayOfWeek)
+        .then(({ data, error }) => { if (error) logger.error({ err: error }, "casual_availability query failed"); return data || []; }),
     ]);
     periodAvailRows.forEach(r => {
       if (!explicitPeriodsByStaffId[r.staff_id]) explicitPeriodsByStaffId[r.staff_id] = new Set();
@@ -191,22 +200,36 @@ async function getShiftRecommendations(shiftId) {
       if (!standingPeriodsByStaffId[r.staff_id]) standingPeriodsByStaffId[r.staff_id] = new Set();
       standingPeriodsByStaffId[r.staff_id].add(r.period_id);
     });
-  } else if (casualStaffIds.length > 0) {
-    const { data: availRows, error: availErr } = await supabaseAdmin
-      .from("casual_availability")
-      .select("staff_id, available_from, available_to")
-      .in("staff_id", casualStaffIds)
-      .eq("week_start_date", weekStartStr)
-      .eq("day_of_week", dayOfWeek);
-    if (availErr) logger.error({ err: availErr }, "casual_availability query failed");
-    (availRows || []).forEach(a => { casualAvailMap[a.staff_id] = a; });
+    availRows.forEach(a => { casualAvailMap[a.staff_id] = a; });
+  }
+  function resolvedPeriodIdsForStaff(staffId) {
+    const explicit = explicitPeriodsByStaffId[staffId];
+    if (explicit) return explicit;
+    return standingPeriodsByStaffId[staffId] || new Set();
   }
   function isAvailableForPeriod(staffId) {
-    const explicit = explicitPeriodsByStaffId[staffId];
-    if (explicit) return explicit.has(shiftPeriodId);
-    const standing = standingPeriodsByStaffId[staffId];
-    return standing ? standing.has(shiftPeriodId) : false;
+    return resolvedPeriodIdsForStaff(staffId).has(shiftPeriodId);
   }
+  // For a period-less shift: does any of the staff member's available periods' own time window
+  // cover this shift's actual start/end?
+  let periodWindowById = {};
+  async function loadPeriodWindows() {
+    if (shiftPeriodId || Object.keys(periodWindowById).length > 0) return;
+    const branchPeriods = await prisma.branch_shift_periods.findMany({
+      where: { branch_id: shift.branch_id, is_active: true },
+      select: { period_id: true, start_time: true, end_time: true },
+    });
+    periodWindowById = Object.fromEntries(branchPeriods.map(p => [p.period_id, { start: toMinutes(p.start_time), end: toMinutes(p.end_time) }]));
+  }
+  function isAvailableByTimeCoverage(staffId, rangeStart, rangeEnd) {
+    const ss = toMinutes(rangeStart), se = toMinutes(rangeEnd);
+    for (const periodId of resolvedPeriodIdsForStaff(staffId)) {
+      const w = periodWindowById[periodId];
+      if (w && w.start <= ss && w.end >= se) return true;
+    }
+    return false;
+  }
+  if (!shiftPeriodId && casualStaffIds.length > 0) await loadPeriodWindows();
 
   // 7. Build staff context for AI, per task (a casual may cover one task's time but not another's)
   function buildStaffContext(task) {
@@ -240,6 +263,8 @@ async function getShiftRecommendations(shiftId) {
               availability = covers
                 ? `available ${window} (covers this task's hours)`
                 : `available ${window} — DOES NOT fully cover this task's hours (${toHHMM(rangeStart)}–${toHHMM(rangeEnd)})`;
+            } else if (isAvailableByTimeCoverage(s.staff_id, rangeStart, rangeEnd)) {
+              availability = "available for this shift's period (via weekly submission or usual pattern)";
             } else {
               availability = "no availability submitted for this day";
             }
@@ -330,9 +355,12 @@ async function getShiftRecommendations(shiftId) {
               if (!isAvailableForPeriod(s.staff_id)) return null; // not available for this period — not a real candidate
             } else {
               const av = casualAvailMap[s.staff_id];
-              if (!av) return null; // no availability submitted — not a real candidate
-              const covers = fullyCovers(av.available_from, av.available_to, rangeStart, rangeEnd);
-              if (!covers) { availSub = 0.3; lowConfidence = true; }
+              if (av) {
+                const covers = fullyCovers(av.available_from, av.available_to, rangeStart, rangeEnd);
+                if (!covers) { availSub = 0.3; lowConfidence = true; }
+              } else if (!isAvailableByTimeCoverage(s.staff_id, rangeStart, rangeEnd)) {
+                return null; // no availability via either source — not a real candidate
+              }
             }
           } else {
             const bitmask = s.default_work_days || "1111100";

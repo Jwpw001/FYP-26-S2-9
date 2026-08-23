@@ -17,6 +17,7 @@ jest.mock("../src/config/prisma", () => ({
   casual_availability: { findMany: jest.fn() },
   casual_period_availability: { findMany: jest.fn() },
   casual_standing_availability: { findMany: jest.fn() },
+  branch_shift_periods: { findMany: jest.fn() },
   timesheets: { findMany: jest.fn() },
   availability: { findMany: jest.fn() },
   off_day_requests: { findMany: jest.fn() },
@@ -101,6 +102,7 @@ function setupBaseline({ regularStaff = [], offDayRows = [], leaveRows = [] } = 
   ]);
   prisma.casual_period_availability.findMany.mockResolvedValue([]);
   prisma.casual_standing_availability.findMany.mockResolvedValue([]);
+  prisma.branch_shift_periods.findMany.mockResolvedValue([]);
   prisma.timesheets.findMany.mockResolvedValue([]);
   prisma.task_assignments.create.mockResolvedValue({ assignment_id: 999 });
 
